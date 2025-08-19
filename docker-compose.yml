@@ -1,0 +1,40 @@
+
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+
+  admin-panel:
+    build:
+      context: ./admin-panel
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./admin-panel/src:/app/src
+
+  providers-panel:
+    build:
+      context: ./providers-panel
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./providers-panel/src:/app/src
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=db
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+

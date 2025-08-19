@@ -1,0 +1,304 @@
+Tourism Marketplace Platform – Spec & Scaffold
+Scope
+
+We are building a tourism marketplace platform with the following components:
+
+    Backend (FastAPI + SQLModel)
+
+    Web Admin Panel (Next.js + React + TS)
+
+    Providers Panel Web Frontend (Next.js + React + TS)
+
+⚠️ The Mobile App for tourists will be implemented later, not in scope now.
+Core Concept
+
+The app connects tourism providers (companies offering trips) with tourists (end users who book trips).
+Functional Requirements
+Provider Onboarding
+
+    Providers register via the Providers Panel Web Frontend.
+
+    They must supply:
+
+        User credentials: email, password, name, phone.
+
+        Company credentials: name, email, phone, documents, logo.
+
+        Multiple documents allowed → store in JSONB.
+
+        company_metadata = Column(
+            "metadata", JSONB, nullable=True
+        )  # {company_registration_file: s3_path, logo: s3_path, ...}
+
+    Creates:
+
+        New user (initial provider user).
+
+        New provider request (pending approval).
+
+Admin Approval
+
+    Admins handle provider requests in the Web Admin Panel.
+
+    Can:
+
+        Approve → provider company created, initial user becomes Super Provider User.
+
+        Deny → denial reason must be provided (visible to provider).
+
+Roles
+Provider Roles
+
+    Super Provider User
+
+        Invite/delete provider users.
+
+        Edit company profile.
+
+        Manage trips fully.
+
+    Provider User
+
+        Manage trips.
+
+        Cannot invite/delete users or edit company profile.
+
+Admin Roles
+
+    Super Admin
+
+        Full access: manage providers, trips, users.
+
+        Can invite/delete admin users.
+
+    Admin User
+
+        Same as Super Admin, except cannot invite/delete admin users.
+
+Trips
+
+    Providers can create trips with:
+
+        Images (upload → S3).
+
+        Title, description.
+
+        Start/end datetime.
+
+        Pickup location (Google Maps).
+
+        Start city/country.
+
+        Destination cities/countries.
+
+        Accommodation included (boolean).
+
+    Trips include:
+
+        Subscribers (normal users who pay).
+
+        Reviews (from subscribed users only).
+
+    Cancellation Rule:
+
+        No cancellation allowed within 2 days before start.
+
+        If canceled earlier → refund all subscribers.
+
+Normal Users (Tourists – via Mobile App later)
+
+    Register with email or phone.
+
+        Email → verification via SendGrid/Mailgun (feature flag via env).
+
+        Phone → dummy OTP for now.
+
+    Actions:
+
+        Browse trips, filter by: start city, destination, start date, duration.
+
+        View provider profiles (image, name, description, list of trips).
+
+        Join trips (pay via Checkout.com sync flow).
+
+        Leave reviews (only for joined trips).
+
+        Manage profile (reset password, update name/email/phone).
+
+        Cannot leave trips after joining.
+
+Technical Requirements
+Backend (FastAPI, Python 3.12)
+
+    Stack: FastAPI, SQLModel, PostgreSQL, Alembic, Redis, Pydantic, Poetry.
+
+    Features:
+
+        Pytest unit tests for all endpoints.
+
+        Mock 3rd-party integrations:
+
+            S3 (trip images, company docs).
+
+            Checkout.com (payments/refunds).
+
+            SendGrid/Mailgun (emails).
+
+            OTP (dummy).
+
+        Localization (English only at start, but extensible).
+
+        JSONB storage for flexible company metadata.
+
+Frontends (Next.js + React + TS)
+
+    Web Admin Panel
+
+    Providers Panel
+
+    Features:
+
+        Role-based access control.
+
+        CRUD for trips, companies, users.
+
+        Status tracking for provider requests.
+
+        Invitation system (email-based).
+
+Infrastructure
+
+    Each project must be dockerized separately.
+
+    Each should run standalone with docker compose up.
+
+    Root-level docker-compose.yml runs all 3 together.
+
+Folder Structures
+1. Backend (FastAPI)
+
+backend/
+│── alembic/                # DB migrations
+│── app/
+│   ├── api/
+│   │   ├── routes/         # All API endpoints
+│   │   ├── deps.py         # Dependencies (auth, pagination, etc.)
+│   │   └── __init__.py
+│   ├── core/               # Configs, security, utils
+│   │   ├── config.py
+│   │   ├── security.py
+│   │   └── localization.py
+│   ├── crud/               # DB queries
+│   ├── models/             # SQLModel classes
+│   ├── schemas/            # Pydantic schemas
+│   ├── services/           # Business logic (emails, payments, s3, otp)
+│   ├── tests/              # pytest tests
+│   └── main.py             # FastAPI entrypoint
+│── poetry.lock
+│── pyproject.toml
+│── Dockerfile
+│── docker-compose.yml
+
+2. Web Admin Panel (Next.js + TS)
+
+admin-panel/
+│── public/
+│── src/
+│   ├── components/
+│   ├── hooks/
+│   ├── layouts/
+│   ├── pages/
+│   ├── services/           # API calls
+│   ├── store/              # State management
+│   ├── utils/
+│   └── styles/
+│── tests/                  # Jest/RTL tests
+│── tsconfig.json
+│── package.json
+│── Dockerfile
+│── docker-compose.yml
+
+3. Providers Panel (Next.js + TS)
+
+providers-panel/
+│── public/
+│── src/
+│   ├── components/
+│   ├── hooks/
+│   ├── layouts/
+│   ├── pages/
+│   ├── services/           # API calls for providers
+│   ├── store/
+│   ├── utils/
+│   └── styles/
+│── tests/
+│── tsconfig.json
+│── package.json
+│── Dockerfile
+│── docker-compose.yml
+
+4. Root Project
+
+project-root/
+│── backend/
+│── admin-panel/
+│── providers-panel/
+│── docker-compose.yml      # runs all 3 together
+
+Testing
+
+    Backend: pytest (mock external services).
+
+    Frontend: Jest + React Testing Library.
+
+Tech Stack Summary
+
+Backend
+
+    FastAPI
+
+    SQLModel
+
+    PostgreSQL
+
+    Alembic
+
+    Redis
+
+    Pydantic
+
+    Poetry
+
+    Python 3.12
+
+Frontend
+
+    Next.js
+
+    React
+
+    TypeScript (latest stable)
+
+👉 Please scaffold all 3 projects with the above folder structures, add minimal boilerplate files (main.py, config.py, _app.tsx, etc.), and ensure each project builds & runs with Docker.
+
+
+instructuion set 2:
+
+1- i see type errors in the typescript code, please fix them.
+2- please add frontend pages for admin-panel and providers-panel. forntend should use tailwindcss 
+
+
+instructuion set 3:
+
+1- please add login pages to both admin-panel and providers-panel. 
+2- please make sure that both forntends are protected by authentication. 
+3- please add normal user mobile app user backend routes like login, register, forgot password, reset password, logout, profile, trips, join trip, leave trip, rate trip
+4- there seems to be an error in admin-panel tsconfig.json file, please fix it
+
+instructuion set 4:
+
+1- create registration for providers panel
+2- create unit tests for all endpoints. these unit tests shoudl call all endpoints and test them. if the endpoint has 3rd party calls then mock them
+4- ready all 3 projects for being pushed to github. Meaning add .gitignores to all 3 projects, make sure secrets are not pushed as well but an example.env is pushed instead...
+5- i don't think all admin panel pages redirect to login when user isn't logged in. fix that if it's true
+6- if providers panel user isn't logged in, they should just see a register and login page. The login form is just email and password. But the register page is the page where the provider creates the provider creation request along with initial user credentials

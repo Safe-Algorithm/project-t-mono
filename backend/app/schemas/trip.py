@@ -1,0 +1,43 @@
+import uuid
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel
+
+
+class TripBase(BaseModel):
+    name: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    price: float
+    max_participants: int
+    trip_metadata: Optional[dict] = None
+
+
+class TripCreate(TripBase):
+    pass
+
+
+class TripUpdate(TripBase):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    price: Optional[float] = None
+    max_participants: Optional[int] = None
+    is_active: Optional[bool] = None
+
+
+class TripRatingCreate(BaseModel):
+    rating: int
+    comment: Optional[str] = None
+
+
+class TripRead(TripBase):
+    id: uuid.UUID
+    provider_id: uuid.UUID
+    is_active: bool
+
+    class Config:
+        orm_mode = True
