@@ -1,24 +1,35 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface Trip {
   id: string;
   name: string;
-  provider_id: string;
+  description: string;
   start_date: string;
   end_date: string;
   price: number;
+  max_participants: number;
   is_active: boolean;
+  provider_id: string;
 }
 
 const TripsPage = () => {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) return;
+
     const fetchTrips = async () => {
       try {
-        const response = await fetch('http://localhost:8000/trips'); // Assuming a general trips endpoint
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/trips`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-Source': 'admin_panel',
+          },
+        }); // Assuming a general trips endpoint
         if (!response.ok) {
           throw new Error('Failed to fetch trips');
         }
@@ -36,7 +47,7 @@ const TripsPage = () => {
     };
 
     fetchTrips();
-  }, []);
+  }, [token]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;

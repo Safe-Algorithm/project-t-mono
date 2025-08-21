@@ -5,11 +5,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 import uuid
 from app.models.user import User, UserRole
+from app.models.source import RequestSource
 from app.schemas.user import UserCreate
 from app.core.security import get_password_hash
 
 def get_user_by_email(session: Session, *, email: str) -> User | None:
     return session.exec(select(User).where(User.email == email)).first()
+
+def get_user_by_email_and_source(session: Session, *, email: str, source: RequestSource) -> User | None:
+    return session.exec(select(User).where(User.email == email, User.source == source)).first()
+
+def get_user_by_phone_and_source(session: Session, *, phone: str, source: RequestSource) -> User | None:
+    return session.exec(select(User).where(User.phone == phone, User.source == source)).first()
 
 def get_user_by_id(session: Session, *, user_id: uuid.UUID) -> User | None:
     return session.get(User, user_id)
@@ -34,7 +41,7 @@ def update_user_role(session: Session, *, db_user: User, role: UserRole) -> User
     session.refresh(db_user)
     return db_user
 
-def create_user(session: Session, *, user_in: UserCreate) -> User:
+def create_user(session: Session, *, user_in: UserCreate, source: RequestSource = RequestSource.MOBILE_APP) -> User:
     logger.info(f"Creating user with email: {user_in.email}")
     logger.info("Hashing password.")
     hashed_password = get_password_hash(user_in.password)
@@ -47,6 +54,7 @@ def create_user(session: Session, *, user_in: UserCreate) -> User:
         is_superuser=user_in.is_superuser,
         role=user_in.role,
         provider_id=user_in.provider_id,
+        source=source,
     )
     session.add(db_user)
     session.commit()

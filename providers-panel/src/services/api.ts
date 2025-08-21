@@ -1,8 +1,8 @@
-const API_BASE_URL = 'http://localhost:8000';
+const BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1`;
 
 const getAuthToken = (): string | null => {
-  // In a real app, you'd get this from a more secure location
-  return localStorage.getItem('provider_token');
+  // Get the access token from localStorage
+  return localStorage.getItem('provider_access_token');
 };
 
 export class ApiError extends Error {
@@ -23,6 +23,13 @@ const handleResponse = async (response: Response) => {
     return response.json();
   }
 
+  // Handle 401 Unauthorized - redirect to login
+  if (response.status === 401) {
+    localStorage.removeItem('provider_access_token');
+    window.location.href = '/login';
+    throw new ApiError('Authentication failed');
+  }
+
   const errorData = await response.json().catch(() => ({ detail: 'An unknown error occurred' }));
 
   if (response.status === 422 && errorData.detail && Array.isArray(errorData.detail)) {
@@ -39,56 +46,90 @@ const handleResponse = async (response: Response) => {
 
 export const api = {
   async get<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const token = getAuthToken();
+    if (!token) {
+      window.location.href = '/login';
+      throw new ApiError('No authentication token');
+    }
+    
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getAuthToken()}`,
+        'X-Source': 'providers_panel',
+        Authorization: `Bearer ${token}`,
       },
+      credentials: 'include', // Include cookies for refresh token
     });
     return handleResponse(response);
   },
 
   async publicPost<T>(endpoint: string, body: any): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-Source': 'providers_panel',
       },
+      credentials: 'include', // Include cookies for refresh token
       body: JSON.stringify(body),
     });
     return handleResponse(response);
   },
 
   async post<T>(endpoint: string, body: any): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const token = getAuthToken();
+    if (!token) {
+      window.location.href = '/login';
+      throw new ApiError('No authentication token');
+    }
+    
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getAuthToken()}`,
+        'X-Source': 'providers_panel',
+        Authorization: `Bearer ${token}`,
       },
+      credentials: 'include', // Include cookies for refresh token
       body: JSON.stringify(body),
     });
     return handleResponse(response);
   },
 
   async put<T>(endpoint: string, body: any): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const token = getAuthToken();
+    if (!token) {
+      window.location.href = '/login';
+      throw new ApiError('No authentication token');
+    }
+    
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${getAuthToken()}`,
+        'X-Source': 'providers_panel',
+        Authorization: `Bearer ${token}`,
       },
+      credentials: 'include', // Include cookies for refresh token
       body: JSON.stringify(body),
     });
     return handleResponse(response);
   },
 
   async del<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const token = getAuthToken();
+    if (!token) {
+      window.location.href = '/login';
+      throw new ApiError('No authentication token');
+    }
+    
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'DELETE',
       headers: {
-        Authorization: `Bearer ${getAuthToken()}`,
+        'X-Source': 'providers_panel',
+        Authorization: `Bearer ${token}`,
       },
+      credentials: 'include', // Include cookies for refresh token
     });
     return handleResponse(response);
   },

@@ -25,9 +25,10 @@ const ProviderRequestsPageContent = () => {
 
     const fetchRequests = async () => {
       try {
-        const response = await fetch('http://localhost:8000/admin/provider-requests', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/provider-requests`, {
           headers: {
             'Authorization': `Bearer ${token}`,
+            'X-Source': 'admin_panel',
           },
         });
         if (!response.ok) {
@@ -53,11 +54,18 @@ const ProviderRequestsPageContent = () => {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/admin/provider-requests/${id}`, {
+      let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/provider-requests/${id}`;
+      if (status === 'approved') {
+        url += '/approve';
+      } else {
+        url += '/deny';
+      }
+      const response = await fetch(url, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-Source': 'admin_panel',
         },
         body: JSON.stringify({ status }),
       });

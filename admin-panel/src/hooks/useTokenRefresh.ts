@@ -1,0 +1,50 @@
+import { useAuth } from '@/context/AuthContext';
+import { useEffect, useRef } from 'react';
+
+export const useTokenRefresh = () => {
+  const { token, refreshToken, logout } = useAuth();
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (token) {
+      // Set up automatic token refresh every 10 minutes (access token expires in 15 minutes)
+      intervalRef.current = setInterval(async () => {
+        const success = await refreshToken();
+        if (!success) {
+          logout();
+        }
+      }, 10 * 60 * 1000); // 10 minutes
+
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    }
+  }, [token, refreshToken, logout]);
+
+  // Also refresh on API call failures (401 errors)
+  const handleApiCall = async (apiCall: () => Promise<Response>): Promise<Response> => {
+    try {
+      const response = await apiCall();
+      
+      if (response.status === 401) {
+        // Try to refresh token
+        const refreshSuccess = await refreshToken();
+        if (refreshSuccess) {
+          // Retry the API call with new token
+          return await apiCall();
+        } else {
+          logout();
+          throw new Error('Authentication failed');
+        }
+      }
+      
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  return { handleApiCall };
+};

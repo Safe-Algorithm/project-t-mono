@@ -302,3 +302,30 @@ instructuion set 4:
 4- ready all 3 projects for being pushed to github. Meaning add .gitignores to all 3 projects, make sure secrets are not pushed as well but an example.env is pushed instead...
 5- i don't think all admin panel pages redirect to login when user isn't logged in. fix that if it's true
 6- if providers panel user isn't logged in, they should just see a register and login page. The login form is just email and password. But the register page is the page where the provider creates the provider creation request along with initial user credentials
+
+
+instructuion set 5:
+
+1- add source header for all requests in the backend so that we can know if a requests originates from app or admin panel or providers panel. also add an enum for it
+2- backend: user phone number and email should be unique per source. so a user with 1 phone number can register for app and admin panel and providers panel with same phone number and that would count as 3 users. but they can't register for the providers panel twice with the same number. this same applies to emails as well. so if i register with phone number in app and then add my email and verify it then i woun't be able to use either the phone number or the email for another account in the mobile app source
+3- both frontends: fix api call routes. for example: for login, the admin frontend calls /auth/login but the backend route is /api/v1/login/access-token. so the admin frontend should call /api/v1/login/access-token. also, all routes currently are prefixed /api/v1
+4- backend: please complete any endpoint that is left hanging in the backend like the /reset-password endpoint has a comment # Verify token and reset password logic here. or for the /logout endpint it says # In a real-world application, you would invalidate the token. # For this example, we'll just return a success message. but add the logic for invalidating the token which should be adding it to a block list in redis until the refresh token for it expires. these 2 are just examples you should look for similiar comments and complete them
+5- backend: log users out on password reset and password change
+6- backend: update unit tests for these new additions
+7- add .env files for all 3 projects and populate them with, currently there are only .env.eample files
+
+
+
+instruction set 6:
+
+1- backend: I got psycopg2.errors.UndefinedColumn: column user.source does not exist error. Please fix it and make sure you always run migration and test endpoits when you change anything
+2- backend: for logout, I changed my mind, please delete the current logout implementation and remove any mentioned of it including unit tests. just leep the logout route and put a comment that it needs to be implemented
+3- backend: for get_request_source, please fon't edault to any source if source header is not provided. make the  header required
+4- both frontend: make sure admin panel and admin providers send the header source in the requests
+5- update any needed unit tests from the mentioend changes
+
+
+instruction set 7:
+
+1- both frontend: please make base backend url an env variables which curerntly equals: http://localhost:8000. and use this env variable when making requests to the backend instead of hardcoding the base url
+2- please re-read the original specification here in instructions.txt file before the first instruction set (instructuion set 2). and then scan this whole project. if you find any specification or instruction that is not done then please implement it

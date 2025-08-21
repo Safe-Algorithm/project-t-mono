@@ -1,12 +1,15 @@
 import pytest
 from typing import Generator
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 from sqlmodel.pool import StaticPool
 
-from app.main import app
 from app.api import deps
+from app.core.config import settings
+from app.main import app
+from app.models.source import RequestSource
 
 
 @pytest.fixture(name="session")
@@ -31,6 +34,18 @@ def get_session_override() -> Generator[Session, None, None]:
 
 
 app.dependency_overrides[deps.get_session] = get_session_override
+
+
+@pytest.fixture(autouse=True)
+def mock_redis():
+    """Mock Redis functions for all tests"""
+    with patch('app.core.redis.redis_client') as mock_client, \
+         patch('app.core.redis.is_token_blacklisted', return_value=False), \
+         patch('app.core.redis.add_token_to_blacklist', return_value=None):
+        mock_client.exists.return_value = 0
+        mock_client.setex.return_value = True
+        yield
+
 
 
 @pytest.fixture(name="client")

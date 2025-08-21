@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface AdminUser {
   id: string;
-  name: string;
   email: string;
+  name: string;
   role: string;
   is_active: boolean;
 }
@@ -12,11 +13,19 @@ const AdminUsersPage = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) return;
+
     const fetchUsers = async () => {
       try {
-        const response = await fetch('http://localhost:8000/admin/users');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/users`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-Source': 'admin_panel',
+          },
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch admin users');
         }
@@ -34,7 +43,7 @@ const AdminUsersPage = () => {
     };
 
     fetchUsers();
-  }, []);
+  }, [token]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;

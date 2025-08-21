@@ -25,6 +25,62 @@ def list_provider_requests(
     requests = provider_crud.get_provider_requests(session, skip=skip, limit=limit)
     return requests
 
+@router.put("/provider-requests/{request_id}/approve", response_model=ProviderRequestRead)
+def approve_provider_request(
+    *, 
+    session: Session = Depends(get_session), 
+    request_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Approve a provider request."""
+    db_request = provider_crud.get_provider_request(session=session, id=request_id)
+    if not db_request:
+        raise HTTPException(status_code=404, detail="Provider request not found")
+
+    # Create a new provider
+    new_provider = provider_crud.create_provider(session=session, provider_request=db_request)
+
+    # Update the user's role to SUPER_PROVIDER and associate with the new provider
+    user_crud.update_user_role_and_provider(
+        session=session,
+        db_user=db_request.user,
+        role=UserRole.SUPER_PROVIDER,
+        provider_id=new_provider.id
+    )
+
+    # Update the request status to approved
+    updated_request = provider_crud.update_provider_request_status(
+        session=session,
+        db_request=db_request,
+        status="approved",
+        denial_reason=None
+    )
+
+    return updated_request
+
+@router.put("/provider-requests/{request_id}/deny", response_model=ProviderRequestRead)
+def deny_provider_request(
+    *, 
+    session: Session = Depends(get_session), 
+    request_id: uuid.UUID,
+    request_in: ProviderRequestUpdate,
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Deny a provider request."""
+    db_request = provider_crud.get_provider_request(session=session, id=request_id)
+    if not db_request:
+        raise HTTPException(status_code=404, detail="Provider request not found")
+
+    # Update the request status to denied
+    updated_request = provider_crud.update_provider_request_status(
+        session=session,
+        db_request=db_request,
+        status="denied",
+        denial_reason=request_in.denial_reason
+    )
+
+    return updated_request
+
 @router.put("/provider-requests/{request_id}", response_model=ProviderRequestRead)
 def update_provider_request(
     *, 

@@ -14,11 +14,13 @@ const LoginPage = () => {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/login/access-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Source': 'providers_panel',
         },
+        credentials: 'include', // Include cookies
         body: new URLSearchParams({
           username: email,
           password: password,
@@ -85,6 +87,14 @@ const LoginPage = () => {
             </button>
           </div>
         </form>
+        <div className="text-center mt-4">
+          <p className="text-gray-600 text-sm">
+            Don't have an account?{' '}
+            <a href="/register" className="text-blue-500 hover:text-blue-700 font-bold">
+              Register here
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

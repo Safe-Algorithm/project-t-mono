@@ -1,22 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 
 interface Provider {
   id: string;
   company_name: string;
   company_email: string;
   company_phone: string;
-  is_active: boolean;
+  is_active?: boolean;
 }
 
 const ProvidersPage = () => {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
+    if (!token) return;
+
     const fetchProviders = async () => {
       try {
-        const response = await fetch('http://localhost:8000/admin/providers');
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/providers`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-Source': 'admin_panel',
+          },
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch providers');
         }
@@ -34,7 +43,7 @@ const ProvidersPage = () => {
     };
 
     fetchProviders();
-  }, []);
+  }, [token]);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p>Error: {error}</p>;

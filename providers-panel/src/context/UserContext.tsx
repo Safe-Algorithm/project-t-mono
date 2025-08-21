@@ -5,39 +5,106 @@ import { User } from '@/types/user';
 interface UserContextType {
   user: User | null;
   token: string | null;
+  isInitialized: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (token: string) => void;
+  login: (accessToken: string) => void;
   logout: () => void;
+  refreshToken: () => Promise<boolean>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const { user, isLoading, error, refetch } = useUser(token);
 
-  useEffect(() => {
-    const storedToken = localStorage.getItem('provider_token');
-    if (storedToken) {
-      setToken(storedToken);
+  const refreshTokens = async (): Promise<boolean> => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Source': 'providers_panel',
+        },
+        credentials: 'include', // Include cookies
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setToken(data.access_token);
+        localStorage.setItem('provider_access_token', data.access_token);
+        return true;
+      } else {
+        // Clear tokens on refresh failure
+        setToken(null);
+        localStorage.removeItem('provider_access_token');
+        return false;
+      }
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      // Clear tokens on refresh failure
+      setToken(null);
+      localStorage.removeItem('provider_access_token');
+      return false;
     }
+  };
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const storedToken = localStorage.getItem('provider_access_token');
+      
+      if (storedToken) {
+        setToken(storedToken);
+      } else {
+        // Try to refresh token on app start using cookie
+        const success = await refreshTokens();
+        if (!success) {
+          // If refresh fails, clear any remaining tokens
+          setToken(null);
+          localStorage.removeItem('provider_access_token');
+        }
+      }
+      setIsInitialized(true);
+    };
+
+    initializeAuth();
   }, []);
 
-  const login = (newToken: string) => {
-    setToken(newToken);
-    localStorage.setItem('provider_token', newToken);
+
+  const login = (accessToken: string) => {
+    setToken(accessToken);
+    localStorage.setItem('provider_access_token', accessToken);
     refetch();
   };
 
-  const logout = () => {
+  const logout = async () => {
     setToken(null);
-    localStorage.removeItem('provider_token');
-    // user state will be cleared by the useUser hook
+    localStorage.removeItem('provider_access_token');
+    // Clear refresh token cookie by calling logout endpoint
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/logout`, {
+        method: 'POST',
+        headers: {
+          'X-Source': 'providers_panel',
+        },
+        credentials: 'include',
+      });
+    } catch (error) {
+      // Ignore errors on logout
+      console.warn('Logout request failed:', error);
+    }
+    // Redirect to login page
+    window.location.href = '/login';
+  };
+
+  const refreshToken = async (): Promise<boolean> => {
+    return refreshTokens();
   };
 
   return (
-    <UserContext.Provider value={{ user, token, isLoading, error, login, logout }}>
+    <UserContext.Provider value={{ user, token, isInitialized, isLoading, error, login, logout, refreshToken }}>
       {children}
     </UserContext.Provider>
   );

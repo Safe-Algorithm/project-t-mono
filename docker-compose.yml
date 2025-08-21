@@ -38,3 +38,6 @@ services:
 volumes:
   postgres_data:
 
+networks:
+  default:
+    name: internal-mono

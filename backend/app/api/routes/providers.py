@@ -22,20 +22,26 @@ router = APIRouter()
 @router.post("/register", response_model=ProviderRequestRead)
 def register_provider(
     *, 
-    session: Session = Depends(deps.get_session), 
+    session: Session = Depends(deps.get_session),
+    source: deps.RequestSource = Depends(deps.get_request_source),
     request_in: ProviderRegistrationRequest
 ):
     logger.info("Attempting to register a new provider.")
     try:
-        user = user_crud.get_user_by_email(session=session, email=request_in.user.email)
+        # Check if user already exists with this email and source
+        user = user_crud.get_user_by_email_and_source(
+            session=session, 
+            email=request_in.user.email, 
+            source=source
+        )
         if user:
             raise HTTPException(
                 status_code=400,
                 detail="The user with this email already exists in the system.",
             )
         
-        logger.info(f"Creating user with email: {request_in.user.email}")
-        new_user = user_crud.create_user(session=session, user_in=request_in.user)
+        logger.info(f"Creating user with email: {request_in.user.email} for source: {source}")
+        new_user = user_crud.create_user(session=session, user_in=request_in.user, source=source)
         logger.info(f"User created successfully with ID: {new_user.id}")
 
         logger.info(f"Creating provider request for user ID: {new_user.id}")

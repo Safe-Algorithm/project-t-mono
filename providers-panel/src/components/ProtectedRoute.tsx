@@ -7,17 +7,21 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { token } = useAuth();
+  const { token, isInitialized } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!token) {
+    if (isInitialized && !token) {
       router.push('/login');
     }
-  }, [token, router]);
+  }, [token, isInitialized, router]);
+
+  if (!isInitialized) {
+    return <p>Loading...</p>; // Show loading while checking authentication
+  }
 
   if (!token) {
-    return <p>Loading...</p>; // Or a spinner
+    return <p>Redirecting to login...</p>; // Show message while redirecting
   }
 
   return <>{children}</>;

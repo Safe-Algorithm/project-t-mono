@@ -1,20 +1,26 @@
 import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/router';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/login/access-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'X-Source': 'admin_panel',
         },
+        credentials: 'include', // Include cookies
         body: new URLSearchParams({
           username: email,
           password: password,
@@ -26,8 +32,8 @@ const LoginPage = () => {
       }
 
       const data = await response.json();
-      // TODO: Handle successful login, e.g., store token, redirect
-      console.log('Login successful', data);
+      login(data.access_token);
+      router.push('/');
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

@@ -7,6 +7,7 @@ from sqlmodel import Session
 
 from app import crud
 from app.models.user import User, UserRole
+from app.models.source import RequestSource
 from app.schemas.user import UserCreate
 from app.core.config import settings
 from app.tests.utils.provider import create_random_provider
@@ -17,13 +18,16 @@ def random_lower_string() -> str:
 def random_email() -> str:
     return f"{random_lower_string()}@{random_lower_string()}.com"
 
-def create_random_user(session: Session, **kwargs) -> User:
+def random_phone() -> str:
+    return "".join(random.choices(string.digits, k=10))
+
+def create_random_user(session: Session, source: RequestSource = RequestSource.MOBILE_APP, **kwargs) -> User:
     email = kwargs.get("email", random_email())
     password = kwargs.get("password", "password123")
     name = kwargs.get("name", "Test User")
-    phone = kwargs.get("phone", "1234567890")
+    phone = kwargs.get("phone", random_phone())
     user_in = UserCreate(email=email, password=password, name=name, phone=phone, **kwargs)
-    return crud.user.create_user(session=session, user_in=user_in)
+    return crud.user.create_user(session=session, user_in=user_in, source=source)
 
 def user_authentication_headers(
     client: TestClient, session: Session, role: UserRole
@@ -40,7 +44,7 @@ def user_authentication_headers(
     )
 
     login_data = {"username": user.email, "password": "password123"}
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
+    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data, headers={"X-Source": "mobile_app"})
     response = r.json()
     auth_token = response["access_token"]
     headers = {"Authorization": f"Bearer {auth_token}"}
