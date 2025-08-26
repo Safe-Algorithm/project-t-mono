@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useUser } from '@/hooks/useUser';
 import { User } from '@/types/user';
+import { setGlobalRefreshToken } from '@/services/api';
 
 interface UserContextType {
   user: User | null;
@@ -76,7 +77,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = (accessToken: string) => {
     setToken(accessToken);
     localStorage.setItem('provider_access_token', accessToken);
-    refetch();
+    // Don't immediately refetch - let the useEffect handle it
   };
 
   const logout = async () => {
@@ -102,6 +103,11 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const refreshToken = async (): Promise<boolean> => {
     return refreshTokens();
   };
+
+  // Set the global refresh token function for the API service
+  useEffect(() => {
+    setGlobalRefreshToken(refreshTokens);
+  }, []);
 
   return (
     <UserContext.Provider value={{ user, token, isInitialized, isLoading, error, login, logout, refreshToken }}>

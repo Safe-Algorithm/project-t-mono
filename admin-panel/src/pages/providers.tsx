@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api';
 
 interface Provider {
   id: string;
@@ -14,22 +16,14 @@ const ProvidersPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!token) return;
 
     const fetchProviders = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/providers`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-Source': 'admin_panel',
-          },
-        });
-        if (!response.ok) {
-          throw new Error('Failed to fetch providers');
-        }
-        const data = await response.json();
+        const data = await api.get<Provider[]>('/admin/providers');
         setProviders(data);
       } catch (err) {
         if (err instanceof Error) {
@@ -63,8 +57,12 @@ const ProvidersPage = () => {
           </thead>
           <tbody>
             {providers.map((provider) => (
-              <tr key={provider.id}>
-                <td className="py-2 px-4 border-b">{provider.company_name}</td>
+              <tr 
+                key={provider.id} 
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => router.push(`/providers/${provider.id}`)}
+              >
+                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{provider.company_name}</td>
                 <td className="py-2 px-4 border-b">{provider.company_email}</td>
                 <td className="py-2 px-4 border-b">{provider.company_phone}</td>
                 <td className="py-2 px-4 border-b">{provider.is_active ? 'Active' : 'Inactive'}</td>

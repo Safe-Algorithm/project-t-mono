@@ -327,5 +327,19 @@ instruction set 6:
 
 instruction set 7:
 
-1- both frontend: please make base backend url an env variables which curerntly equals: http://localhost:8000. and use this env variable when making requests to the backend instead of hardcoding the base url
-2- please re-read the original specification here in instructions.txt file before the first instruction set (instructuion set 2). and then scan this whole project. if you find any specification or instruction that is not done then please implement it
+1- backend: add columns is_phone_verified and is_email_verified to user. these columns should be false by default.
+2- backend: provider feature: when a provider creates a trip. they can chose which fields that any user joining the trip must fill or provide. the fields options are pre determined in code, but the provider can choose which ones will be shown to joining users in the app to fill. the fields are id/iqama number(text), passport number(text), name(text), phone(text), email(text), address(text), city(text), country(text), date of birth(date), gender(enum), disability(enum), medical conditions(text), allergies(text). the mobile app must have way of knowing that these are the required fields for a trip. either the backend provides a dedicated route for the app to know the required fields for a trip or the required fields are retunred with in /trips/{trip_id}   
+2- backend: trip enhancement: add trip packages, so that a trip can have multiple packages with different prices. a package has a name and a price and a description.
+3- backend: trip enhancement: a single mobile app user can register multiple people to a trip. this enhancement ties in with the required fields for a trip. when a user registers multiple people to a trip, they must provide the required fields for each person. 
+4- add unit tests for new features and update unit tests for old affected features by these changes
+
+
+instruction set 8:
+1- backend: trip flow adjustment: a trip provider should be able to define required fields per trip package. not all packages need to have the same required fields. for exampl. 1 trip package migth be for adults so it requires a phone number and the other for children so it doesn't require a phone number
+2- after making the needed adjustment please bring unit tests up to date with it. and also please make requests to the backend to make sure the flow is correct and everything works
+
+
+instruction set 9:
+1- providers panel: please bring providers panel to the latest provider chnages in the backend. including trip packages and packages fields.
+2- backend and providers panel: please make sure that a provider adds at least one package to the trip. backend and provider panel should prevent this.
+3- providers panel: please make sure if a provider creates a trip that there's a detailed page for it in the providers panel. where the provder can see trip packages and packages fields. 

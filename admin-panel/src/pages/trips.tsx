@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api';
+import { useRouter } from 'next/router';
 
 interface Trip {
   id: string;
@@ -18,22 +20,14 @@ const TripsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!token) return;
 
     const fetchTrips = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/trips`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-Source': 'admin_panel',
-          },
-        }); // Assuming a general trips endpoint
-        if (!response.ok) {
-          throw new Error('Failed to fetch trips');
-        }
-        const data = await response.json();
+        const data = await api.get<Trip[]>('/admin/trips');
         setTrips(data);
       } catch (err) {
         if (err instanceof Error) {
@@ -69,8 +63,12 @@ const TripsPage = () => {
           </thead>
           <tbody>
             {trips.map((trip) => (
-              <tr key={trip.id}>
-                <td className="py-2 px-4 border-b">{trip.name}</td>
+              <tr 
+                key={trip.id} 
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => router.push(`/trips/${trip.id}`)}
+              >
+                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{trip.name}</td>
                 <td className="py-2 px-4 border-b">{trip.provider_id}</td>
                 <td className="py-2 px-4 border-b">{new Date(trip.start_date).toLocaleDateString()}</td>
                 <td className="py-2 px-4 border-b">{new Date(trip.end_date).toLocaleDateString()}</td>

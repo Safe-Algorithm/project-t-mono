@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { api } from '@/services/api';
 import ProtectedRoute from '../components/ProtectedRoute';
 
 interface ProviderRequest {
@@ -25,16 +26,7 @@ const ProviderRequestsPageContent = () => {
 
     const fetchRequests = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/provider-requests`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-Source': 'admin_panel',
-          },
-        });
-        if (!response.ok) {
-          throw new Error('Failed to fetch provider requests');
-        }
-        const data = await response.json();
+        const data = await api.get<ProviderRequest[]>('/admin/provider-requests');
         setRequests(data);
       } catch (err) {
         if (err instanceof Error) {

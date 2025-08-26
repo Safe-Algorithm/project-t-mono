@@ -36,6 +36,8 @@ class User(SQLModel, table=True):
     hashed_password: str
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
+    is_phone_verified: bool = Field(default=False)
+    is_email_verified: bool = Field(default=False)
     role: UserRole = Field(default=UserRole.NORMAL)
     source: RequestSource = Field(sa_column=Column(SQLEnum(RequestSource, name='requestsource', values_callable=lambda obj: [e.value for e in obj])))
 

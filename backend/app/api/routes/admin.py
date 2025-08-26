@@ -9,8 +9,11 @@ from app.crud import provider as provider_crud, user as user_crud
 from app.schemas.provider import ProviderRequestRead, ProviderPublic
 from app.schemas.user import UserPublic
 from app.schemas.trip import TripRead
+from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.crud import trip as trip_crud
 from app.schemas.admin import ProviderRequestUpdate
+from app.models.trip_package import TripPackage as TripPackageModel
+from app.models.trip_package_field import TripPackageRequiredField
 
 router = APIRouter()
 
@@ -147,4 +150,168 @@ def list_all_trips(
 ):
     """Retrieve all trips."""
     trips = trip_crud.get_all_trips(session=session, skip=skip, limit=limit)
-    return trips
+    
+    # Build TripRead responses with packages and required fields
+    trip_responses = []
+    for trip in trips:
+        # Get packages with required fields
+        packages = session.query(TripPackageModel).filter(
+            TripPackageModel.trip_id == trip.id,
+            TripPackageModel.is_active == True
+        ).all()
+        
+        packages_with_fields = []
+        for package in packages:
+            required_fields = session.query(TripPackageRequiredField).filter(
+                TripPackageRequiredField.package_id == package.id
+            ).all()
+            required_field_types = [rf.field_type for rf in required_fields]
+            
+            packages_with_fields.append(TripPackageWithRequiredFields(
+                id=package.id,
+                trip_id=package.trip_id,
+                name=package.name,
+                description=package.description,
+                price=package.price,
+                is_active=package.is_active,
+                required_fields=required_field_types
+            ))
+        
+        trip_responses.append(TripRead(
+            id=trip.id,
+            provider_id=trip.provider_id,
+            name=trip.name,
+            description=trip.description,
+            start_date=trip.start_date,
+            end_date=trip.end_date,
+            price=trip.price,
+            max_participants=trip.max_participants,
+            trip_metadata=trip.trip_metadata,
+            is_active=trip.is_active,
+            packages=packages_with_fields
+        ))
+    
+    return trip_responses
+
+@router.get("/trips/{trip_id}", response_model=TripRead)
+def get_trip_details(
+    trip_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Get detailed trip information by ID."""
+    trip = trip_crud.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Get packages with required fields
+    packages = session.query(TripPackageModel).filter(
+        TripPackageModel.trip_id == trip_id,
+        TripPackageModel.is_active == True
+    ).all()
+    
+    packages_with_fields = []
+    for package in packages:
+        required_fields = session.query(TripPackageRequiredField).filter(
+            TripPackageRequiredField.package_id == package.id
+        ).all()
+        required_field_types = [rf.field_type for rf in required_fields]
+        
+        packages_with_fields.append(TripPackageWithRequiredFields(
+            id=package.id,
+            trip_id=package.trip_id,
+            name=package.name,
+            description=package.description,
+            price=package.price,
+            is_active=package.is_active,
+            required_fields=required_field_types
+        ))
+    
+    return TripRead(
+        id=trip.id,
+        provider_id=trip.provider_id,
+        name=trip.name,
+        description=trip.description,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        price=trip.price,
+        max_participants=trip.max_participants,
+        trip_metadata=trip.trip_metadata,
+        is_active=trip.is_active,
+        packages=packages_with_fields
+    )
+
+@router.get("/providers/{provider_id}", response_model=ProviderPublic)
+def get_provider_details(
+    provider_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Get provider details by ID."""
+    provider = provider_crud.get_provider(session=session, provider_id=provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    return provider
+
+@router.get("/providers/{provider_id}/users", response_model=List[UserPublic])
+def get_provider_users(
+    provider_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Get all users for a specific provider."""
+    users = user_crud.get_users_by_provider_id(session=session, provider_id=provider_id)
+    return users
+
+@router.get("/providers/{provider_id}/trips", response_model=List[TripRead])
+def get_provider_trips(
+    provider_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    skip: int = 0,
+    limit: int = 100,
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Get all trips for a specific provider."""
+    trips = trip_crud.get_trips_by_provider(session=session, provider_id=provider_id, skip=skip, limit=limit)
+    
+    # Build TripRead responses with packages and required fields
+    trip_responses = []
+    for trip in trips:
+        # Get packages with required fields
+        packages = session.query(TripPackageModel).filter(
+            TripPackageModel.trip_id == trip.id,
+            TripPackageModel.is_active == True
+        ).all()
+        
+        packages_with_fields = []
+        for package in packages:
+            required_fields = session.query(TripPackageRequiredField).filter(
+                TripPackageRequiredField.package_id == package.id
+            ).all()
+            required_field_types = [rf.field_type for rf in required_fields]
+            
+            packages_with_fields.append(TripPackageWithRequiredFields(
+                id=package.id,
+                trip_id=package.trip_id,
+                name=package.name,
+                description=package.description,
+                price=package.price,
+                is_active=package.is_active,
+                required_fields=required_field_types
+            ))
+        
+        trip_responses.append(TripRead(
+            id=trip.id,
+            provider_id=trip.provider_id,
+            name=trip.name,
+            description=trip.description,
+            start_date=trip.start_date,
+            end_date=trip.end_date,
+            price=trip.price,
+            max_participants=trip.max_participants,
+            trip_metadata=trip.trip_metadata,
+            is_active=trip.is_active,
+            packages=packages_with_fields
+        ))
+    
+    return trip_responses

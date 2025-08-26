@@ -62,6 +62,9 @@ def update_provider(
     session.refresh(db_provider)
     return db_provider
 
+def get_provider(session: Session, *, provider_id: uuid.UUID) -> Optional[Provider]:
+    return session.get(Provider, provider_id)
+
 def get_all_providers(session: Session, *, skip: int = 0, limit: int = 100) -> List[Provider]:
     statement = select(Provider).offset(skip).limit(limit)
     return session.exec(statement).all()

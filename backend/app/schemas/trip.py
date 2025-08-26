@@ -1,8 +1,10 @@
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
+from .trip_field import TripRequiredField
+from .trip_package import TripPackageWithRequiredFields
 
 
 class TripBase(BaseModel):
@@ -38,6 +40,7 @@ class TripRead(TripBase):
     id: uuid.UUID
     provider_id: uuid.UUID
     is_active: bool
+    packages: List[TripPackageWithRequiredFields] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

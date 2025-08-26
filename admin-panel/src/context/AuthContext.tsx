@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { setGlobalRefreshToken } from '@/services/api';
 
 interface AuthContextType {
   token: string | null;
@@ -47,6 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = async () => {
     setToken(null);
     localStorage.removeItem('admin_access_token');
+    localStorage.removeItem('admin_refresh_token'); // Clean up any old refresh tokens
     // Clear refresh token cookie by calling logout endpoint
     try {
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/logout`, {
@@ -67,6 +69,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const refreshToken = async (): Promise<boolean> => {
     return refreshTokens();
   };
+
+  // Set the global refresh token function for the API service
+  useEffect(() => {
+    setGlobalRefreshToken(refreshTokens);
+  }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {

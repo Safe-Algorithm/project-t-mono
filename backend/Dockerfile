@@ -9,8 +9,10 @@ RUN pip install poetry
 # Copy only pyproject.toml and poetry.lock to leverage Docker cache
 COPY pyproject.toml poetry.lock* ./
 
-# Install dependencies
-RUN poetry config virtualenvs.create false && poetry install --without dev --no-interaction --no-ansi --no-root
+# Allow installing dev dependencies to run tests
+ARG INSTALL_DEV=false
+RUN poetry config virtualenvs.create false
+RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; else poetry install --no-root --only main ; fi"
 
 # Copy the rest of the application
 COPY . /app

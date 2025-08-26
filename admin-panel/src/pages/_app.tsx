@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 import ProtectedRoute from '../components/ProtectedRoute';
 import { AuthProvider } from '@/context/AuthContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import '@/styles/globals.css';
 
@@ -15,16 +16,18 @@ function AppContent({ Component, pageProps, router }: AppProps) {
 
 export default function MyApp({ Component, pageProps, router }: AppProps) {
   return (
-    <AuthProvider>
-      {publicPages.includes(router.pathname) ? (
-        <AppContent Component={Component} pageProps={pageProps} router={router} />
-      ) : (
-        <ProtectedRoute>
-          <Layout>
-            <AppContent Component={Component} pageProps={pageProps} router={router} />
-          </Layout>
-        </ProtectedRoute>
-      )}
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        {publicPages.includes(router.pathname) ? (
+          <AppContent Component={Component} pageProps={pageProps} router={router} />
+        ) : (
+          <ProtectedRoute>
+            <Layout>
+              <AppContent Component={Component} pageProps={pageProps} router={router} />
+            </Layout>
+          </ProtectedRoute>
+        )}
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

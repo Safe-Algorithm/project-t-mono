@@ -30,6 +30,22 @@ def get_users_by_provider_id(
 ) -> list[User]:
     return session.exec(select(User).where(User.provider_id == provider_id)).all()
 
+def get_users_by_role(session: Session, *, role: UserRole, skip: int = 0, limit: int = 100) -> list[User]:
+    statement = select(User).where(User.role == role).offset(skip).limit(limit)
+    return session.exec(statement).all()
+
+def get_admin_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:
+    statement = select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN])).offset(skip).limit(limit)
+    return session.exec(statement).all()
+
+def get_provider_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:
+    statement = select(User).where(User.role.in_([UserRole.PROVIDER, UserRole.SUPER_PROVIDER])).offset(skip).limit(limit)
+    return session.exec(statement).all()
+
+def get_normal_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:
+    statement = select(User).where(User.role == UserRole.NORMAL).offset(skip).limit(limit)
+    return session.exec(statement).all()
+
 def delete_user(session: Session, *, db_user: User) -> None:
     session.delete(db_user)
     session.commit()

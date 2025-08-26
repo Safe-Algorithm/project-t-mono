@@ -54,6 +54,6 @@ def client_fixture(session: Session) -> Generator[TestClient, None, None]:
         yield session
 
     app.dependency_overrides[deps.get_session] = get_session_override
-    with TestClient(app) as client:
-        yield client
+    client = TestClient(app)
+    yield client
     app.dependency_overrides.clear()

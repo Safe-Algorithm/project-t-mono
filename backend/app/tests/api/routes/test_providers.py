@@ -18,9 +18,11 @@ def test_register_provider(client: TestClient, session: Session) -> None:
         "company_phone": "0987654321",
     }
     data = {"user": user_data, "provider": provider_data}
+    headers = {"X-Source": "providers_panel"}
     response = client.post(
         f"{settings.API_V1_STR}/providers/register",
         json=data,
+        headers=headers,
     )
     assert response.status_code == 200
     created_request = response.json()

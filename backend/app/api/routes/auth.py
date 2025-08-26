@@ -36,10 +36,10 @@ def login_for_access_token(
         )
     access_token_expires = timedelta(minutes=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
-        data={"sub": user.email}
+        data={"sub": user.email, "source": source.value}
     )
     refresh_token = security.create_refresh_token(
-        data={"sub": user.email}
+        data={"sub": user.email, "source": source.value}
     )
     
     # Set refresh token as HttpOnly Secure SameSite cookie
@@ -123,10 +123,10 @@ def refresh_access_token(
         
         # Create new tokens
         access_token = security.create_access_token(
-            data={"sub": user.email}
+            data={"sub": user.email, "source": source.value}
         )
         new_refresh_token = security.create_refresh_token(
-            data={"sub": user.email}
+            data={"sub": user.email, "source": source.value}
         )
         
         # Update refresh token cookie

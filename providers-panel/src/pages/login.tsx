@@ -34,7 +34,11 @@ const LoginPage = () => {
 
       const data = await response.json();
       login(data.access_token);
-      router.push('/');
+      
+      // Add a small delay to ensure token is set before navigation
+      setTimeout(() => {
+        router.push('/');
+      }, 100);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

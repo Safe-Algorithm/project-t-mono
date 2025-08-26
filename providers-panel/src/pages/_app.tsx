@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app';
 import Layout from '@/components/layout/Layout';
 import { UserProvider, useAuth } from '@/context/UserContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/router';
@@ -32,18 +33,20 @@ export default function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   return (
-    <UserProvider>
-      <GlobalAuthHandler>
-        <Layout>
-          {publicPages.includes(router.pathname) ? (
-            <Component {...pageProps} />
-          ) : (
-            <ProtectedRoute>
+    <ThemeProvider>
+      <UserProvider>
+        <GlobalAuthHandler>
+          <Layout>
+            {publicPages.includes(router.pathname) ? (
               <Component {...pageProps} />
-            </ProtectedRoute>
-          )}
-        </Layout>
-      </GlobalAuthHandler>
-    </UserProvider>
+            ) : (
+              <ProtectedRoute>
+                <Component {...pageProps} />
+              </ProtectedRoute>
+            )}
+          </Layout>
+        </GlobalAuthHandler>
+      </UserProvider>
+    </ThemeProvider>
   );
 }
