@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import ProtectedRoute from '../components/ProtectedRoute';
@@ -9,6 +10,7 @@ interface ProviderRequest {
   company_email: string;
   company_phone: string;
   status: string;
+  provider_id: string;
   user: {
     name: string;
     email: string;
@@ -20,6 +22,7 @@ const ProviderRequestsPageContent = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!token) return;
@@ -96,8 +99,12 @@ const ProviderRequestsPageContent = () => {
           </thead>
           <tbody>
             {requests.map((request) => (
-              <tr key={request.id}>
-                <td className="py-2 px-4 border-b">{request.company_name}</td>
+              <tr 
+                key={request.id}
+                className="hover:bg-gray-50 cursor-pointer"
+                onClick={() => router.push(`/providers/${request.provider_id}`)}
+              >
+                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{request.company_name}</td>
                 <td className="py-2 px-4 border-b">{request.company_email}</td>
                 <td className="py-2 px-4 border-b">{request.user.name}</td>
                 <td className="py-2 px-4 border-b">{request.status}</td>
@@ -105,13 +112,19 @@ const ProviderRequestsPageContent = () => {
                   {request.status === 'pending' && (
                     <>
                       <button 
-                        onClick={() => handleUpdateRequest(request.id, 'approved')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateRequest(request.id, 'approved');
+                        }}
                         className="bg-green-500 text-white px-2 py-1 rounded mr-2"
                       >
                         Approve
                       </button>
                       <button 
-                        onClick={() => handleUpdateRequest(request.id, 'denied')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUpdateRequest(request.id, 'denied');
+                        }}
                         className="bg-red-500 text-white px-2 py-1 rounded"
                       >
                         Deny

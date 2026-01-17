@@ -9,6 +9,7 @@ interface Provider {
   company_email: string;
   company_phone: string;
   is_active?: boolean;
+  status?: string;
 }
 
 const ProvidersPage = () => {
@@ -65,7 +66,19 @@ const ProvidersPage = () => {
                 <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{provider.company_name}</td>
                 <td className="py-2 px-4 border-b">{provider.company_email}</td>
                 <td className="py-2 px-4 border-b">{provider.company_phone}</td>
-                <td className="py-2 px-4 border-b">{provider.is_active ? 'Active' : 'Inactive'}</td>
+                <td className="py-2 px-4 border-b">
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    provider.status === 'approved' 
+                      ? 'bg-green-100 text-green-800' 
+                      : provider.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : provider.status === 'denied'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {provider.status || 'unknown'}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>

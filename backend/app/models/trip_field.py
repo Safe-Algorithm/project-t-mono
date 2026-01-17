@@ -1,13 +1,6 @@
-import uuid
 from enum import Enum
-from typing import TYPE_CHECKING, List, Dict, Any
+from typing import Dict, Any
 
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import ENUM as SQLEnum
-from sqlmodel import Field, Relationship, SQLModel
-
-if TYPE_CHECKING:
-    from .trip import Trip
 
 
 class TripFieldType(str, Enum):
@@ -63,37 +56,43 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "display_name": "Full Name",
         "ui_type": UIFieldType.TEXT,
         "placeholder": "Enter full name",
-        "required": True
+        "required": True,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     },
     TripFieldType.EMAIL: {
         "display_name": "Email Address",
         "ui_type": UIFieldType.EMAIL,
         "placeholder": "Enter email address",
-        "required": True
+        "required": True,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     },
     TripFieldType.PHONE: {
         "display_name": "Phone Number",
         "ui_type": UIFieldType.PHONE,
         "placeholder": "Enter phone number",
-        "required": True
+        "required": True,
+        "available_validations": ["phone_country_codes", "phone_min_length", "phone_max_length", "regex_pattern"]
     },
     TripFieldType.ID_IQAMA_NUMBER: {
         "display_name": "ID/Iqama Number",
         "ui_type": UIFieldType.TEXT,
         "placeholder": "Enter ID or Iqama number",
-        "required": True
+        "required": True,
+        "available_validations": ["saudi_id_format", "iqama_format", "regex_pattern", "min_length", "max_length"]
     },
     TripFieldType.PASSPORT_NUMBER: {
         "display_name": "Passport Number",
         "ui_type": UIFieldType.TEXT,
         "placeholder": "Enter passport number",
-        "required": True
+        "required": True,
+        "available_validations": ["passport_format", "regex_pattern", "min_length", "max_length"]
     },
     TripFieldType.DATE_OF_BIRTH: {
         "display_name": "Date of Birth",
         "ui_type": UIFieldType.DATE,
         "placeholder": "Select date of birth",
-        "required": True
+        "required": True,
+        "available_validations": ["min_age", "max_age"]
     },
     TripFieldType.GENDER: {
         "display_name": "Gender",
@@ -103,25 +102,29 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
             {"value": GenderType.FEMALE.value, "label": "Female"},
             {"value": GenderType.PREFER_NOT_TO_SAY.value, "label": "Prefer not to say"}
         ],
-        "required": False
+        "required": False,
+        "available_validations": ["gender_restrictions"]
     },
     TripFieldType.ADDRESS: {
         "display_name": "Address",
         "ui_type": UIFieldType.TEXTAREA,
         "placeholder": "Enter full address",
-        "required": False
+        "required": False,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     },
     TripFieldType.CITY: {
         "display_name": "City",
-        "ui_type": UIFieldType.TEXT,
+        "ui_type": UIFieldType.TEXT, 
         "placeholder": "Enter city",
-        "required": False
+        "required": False,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     },
     TripFieldType.COUNTRY: {
         "display_name": "Country",
         "ui_type": UIFieldType.TEXT,
         "placeholder": "Enter country",
-        "required": False
+        "required": False,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     },
     TripFieldType.DISABILITY: {
         "display_name": "Disability",
@@ -134,28 +137,23 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
             {"value": DisabilityType.COGNITIVE.value, "label": "Cognitive"},
             {"value": DisabilityType.OTHER.value, "label": "Other"}
         ],
-        "required": False
+        "required": False,
+        "available_validations": []
     },
     TripFieldType.MEDICAL_CONDITIONS: {
         "display_name": "Medical Conditions",
         "ui_type": UIFieldType.TEXTAREA,
         "placeholder": "Describe any medical conditions",
-        "required": False
+        "required": False,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     },
     TripFieldType.ALLERGIES: {
         "display_name": "Allergies",
         "ui_type": UIFieldType.TEXTAREA,
         "placeholder": "List any allergies",
-        "required": False
+        "required": False,
+        "available_validations": ["min_length", "max_length", "regex_pattern"]
     }
 }
 
 
-class TripRequiredField(SQLModel, table=True):
-    """Model to store which fields are required for a specific trip"""
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    trip_id: uuid.UUID = Field(foreign_key="trip.id")
-    field_type: TripFieldType = Field(sa_column=Column(SQLEnum(TripFieldType, name='tripfieldtype', values_callable=lambda obj: [e.value for e in obj])))
-    is_required: bool = Field(default=True)
-    
-    trip: "Trip" = Relationship(back_populates="required_fields")

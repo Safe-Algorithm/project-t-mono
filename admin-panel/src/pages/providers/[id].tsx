@@ -8,6 +8,14 @@ interface Provider {
   company_email: string;
   company_phone: string;
   is_active?: boolean;
+  status?: string;
+}
+
+interface TripPackage {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
 }
 
 interface Trip {
@@ -16,10 +24,10 @@ interface Trip {
   description: string;
   start_date: string;
   end_date: string;
-  price: number;
   max_participants: number;
   is_active: boolean;
   provider_id: string;
+  packages: TripPackage[];
 }
 
 interface User {
@@ -138,9 +146,17 @@ const ProviderDetailPage = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Status</label>
-            <p className={`mt-1 text-sm font-semibold ${provider.is_active ? 'text-green-600' : 'text-red-600'}`}>
-              {provider.is_active ? 'Active' : 'Inactive'}
-            </p>
+            <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-semibold ${
+              provider.status === 'approved' 
+                ? 'bg-green-100 text-green-800' 
+                : provider.status === 'pending'
+                ? 'bg-yellow-100 text-yellow-800'
+                : provider.status === 'denied'
+                ? 'bg-red-100 text-red-800'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {provider.status || 'unknown'}
+            </span>
           </div>
         </div>
       </div>
@@ -178,7 +194,12 @@ const ProviderDetailPage = () => {
                     </td>
                     <td className="py-2 px-4 border-b">{new Date(trip.start_date).toLocaleDateString()}</td>
                     <td className="py-2 px-4 border-b">{new Date(trip.end_date).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 border-b">${trip.price}</td>
+                    <td className="py-2 px-4 border-b">
+                      {trip.packages.length > 0 ? 
+                        trip.packages.map(pkg => `${pkg.price} ${pkg.currency || 'SAR'}`).join(', ') : 
+                        'No packages'
+                      }
+                    </td>
                     <td className="py-2 px-4 border-b">{trip.max_participants}</td>
                     <td className="py-2 px-4 border-b">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${

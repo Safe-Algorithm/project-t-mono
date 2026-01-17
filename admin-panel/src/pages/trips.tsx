@@ -3,16 +3,29 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import { useRouter } from 'next/router';
 
+interface Provider {
+  id: string;
+  company_name: string;
+}
+
+interface TripPackage {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+}
+
 interface Trip {
   id: string;
   name: string;
   description: string;
   start_date: string;
   end_date: string;
-  price: number;
   max_participants: number;
   is_active: boolean;
   provider_id: string;
+  provider: Provider;
+  packages: TripPackage[];
 }
 
 const TripsPage = () => {
@@ -54,7 +67,7 @@ const TripsPage = () => {
           <thead>
             <tr>
               <th className="py-2 px-4 border-b">Trip Name</th>
-              <th className="py-2 px-4 border-b">Provider ID</th>
+              <th className="py-2 px-4 border-b">Provider</th>
               <th className="py-2 px-4 border-b">Start Date</th>
               <th className="py-2 px-4 border-b">End Date</th>
               <th className="py-2 px-4 border-b">Price</th>
@@ -69,10 +82,18 @@ const TripsPage = () => {
                 onClick={() => router.push(`/trips/${trip.id}`)}
               >
                 <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{trip.name}</td>
-                <td className="py-2 px-4 border-b">{trip.provider_id}</td>
+                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800 cursor-pointer" onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/providers/${trip.provider.id}`);
+                }}>{trip.provider.company_name}</td>
                 <td className="py-2 px-4 border-b">{new Date(trip.start_date).toLocaleDateString()}</td>
                 <td className="py-2 px-4 border-b">{new Date(trip.end_date).toLocaleDateString()}</td>
-                <td className="py-2 px-4 border-b">${trip.price}</td>
+                <td className="py-2 px-4 border-b">
+                  {trip.packages.length > 0 ? 
+                    trip.packages.map(pkg => `${pkg.price} ${pkg.currency || 'SAR'}`).join(', ') : 
+                    'No packages'
+                  }
+                </td>
                 <td className="py-2 px-4 border-b">{trip.is_active ? 'Active' : 'Cancelled'}</td>
               </tr>
             ))}

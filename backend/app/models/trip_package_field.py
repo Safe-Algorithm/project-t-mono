@@ -1,6 +1,6 @@
 import uuid
-from typing import TYPE_CHECKING, List
-from sqlalchemy import Column
+from typing import TYPE_CHECKING, List, Optional, Dict, Any
+from sqlalchemy import Column, JSON
 from sqlalchemy.dialects.postgresql import ENUM as SQLEnum
 from sqlmodel import Field, Relationship, SQLModel
 
@@ -16,5 +16,6 @@ class TripPackageRequiredField(SQLModel, table=True):
     package_id: uuid.UUID = Field(foreign_key="trippackage.id")
     field_type: TripFieldType = Field(sa_column=Column(SQLEnum(TripFieldType, name='tripfieldtype', values_callable=lambda obj: [e.value for e in obj])))
     is_required: bool = Field(default=True)
+    validation_config: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     
     package: "TripPackage" = Relationship(back_populates="required_fields")

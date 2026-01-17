@@ -18,6 +18,7 @@ class FieldMetadata(BaseModel):
     placeholder: Optional[str] = None
     required: bool = True
     options: Optional[List[FieldOption]] = None
+    available_validations: Optional[List[str]] = None
 
 
 class AvailableFieldsResponse(BaseModel):

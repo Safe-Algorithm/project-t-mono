@@ -13,7 +13,6 @@ const TripListItem: React.FC<TripListItemProps> = ({ trip }) => {
     <div className="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
       <div>
         <h3 className="text-xl font-semibold">{trip.name}</h3>
-        <p className="text-gray-600">Base Price: ${trip.price}</p>
         <p className="text-gray-600">Dates: {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}</p>
         <div className="flex items-center gap-4 mt-2">
           <p className={`text-sm font-medium ${trip.is_active ? 'text-green-600' : 'text-red-600'}`}>
@@ -26,7 +25,7 @@ const TripListItem: React.FC<TripListItemProps> = ({ trip }) => {
         {hasPackages && (
           <div className="mt-2">
             <p className="text-sm text-gray-500">
-              Package prices: {trip.packages.map(pkg => `$${pkg.price}`).join(', ')}
+              Package prices: {trip.packages.map(pkg => `${pkg.price} ${pkg.currency || 'SAR'}`).join(', ')}
             </p>
           </div>
         )}

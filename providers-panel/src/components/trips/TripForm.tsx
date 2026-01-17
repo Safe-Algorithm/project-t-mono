@@ -1,10 +1,11 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Trip, CreateTripPackage, FieldMetadata } from '../../types/trip';
+import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig } from '../../types/trip';
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
+import ValidationConfigComponent from './ValidationConfig';
 
 interface TripFormProps {
   trip?: Trip;
-  onSubmit: (payload: TripCreatePayload | TripUpdatePayload, packages?: CreateTripPackage[], packageFields?: { [index: number]: string[] }) => void;
+  onSubmit: (payload: TripCreatePayload | TripUpdatePayload, packages?: CreateTripPackage[], packageFields?: { [index: number]: string[] }, validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } }) => void;
   isSubmitting: boolean;
 }
 
@@ -14,21 +15,25 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     description: '',
     start_date: '',
     end_date: '',
-    price: '',
     max_participants: '',
     is_active: true,
   });
 
   const [packages, setPackages] = useState<CreateTripPackage[]>([
-    { name: '', description: '', price: 0 }
+    { name: '', description: '', price: 0, currency: 'SAR' }
   ]);
 
   const [packageRequiredFields, setPackageRequiredFields] = useState<{ [index: number]: string[] }>({
-    0: []
+    0: ['name', 'date_of_birth'] // Always include mandatory fields
+  });
+
+  const [packageValidationConfigs, setPackageValidationConfigs] = useState<{ [packageIndex: number]: { [fieldName: string]: ValidationConfig } }>({
+    0: {} // Initialize with empty validation configs for first package
   });
 
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+  const [showValidationConfig, setShowValidationConfig] = useState<{ [packageIndex: number]: { [fieldName: string]: boolean } }>({});
 
   useEffect(() => {
     // Load available fields on component mount
@@ -43,6 +48,22 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     };
     
     loadAvailableFields();
+    
+    // Ensure mandatory fields are always selected for existing packages
+    const ensureMandatoryFields = () => {
+      setPackageRequiredFields(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(key => {
+          const mandatoryFields = ['name', 'date_of_birth'];
+          const currentFields = updated[parseInt(key)] || [];
+          const allFields = Array.from(new Set([...mandatoryFields, ...currentFields]));
+          updated[parseInt(key)] = allFields;
+        });
+        return updated;
+      });
+    };
+    
+    ensureMandatoryFields();
 
     if (trip) {
       // Populate trip form data
@@ -51,7 +72,6 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         description: trip.description,
         start_date: new Date(trip.start_date).toISOString().substring(0, 16),
         end_date: new Date(trip.end_date).toISOString().substring(0, 16),
-        price: trip.price.toString(),
         max_participants: trip.max_participants.toString(),
         is_active: trip.is_active,
       });
@@ -61,16 +81,36 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         const existingPackages: CreateTripPackage[] = trip.packages.map(pkg => ({
           name: pkg.name,
           description: pkg.description,
-          price: Number(pkg.price)
+          price: Number(pkg.price),
+          currency: pkg.currency || 'SAR'
         }));
         setPackages(existingPackages);
 
         // Populate existing required fields for each package
         const existingPackageFields: { [index: number]: string[] } = {};
+        const existingValidationConfigs: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } } = {};
+        
         trip.packages.forEach((pkg, index) => {
-          existingPackageFields[index] = pkg.required_fields || [];
+          const fields = pkg.required_fields || [];
+          // Always ensure mandatory fields are included
+          const mandatoryFields = ['name', 'date_of_birth'];
+          const allFields = Array.from(new Set([...mandatoryFields, ...fields]));
+          existingPackageFields[index] = allFields;
+          
+          // Populate existing validation configs
+          const packageValidationConfigs: { [fieldName: string]: ValidationConfig } = {};
+          if (pkg.required_fields_details) {
+            pkg.required_fields_details.forEach((fieldDetail: any) => {
+              if (fieldDetail.validation_config && Object.keys(fieldDetail.validation_config).length > 0) {
+                packageValidationConfigs[fieldDetail.field_type] = fieldDetail.validation_config;
+              }
+            });
+          }
+          existingValidationConfigs[index] = packageValidationConfigs;
         });
+        
         setPackageRequiredFields(existingPackageFields);
+        setPackageValidationConfigs(existingValidationConfigs);
       }
     }
   }, [trip]);
@@ -83,8 +123,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
   const addPackage = () => {
     const newIndex = packages.length;
-    setPackages([...packages, { name: '', description: '', price: 0 }]);
-    setPackageRequiredFields(prev => ({ ...prev, [newIndex]: [] }));
+    setPackages([...packages, { name: '', description: '', price: 0, currency: 'SAR' }]);
+    // Always include mandatory fields for new packages
+    setPackageRequiredFields(prev => ({ ...prev, [newIndex]: ['name', 'date_of_birth'] }));
+    // Initialize empty validation configs for new package
+    setPackageValidationConfigs(prev => ({ ...prev, [newIndex]: {} }));
   };
 
   const removePackage = (index: number) => {
@@ -92,15 +135,20 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       setPackages(packages.filter((_, i) => i !== index));
       // Remove the fields for this package and reindex
       const newFields: { [index: number]: string[] } = {};
+      const newValidationConfigs: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } } = {};
+      
       Object.keys(packageRequiredFields).forEach(key => {
         const keyIndex = parseInt(key);
         if (keyIndex < index) {
           newFields[keyIndex] = packageRequiredFields[keyIndex];
+          newValidationConfigs[keyIndex] = packageValidationConfigs[keyIndex] || {};
         } else if (keyIndex > index) {
           newFields[keyIndex - 1] = packageRequiredFields[keyIndex];
+          newValidationConfigs[keyIndex - 1] = packageValidationConfigs[keyIndex] || {};
         }
       });
       setPackageRequiredFields(newFields);
+      setPackageValidationConfigs(newValidationConfigs);
     }
   };
 
@@ -118,12 +166,47 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   };
 
   const toggleRequiredField = (packageIndex: number, fieldName: string) => {
+    // Don't allow removal of mandatory fields
+    const mandatoryFields = ['name', 'date_of_birth'];
+    if (mandatoryFields.includes(fieldName)) {
+      return; // Do nothing for mandatory fields
+    }
+    
     const currentFields = packageRequiredFields[packageIndex] || [];
     const updatedFields = currentFields.includes(fieldName)
       ? currentFields.filter(f => f !== fieldName)
       : [...currentFields, fieldName];
     
     updatePackageRequiredFields(packageIndex, updatedFields);
+    
+    // If removing a field, also remove its validation config
+    if (currentFields.includes(fieldName) && !updatedFields.includes(fieldName)) {
+      const newValidationConfigs = { ...packageValidationConfigs };
+      if (newValidationConfigs[packageIndex]) {
+        delete newValidationConfigs[packageIndex][fieldName];
+      }
+      setPackageValidationConfigs(newValidationConfigs);
+    }
+  };
+
+  const updateFieldValidationConfig = (packageIndex: number, fieldName: string, config: ValidationConfig) => {
+    setPackageValidationConfigs(prev => ({
+      ...prev,
+      [packageIndex]: {
+        ...prev[packageIndex],
+        [fieldName]: config
+      }
+    }));
+  };
+
+  const toggleValidationConfigVisibility = (packageIndex: number, fieldName: string) => {
+    setShowValidationConfig(prev => ({
+      ...prev,
+      [packageIndex]: {
+        ...prev[packageIndex],
+        [fieldName]: !prev[packageIndex]?.[fieldName]
+      }
+    }));
   };
 
   const validateForm = (): boolean => {
@@ -160,12 +243,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
     const payload = {
         ...formData,
-        price: parseFloat(formData.price),
         max_participants: parseInt(formData.max_participants, 10),
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
     };
-    onSubmit(payload, packages, packageRequiredFields);
+    onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs);
   };
 
   return (
@@ -186,7 +268,6 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Description" required />
       <input type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange} required />
       <input type="datetime-local" name="end_date" value={formData.end_date} onChange={handleChange} required />
-      <input type="number" name="price" value={formData.price} onChange={handleChange} placeholder="Base Price" required />
       <input type="number" name="max_participants" value={formData.max_participants} onChange={handleChange} placeholder="Max Participants" required />
       <label>
         <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} />
@@ -216,30 +297,96 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             placeholder="Package Description"
             required
           />
-          <input
-            type="number"
-            value={pkg.price}
-            onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)}
-            placeholder="Package Price"
-            min="0.01"
-            step="0.01"
-            required
-          />
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <input
+              type="number"
+              value={pkg.price}
+              onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)}
+              placeholder="Package Price"
+              min="0.01"
+              step="0.01"
+              required
+              style={{ flex: 1 }}
+            />
+            <select
+              value={pkg.currency}
+              onChange={(e) => updatePackage(index, 'currency', e.target.value)}
+              style={{ minWidth: '80px' }}
+            >
+              <option value="SAR">SAR</option>
+            </select>
+          </div>
           
           <div style={{ marginTop: '1rem' }}>
             <h5>Required Fields for This Package</h5>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', marginTop: '0.5rem' }}>
-              {availableFields.map((field) => (
-                <label key={field.field_name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.9rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={(packageRequiredFields[index] || []).includes(field.field_name)}
-                    onChange={() => toggleRequiredField(index, field.field_name)}
-                  />
-                  <span>{field.display_name}</span>
-                  <small style={{ color: '#666' }}>({field.ui_type})</small>
-                </label>
-              ))}
+            <p style={{ fontSize: '0.8rem', color: '#666', margin: '0.5rem 0' }}>
+              <strong>Note:</strong> Name and Date of Birth are always required and cannot be removed.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+              {availableFields.map((field) => {
+                const mandatoryFields = ['name', 'date_of_birth'];
+                const isMandatory = mandatoryFields.includes(field.field_name);
+                const isChecked = (packageRequiredFields[index] || []).includes(field.field_name) || isMandatory;
+                const hasValidations = field.available_validations && field.available_validations.length > 0;
+                const showConfig = showValidationConfig[index]?.[field.field_name] || false;
+                
+                return (
+                  <div key={field.field_name} style={{ 
+                    border: '1px solid #e0e0e0', 
+                    borderRadius: '6px', 
+                    padding: '1rem',
+                    backgroundColor: isChecked ? '#f8f9fa' : '#fff'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <label style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '0.5rem', 
+                        fontSize: '0.9rem',
+                        opacity: isMandatory ? 0.7 : 1,
+                        flex: 1
+                      }}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          disabled={isMandatory}
+                          onChange={() => toggleRequiredField(index, field.field_name)}
+                          style={{ transform: 'scale(1.1)' }}
+                        />
+                        <span style={{ fontWeight: '500' }}>{field.display_name}</span>
+                        <small style={{ color: '#666' }}>({field.ui_type})</small>
+                        {isMandatory && <small style={{ color: '#ff6b6b', fontWeight: 'bold' }}>(Required)</small>}
+                      </label>
+                      
+                      {isChecked && hasValidations && (
+                        <button
+                          type="button"
+                          onClick={() => toggleValidationConfigVisibility(index, field.field_name)}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            fontSize: '0.8rem',
+                            backgroundColor: showConfig ? '#2196F3' : '#f0f0f0',
+                            color: showConfig ? 'white' : '#333',
+                            border: '1px solid #ddd',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {showConfig ? 'Hide' : 'Configure'} Validations
+                        </button>
+                      )}
+                    </div>
+
+                    {isChecked && hasValidations && showConfig && (
+                      <ValidationConfigComponent
+                        fieldMetadata={field}
+                        currentConfig={packageValidationConfigs[index]?.[field.field_name] || {}}
+                        onConfigChange={(config) => updateFieldValidationConfig(index, field.field_name, config)}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
             {(packageRequiredFields[index] || []).length > 0 && (
               <div style={{ marginTop: '0.5rem' }}>

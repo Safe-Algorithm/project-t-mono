@@ -1,21 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/UserContext';
 import { UserRole } from '@/types/user';
 import ThemeToggle from '@/components/ThemeToggle';
+import { api } from '@/services/api';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
+interface ProviderRequest {
+  id: string;
+  status: string;
+  company_name: string;
+  company_email: string;
+  company_phone: string;
+  company_metadata: any;
+  denial_reason: string | null;
+}
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, isLoading, logout } = useAuth();
+  const [providerStatus, setProviderStatus] = useState<string | null>(null);
+  const [statusLoading, setStatusLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProviderStatus = async () => {
+      if (user) {
+        try {
+          const response = await api.get<ProviderRequest>('/providers/request-status');
+          setProviderStatus(response.status);
+        } catch (error) {
+          console.error('Failed to fetch provider status:', error);
+        } finally {
+          setStatusLoading(false);
+        }
+      }
+    };
+
+    fetchProviderStatus();
+  }, [user]);
 
   const handleLogout = async () => {
     if (confirm('Are you sure you want to logout?')) {
       await logout();
     }
   };
+
+  const isApproved = providerStatus === 'approved';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -27,16 +59,32 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Provider Panel</h1>
               </div>
               <div className="flex space-x-4">
-                <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                  Dashboard
-                </Link>
-                <Link href="/trips" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                  Trips
-                </Link>
+                {/* Profile tab is always visible */}
                 <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
                   Profile
                 </Link>
-                {!isLoading && user?.role === UserRole.SUPER_PROVIDER && (
+                
+                {/* Request Status tab - only show for non-approved providers */}
+                {!statusLoading && !isApproved && (
+                  <Link href="/request-status" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                    Request Status
+                  </Link>
+                )}
+                
+                {/* Dashboard and Trips tabs - only show for approved providers */}
+                {!statusLoading && isApproved && (
+                  <>
+                    <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                      Dashboard
+                    </Link>
+                    <Link href="/trips" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                      Trips
+                    </Link>
+                  </>
+                )}
+                
+                {/* Team tab only for approved super users */}
+                {!isLoading && !statusLoading && user?.role === UserRole.SUPER_USER && isApproved && (
                   <Link href="/team" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
                     Team
                   </Link>

@@ -16,7 +16,7 @@ def list_admin_users(
     limit: int = 100,
     current_user: User = Depends(get_current_active_superuser),
 ):
-    """Retrieve admin users (ADMIN and SUPER_ADMIN roles)."""
+    """Retrieve admin users (SUPER_USER role with ADMIN_PANEL source)."""
     users = user_crud.get_admin_users(session=session, skip=skip, limit=limit)
     return users
 
@@ -27,7 +27,7 @@ def list_provider_users(
     limit: int = 100,
     current_user: User = Depends(get_current_active_superuser),
 ):
-    """Retrieve provider users (PROVIDER and SUPER_PROVIDER roles)."""
+    """Retrieve provider users (users with PROVIDER_PANEL source)."""
     users = user_crud.get_provider_users(session=session, skip=skip, limit=limit)
     return users
 

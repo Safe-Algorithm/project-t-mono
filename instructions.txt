@@ -342,4 +342,5 @@ instruction set 8:
 instruction set 9:
 1- providers panel: please bring providers panel to the latest provider chnages in the backend. including trip packages and packages fields.
 2- backend and providers panel: please make sure that a provider adds at least one package to the trip. backend and provider panel should prevent this.
-3- providers panel: please make sure if a provider creates a trip that there's a detailed page for it in the providers panel. where the provder can see trip packages and packages fields. 
+3- providers panel: please make sure if a provider creates a trip that there's a detailed page for it in the providers panel. where the provder can see trip packages and packages fields.
+

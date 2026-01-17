@@ -23,6 +23,8 @@ class TripRegistration(SQLModel, table=True):
     # Registration metadata
     registration_date: datetime = Field(default_factory=datetime.utcnow)
     total_participants: int = Field(default=1)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     total_amount: Decimal = Field(decimal_places=2, max_digits=10)
     status: str = Field(default="pending")  # pending, confirmed, cancelled
     
@@ -37,6 +39,10 @@ class TripRegistrationParticipant(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     registration_id: uuid.UUID = Field(foreign_key="tripregistration.id")
     package_id: Optional[uuid.UUID] = Field(default=None, foreign_key="trippackage.id")  # Each participant can choose their own package
+    
+    # Registration tracking fields
+    registration_user_id: uuid.UUID = Field(foreign_key="user.id")  # The user who registered this participant
+    is_registration_user: bool = Field(default=False)  # True if this participant is the user who made the registration
     
     # Participant details based on required fields
     id_iqama_number: Optional[str] = Field(default=None, max_length=50)
@@ -59,3 +65,4 @@ class TripRegistrationParticipant(SQLModel, table=True):
     # Relationships
     registration: "TripRegistration" = Relationship(back_populates="participants")
     package: Optional["TripPackage"] = Relationship()
+    registration_user: "User" = Relationship()  # The user who registered this participant

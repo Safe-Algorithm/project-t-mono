@@ -9,6 +9,7 @@ from app.models.trip_field import GenderType, DisabilityType
 
 class TripParticipantBase(BaseModel):
     package_id: Optional[uuid.UUID] = None  # Each participant can choose their own package
+    is_registration_user: bool = False  # True if this participant is the user who made the registration
     id_iqama_number: Optional[str] = None
     passport_number: Optional[str] = None
     name: Optional[str] = None
@@ -32,6 +33,7 @@ class TripParticipantCreate(TripParticipantBase):
 class TripRegistrationParticipant(TripParticipantBase):
     id: uuid.UUID
     registration_id: uuid.UUID
+    registration_user_id: uuid.UUID  # The user who registered this participant
 
     class Config:
         from_attributes = True

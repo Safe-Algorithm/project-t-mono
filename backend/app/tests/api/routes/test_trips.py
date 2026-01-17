@@ -14,13 +14,12 @@ import datetime
 import uuid
 
 def test_create_trip(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     data = {
         "name": "Test Trip",
         "description": "Test Description",
         "start_date": str(datetime.datetime.utcnow()),
         "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=1)),
-        "price": 100.0,
         "max_participants": 10,
         "location": "Test Location"
     }
@@ -30,14 +29,13 @@ def test_create_trip(client: TestClient, session: Session) -> None:
     assert created_trip["name"] == data["name"]
 
 def test_read_trips(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Provider",
         description="A trip created for a specific provider",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Provider's Location",
-        price=150.0,
         max_participants=20
     )
     crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -47,14 +45,13 @@ def test_read_trips(client: TestClient, session: Session) -> None:
     assert len(trips) > 0
 
 def test_read_trip(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
-        name="Test Trip to Read",
-        description="A trip to be read",
+        name="Test Trip for Reading",
+        description="A trip created for reading test",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Readable Location",
-        price=200.0,
         max_participants=5
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -82,14 +79,13 @@ def test_read_trip(client: TestClient, session: Session) -> None:
 
 def test_read_trip_without_packages_fails(client: TestClient, session: Session) -> None:
     """Test that reading a trip without packages returns 400 error"""
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip Without Packages",
         description="A trip without packages should fail",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="No Package Location",
-        price=200.0,
         max_participants=5
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -102,14 +98,13 @@ def test_read_trip_without_packages_fails(client: TestClient, session: Session) 
 
 
 def test_update_trip(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip to Update",
         description="A trip to be updated",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Updatable Location",
-        price=250.0,
         max_participants=15
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -120,14 +115,13 @@ def test_update_trip(client: TestClient, session: Session) -> None:
     assert content["name"] == data["name"]
 
 def test_delete_trip(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip to Delete",
         description="A trip to be deleted",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Deletable Location",
-        price=300.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -138,76 +132,19 @@ def test_delete_trip(client: TestClient, session: Session) -> None:
     assert response.status_code == 404
 
 
-# Tests for Trip Required Fields
-def test_set_trip_required_fields(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
-    trip_in = TripCreate(
-        name="Test Trip for Required Fields",
-        description="A trip to test required fields",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        location="Test Location",
-        price=100.0,
-        max_participants=10
-    )
-    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
-    
-    # Set required fields
-    field_types = ["name", "phone", "email"]
-    response = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/required-fields",
-        headers=headers,
-        json=field_types
-    )
-    assert response.status_code == 200
-    assert response.json()["message"] == "Required fields updated successfully"
-
-
-def test_get_trip_required_fields(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
-    trip_in = TripCreate(
-        name="Test Trip for Getting Required Fields",
-        description="A trip to test getting required fields",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        location="Test Location",
-        price=100.0,
-        max_participants=10
-    )
-    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
-    
-    # Set required fields first
-    field_types = ["name", "phone"]
-    client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/required-fields",
-        headers=headers,
-        json=field_types
-    )
-    
-    # Get required fields
-    response = client.get(
-        f"{settings.API_V1_STR}/trips/{trip.id}/required-fields",
-        headers=headers
-    )
-    assert response.status_code == 200
-    response_data = response.json()
-    fields = response_data["required_fields"]
-    assert len(fields) == 2
-    field_types_returned = [field["field_type"] for field in fields]
-    assert "name" in field_types_returned
-    assert "phone" in field_types_returned
+# Note: Trip required fields tests removed - fields are now managed at package level
+# See package required fields tests below for field management functionality
 
 
 # Tests for Trip Packages
 def test_create_trip_package(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Package",
         description="A trip to test packages",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -229,14 +166,13 @@ def test_create_trip_package(client: TestClient, session: Session) -> None:
 
 
 def test_get_trip_packages(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Getting Packages",
         description="A trip to test getting packages",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -265,14 +201,13 @@ def test_get_trip_packages(client: TestClient, session: Session) -> None:
 
 
 def test_update_trip_package(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Package Update",
         description="A trip to test package updates",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -309,14 +244,13 @@ def test_update_trip_package(client: TestClient, session: Session) -> None:
 # Tests for Trip Registration
 def test_register_for_trip_single_participant(client: TestClient, session: Session) -> None:
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Registration",
         description="A trip to test registration",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -365,14 +299,13 @@ def test_register_for_trip_single_participant(client: TestClient, session: Sessi
 
 def test_register_for_trip_multiple_participants(client: TestClient, session: Session) -> None:
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Multi Registration",
         description="A trip to test multi-participant registration",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -427,14 +360,13 @@ def test_register_for_trip_multiple_participants(client: TestClient, session: Se
 
 def test_register_for_trip_with_required_fields_validation(client: TestClient, session: Session) -> None:
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Required Fields Validation",
         description="A trip to test required fields validation",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -480,14 +412,13 @@ def test_register_for_trip_with_required_fields_validation(client: TestClient, s
 
 # Tests for Trip Package Required Fields
 def test_create_trip_package_with_required_fields(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Package with Required Fields",
         description="A trip to test packages with required fields",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -496,7 +427,7 @@ def test_create_trip_package_with_required_fields(client: TestClient, session: S
         "name": "Adult Package",
         "description": "Package for adults with phone requirement",
         "price": 150.0,
-        "required_fields": ["name", "phone", "email"]
+        "required_fields": ["phone", "email"]  # name and date_of_birth are automatically added
     }
     response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages",
@@ -506,18 +437,19 @@ def test_create_trip_package_with_required_fields(client: TestClient, session: S
     assert response.status_code == 200
     package = response.json()
     assert package["name"] == package_data["name"]
-    assert set(package["required_fields"]) == set(package_data["required_fields"])
+    # Check that mandatory fields are always included
+    expected_fields = set(["name", "date_of_birth"] + package_data["required_fields"])
+    assert set(package["required_fields"]) == expected_fields
 
 
 def test_update_trip_package_required_fields(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Package Update with Required Fields",
         description="A trip to test package required fields updates",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -527,7 +459,7 @@ def test_update_trip_package_required_fields(client: TestClient, session: Sessio
         "name": "Basic Package",
         "description": "Basic package",
         "price": 100.0,
-        "required_fields": ["name", "phone"]
+        "required_fields": ["phone"]  # name and date_of_birth are automatically added
     }
     create_response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages",
@@ -539,7 +471,7 @@ def test_update_trip_package_required_fields(client: TestClient, session: Sessio
     # Update the package with different required fields
     update_data = {
         "name": "Updated Basic Package",
-        "required_fields": ["name", "phone", "email", "date_of_birth"]
+        "required_fields": ["phone", "email"]  # name and date_of_birth are automatically added
     }
     response = client.put(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages/{package_id}",
@@ -549,18 +481,19 @@ def test_update_trip_package_required_fields(client: TestClient, session: Sessio
     assert response.status_code == 200
     updated_package = response.json()
     assert updated_package["name"] == update_data["name"]
-    assert set(updated_package["required_fields"]) == set(update_data["required_fields"])
+    # Check that mandatory fields are always included
+    expected_fields = set(["name", "date_of_birth"] + update_data["required_fields"])
+    assert set(updated_package["required_fields"]) == expected_fields
 
 
 def test_set_package_required_fields(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Package Required Fields",
         description="A trip to test setting package required fields",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -579,7 +512,7 @@ def test_set_package_required_fields(client: TestClient, session: Session) -> No
     package_id = create_response.json()["id"]
     
     # Set required fields for the package
-    field_types = ["name", "phone", "email"]
+    field_types = ["phone", "email"]  # name and date_of_birth are automatically added
     response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages/{package_id}/required-fields",
         headers=headers,
@@ -590,14 +523,13 @@ def test_set_package_required_fields(client: TestClient, session: Session) -> No
 
 
 def test_get_package_required_fields(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Getting Package Required Fields",
         description="A trip to test getting package required fields",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -616,7 +548,7 @@ def test_get_package_required_fields(client: TestClient, session: Session) -> No
     package_id = create_response.json()["id"]
     
     # Set required fields first
-    field_types = ["name", "phone"]
+    field_types = ["phone"]  # name and date_of_birth are automatically added
     client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages/{package_id}/required-fields",
         headers=headers,
@@ -631,22 +563,22 @@ def test_get_package_required_fields(client: TestClient, session: Session) -> No
     assert response.status_code == 200
     response_data = response.json()
     fields = response_data["required_fields"]
-    assert len(fields) == 2
+    assert len(fields) == 3  # phone + mandatory name and date_of_birth
     field_types_returned = [field["field_type"] for field in fields]
     assert "name" in field_types_returned
+    assert "date_of_birth" in field_types_returned
     assert "phone" in field_types_returned
 
 
 def test_register_for_trip_with_package_specific_required_fields(client: TestClient, session: Session) -> None:
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Package-Specific Required Fields",
         description="A trip to test package-specific required fields validation",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -656,7 +588,7 @@ def test_register_for_trip_with_package_specific_required_fields(client: TestCli
         "name": "Adult Package",
         "description": "Package for adults",
         "price": 150.0,
-        "required_fields": ["name", "phone", "email", "id_iqama_number"]
+        "required_fields": ["phone", "email", "id_iqama_number"]  # name and date_of_birth are automatically added
     }
     adult_response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages",
@@ -669,7 +601,7 @@ def test_register_for_trip_with_package_specific_required_fields(client: TestCli
         "name": "Child Package",
         "description": "Package for children",
         "price": 100.0,
-        "required_fields": ["name", "date_of_birth"]  # Children don't need phone/email
+        "required_fields": []  # Only mandatory name and date_of_birth for children
     }
     child_response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages",
@@ -690,6 +622,7 @@ def test_register_for_trip_with_package_specific_required_fields(client: TestCli
             {
                 "package_id": adult_package_id,
                 "name": "John Doe",
+                "date_of_birth": "1990-01-01",  # Mandatory field
                 "phone": "+1234567890",
                 "email": "john@example.com",
                 "id_iqama_number": "123456789"
@@ -714,14 +647,13 @@ def test_register_for_trip_with_package_specific_required_fields(client: TestCli
 
 def test_register_for_trip_missing_package_required_fields(client: TestClient, session: Session) -> None:
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Missing Package Required Fields",
         description="A trip to test missing package required fields validation",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -731,7 +663,7 @@ def test_register_for_trip_missing_package_required_fields(client: TestClient, s
         "name": "Strict Package",
         "description": "Package with strict requirements",
         "price": 150.0,
-        "required_fields": ["name", "phone", "email"]
+        "required_fields": ["phone", "email"]  # name and date_of_birth are automatically added
     }
     package_response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/packages",
@@ -751,7 +683,8 @@ def test_register_for_trip_missing_package_required_fields(client: TestClient, s
         "participants": [
             {
                 "package_id": package_id,
-                "name": "John Doe"
+                "name": "John Doe",
+                "date_of_birth": "1990-01-01"
                 # Missing phone and email which are required for this package
             }
         ]
@@ -768,14 +701,13 @@ def test_register_for_trip_missing_package_required_fields(client: TestClient, s
 
 def test_get_trip_registrations(client: TestClient, session: Session) -> None:
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
         name="Test Trip for Getting Registrations",
         description="A trip to test getting registrations",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -813,7 +745,7 @@ def test_get_trip_registrations(client: TestClient, session: Session) -> None:
 def test_get_available_package_fields(client: TestClient, session: Session):
     """Test getting available field types with metadata for package creation."""
     # Create a provider user for authentication
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     
     response = client.get(f"{settings.API_V1_STR}/trips/available-fields", headers=provider_headers)
     assert response.status_code == 200
@@ -870,3 +802,265 @@ def test_get_available_package_fields(client: TestClient, session: Session):
             assert len(field["options"]) == 3  # male, female, prefer_not_to_say
         elif field["field_name"] == "medical_conditions":
             assert field["ui_type"] == "textarea"
+
+
+# Tests for registration user tracking features
+def test_register_for_trip_with_registration_user_tracking(client: TestClient, session: Session) -> None:
+    """Test that registration_user_id is automatically set and is_registration_user works correctly."""
+    # Create provider and trip
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name="Test Trip for Registration User Tracking",
+        description="A trip to test registration user tracking",
+        start_date=datetime.datetime.utcnow(),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        location="Test Location",
+        max_participants=10
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    
+    # Create package
+    package_data = {
+        "name": "Test Package",
+        "description": "Test package",
+        "price": 100.0,
+        "required_fields": []
+    }
+    package_response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/packages",
+        headers=provider_headers,
+        json=package_data
+    )
+    package_id = package_response.json()["id"]
+    
+    # Create mobile app user for registration
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    
+    # Register with the user marking themselves as the registration user
+    registration_data = {
+        "total_participants": 2,
+        "total_amount": 200.0,
+        "status": "pending",
+        "participants": [
+            {
+                "package_id": package_id,
+                "name": "John Doe",
+                "date_of_birth": "1990-01-01",
+                "is_registration_user": True  # This participant is the user making the registration
+            },
+            {
+                "package_id": package_id,
+                "name": "Jane Doe",
+                "date_of_birth": "1992-05-15",
+                "is_registration_user": False  # This is someone else
+            }
+        ]
+    }
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json=registration_data
+    )
+    assert response.status_code == 200
+    registration = response.json()
+    
+    # Verify registration was created correctly
+    assert registration["total_participants"] == 2
+    assert registration["user_id"] == str(mobile_user.id)
+    
+    # Verify participants have correct registration_user_id and is_registration_user values
+    participants = registration["participants"]
+    assert len(participants) == 2
+    
+    for participant in participants:
+        # All participants should have registration_user_id set to the mobile user's ID
+        assert participant["registration_user_id"] == str(mobile_user.id)
+        
+        # Check is_registration_user flag
+        if participant["name"] == "John Doe":
+            assert participant["is_registration_user"] == True
+        else:
+            assert participant["is_registration_user"] == False
+
+
+def test_register_for_trip_multiple_registration_users_fails(client: TestClient, session: Session) -> None:
+    """Test that only one participant can be marked as registration user."""
+    # Create provider and trip
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name="Test Trip for Multiple Registration Users",
+        description="A trip to test multiple registration users validation",
+        start_date=datetime.datetime.utcnow(),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        location="Test Location",
+        max_participants=10
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    
+    # Create package
+    package_data = {
+        "name": "Test Package",
+        "description": "Test package",
+        "price": 100.0,
+        "required_fields": []
+    }
+    package_response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/packages",
+        headers=provider_headers,
+        json=package_data
+    )
+    package_id = package_response.json()["id"]
+    
+    # Create mobile app user for registration
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    
+    # Try to register with multiple participants marked as registration user
+    registration_data = {
+        "total_participants": 2,
+        "total_amount": 200.0,
+        "status": "pending",
+        "participants": [
+            {
+                "package_id": package_id,
+                "name": "John Doe",
+                "date_of_birth": "1990-01-01",
+                "is_registration_user": True  # First registration user
+            },
+            {
+                "package_id": package_id,
+                "name": "Jane Doe",
+                "date_of_birth": "1992-05-15",
+                "is_registration_user": True  # Second registration user - should fail
+            }
+        ]
+    }
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json=registration_data
+    )
+    assert response.status_code == 400
+    assert "Only one participant can be marked as the registration user" in response.json()["detail"]
+
+
+def test_register_for_trip_no_registration_user_allowed(client: TestClient, session: Session) -> None:
+    """Test that registration can succeed with no participant marked as registration user."""
+    # Create provider and trip
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name="Test Trip for No Registration User",
+        description="A trip to test no registration user scenario",
+        start_date=datetime.datetime.utcnow(),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        location="Test Location",
+        max_participants=10
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    
+    # Create package
+    package_data = {
+        "name": "Test Package",
+        "description": "Test package",
+        "price": 100.0,
+        "required_fields": []
+    }
+    package_response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/packages",
+        headers=provider_headers,
+        json=package_data
+    )
+    package_id = package_response.json()["id"]
+    
+    # Create mobile app user for registration
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    
+    # Register with no participant marked as registration user (registering for others only)
+    registration_data = {
+        "total_participants": 2,
+        "total_amount": 200.0,
+        "status": "pending",
+        "participants": [
+            {
+                "package_id": package_id,
+                "name": "John Doe",
+                "date_of_birth": "1990-01-01",
+                "is_registration_user": False
+            },
+            {
+                "package_id": package_id,
+                "name": "Jane Doe",
+                "date_of_birth": "1992-05-15",
+                "is_registration_user": False
+            }
+        ]
+    }
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json=registration_data
+    )
+    assert response.status_code == 200
+    registration = response.json()
+    
+    # Verify all participants have registration_user_id set but none are marked as registration user
+    participants = registration["participants"]
+    for participant in participants:
+        assert participant["registration_user_id"] == str(mobile_user.id)
+        assert participant["is_registration_user"] == False
+
+
+def test_mandatory_fields_always_included_in_packages(client: TestClient, session: Session) -> None:
+    """Test that name and date_of_birth are always included as required fields."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name="Test Trip for Mandatory Fields",
+        description="A trip to test mandatory required fields",
+        start_date=datetime.datetime.utcnow(),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        location="Test Location",
+        max_participants=10
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
+    
+    # Create package with no required fields specified
+    package_data = {
+        "name": "Basic Package",
+        "description": "Package with no explicit required fields",
+        "price": 100.0
+    }
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/packages",
+        headers=headers,
+        json=package_data
+    )
+    assert response.status_code == 200
+    package = response.json()
+    
+    # Verify mandatory fields are automatically included
+    required_fields = set(package["required_fields"])
+    assert "name" in required_fields
+    assert "date_of_birth" in required_fields
+    assert len(required_fields) == 2  # Only the mandatory fields
+    
+    # Create another package with some fields specified
+    package_data_2 = {
+        "name": "Advanced Package",
+        "description": "Package with additional required fields",
+        "price": 150.0,
+        "required_fields": ["phone", "email"]
+    }
+    response_2 = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/packages",
+        headers=headers,
+        json=package_data_2
+    )
+    assert response_2.status_code == 200
+    package_2 = response_2.json()
+    
+    # Verify mandatory fields are included along with specified fields
+    required_fields_2 = set(package_2["required_fields"])
+    assert "name" in required_fields_2
+    assert "date_of_birth" in required_fields_2
+    assert "phone" in required_fields_2
+    assert "email" in required_fields_2
+    assert len(required_fields_2) == 4  # Mandatory + specified fields

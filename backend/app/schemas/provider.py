@@ -18,12 +18,12 @@ class ProviderRegistrationRequest(SQLModel):
 # Schema for reading a provider request
 class ProviderRequestRead(SQLModel):
     id: uuid.UUID
+    status: str
+    denial_reason: Optional[str] = None
     company_name: str
     company_email: str
     company_phone: str
-    company_metadata: Optional[Dict[str, Any]] = None
-    status: str
-    denial_reason: Optional[str] = None
+    provider_id: uuid.UUID
     user: UserPublic
 
 
@@ -42,3 +42,4 @@ class ProviderPublic(SQLModel):
     company_email: str
     company_phone: str
     company_metadata: Optional[Dict[str, Any]] = None
+    status: Optional[str] = None  # Status from provider request

@@ -1,15 +1,17 @@
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
 from decimal import Decimal
 import uuid
 
 from app.models.trip_field import TripFieldType
+from app.models.trip_package import Currency
 
 
 class TripPackageBase(BaseModel):
     name: str
     description: str
     price: Decimal
+    currency: Currency = Currency.SAR
     is_active: bool = True
 
 
@@ -21,6 +23,7 @@ class TripPackageUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     price: Optional[Decimal] = None
+    currency: Optional[Currency] = None
     is_active: Optional[bool] = None
     required_fields: Optional[List[TripFieldType]] = None
 
@@ -33,6 +36,15 @@ class TripPackage(TripPackageBase):
         from_attributes = True
 
 
+class TripPackageRequiredFieldDetail(BaseModel):
+    """Detailed required field information with validation config"""
+    id: str
+    package_id: str
+    field_type: str
+    is_required: bool
+    validation_config: Optional[Dict[str, Any]] = None
+
 class TripPackageWithRequiredFields(TripPackage):
     """Trip package response with required fields populated"""
     required_fields: List[TripFieldType] = []
+    required_fields_details: Optional[List[TripPackageRequiredFieldDetail]] = []

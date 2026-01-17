@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import TripForm from '../../components/trips/TripForm';
 import { tripService, TripCreatePayload, TripUpdatePayload } from '../../services/tripService';
-import { CreateTripPackage, PackageRequiredField } from '../../types/trip';
+import { CreateTripPackage, PackageRequiredField, ValidationConfig } from '../../types/trip';
 
 const NewTripPage = () => {
   const router = useRouter();
@@ -12,7 +12,8 @@ const NewTripPage = () => {
   const handleSubmit = async (
     payload: TripCreatePayload | TripUpdatePayload, 
     packages?: CreateTripPackage[], 
-    packageFields?: { [index: number]: string[] }
+    packageFields?: { [index: number]: string[] },
+    validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } }
   ) => {
     setIsSubmitting(true);
     setError(null);
@@ -29,8 +30,21 @@ const NewTripPage = () => {
           // Set required fields for this package if any are selected
           const selectedFields = packageFields?.[i] || [];
           if (selectedFields.length > 0) {
-            const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({ field_type: fieldName }));
-            await tripService.setPackageRequiredFields(createdTrip.id, createdPackage.id, fields);
+            const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({
+              field_type: fieldName,
+              validation_config: validationConfigs?.[i]?.[fieldName] || {}
+            }));
+            
+            // Use the new validation-aware endpoint if validation configs are present
+            const hasValidationConfigs = fields.some(field => 
+              field.validation_config && Object.keys(field.validation_config).length > 0
+            );
+            
+            if (hasValidationConfigs) {
+              await tripService.setPackageRequiredFieldsWithValidation(createdTrip.id, createdPackage.id, fields);
+            } else {
+              await tripService.setPackageRequiredFields(createdTrip.id, createdPackage.id, fields);
+            }
           }
         }
       }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import TripForm from '../../../components/trips/TripForm';
 import { tripService, TripUpdatePayload } from '../../../services/tripService';
-import { Trip, CreateTripPackage, PackageRequiredField } from '../../../types/trip';
+import { Trip, CreateTripPackage, PackageRequiredField, ValidationConfig } from '../../../types/trip';
 
 const TripEditPage = () => {
   const router = useRouter();
@@ -36,7 +36,8 @@ const TripEditPage = () => {
   const handleSubmit = async (
     payload: TripUpdatePayload, 
     packages?: CreateTripPackage[], 
-    packageFields?: { [index: number]: string[] }
+    packageFields?: { [index: number]: string[] },
+    validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } }
   ) => {
     if (!id || typeof id !== 'string') return;
     setIsSubmitting(true);
@@ -68,8 +69,21 @@ const TripEditPage = () => {
           
           // Update required fields for this package
           const selectedFields = packageFields?.[i] || [];
-          const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({ field_type: fieldName }));
-          await tripService.setPackageRequiredFields(id, packageId, fields);
+          const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({
+            field_type: fieldName,
+            validation_config: validationConfigs?.[i]?.[fieldName] || {}
+          }));
+          
+          // Use the new validation-aware endpoint if validation configs are present
+          const hasValidationConfigs = fields.some(field => 
+            field.validation_config && Object.keys(field.validation_config).length > 0
+          );
+          
+          if (hasValidationConfigs) {
+            await tripService.setPackageRequiredFieldsWithValidation(id, packageId, fields);
+          } else {
+            await tripService.setPackageRequiredFields(id, packageId, fields);
+          }
         }
       }
       

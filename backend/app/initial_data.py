@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.core.db import engine
 from app.schemas.user import UserCreate
 from app.models.source import RequestSource
+from app.models.user import UserRole
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ def init_db(session: Session) -> None:
             name=settings.FIRST_SUPERUSER_NAME,
             phone=settings.FIRST_SUPERUSER_PHONE,
             is_superuser=True,
+            role=UserRole.SUPER_USER,
         )
         user = crud.user.create_user(session, user_in=user_in, source=RequestSource.ADMIN_PANEL)
         logger.info(f"Superuser created: {user.email} for source: {RequestSource.ADMIN_PANEL.value}")

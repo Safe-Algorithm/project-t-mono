@@ -27,7 +27,7 @@ def invite_team_member(
             detail="The user with this email already exists in the system.",
         )
     
-    user_in.role = UserRole.PROVIDER
+    user_in.role = UserRole.NORMAL
     user_in.provider_id = current_user.provider_id
     user = crud.user.create_user(session, user_in=user_in)
     return user
@@ -96,7 +96,7 @@ def update_team_member_role(
         raise HTTPException(status_code=400, detail="Cannot change your own role")
 
     # Ensure only provider-related roles can be assigned
-    if role_in.role not in [UserRole.PROVIDER, UserRole.SUPER_PROVIDER]:
+    if role_in.role not in [UserRole.NORMAL, UserRole.SUPER_USER]:
         raise HTTPException(status_code=400, detail="Invalid role for a team member")
 
     updated_user = crud.user.update_user_role(

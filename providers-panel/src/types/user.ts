@@ -1,9 +1,6 @@
 export enum UserRole {
-  ADMIN = 'admin',
-  SUPER_ADMIN = 'super_admin',
-  PROVIDER = 'provider',
-  SUPER_PROVIDER = 'super_provider',
   NORMAL = 'normal',
+  SUPER_USER = 'super_user',
 }
 
 import { ProviderRegistrationPayload } from './provider';

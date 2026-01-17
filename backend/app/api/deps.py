@@ -66,39 +66,35 @@ def get_current_active_user(
     # This is a placeholder for a more complex active user check
     return current_user
 
-def get_current_active_superuser(
-    current_user: User = Depends(get_current_user),
-) -> User:
-    if not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403, detail="The user doesn't have enough privileges"
-        )
-    return current_user
-
 def get_current_active_provider(
     current_user: User = Depends(get_current_user),
 ) -> User:
-    if current_user.role not in [UserRole.SUPER_PROVIDER, UserRole.PROVIDER]:
+    if current_user.source != RequestSource.PROVIDERS_PANEL:
         raise HTTPException(
             status_code=403,
             detail="The user doesn't have provider privileges",
-        )
-    if not current_user.provider_id:
-        raise HTTPException(
-            status_code=403,
-            detail="User is not associated with a provider",
         )
     return current_user
 
 def get_current_active_super_provider(
     current_provider: User = Depends(get_current_active_provider),
 ) -> User:
-    if current_provider.role != UserRole.SUPER_PROVIDER:
+    if current_provider.role != UserRole.SUPER_USER:
         raise HTTPException(
             status_code=403,
             detail="The user doesn't have super provider privileges",
         )
     return current_provider
+
+def get_current_active_superuser(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    if current_user.role != UserRole.SUPER_USER:
+        raise HTTPException(
+            status_code=403,
+            detail="The user doesn't have superuser privileges",
+        )
+    return current_user
 
 def get_request_source(
     x_source: str = Header(..., alias="X-Source")

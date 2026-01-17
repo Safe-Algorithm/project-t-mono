@@ -30,21 +30,35 @@ def create_random_user(session: Session, source: RequestSource = RequestSource.M
     return crud.user.create_user(session=session, user_in=user_in, source=source)
 
 def user_authentication_headers(
-    client: TestClient, session: Session, role: UserRole
+    client: TestClient, session: Session, role: UserRole, source: RequestSource = RequestSource.PROVIDERS_PANEL
 ) -> Tuple[User, Dict[str, str]]:
     provider = None
-    if role in [UserRole.NORMAL, UserRole.SUPER_PROVIDER]:
+    # Create provider for provider panel users
+    if source == RequestSource.PROVIDERS_PANEL:
         provider = create_random_provider(session)
+
+    # Determine source based on role and context
+    if source == RequestSource.ADMIN_PANEL:
+        # Admin panel users should be SUPER_USER
+        role = UserRole.SUPER_USER
+        source_header = "admin_panel"
+    elif source == RequestSource.PROVIDERS_PANEL:
+        # Provider panel users can be NORMAL or SUPER_USER
+        source_header = "providers_panel"
+    else:
+        # Mobile app users
+        source_header = "mobile_app"
 
     user = create_random_user(
         session,
+        source=source,
         role=role,
         provider_id=provider.id if provider else None,
-        is_superuser=role == UserRole.ADMIN,
+        is_superuser=role == UserRole.SUPER_USER,
     )
 
     login_data = {"username": user.email, "password": "password123"}
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data, headers={"X-Source": "mobile_app"})
+    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data, headers={"X-Source": source_header})
     response = r.json()
     auth_token = response["access_token"]
     headers = {"Authorization": f"Bearer {auth_token}"}

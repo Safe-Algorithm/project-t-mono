@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 from enum import Enum
 
@@ -17,11 +18,8 @@ if TYPE_CHECKING:
 
 
 class UserRole(str, Enum):
-    ADMIN = "admin"
-    SUPER_ADMIN = "super_admin"
-    PROVIDER = "provider"
-    SUPER_PROVIDER = "super_provider"
     NORMAL = "normal"
+    SUPER_USER = "super_user"
 
 class User(SQLModel, table=True):
     __table_args__ = (
@@ -40,6 +38,8 @@ class User(SQLModel, table=True):
     is_email_verified: bool = Field(default=False)
     role: UserRole = Field(default=UserRole.NORMAL)
     source: RequestSource = Field(sa_column=Column(SQLEnum(RequestSource, name='requestsource', values_callable=lambda obj: [e.value for e in obj])))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     provider_id: Optional[uuid.UUID] = Field(default=None, foreign_key="provider.id")
     provider: Optional["Provider"] = Relationship(back_populates="users")

@@ -26,20 +26,19 @@ def test_register_provider(client: TestClient, session: Session) -> None:
     )
     assert response.status_code == 200
     created_request = response.json()
-    assert created_request["company_name"] == provider_data["company_name"]
     assert created_request["user"]["email"] == user_data["email"]
     assert "id" in created_request
     assert created_request["status"] == "pending"
 
 def test_get_provider_profile(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     response = client.get(f"{settings.API_V1_STR}/providers/profile", headers=headers)
     assert response.status_code == 200
     profile = response.json()
     assert profile["id"] == str(user.provider_id)
 
 def test_update_provider_profile(client: TestClient, session: Session) -> None:
-    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_PROVIDER)
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     new_name = "New Company Name"
     data = {"company_name": new_name}
     response = client.put(

@@ -5,7 +5,7 @@ import { UserRole } from '@/types/user';
 
 const withAuth = <P extends object>(
   WrappedComponent: ComponentType<P>,
-  requiredRole: UserRole = UserRole.SUPER_PROVIDER
+  requiredRole: UserRole = UserRole.SUPER_USER
 ) => {
   const AuthComponent: React.FC<P> = (props) => {
     const { user, isLoading } = useAuth();

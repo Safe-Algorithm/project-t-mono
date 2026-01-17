@@ -1,5 +1,5 @@
 import { api } from './api';
-import { Trip, TripPackage, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata } from '../types/trip';
+import { Trip, TripPackage, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata, ValidationMetadata, ValidationConfig } from '../types/trip';
 
 export interface TripCreatePayload {
   name: string;
@@ -55,6 +55,12 @@ export const tripService = {
     return api.post<void>(`/trips/${tripId}/packages/${packageId}/required-fields`, fieldTypes);
   },
 
+  setPackageRequiredFieldsWithValidation: (tripId: string, packageId: string, fields: PackageRequiredField[]): Promise<void> => {
+    return api.post<void>(`/trips/${tripId}/packages/${packageId}/required-fields-with-validation`, {
+      required_fields: fields
+    });
+  },
+
   getPackageRequiredFields: (tripId: string, packageId: string): Promise<string[]> => {
     return api.get<string[]>(`/trips/${tripId}/packages/${packageId}/required-fields`);
   },
@@ -62,5 +68,29 @@ export const tripService = {
   // Get available field metadata
   getAvailableFields: (): Promise<{ fields: FieldMetadata[] }> => {
     return api.get<{ fields: FieldMetadata[] }>('/trips/available-fields');
+  },
+
+  // Validation management
+  getAvailableValidations: (fieldType: string): Promise<Record<string, ValidationMetadata>> => {
+    return api.get<Record<string, ValidationMetadata>>(`/trips/validation/available/${fieldType}`);
+  },
+
+  getAllValidationMetadata: (): Promise<Record<string, ValidationMetadata>> => {
+    return api.get<Record<string, ValidationMetadata>>('/trips/validation/metadata');
+  },
+
+  validateConfig: (fieldType: string, validationConfig: ValidationConfig): Promise<{ is_valid: boolean; errors: string[] }> => {
+    return api.post<{ is_valid: boolean; errors: string[] }>('/trips/validation/validate-config', {
+      field_type: fieldType,
+      validation_config: validationConfig
+    });
+  },
+
+  validateValue: (fieldType: string, value: string, validationConfig: ValidationConfig): Promise<{ is_valid: boolean; errors: string[] }> => {
+    return api.post<{ is_valid: boolean; errors: string[] }>('/trips/validation/validate-value', {
+      field_type: fieldType,
+      value: value,
+      validation_config: validationConfig
+    });
   },
 };

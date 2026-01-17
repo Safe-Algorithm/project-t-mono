@@ -10,8 +10,6 @@ const TripDetailPage: React.FC = () => {
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-
   useEffect(() => {
     if (router.isReady && tripId && typeof tripId === 'string') {
       loadTripDetails();
@@ -41,23 +39,6 @@ const TripDetailPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to load available fields:', err);
       setAvailableFields([]);
-    }
-  };
-
-  const handleSetPackageFields = async (packageId: string, selectedFields: string[]) => {
-    if (!tripId || typeof tripId !== 'string') return;
-    
-    try {
-      const fields: PackageRequiredField[] = selectedFields.map(field => ({ field_type: field }));
-      await tripService.setPackageRequiredFields(tripId, packageId, fields);
-      
-      // Reload trip data to get updated required fields
-      await loadTripDetails();
-      
-      setSelectedPackageId(null);
-    } catch (err) {
-      setError('Failed to update package required fields');
-      console.error(err);
     }
   };
 
@@ -93,7 +74,6 @@ const TripDetailPage: React.FC = () => {
           <p><strong>Description:</strong> {trip.description}</p>
           <p><strong>Start Date:</strong> {new Date(trip.start_date).toLocaleString()}</p>
           <p><strong>End Date:</strong> {new Date(trip.end_date).toLocaleString()}</p>
-          <p><strong>Base Price:</strong> ${trip.price}</p>
           <p><strong>Max Participants:</strong> {trip.max_participants}</p>
           <p><strong>Status:</strong> {trip.is_active ? 'Active' : 'Inactive'}</p>
         </div>
@@ -113,7 +93,7 @@ const TripDetailPage: React.FC = () => {
                   <div>
                     <h4 style={{ margin: '0 0 0.5rem 0' }}>{pkg.name}</h4>
                     <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>{pkg.description}</p>
-                    <p style={{ margin: '0', fontWeight: 'bold' }}>Price: ${pkg.price}</p>
+                    <p style={{ margin: '0', fontWeight: 'bold' }}>Price: {pkg.price} {pkg.currency || 'SAR'}</p>
                   </div>
                   <div>
                     <span style={{ 
@@ -128,110 +108,82 @@ const TripDetailPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div style={{ marginBottom: '0.5rem' }}>
                     <h5>Required Fields for Registration</h5>
-                    <button 
-                      onClick={() => setSelectedPackageId(selectedPackageId === pkg.id ? null : pkg.id)}
-                      style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-                    >
-                      {selectedPackageId === pkg.id ? 'Cancel' : 'Edit Fields'}
-                    </button>
                   </div>
 
-                  {selectedPackageId === pkg.id ? (
-                    <PackageFieldsEditor
-                      packageId={pkg.id}
-                      currentFields={pkg.required_fields || []}
-                      availableFields={availableFields}
-                      onSave={(fields) => handleSetPackageFields(pkg.id, fields)}
-                      onCancel={() => setSelectedPackageId(null)}
-                    />
-                  ) : (
-                    <div>
-                      {pkg.required_fields?.length > 0 ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                          {pkg.required_fields.map((field: string) => (
-                            <span 
-                              key={field}
-                              style={{ 
-                                padding: '0.25rem 0.5rem', 
-                                backgroundColor: '#e3f2fd', 
-                                borderRadius: '4px',
-                                fontSize: '0.9rem'
-                              }}
-                            >
-                              {getFieldDisplayName(field)}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ color: '#666', fontStyle: 'italic' }}>No required fields set</p>
-                      )}
-                    </div>
-                  )}
+                    {pkg.required_fields?.length > 0 ? (
+                      <div style={{ display: 'grid', gap: '0.75rem' }}>
+                        {pkg.required_fields.map((field: string) => {
+                          // Find validation config for this field
+                          const fieldDetail = pkg.required_fields_details?.find(
+                            (detail: any) => detail.field_type === field
+                          );
+                          const hasValidations = fieldDetail?.validation_config && 
+                            Object.keys(fieldDetail.validation_config).length > 0;
+                          
+                          return (
+                            <div key={field} style={{ 
+                              border: '1px solid #e0e0e0',
+                              borderRadius: '6px',
+                              padding: '0.75rem',
+                              backgroundColor: '#fafafa'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                <span style={{ 
+                                  fontWeight: 'bold',
+                                  color: '#333'
+                                }}>
+                                  {getFieldDisplayName(field)}
+                                </span>
+                                {hasValidations && (
+                                  <span style={{
+                                    fontSize: '0.75rem',
+                                    padding: '0.2rem 0.4rem',
+                                    backgroundColor: '#e8f5e8',
+                                    color: '#2e7d32',
+                                    borderRadius: '3px',
+                                    fontWeight: 'bold'
+                                  }}>
+                                    VALIDATED
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {hasValidations && (
+                                <div style={{ fontSize: '0.85rem', color: '#666' }}>
+                                  <strong>Validation Rules:</strong>
+                                  <ul style={{ margin: '0.25rem 0 0 1rem', padding: 0 }}>
+                                    {Object.entries(fieldDetail.validation_config || {}).map(([validationType, config]: [string, any]) => (
+                                      <li key={validationType} style={{ marginBottom: '0.25rem' }}>
+                                        <strong>{validationType.replace('_', ' ')}:</strong> {
+                                          typeof config === 'object' && config !== null 
+                                            ? Object.entries(config).map(([key, value]) => `${key}: ${value}`).join(', ')
+                                            : String(config)
+                                        }
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              
+                              {!hasValidations && (
+                                <div style={{ fontSize: '0.8rem', color: '#999', fontStyle: 'italic' }}>
+                                  No validation rules configured
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p style={{ color: '#666', fontStyle: 'italic' }}>No required fields set</p>
+                    )}
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
-    </div>
-  );
-};
-
-interface PackageFieldsEditorProps {
-  packageId: string;
-  currentFields: string[];
-  availableFields: FieldMetadata[];
-  onSave: (fields: string[]) => void;
-  onCancel: () => void;
-}
-
-const PackageFieldsEditor: React.FC<PackageFieldsEditorProps> = ({
-  currentFields,
-  availableFields,
-  onSave,
-  onCancel
-}) => {
-  const [selectedFields, setSelectedFields] = useState<string[]>(currentFields);
-
-  const handleFieldToggle = (fieldType: string) => {
-    setSelectedFields(prev => 
-      prev.includes(fieldType) 
-        ? prev.filter(f => f !== fieldType)
-        : [...prev, fieldType]
-    );
-  };
-
-  return (
-    <div style={{ border: '1px solid #ccc', padding: '1rem', borderRadius: '4px', backgroundColor: '#f9f9f9' }}>
-      <h6>Select Required Fields:</h6>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.5rem', marginBottom: '1rem' }}>
-        {availableFields.map((field) => (
-          <label key={field.field_name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              type="checkbox"
-              checked={selectedFields.includes(field.field_name)}
-              onChange={() => handleFieldToggle(field.field_name)}
-            />
-            <span>{field.display_name}</span>
-            <small style={{ color: '#666' }}>({field.ui_type})</small>
-          </label>
-        ))}
-      </div>
-      <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button 
-          onClick={() => onSave(selectedFields)}
-          style={{ backgroundColor: '#007bff', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
-        >
-          Save Fields
-        </button>
-        <button 
-          onClick={onCancel}
-          style={{ backgroundColor: '#6c757d', color: 'white', padding: '0.5rem 1rem', border: 'none', borderRadius: '4px' }}
-        >
-          Cancel
-        </button>
       </div>
     </div>
   );

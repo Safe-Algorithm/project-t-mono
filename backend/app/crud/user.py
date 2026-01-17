@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 import uuid
 from app.models.user import User, UserRole
 from app.models.source import RequestSource
-from app.schemas.user import UserCreate
-from app.core.security import get_password_hash
+from app.schemas.user import UserCreate, UserUpdate
+from app.core.security import get_password_hash, verify_password
 
 def get_user_by_email(session: Session, *, email: str) -> User | None:
     return session.exec(select(User).where(User.email == email)).first()
@@ -35,11 +35,15 @@ def get_users_by_role(session: Session, *, role: UserRole, skip: int = 0, limit:
     return session.exec(statement).all()
 
 def get_admin_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:
-    statement = select(User).where(User.role.in_([UserRole.ADMIN, UserRole.SUPER_ADMIN])).offset(skip).limit(limit)
+    # Admin users are super_user role with ADMIN_PANEL source
+    statement = select(User).where(
+        User.role == UserRole.SUPER_USER,
+        User.source == RequestSource.ADMIN_PANEL
+    ).offset(skip).limit(limit)
     return session.exec(statement).all()
 
 def get_provider_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:
-    statement = select(User).where(User.role.in_([UserRole.PROVIDER, UserRole.SUPER_PROVIDER])).offset(skip).limit(limit)
+    statement = select(User).where(User.source == RequestSource.PROVIDERS_PANEL).offset(skip).limit(limit)
     return session.exec(statement).all()
 
 def get_normal_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:

@@ -1,14 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
+import ValidationDisplay from '@/components/ValidationDisplay';
+
+interface TripPackageRequiredFieldDetail {
+  id: string;
+  package_id: string;
+  field_type: string;
+  is_required: boolean;
+  validation_config: any;
+}
 
 interface TripPackage {
   id: string;
   name: string;
   description: string;
   price: number;
+  currency: string;
   is_active: boolean;
   required_fields: string[];
+  required_fields_details?: TripPackageRequiredFieldDetail[];
+}
+
+interface Provider {
+  id: string;
+  company_name: string;
 }
 
 interface Trip {
@@ -17,10 +33,10 @@ interface Trip {
   description: string;
   start_date: string;
   end_date: string;
-  price: number;
   max_participants: number;
   is_active: boolean;
   provider_id: string;
+  provider: Provider;
   trip_metadata?: any;
   packages: TripPackage[];
 }
@@ -67,7 +83,7 @@ const TripDetailPage = () => {
         setTrip(tripData);
 
         // Fetch field metadata for rendering required fields
-        const fieldsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/available-fields`, {
+        const fieldsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/available-fields`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'X-Source': 'admin_panel',
@@ -76,7 +92,14 @@ const TripDetailPage = () => {
         
         if (fieldsResponse.ok) {
           const fieldsData = await fieldsResponse.json();
-          setFieldMetadata(fieldsData);
+          // Convert array of fields to object keyed by field_name for easier lookup
+          const metadataObject: FieldMetadata = {};
+          if (fieldsData.fields) {
+            fieldsData.fields.forEach((field: any) => {
+              metadataObject[field.field_name] = field;
+            });
+          }
+          setFieldMetadata(metadataObject);
         }
         
       } catch (err) {
@@ -118,8 +141,13 @@ const TripDetailPage = () => {
             <p className="mt-1 text-sm text-gray-900">{trip.name}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Provider ID</label>
-            <p className="mt-1 text-sm text-gray-900">{trip.provider_id}</p>
+            <label className="block text-sm font-medium text-gray-700">Provider</label>
+            <p 
+              className="mt-1 text-sm text-blue-600 hover:text-blue-800 cursor-pointer underline"
+              onClick={() => router.push(`/providers/${trip.provider.id}`)}
+            >
+              {trip.provider.company_name}
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Start Date</label>
@@ -128,10 +156,6 @@ const TripDetailPage = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700">End Date</label>
             <p className="mt-1 text-sm text-gray-900">{new Date(trip.end_date).toLocaleDateString()}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Price</label>
-            <p className="mt-1 text-sm text-gray-900">${trip.price}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Max Participants</label>
@@ -177,7 +201,7 @@ const TripDetailPage = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Price</label>
-                    <p className="mt-1 text-sm text-gray-900">${pkg.price}</p>
+                    <p className="mt-1 text-sm text-gray-900">{pkg.price} {pkg.currency || 'SAR'}</p>
                   </div>
                 </div>
 
@@ -190,14 +214,25 @@ const TripDetailPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                       {pkg.required_fields.map((fieldType) => {
                         const metadata = fieldMetadata[fieldType];
+                        const fieldDetail = pkg.required_fields_details?.find(
+                          detail => detail.field_type === fieldType
+                        );
+                        
                         return (
-                          <div key={fieldType} className="bg-gray-50 p-2 rounded border">
+                          <div key={fieldType} className="bg-gray-50 p-3 rounded border">
                             <p className="text-sm font-medium">
                               {metadata?.display_name || fieldType}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 mb-1">
                               Type: {metadata?.ui_type || 'text'}
                             </p>
+                            {fieldDetail && (
+                              <ValidationDisplay
+                                fieldType={fieldType}
+                                fieldDisplayName={metadata?.display_name || fieldType}
+                                validationConfig={fieldDetail.validation_config}
+                              />
+                            )}
                           </div>
                         );
                       })}

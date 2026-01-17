@@ -1,12 +1,18 @@
 import uuid
 from typing import TYPE_CHECKING, List
 from decimal import Decimal
+from enum import Enum
 
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from .trip import Trip
     from .trip_package_field import TripPackageRequiredField
+
+
+class Currency(str, Enum):
+    """Supported currencies for trip packages"""
+    SAR = "SAR"  # Saudi Riyal
 
 
 class TripPackage(SQLModel, table=True):
@@ -16,6 +22,7 @@ class TripPackage(SQLModel, table=True):
     name: str = Field(max_length=255)
     description: str
     price: Decimal = Field(decimal_places=2, max_digits=10)
+    currency: Currency = Field(default=Currency.SAR)
     is_active: bool = Field(default=True)
     
     trip: "Trip" = Relationship(back_populates="packages")
