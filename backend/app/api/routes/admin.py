@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
@@ -168,9 +168,55 @@ def list_all_trips(
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_active_superuser),
+    search: Optional[str] = None,
+    provider_id: Optional[str] = None,
+    provider_name: Optional[str] = None,
+    start_date_from: Optional[str] = None,
+    start_date_to: Optional[str] = None,
+    end_date_from: Optional[str] = None,
+    end_date_to: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    min_participants: Optional[int] = None,
+    max_participants: Optional[int] = None,
+    min_rating: Optional[float] = None,
+    is_active: Optional[bool] = None,
 ):
-    """Retrieve all trips."""
-    trips = trip_crud.get_all_trips(session=session, skip=skip, limit=limit)
+    """Retrieve and filter all trips (admin view)."""
+    from datetime import datetime
+    from decimal import Decimal
+    
+    # Parse date strings to datetime objects
+    start_date_from_dt = datetime.fromisoformat(start_date_from) if start_date_from else None
+    start_date_to_dt = datetime.fromisoformat(start_date_to) if start_date_to else None
+    end_date_from_dt = datetime.fromisoformat(end_date_from) if end_date_from else None
+    end_date_to_dt = datetime.fromisoformat(end_date_to) if end_date_to else None
+    
+    # Convert price to Decimal
+    min_price_decimal = Decimal(str(min_price)) if min_price is not None else None
+    max_price_decimal = Decimal(str(max_price)) if max_price is not None else None
+    
+    # Parse provider_id if provided
+    provider_uuid = uuid.UUID(provider_id) if provider_id else None
+    
+    trips = trip_crud.search_and_filter_trips(
+        session=session,
+        provider_id=provider_uuid,
+        provider_name=provider_name,
+        search_query=search,
+        start_date_from=start_date_from_dt,
+        start_date_to=start_date_to_dt,
+        end_date_from=end_date_from_dt,
+        end_date_to=end_date_to_dt,
+        min_price=min_price_decimal,
+        max_price=max_price_decimal,
+        min_participants=min_participants,
+        max_participants=max_participants,
+        min_rating=min_rating,
+        is_active=is_active,
+        skip=skip,
+        limit=limit
+    )
     
     # Build TripRead responses with packages and required fields
     trip_responses = []

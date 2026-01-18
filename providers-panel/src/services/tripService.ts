@@ -15,9 +15,34 @@ export interface TripUpdatePayload extends Partial<TripCreatePayload> {
   is_active?: boolean;
 }
 
+export interface TripFilterParams {
+  search?: string;
+  start_date_from?: string;
+  start_date_to?: string;
+  min_price?: number;
+  max_price?: number;
+  min_participants?: number;
+  max_participants?: number;
+  min_rating?: number;
+  is_active?: boolean;
+}
+
 export const tripService = {
-  getAll: (): Promise<Trip[]> => {
-    return api.get<Trip[]>('/trips/');
+  getAll: (filters?: TripFilterParams): Promise<Trip[]> => {
+    const params = new URLSearchParams();
+    if (filters) {
+      if (filters.search) params.append('search', filters.search);
+      if (filters.start_date_from) params.append('start_date_from', filters.start_date_from);
+      if (filters.start_date_to) params.append('start_date_to', filters.start_date_to);
+      if (filters.min_price !== undefined) params.append('min_price', filters.min_price.toString());
+      if (filters.max_price !== undefined) params.append('max_price', filters.max_price.toString());
+      if (filters.min_participants !== undefined) params.append('min_participants', filters.min_participants.toString());
+      if (filters.max_participants !== undefined) params.append('max_participants', filters.max_participants.toString());
+      if (filters.min_rating !== undefined) params.append('min_rating', filters.min_rating.toString());
+      if (filters.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+    }
+    const queryString = params.toString();
+    return api.get<Trip[]>(`/trips/${queryString ? `?${queryString}` : ''}`);
   },
 
   getById: (id: string): Promise<Trip> => {

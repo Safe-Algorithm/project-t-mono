@@ -1,43 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { api } from '@/services/api';
-import { useRouter } from 'next/router';
+import React, { useState } from 'react';
+import { TripFilterParams } from '../../services/tripService';
 
-interface Provider {
-  id: string;
-  company_name: string;
+interface TripFiltersProps {
+  onFilterChange: (filters: TripFilterParams) => void;
 }
 
-interface TripPackage {
-  id: string;
-  name: string;
-  price: number;
-  currency: string;
-}
-
-interface Trip {
-  id: string;
-  name: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  max_participants: number;
-  is_active: boolean;
-  provider_id: string;
-  provider: Provider;
-  packages: TripPackage[];
-}
-
-const TripsPage = () => {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
-  const router = useRouter();
-
-  // Filter states
+const TripFilters: React.FC<TripFiltersProps> = ({ onFilterChange }) => {
+  const [showFilters, setShowFilters] = useState(false);
   const [search, setSearch] = useState('');
-  const [providerName, setProviderName] = useState('');
   const [startDateFrom, setStartDateFrom] = useState('');
   const [startDateTo, setStartDateTo] = useState('');
   const [minPrice, setMinPrice] = useState('');
@@ -47,48 +17,25 @@ const TripsPage = () => {
   const [minRating, setMinRating] = useState(1);
   const [ratingEnabled, setRatingEnabled] = useState(false);
   const [isActive, setIsActive] = useState<string>('all');
-  const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    if (!token) return;
+  const applyFilters = () => {
+    const filters: TripFilterParams = {};
+    
+    if (search) filters.search = search;
+    if (startDateFrom) filters.start_date_from = new Date(startDateFrom).toISOString();
+    if (startDateTo) filters.start_date_to = new Date(startDateTo).toISOString();
+    if (minPrice) filters.min_price = parseFloat(minPrice);
+    if (maxPrice) filters.max_price = parseFloat(maxPrice);
+    if (minParticipants) filters.min_participants = parseInt(minParticipants);
+    if (maxParticipants) filters.max_participants = parseInt(maxParticipants);
+    if (ratingEnabled) filters.min_rating = minRating;
+    if (isActive !== 'all') filters.is_active = isActive === 'true';
 
-    const fetchTrips = async () => {
-      try {
-        // Build query params
-        const params = new URLSearchParams();
-        if (search) params.append('search', search);
-        if (providerName) params.append('provider_name', providerName);
-        if (startDateFrom) params.append('start_date_from', new Date(startDateFrom).toISOString());
-        if (startDateTo) params.append('start_date_to', new Date(startDateTo).toISOString());
-        if (minPrice) params.append('min_price', minPrice);
-        if (maxPrice) params.append('max_price', maxPrice);
-        if (minParticipants) params.append('min_participants', minParticipants);
-        if (maxParticipants) params.append('max_participants', maxParticipants);
-        if (ratingEnabled) params.append('min_rating', minRating.toString());
-        if (isActive !== 'all') params.append('is_active', isActive);
+    onFilterChange(filters);
+  };
 
-        const queryString = params.toString();
-        const url = `/admin/trips${queryString ? `?${queryString}` : ''}`;
-        
-        const data = await api.get<Trip[]>(url);
-        setTrips(data);
-      } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unexpected error occurred');
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrips();
-  }, [token, search, providerName, startDateFrom, startDateTo, minPrice, maxPrice, minParticipants, maxParticipants, minRating, ratingEnabled, isActive]);
-
-  const handleClearFilters = () => {
+  const clearFilters = () => {
     setSearch('');
-    setProviderName('');
     setStartDateFrom('');
     setStartDateTo('');
     setMinPrice('');
@@ -98,30 +45,29 @@ const TripsPage = () => {
     setMinRating(1);
     setRatingEnabled(false);
     setIsActive('all');
+    onFilterChange({});
   };
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
+  // Apply filters whenever any filter value changes
+  React.useEffect(() => {
+    applyFilters();
+  }, [search, startDateFrom, startDateTo, minPrice, maxPrice, minParticipants, maxParticipants, minRating, ratingEnabled, isActive]);
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">All Trips</h1>
-        <button
-          onClick={() => setShowFilters(!showFilters)}
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          {showFilters ? 'Hide Filters' : 'Show Filters'}
-        </button>
-      </div>
+    <div className="mb-6">
+      <button
+        onClick={() => setShowFilters(!showFilters)}
+        className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+      >
+        {showFilters ? 'Hide Filters' : 'Show Filters'}
+      </button>
 
-      {/* Search and Filter Section */}
       {showFilters && (
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+        <div className="mt-4 bg-white p-6 rounded-lg shadow-md">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Search
               </label>
               <input
@@ -133,23 +79,9 @@ const TripsPage = () => {
               />
             </div>
 
-            {/* Provider Name */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Provider Name
-              </label>
-              <input
-                type="text"
-                value={providerName}
-                onChange={(e) => setProviderName(e.target.value)}
-                placeholder="Search by provider name..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
             {/* Start Date From */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Start Date From
               </label>
               <input
@@ -162,7 +94,7 @@ const TripsPage = () => {
 
             {/* Start Date To */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Start Date To
               </label>
               <input
@@ -265,7 +197,7 @@ const TripsPage = () => {
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Status
               </label>
               <select
@@ -283,60 +215,16 @@ const TripsPage = () => {
           {/* Clear Filters Button */}
           <div className="mt-4">
             <button
-              onClick={handleClearFilters}
-              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+              onClick={clearFilters}
+              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors"
             >
               Clear All Filters
             </button>
           </div>
         </div>
       )}
-
-      {/* Results Count */}
-      <div className="mb-4 text-sm text-gray-600">
-        Showing {trips.length} trip{trips.length !== 1 ? 's' : ''}
-      </div>
-
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border-b">Trip Name</th>
-              <th className="py-2 px-4 border-b">Provider</th>
-              <th className="py-2 px-4 border-b">Start Date</th>
-              <th className="py-2 px-4 border-b">End Date</th>
-              <th className="py-2 px-4 border-b">Price</th>
-              <th className="py-2 px-4 border-b">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {trips.map((trip) => (
-              <tr 
-                key={trip.id} 
-                className="hover:bg-gray-50 cursor-pointer"
-                onClick={() => router.push(`/trips/${trip.id}`)}
-              >
-                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{trip.name}</td>
-                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800 cursor-pointer" onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/providers/${trip.provider.id}`);
-                }}>{trip.provider.company_name}</td>
-                <td className="py-2 px-4 border-b">{new Date(trip.start_date).toLocaleDateString()}</td>
-                <td className="py-2 px-4 border-b">{new Date(trip.end_date).toLocaleDateString()}</td>
-                <td className="py-2 px-4 border-b">
-                  {trip.packages.length > 0 ? 
-                    trip.packages.map(pkg => `${pkg.price} ${pkg.currency || 'SAR'}`).join(', ') : 
-                    'No packages'
-                  }
-                </td>
-                <td className="py-2 px-4 border-b">{trip.is_active ? 'Active' : 'Cancelled'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
   );
 };
 
-export default TripsPage;
+export default TripFilters;

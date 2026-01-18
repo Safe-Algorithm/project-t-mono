@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 from app.core.config import settings
 from app.models.user import UserRole
+from app.models.source import RequestSource
 from app.models.trip_field import TripFieldType
 from app.models.trip_package import TripPackage
 from app.models.trip_registration import TripRegistration, TripRegistrationParticipant
@@ -1064,3 +1065,584 @@ def test_mandatory_fields_always_included_in_packages(client: TestClient, sessio
     assert "phone" in required_fields_2
     assert "email" in required_fields_2
     assert len(required_fields_2) == 4  # Mandatory + specified fields
+
+
+# ============================================
+# Trip Search and Filtering Tests
+# ============================================
+
+def test_search_trips_by_name(client: TestClient, session: Session) -> None:
+    """Test searching trips by name"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create trips with different names
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Dubai Adventure Tour",
+            description="Explore Dubai",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user.provider
+    )
+    
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Riyadh Cultural Experience",
+            description="Discover Riyadh",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=20),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=25),
+            max_participants=15
+        ),
+        provider=user.provider
+    )
+    
+    # Search for "Dubai"
+    response = client.get(
+        f"{settings.API_V1_STR}/trips?search=Dubai",
+        headers=headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    assert len(trips) >= 1
+    assert any(t["name"] == "Dubai Adventure Tour" for t in trips)
+    assert not any(t["name"] == "Riyadh Cultural Experience" for t in trips)
+
+
+def test_filter_trips_by_date_range(client: TestClient, session: Session) -> None:
+    """Test filtering trips by start date range"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    now = datetime.datetime.utcnow()
+    
+    # Create trips with different start dates
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Early Trip",
+            description="Starts soon",
+            start_date=now + datetime.timedelta(days=5),
+            end_date=now + datetime.timedelta(days=10),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Late Trip",
+            description="Starts later",
+            start_date=now + datetime.timedelta(days=30),
+            end_date=now + datetime.timedelta(days=35),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    # Filter for trips starting within next 15 days
+    start_date_from = now.isoformat()
+    start_date_to = (now + datetime.timedelta(days=15)).isoformat()
+    
+    response = client.get(
+        f"{settings.API_V1_STR}/trips?start_date_from={start_date_from}&start_date_to={start_date_to}",
+        headers=headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    assert any(t["name"] == "Early Trip" for t in trips)
+    assert not any(t["name"] == "Late Trip" for t in trips)
+
+
+def test_filter_trips_by_price_range(client: TestClient, session: Session) -> None:
+    """Test filtering trips by package price range"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create trip with cheap package
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Budget Trip",
+            description="Affordable option",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user.provider
+    )
+    
+    # Create cheap package
+    package1 = TripPackage(
+        trip_id=trip1.id,
+        name="Economy Package",
+        description="Budget friendly",
+        price=100.0,
+        is_active=True
+    )
+    session.add(package1)
+    session.commit()
+    
+    # Create trip with expensive package
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Luxury Trip",
+            description="Premium experience",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=20),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=25),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    # Create expensive package
+    package2 = TripPackage(
+        trip_id=trip2.id,
+        name="VIP Package",
+        description="Luxury experience",
+        price=1000.0,
+        is_active=True
+    )
+    session.add(package2)
+    session.commit()
+    
+    # Filter for trips with price between 50 and 500
+    response = client.get(
+        f"{settings.API_V1_STR}/trips?min_price=50&max_price=500",
+        headers=headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    trip_names = [t["name"] for t in trips]
+    assert "Budget Trip" in trip_names
+    assert "Luxury Trip" not in trip_names
+
+
+def test_filter_trips_by_participants(client: TestClient, session: Session) -> None:
+    """Test filtering trips by max_participants"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create trip with small capacity
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Small Group Trip",
+            description="Intimate experience",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=5
+        ),
+        provider=user.provider
+    )
+    
+    # Create trip with large capacity
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Large Group Trip",
+            description="Big adventure",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=20),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=25),
+            max_participants=50
+        ),
+        provider=user.provider
+    )
+    
+    # Filter for trips with max_participants >= 10
+    response = client.get(
+        f"{settings.API_V1_STR}/trips?min_participants=10",
+        headers=headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    trip_names = [t["name"] for t in trips]
+    assert "Small Group Trip" not in trip_names
+    assert "Large Group Trip" in trip_names
+
+
+def test_filter_trips_by_active_status(client: TestClient, session: Session) -> None:
+    """Test filtering trips by is_active status"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create active trip
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Active Trip",
+            description="Currently available",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user.provider
+    )
+    trip1.is_active = True
+    session.add(trip1)
+    
+    # Create inactive trip
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Inactive Trip",
+            description="Not available",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=20),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=25),
+            max_participants=15
+        ),
+        provider=user.provider
+    )
+    trip2.is_active = False
+    session.add(trip2)
+    session.commit()
+    
+    # Filter for active trips only
+    response = client.get(
+        f"{settings.API_V1_STR}/trips?is_active=true",
+        headers=headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    trip_names = [t["name"] for t in trips]
+    assert "Active Trip" in trip_names
+    assert "Inactive Trip" not in trip_names
+
+
+def test_combined_filters(client: TestClient, session: Session) -> None:
+    """Test combining multiple filters"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    now = datetime.datetime.utcnow()
+    
+    # Create matching trip
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Dubai Beach Adventure",
+            description="Perfect match",
+            start_date=now + datetime.timedelta(days=10),
+            end_date=now + datetime.timedelta(days=15),
+            max_participants=25
+        ),
+        provider=user.provider
+    )
+    package1 = TripPackage(
+        trip_id=trip1.id,
+        name="Standard Package",
+        description="Good value",
+        price=300.0,
+        is_active=True
+    )
+    session.add(package1)
+    
+    # Create non-matching trip (wrong name)
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Riyadh City Tour",
+            description="Different location",
+            start_date=now + datetime.timedelta(days=10),
+            end_date=now + datetime.timedelta(days=15),
+            max_participants=25
+        ),
+        provider=user.provider
+    )
+    package2 = TripPackage(
+        trip_id=trip2.id,
+        name="Standard Package",
+        description="Good value",
+        price=300.0,
+        is_active=True
+    )
+    session.add(package2)
+    session.commit()
+    
+    # Apply multiple filters
+    start_date_from = now.isoformat()
+    start_date_to = (now + datetime.timedelta(days=20)).isoformat()
+    
+    response = client.get(
+        f"{settings.API_V1_STR}/trips?search=Dubai&min_price=200&max_price=400&min_participants=20&start_date_from={start_date_from}&start_date_to={start_date_to}",
+        headers=headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    assert len(trips) >= 1
+    assert any(t["name"] == "Dubai Beach Adventure" for t in trips)
+    assert not any(t["name"] == "Riyadh City Tour" for t in trips)
+
+
+def test_public_trip_search(client: TestClient, session: Session) -> None:
+    """Test public trip search endpoint (for mobile app)"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create active trip
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Public Adventure",
+            description="Available to all",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=30
+        ),
+        provider=user.provider
+    )
+    trip1.is_active = True
+    session.add(trip1)
+    
+    # Create package
+    package = TripPackage(
+        trip_id=trip1.id,
+        name="Standard Package",
+        description="Good value",
+        price=250.0,
+        is_active=True
+    )
+    session.add(package)
+    session.commit()
+    
+    # Test public endpoint (no auth required)
+    response = client.get(f"{settings.API_V1_STR}/trips/all?search=Adventure")
+    assert response.status_code == 200
+    trips = response.json()
+    assert len(trips) >= 1
+    assert any(t["name"] == "Public Adventure" for t in trips)
+
+
+def test_admin_trip_search_with_provider_filter(client: TestClient, session: Session) -> None:
+    """Test admin can filter trips by provider"""
+    # Create two different providers
+    user1, headers1 = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    user2, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create trip for provider 1
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Provider 1 Trip",
+            description="First provider",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user1.provider
+    )
+    
+    # Create trip for provider 2
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Provider 2 Trip",
+            description="Second provider",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user2.provider
+    )
+    
+    # Create admin user
+    admin_user, admin_headers = user_authentication_headers(
+        client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL
+    )
+    
+    # Filter by provider 1
+    response = client.get(
+        f"{settings.API_V1_STR}/admin/trips?provider_id={user1.provider_id}",
+        headers=admin_headers
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    trip_names = [t["name"] for t in trips]
+    assert "Provider 1 Trip" in trip_names
+    assert "Provider 2 Trip" not in trip_names
+
+
+def test_filter_trips_by_provider_name(client: TestClient, session: Session) -> None:
+    """Test filtering trips by provider company name"""
+    # Create two providers with different names
+    user1, headers1 = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    # Update provider 1 name
+    user1.provider.company_name = "Adventure Tours LLC"
+    session.add(user1.provider)
+    
+    user2, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    # Update provider 2 name
+    user2.provider.company_name = "Luxury Travel Co"
+    session.add(user2.provider)
+    session.commit()
+    
+    # Create trips for both providers
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Desert Safari",
+            description="Adventure in the desert",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user1.provider
+    )
+    
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Beach Resort",
+            description="Luxury beach experience",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=15
+        ),
+        provider=user2.provider
+    )
+    
+    # Create packages for both trips
+    package1 = TripPackage(trip_id=trip1.id, name="Standard", description="Basic", price=200.0, is_active=True)
+    package2 = TripPackage(trip_id=trip2.id, name="VIP", description="Luxury", price=500.0, is_active=True)
+    session.add(package1)
+    session.add(package2)
+    session.commit()
+    
+    # Search by provider name "Adventure"
+    response = client.get(f"{settings.API_V1_STR}/trips/all?provider_name=Adventure")
+    assert response.status_code == 200
+    trips = response.json()
+    trip_names = [t["name"] for t in trips]
+    assert "Desert Safari" in trip_names
+    assert "Beach Resort" not in trip_names
+
+
+def test_filter_trips_by_rating(client: TestClient, session: Session) -> None:
+    """Test filtering trips by minimum rating"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create two trips
+    trip1 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Highly Rated Trip",
+            description="Excellent reviews",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user.provider
+    )
+    
+    trip2 = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Poorly Rated Trip",
+            description="Needs improvement",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=20),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=25),
+            max_participants=15
+        ),
+        provider=user.provider
+    )
+    
+    # Create packages
+    package1 = TripPackage(trip_id=trip1.id, name="Standard", description="Basic", price=200.0, is_active=True)
+    package2 = TripPackage(trip_id=trip2.id, name="Standard", description="Basic", price=200.0, is_active=True)
+    session.add(package1)
+    session.add(package2)
+    session.commit()
+    
+    # Create normal users for ratings
+    from app.models.user import User as UserModel
+    from app.models.links import TripRating
+    
+    rater1 = UserModel(
+        email="rater1@example.com",
+        name="Rater 1",
+        phone="1234567890",
+        hashed_password="hashed",
+        source="mobile_app"
+    )
+    rater2 = UserModel(
+        email="rater2@example.com",
+        name="Rater 2",
+        phone="1234567891",
+        hashed_password="hashed",
+        source="mobile_app"
+    )
+    session.add(rater1)
+    session.add(rater2)
+    session.commit()
+    
+    # Add high ratings to trip1 (average: 4.5)
+    rating1 = TripRating(user_id=rater1.id, trip_id=trip1.id, rating=5, comment="Excellent!")
+    rating2 = TripRating(user_id=rater2.id, trip_id=trip1.id, rating=4, comment="Great!")
+    
+    # Add low ratings to trip2 (average: 2.5)
+    rating3 = TripRating(user_id=rater1.id, trip_id=trip2.id, rating=3, comment="Okay")
+    rating4 = TripRating(user_id=rater2.id, trip_id=trip2.id, rating=2, comment="Not great")
+    
+    session.add_all([rating1, rating2, rating3, rating4])
+    session.commit()
+    
+    # Filter for trips with min_rating >= 4.0
+    response = client.get(f"{settings.API_V1_STR}/trips/all?min_rating=4.0")
+    assert response.status_code == 200
+    trips = response.json()
+    trip_names = [t["name"] for t in trips]
+    assert "Highly Rated Trip" in trip_names
+    assert "Poorly Rated Trip" not in trip_names
+
+
+def test_combined_filters_with_provider_and_rating(client: TestClient, session: Session) -> None:
+    """Test combining provider name and rating filters"""
+    # Create provider with specific name
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    user.provider.company_name = "Premium Adventures"
+    session.add(user.provider)
+    session.commit()
+    
+    # Create trip
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Premium Desert Tour",
+            description="High quality desert experience",
+            start_date=datetime.datetime.utcnow() + datetime.timedelta(days=10),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=15),
+            max_participants=20
+        ),
+        provider=user.provider
+    )
+    
+    # Create package
+    package = TripPackage(trip_id=trip.id, name="Deluxe", description="Premium", price=400.0, is_active=True)
+    session.add(package)
+    session.commit()
+    
+    # Add ratings
+    from app.models.user import User as UserModel
+    from app.models.links import TripRating
+    
+    rater = UserModel(
+        email="rater@example.com",
+        name="Rater",
+        phone="9876543210",
+        hashed_password="hashed",
+        source="mobile_app"
+    )
+    session.add(rater)
+    session.commit()
+    
+    rating = TripRating(user_id=rater.id, trip_id=trip.id, rating=5, comment="Amazing!")
+    session.add(rating)
+    session.commit()
+    
+    # Filter by provider name AND rating
+    response = client.get(
+        f"{settings.API_V1_STR}/trips/all?provider_name=Premium&min_rating=4.5&min_price=300&max_price=500"
+    )
+    assert response.status_code == 200
+    trips = response.json()
+    assert len(trips) >= 1
+    assert any(t["name"] == "Premium Desert Tour" for t in trips)
