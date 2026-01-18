@@ -61,66 +61,118 @@ The backend is **surprisingly well-prepared** for mobile app development. Here's
 ---
 
 #### **2. Trip Reviews/Ratings System**
-**Status**: 🟡 Partially implemented (model exists, endpoint commented out)  
+**Status**: ✅ **COMPLETED**  
 **Priority**: Critical  
-**Estimated Time**: 2-3 days
+**Completed**: January 2026
 
-**What's needed**:
-- Uncomment and complete rating endpoint
-- Add review text support
-- Validate user joined trip before allowing review
-- List reviews per trip
-- Calculate average rating
+**What was implemented**:
+- ✅ Complete review CRUD operations (`crud/review.py`)
+- ✅ Review schemas with validation (`schemas/review.py`)
+- ✅ Full API endpoints (`api/routes/reviews.py`)
+- ✅ User validation: must have confirmed registration
+- ✅ Trip validation: trip must have ended before review
+- ✅ Duplicate prevention: one review per user per trip
+- ✅ Average rating calculation with distribution
+- ✅ Review update and delete (owner only)
+- ✅ 12 comprehensive unit tests passing
 
-**Endpoints to implement**:
+**API Endpoints**:
 ```python
 # Create review
-POST /api/v1/trips/{trip_id}/reviews
-Input: {rating: int, review_text: str}
-Validation: User must have completed trip registration
+POST /api/v1/reviews/trips/{trip_id}
+Input: {rating: int (1-5), comment: str (optional)}
+Validation: 
+  - User must have confirmed registration
+  - Trip must have ended
+  - User can only review once per trip
 
-# List reviews for trip
-GET /api/v1/trips/{trip_id}/reviews
-Output: [{user_name, rating, review_text, created_at}]
+# List reviews for a trip
+GET /api/v1/reviews/trips/{trip_id}
+Output: List of reviews with user names
 
-# Get trip average rating
-GET /api/v1/trips/{trip_id}/rating
-Output: {average_rating: float, total_reviews: int}
+# Get average rating
+GET /api/v1/reviews/trips/{trip_id}/rating
+Output: {average_rating: float, total_reviews: int, rating_distribution: dict}
+
+# Update review (owner only)
+PUT /api/v1/reviews/{review_id}
+Input: {rating: int, comment: str}
+
+# Delete review (owner only)
+DELETE /api/v1/reviews/{review_id}
+
+# Get my reviews
+GET /api/v1/reviews/my-reviews
+Output: List of current user's reviews
 ```
+
+**Validation Rules**:
+1. ✅ User must have confirmed registration for the trip
+2. ✅ Trip must have ended (end_date < today)
+3. ✅ User can only submit one review per trip
+4. ✅ Rating must be between 1-5
+5. ✅ Only review owner can update/delete their review
+
+**Tests**:
+- ✅ 12 unit tests covering all scenarios
+- ✅ Create review with all validations
+- ✅ List and filter reviews
+- ✅ Calculate average ratings
+- ✅ Update and delete reviews
+- ✅ Permission checks
 
 ---
 
 #### **3. Provider Profile View (Public)**
-**Status**: ❌ Not implemented for mobile  
+**Status**: ✅ **COMPLETED**  
 **Priority**: Critical  
-**Estimated Time**: 1 day
+**Completed**: January 2026
 
-**What's needed**:
+**What was implemented**:
+- ✅ Public provider profile schema (`schemas/provider.py`)
+- ✅ CRUD operation with statistics (`crud/provider_profile.py`)
+- ✅ Public API endpoint (`api/routes/provider_profiles.py`)
+- ✅ Calculates total trips count
+- ✅ Calculates active trips count
+- ✅ Calculates average rating across all provider's trips
+- ✅ Counts total reviews
+- ✅ 8 comprehensive unit tests passing
+
+**API Endpoint**:
 ```python
-@router.get("/providers/{provider_id}/profile")
-def get_provider_profile_public(
-    provider_id: UUID,
-    session: Session = Depends(get_session)
-):
-    # Return provider info + their active trips
-    # Include company metadata (logo, description)
-    # Include trip count and average rating
-```
+GET /api/v1/provider-profiles/{provider_id}
+# Public endpoint - no authentication required
 
-**Response**:
-```json
-{
+Response: {
   "id": "uuid",
   "company_name": "Adventure Tours",
   "company_metadata": {
-    "logo": "s3://...",
-    "description": "Best tours in Saudi Arabia"
+    "logo": "https://...",
+    "description": "Best tours in Saudi Arabia",
+    "website": "https://..."
   },
   "total_trips": 15,
+  "active_trips": 12,
   "average_rating": 4.5,
-  "trips": [...]
+  "total_reviews": 120
 }
 ```
+
+**Features**:
+- ✅ Public access (no authentication required)
+- ✅ Includes company metadata (logo, description, etc.)
+- ✅ Aggregates statistics from all provider's trips
+- ✅ Average rating calculated from all trip reviews
+- ✅ Distinguishes between total and active trips
+
+**Tests**:
+- ✅ 8 unit tests covering all scenarios
+- ✅ Profile with and without trips
+- ✅ Profile with reviews and ratings
+- ✅ Active vs inactive trip counts
+- ✅ Provider not found handling
+- ✅ Public access verification
+- ✅ Correct review aggregation per provider
 
 ---
 

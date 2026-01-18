@@ -2,6 +2,8 @@ from typing import List, Optional
 import uuid
 from sqlmodel import Session, select
 from app.models.provider import Provider, ProviderRequest
+from app.models.trip import Trip
+from app.models.links import TripRating
 from app.schemas.provider import ProviderRequestCreate, ProviderUpdate
 from app.models.user import User
 

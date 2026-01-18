@@ -43,3 +43,14 @@ class ProviderPublic(SQLModel):
     company_phone: str
     company_metadata: Optional[Dict[str, Any]] = None
     status: Optional[str] = None  # Status from provider request
+
+
+# Public provider profile with statistics (for mobile app)
+class ProviderProfilePublic(SQLModel):
+    id: uuid.UUID
+    company_name: str
+    company_metadata: Optional[Dict[str, Any]] = None
+    total_trips: int = 0
+    active_trips: int = 0
+    average_rating: float = 0.0
+    total_reviews: int = 0
