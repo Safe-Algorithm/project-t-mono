@@ -1,0 +1,361 @@
+"""
+SendGrid Email Service
+
+Provides email sending functionality using SendGrid API.
+"""
+
+from typing import Optional, List
+import httpx
+from app.core.config import settings
+
+
+class SendGridEmailService:
+    """Service for sending emails via SendGrid."""
+    
+    def __init__(self):
+        self.api_key = settings.SENDGRID_API_KEY
+        self.from_email = settings.SENDGRID_FROM_EMAIL
+        self.from_name = settings.SENDGRID_FROM_NAME
+        self.api_url = "https://api.sendgrid.com/v3/mail/send"
+    
+    async def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        html_content: str,
+        text_content: Optional[str] = None,
+        to_name: Optional[str] = None
+    ) -> dict:
+        """
+        Send an email via SendGrid.
+        
+        Args:
+            to_email: Recipient email address
+            subject: Email subject
+            html_content: HTML email content
+            text_content: Plain text email content (optional)
+            to_name: Recipient name (optional)
+            
+        Returns:
+            dict with message ID and status
+        """
+        # Prepare email payload
+        payload = {
+            "personalizations": [
+                {
+                    "to": [
+                        {
+                            "email": to_email,
+                            **({"name": to_name} if to_name else {})
+                        }
+                    ],
+                    "subject": subject
+                }
+            ],
+            "from": {
+                "email": self.from_email,
+                "name": self.from_name
+            },
+            "content": [
+                {
+                    "type": "text/html",
+                    "value": html_content
+                }
+            ]
+        }
+        
+        # Add plain text version if provided
+        if text_content:
+            payload["content"].insert(0, {
+                "type": "text/plain",
+                "value": text_content
+            })
+        
+        # Send email via SendGrid API
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self.api_url,
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                },
+                json=payload,
+                timeout=30.0
+            )
+            response.raise_for_status()
+        
+        # SendGrid returns 202 Accepted with X-Message-Id header
+        return {
+            "message_id": response.headers.get("X-Message-Id"),
+            "status_code": response.status_code
+        }
+    
+    async def send_verification_email(
+        self,
+        to_email: str,
+        to_name: str,
+        verification_token: str,
+        verification_url: str
+    ) -> dict:
+        """
+        Send email verification email.
+        
+        Args:
+            to_email: Recipient email address
+            to_name: Recipient name
+            verification_token: Verification token
+            verification_url: Base verification URL
+            
+        Returns:
+            dict with message ID and status
+        """
+        verify_link = f"{verification_url}?token={verification_token}"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #4F46E5; color: white; padding: 20px; text-align: center; }}
+                .content {{ padding: 30px; background-color: #f9fafb; }}
+                .button {{ display: inline-block; padding: 12px 30px; background-color: #4F46E5; 
+                          color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Verify Your Email</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {to_name},</p>
+                    <p>Thank you for registering with Safe Algo Tourism! Please verify your email address by clicking the button below:</p>
+                    <p style="text-align: center;">
+                        <a href="{verify_link}" class="button">Verify Email Address</a>
+                    </p>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #666;">{verify_link}</p>
+                    <p>This link will expire in 24 hours.</p>
+                    <p>If you didn't create an account, please ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Safe Algo Tourism. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Hello {to_name},
+        
+        Thank you for registering with Safe Algo Tourism!
+        
+        Please verify your email address by clicking this link:
+        {verify_link}
+        
+        This link will expire in 24 hours.
+        
+        If you didn't create an account, please ignore this email.
+        
+        © 2026 Safe Algo Tourism. All rights reserved.
+        """
+        
+        return await self.send_email(
+            to_email=to_email,
+            subject="Verify Your Email - Safe Algo Tourism",
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name
+        )
+    
+    async def send_password_reset_email(
+        self,
+        to_email: str,
+        to_name: str,
+        reset_token: str,
+        reset_url: str
+    ) -> dict:
+        """
+        Send password reset email.
+        
+        Args:
+            to_email: Recipient email address
+            to_name: Recipient name
+            reset_token: Password reset token
+            reset_url: Base reset URL
+            
+        Returns:
+            dict with message ID and status
+        """
+        reset_link = f"{reset_url}?token={reset_token}"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #EF4444; color: white; padding: 20px; text-align: center; }}
+                .content {{ padding: 30px; background-color: #f9fafb; }}
+                .button {{ display: inline-block; padding: 12px 30px; background-color: #EF4444; 
+                          color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Reset Your Password</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {to_name},</p>
+                    <p>We received a request to reset your password. Click the button below to create a new password:</p>
+                    <p style="text-align: center;">
+                        <a href="{reset_link}" class="button">Reset Password</a>
+                    </p>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #666;">{reset_link}</p>
+                    <p>This link will expire in 1 hour.</p>
+                    <p>If you didn't request a password reset, please ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Safe Algo Tourism. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Hello {to_name},
+        
+        We received a request to reset your password.
+        
+        Click this link to create a new password:
+        {reset_link}
+        
+        This link will expire in 1 hour.
+        
+        If you didn't request a password reset, please ignore this email.
+        
+        © 2026 Safe Algo Tourism. All rights reserved.
+        """
+        
+        return await self.send_email(
+            to_email=to_email,
+            subject="Reset Your Password - Safe Algo Tourism",
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name
+        )
+    
+    async def send_booking_confirmation_email(
+        self,
+        to_email: str,
+        to_name: str,
+        trip_name: str,
+        booking_reference: str,
+        start_date: str,
+        total_amount: str
+    ) -> dict:
+        """
+        Send booking confirmation email.
+        
+        Args:
+            to_email: Recipient email address
+            to_name: Recipient name
+            trip_name: Name of the trip
+            booking_reference: Booking reference number
+            start_date: Trip start date
+            total_amount: Total booking amount
+            
+        Returns:
+            dict with message ID and status
+        """
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #10B981; color: white; padding: 20px; text-align: center; }}
+                .content {{ padding: 30px; background-color: #f9fafb; }}
+                .booking-details {{ background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; }}
+                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }}
+                .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>✓ Booking Confirmed!</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {to_name},</p>
+                    <p>Your booking has been confirmed! We're excited to have you join us.</p>
+                    <div class="booking-details">
+                        <h2>Booking Details</h2>
+                        <div class="detail-row">
+                            <strong>Trip:</strong>
+                            <span>{trip_name}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Reference:</strong>
+                            <span>{booking_reference}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Start Date:</strong>
+                            <span>{start_date}</span>
+                        </div>
+                        <div class="detail-row">
+                            <strong>Total Amount:</strong>
+                            <span>{total_amount}</span>
+                        </div>
+                    </div>
+                    <p>You will receive additional details about your trip closer to the departure date.</p>
+                    <p>Safe travels!</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Safe Algo Tourism. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Hello {to_name},
+        
+        Your booking has been confirmed! We're excited to have you join us.
+        
+        BOOKING DETAILS
+        ---------------
+        Trip: {trip_name}
+        Reference: {booking_reference}
+        Start Date: {start_date}
+        Total Amount: {total_amount}
+        
+        You will receive additional details about your trip closer to the departure date.
+        
+        Safe travels!
+        
+        © 2026 Safe Algo Tourism. All rights reserved.
+        """
+        
+        return await self.send_email(
+            to_email=to_email,
+            subject=f"Booking Confirmed - {trip_name}",
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name
+        )
+
+
+# Singleton instance
+email_service = SendGridEmailService()

@@ -151,6 +151,172 @@ docker exec -it project-t-mono-backend-1 poetry update
 
 ---
 
+## 🔌 **3rd Party Integrations**
+
+### **Available Services**
+
+The project has integrated services for:
+1. **Backblaze B2** - Object storage (images, files)
+2. **Twilio** - SMS notifications
+3. **SendGrid** - Email notifications
+4. **Checkout.com** - Payment processing
+
+### **Configuration**
+
+All credentials are stored in `backend/app/core/config.py` and can be overridden via environment variables.
+
+**⚠️ IMPORTANT**: The `accounts.txt` file in the project root contains all API keys and credentials. This file is gitignored for security.
+
+### **Usage Examples**
+
+#### **1. Backblaze B2 (Object Storage)**
+
+```python
+from app.services.storage import storage_service
+
+# Upload a file
+result = await storage_service.upload_file(
+    file_data=image_bytes,
+    file_name="profile.jpg",
+    content_type="image/jpeg",
+    folder="avatars"
+)
+# Returns: {"fileId": "...", "fileName": "...", "downloadUrl": "..."}
+
+# Delete a file
+await storage_service.delete_file(file_id="...", file_name="...")
+
+# Get file info
+info = await storage_service.get_file_info(file_id="...")
+```
+
+#### **2. Twilio SMS**
+
+```python
+from app.services.sms import sms_service
+
+# Send OTP
+result = await sms_service.send_otp(
+    to_phone="+966501234567",
+    otp_code="123456"
+)
+
+# Send trip reminder
+await sms_service.send_trip_reminder(
+    to_phone="+966501234567",
+    trip_name="Desert Safari",
+    start_date="2026-02-01"
+)
+
+# Send booking confirmation
+await sms_service.send_booking_confirmation(
+    to_phone="+966501234567",
+    trip_name="Desert Safari",
+    booking_reference="BOOK123456"
+)
+```
+
+#### **3. SendGrid Email**
+
+```python
+from app.services.email import email_service
+
+# Send verification email
+result = await email_service.send_verification_email(
+    to_email="user@example.com",
+    to_name="John Doe",
+    verification_token="abc123",
+    verification_url="https://app.com/verify"
+)
+
+# Send password reset
+await email_service.send_password_reset_email(
+    to_email="user@example.com",
+    to_name="John Doe",
+    reset_token="xyz789",
+    reset_url="https://app.com/reset"
+)
+
+# Send booking confirmation
+await email_service.send_booking_confirmation_email(
+    to_email="user@example.com",
+    to_name="John Doe",
+    trip_name="Desert Safari",
+    booking_reference="BOOK123456",
+    start_date="2026-02-01",
+    total_amount="1500 SAR"
+)
+```
+
+#### **4. Checkout.com Payment**
+
+```python
+from app.services.payment import payment_service
+from decimal import Decimal
+
+# Create payment
+result = await payment_service.create_payment(
+    amount=Decimal("1500.00"),
+    currency="SAR",
+    reference="BOOK123",
+    customer_email="user@example.com",
+    customer_name="John Doe",
+    metadata={"trip_id": "trip_123"}
+)
+# Returns: {"payment_id": "...", "status": "...", "redirect_url": "..."}
+
+# Get payment details
+details = await payment_service.get_payment_details(payment_id="...")
+
+# Refund payment
+refund = await payment_service.refund_payment(
+    payment_id="...",
+    amount=Decimal("1500.00"),  # Optional, full refund if not specified
+    reference="REFUND_123"
+)
+
+# Verify webhook signature
+is_valid = payment_service.verify_webhook_signature(
+    payload=request_body,
+    signature=request.headers["Cko-Signature"],
+    secret=webhook_secret
+)
+```
+
+### **Testing Integrations**
+
+```bash
+# Run all integration tests
+docker exec project-t-mono-backend-1 pytest app/tests/services/ -v
+
+# Run specific service tests
+docker exec project-t-mono-backend-1 pytest app/tests/services/test_storage.py -v
+docker exec project-t-mono-backend-1 pytest app/tests/services/test_sms.py -v
+docker exec project-t-mono-backend-1 pytest app/tests/services/test_email.py -v
+docker exec project-t-mono-backend-1 pytest app/tests/services/test_payment.py -v
+```
+
+### **Service Files**
+
+```
+backend/app/services/
+├── storage.py   # Backblaze B2 integration
+├── sms.py       # Twilio SMS integration
+├── email.py     # SendGrid email integration
+└── payment.py   # Checkout.com payment integration
+```
+
+### **Test Coverage**
+
+All services have comprehensive unit tests:
+- ✅ 40 integration tests passing
+- ✅ Storage: 8 tests (upload, delete, auth, etc.)
+- ✅ SMS: 9 tests (send, OTP, reminders, etc.)
+- ✅ Email: 10 tests (verification, reset, booking, etc.)
+- ✅ Payment: 13 tests (create, capture, refund, webhooks, etc.)
+
+---
+
 ## 🔧 **Backend Development**
 
 ### **Access backend container shell**

@@ -17,6 +17,28 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_NAME: str = "Admin"
     FIRST_SUPERUSER_PHONE: str = "1234567890"
 
+    # Backblaze B2 (Object Storage)
+    BACKBLAZE_KEY_ID: str = "003d9e183559ac50000000001"
+    BACKBLAZE_APPLICATION_KEY: str = "K003yrhJasu2YEinOGra7l7vwLRa17o"
+    BACKBLAZE_BUCKET_NAME: str = "Safe-Algo-Test-Bucket"
+    BACKBLAZE_BUCKET_ID: str = ""  # Will be fetched on first use
+
+    # Twilio (SMS)
+    TWILIO_ACCOUNT_SID: str = "ACc2e937eac42b93871d7688d99987949a"
+    TWILIO_AUTH_TOKEN: str = "144141840e925febcc8d58215faf2803"
+    TWILIO_PHONE_NUMBER: str = "+18128182666"
+    TWILIO_MESSAGING_SERVICE_SID: str = "MGaa171a12a0b31318ed0a20306a4b7dce"
+
+    # SendGrid (Email)
+    SENDGRID_API_KEY: str = "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"
+    SENDGRID_FROM_EMAIL: str = "noreply@safealgo.com"
+    SENDGRID_FROM_NAME: str = "Safe Algo Tourism"
+
+    # Checkout.com (Payment Gateway)
+    CHECKOUT_SECRET_KEY: str = "sk_sbox_p7gis5zzoeecmthcm7e4v4xfsu="
+    CHECKOUT_PUBLIC_KEY: str = ""  # Set via environment variable
+    CHECKOUT_API_URL: str = "https://g6ftayvr.api.sandbox.checkout.com"
+
     class Config:
         case_sensitive = True
 

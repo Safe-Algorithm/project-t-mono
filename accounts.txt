@@ -1,0 +1,38 @@
+
+Checkout.com (payment gateway):
+
+api key: sk_sbox_p7gis5zzoeecmthcm7e4v4xfsu=
+
+url: https://g6ftayvr.api.sandbox.checkout.com
+
+
+
+twilio/sendgrid (email):
+
+account recovery code: 9K8DDP2PDUZW69TNDUEXPE63
+
+api key: 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
+
+
+
+Backblaze (first 10 gb free) (object storage):
+
+password: Almowld@123488A
+
+api key: K003yrhJasu2YEinOGra7l7vwLRa17o
+
+key name: Test-Key
+
+bucket name: Safe-Algo-Test-Bucket
+
+
+
+twilio/sms (sms notifications):
+
+Account SID: ACc2e937eac42b93871d7688d99987949a
+
+Auth Token: 144141840e925febcc8d58215faf2803
+
+phone number: +18128182666
+
+Safe Algo SMS Service ID: MGaa171a12a0b31318ed0a20306a4b7dce
