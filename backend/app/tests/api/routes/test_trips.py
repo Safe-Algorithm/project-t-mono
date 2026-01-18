@@ -1405,7 +1405,7 @@ def test_public_trip_search(client: TestClient, session: Session) -> None:
     session.commit()
     
     # Test public endpoint (no auth required)
-    response = client.get(f"{settings.API_V1_STR}/trips/all?search=Adventure")
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Adventure")
     assert response.status_code == 200
     trips = response.json()
     assert len(trips) >= 1
@@ -1508,7 +1508,7 @@ def test_filter_trips_by_provider_name(client: TestClient, session: Session) -> 
     session.commit()
     
     # Search by provider name "Adventure"
-    response = client.get(f"{settings.API_V1_STR}/trips/all?provider_name=Adventure")
+    response = client.get(f"{settings.API_V1_STR}/public-trips?provider_name=Adventure")
     assert response.status_code == 200
     trips = response.json()
     trip_names = [t["name"] for t in trips]
@@ -1586,7 +1586,7 @@ def test_filter_trips_by_rating(client: TestClient, session: Session) -> None:
     session.commit()
     
     # Filter for trips with min_rating >= 4.0
-    response = client.get(f"{settings.API_V1_STR}/trips/all?min_rating=4.0")
+    response = client.get(f"{settings.API_V1_STR}/public-trips?min_rating=4.0")
     assert response.status_code == 200
     trips = response.json()
     trip_names = [t["name"] for t in trips]
@@ -1640,7 +1640,7 @@ def test_combined_filters_with_provider_and_rating(client: TestClient, session: 
     
     # Filter by provider name AND rating
     response = client.get(
-        f"{settings.API_V1_STR}/trips/all?provider_name=Premium&min_rating=4.5&min_price=300&max_price=500"
+        f"{settings.API_V1_STR}/public-trips?provider_name=Premium&min_rating=4.5&min_price=300&max_price=500"
     )
     assert response.status_code == 200
     trips = response.json()

@@ -114,3 +114,72 @@ def list_public_trips(
         ))
     
     return trips_with_packages
+
+
+@router.get("/{trip_id}", response_model=TripRead)
+def get_public_trip(
+    trip_id: str,
+    session: Session = Depends(get_session)
+):
+    """
+    Get a single trip by ID (public endpoint for mobile app).
+    
+    No authentication required.
+    """
+    import uuid
+    from fastapi import HTTPException
+    
+    try:
+        trip_uuid = uuid.UUID(trip_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid trip ID format")
+    
+    trip = crud.trip.get_trip(session=session, trip_id=trip_uuid)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    # Get packages with required fields
+    packages = session.query(TripPackageModel).filter(
+        TripPackageModel.trip_id == trip_uuid,
+        TripPackageModel.is_active == True
+    ).all()
+    
+    packages_with_fields = []
+    for package in packages:
+        required_fields = session.query(TripPackageRequiredField).filter(
+            TripPackageRequiredField.package_id == package.id
+        ).all()
+        required_field_types = [rf.field_type.value for rf in required_fields]
+        
+        packages_with_fields.append(TripPackageWithRequiredFields(
+            id=package.id,
+            trip_id=package.trip_id,
+            name=package.name,
+            description=package.description,
+            price=package.price,
+            currency=package.currency,
+            is_active=package.is_active,
+            required_fields=required_field_types
+        ))
+    
+    # Get provider info
+    from app.crud import provider as provider_crud
+    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
+    provider_info = {
+        "id": provider.id,
+        "company_name": provider.company_name
+    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
+    
+    return TripRead(
+        id=trip.id,
+        provider_id=trip.provider_id,
+        provider=provider_info,
+        name=trip.name,
+        description=trip.description,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        max_participants=trip.max_participants,
+        trip_metadata=trip.trip_metadata,
+        is_active=trip.is_active,
+        packages=packages_with_fields
+    )
