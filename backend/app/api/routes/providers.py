@@ -105,16 +105,25 @@ def get_provider_request_status(
     current_user: User = Depends(deps.get_current_active_provider),
 ):
     """
-    Get current user's provider request status.
+    Get provider request status using the provider relationship.
+    Only returns data for pending/denied requests. Approved providers should not access this.
     """
-    provider_request = provider_crud.get_provider_request_by_user_id(session, user_id=current_user.id)
-    if not provider_request:
-        raise HTTPException(status_code=404, detail="Provider request not found")
-    
-    # Get the provider to include company details
+    # Get the provider
     provider = provider_crud.get_provider_by_id(session, id=current_user.provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
+    
+    # Get the provider request through the provider relationship
+    if not provider.provider_request_id:
+        raise HTTPException(status_code=404, detail="Provider request not found")
+    
+    provider_request = provider_crud.get_provider_request(session, id=provider.provider_request_id)
+    if not provider_request:
+        raise HTTPException(status_code=404, detail="Provider request not found")
+    
+    # Don't return request status for approved providers
+    if provider_request.status == "approved":
+        raise HTTPException(status_code=404, detail="Request already approved")
     
     return ProviderRequestRead(
         id=provider_request.id,

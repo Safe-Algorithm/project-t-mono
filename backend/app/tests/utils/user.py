@@ -37,16 +37,12 @@ def user_authentication_headers(
     if source == RequestSource.PROVIDERS_PANEL:
         provider = create_random_provider(session)
 
-    # Determine source based on role and context
+    # Determine source header
     if source == RequestSource.ADMIN_PANEL:
-        # Admin panel users should be SUPER_USER
-        role = UserRole.SUPER_USER
         source_header = "admin_panel"
     elif source == RequestSource.PROVIDERS_PANEL:
-        # Provider panel users can be NORMAL or SUPER_USER
         source_header = "providers_panel"
     else:
-        # Mobile app users
         source_header = "mobile_app"
 
     user = create_random_user(

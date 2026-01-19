@@ -39,26 +39,55 @@ const TeamManagementPage = () => {
   };
 
   return (
-    <div>
-      <h1>Team Management</h1>
-      <Link href="/team/invite">
-        <button>Invite New Member</button>
-      </Link>
+    <div className="container mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
+            <p className="mt-2 text-sm text-gray-600">Manage your team members and their roles</p>
+          </div>
+          <Link href="/team/invite">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
+              + Invite New Member
+            </button>
+          </Link>
+        </div>
+      </div>
 
-      {isLoading && <p>Loading team members...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {deleteError && <p style={{ color: 'red' }}>{deleteError}</p>}
-      {updateError && <p style={{ color: 'red' }}>{updateError}</p>}
-
-      {!isLoading && !error && (
-        <TeamList 
-          members={members} 
-          onDelete={handleDelete} 
-          isDeleting={isDeleting} 
-          onUpdateRole={handleUpdateRole}
-          isUpdating={isUpdating}
-        />
+      {/* Error Messages */}
+      {error && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {error}
+        </div>
       )}
+      {deleteError && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {deleteError}
+        </div>
+      )}
+      {updateError && (
+        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          {updateError}
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="bg-white shadow-md rounded-lg p-6">
+        {isLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <TeamList 
+            members={members} 
+            onDelete={handleDelete} 
+            isDeleting={isDeleting} 
+            onUpdateRole={handleUpdateRole}
+            isUpdating={isUpdating}
+          />
+        )}
+      </div>
     </div>
   );
 };

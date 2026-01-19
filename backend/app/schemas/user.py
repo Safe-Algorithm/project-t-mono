@@ -40,3 +40,9 @@ class UserPublic(UserBase):
     is_active: bool
     role: UserRole
     provider_id: uuid.UUID | None = None
+
+
+class UserPublicWithProvider(UserPublic):
+    """User with provider company information"""
+    provider_company_name: str | None = None
+    source: str

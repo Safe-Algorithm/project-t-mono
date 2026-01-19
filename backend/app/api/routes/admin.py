@@ -1,13 +1,16 @@
 from typing import List, Optional
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+import secrets
+import json
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session
 
-from app.api.deps import get_current_active_superuser, get_session
+from app.api.deps import get_current_active_superuser, get_current_active_admin, get_session
 from app.models.user import User, UserRole
+from app.models.source import RequestSource
 from app.crud import provider as provider_crud, user as user_crud
 from app.schemas.provider import ProviderRequestRead, ProviderPublic
-from app.schemas.user import UserPublic
+from app.schemas.user import UserPublic, UserCreate, UserPublicWithProvider
 from app.schemas.trip import TripRead
 from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
@@ -16,6 +19,9 @@ from app.crud import trip as trip_crud
 from app.schemas.admin import ProviderRequestUpdate
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
+from app.core.redis import redis_client
+from app.core.config import settings
+from app.services.email import email_service
 
 router = APIRouter()
 
@@ -122,6 +128,120 @@ def deny_provider_request(
     )
 
 
+@router.post("/invite-admin", response_model=UserPublic)
+async def invite_admin(
+    *,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_admin),
+    user_in: UserCreate
+):
+    """
+    Invite a new admin user.
+    Only super admins can invite other admins.
+    Sends an invitation email with a link to accept and activate the account.
+    """
+    # Check if user with email already exists
+    user = user_crud.get_user_by_email_and_source(session, email=user_in.email, source=RequestSource.ADMIN_PANEL)
+    if user:
+        raise HTTPException(
+            status_code=400,
+            detail="A user with this email already exists in the admin panel."
+        )
+    
+    # Check if user with phone already exists
+    user_by_phone = user_crud.get_user_by_phone_and_source(session, phone=user_in.phone, source=RequestSource.ADMIN_PANEL)
+    if user_by_phone:
+        raise HTTPException(
+            status_code=400,
+            detail="A user with this phone number already exists in the admin panel."
+        )
+    
+    # Generate invitation token
+    invitation_token = secrets.token_urlsafe(32)
+    
+    # Store invitation data in Redis with 7-day expiry
+    redis_key = f"admin_invitation:{invitation_token}"
+    invitation_data = {
+        "email": user_in.email,
+        "name": user_in.name,
+        "phone": user_in.phone,
+        "password": user_in.password,
+        "role": "normal",  # New admins start as normal users
+        "inviter_name": current_user.name,
+        "source": RequestSource.ADMIN_PANEL.value
+    }
+    redis_client.setex(redis_key, 7 * 24 * 60 * 60, json.dumps(invitation_data))
+    
+    # Send invitation email in background
+    invitation_url = f"{settings.ADMIN_PANEL_URL}/accept-invitation?token={invitation_token}"
+    background_tasks.add_task(
+        email_service.send_team_invitation_email,
+        to_email=user_in.email,
+        to_name=user_in.name,
+        inviter_name=current_user.name,
+        company_name="Safe Algo Tourism Admin",
+        invitation_token=invitation_token,
+        invitation_url=invitation_url
+    )
+    
+    # Create admin user with is_active=False until they accept invitation
+    user_in.role = UserRole.NORMAL
+    user = user_crud.create_user(session, user_in=user_in, source=RequestSource.ADMIN_PANEL)
+    user.is_active = False  # User must accept invitation to activate
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    return user
+
+
+@router.post("/accept-admin-invitation", response_model=UserPublic)
+def accept_admin_invitation(
+    token: str,
+    session: Session = Depends(get_session),
+):
+    """
+    Accept admin invitation using token from email.
+    Activates the admin account.
+    """
+    # Check token in Redis
+    redis_key = f"admin_invitation:{token}"
+    invitation_data = redis_client.get(redis_key)
+    
+    if not invitation_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired invitation token"
+        )
+    
+    # Parse invitation data (handle both bytes and string from Redis)
+    if isinstance(invitation_data, bytes):
+        data = json.loads(invitation_data.decode())
+    else:
+        data = json.loads(invitation_data)
+    
+    # Find user by email and source
+    user = user_crud.get_user_by_email_and_source(
+        session, 
+        email=data["email"], 
+        source=RequestSource.ADMIN_PANEL
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Activate user account
+    user.is_active = True
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+    
+    # Delete token from Redis
+    redis_client.delete(redis_key)
+    
+    return user
+
+
 @router.get("/providers", response_model=List[ProviderPublic])
 def list_providers(
     session: Session = Depends(get_session),
@@ -151,16 +271,39 @@ def list_providers(
     
     return result
 
-@router.get("/users", response_model=List[UserPublic])
+@router.get("/users", response_model=List[UserPublicWithProvider])
 def list_users(
     session: Session = Depends(get_session),
     skip: int = 0,
     limit: int = 100,
     current_user: User = Depends(get_current_active_superuser),
 ):
-    """Retrieve all users."""
+    """Retrieve all users with provider company information."""
     users = user_crud.get_users(session, skip=skip, limit=limit)
-    return users
+    
+    # Build response with provider company names
+    result = []
+    for user in users:
+        provider_company_name = None
+        if user.provider_id:
+            provider = provider_crud.get_provider(session, provider_id=user.provider_id)
+            if provider:
+                provider_company_name = provider.company_name
+        
+        result.append(UserPublicWithProvider(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            phone=user.phone,
+            is_superuser=user.is_superuser,
+            is_active=user.is_active,
+            role=user.role,
+            provider_id=user.provider_id,
+            provider_company_name=provider_company_name,
+            source=user.source.value
+        ))
+    
+    return result
 
 @router.get("/trips", response_model=List[TripRead])
 def list_all_trips(

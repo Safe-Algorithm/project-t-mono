@@ -355,6 +355,94 @@ class SendGridEmailService:
             text_content=text_content,
             to_name=to_name
         )
+    
+    async def send_team_invitation_email(
+        self,
+        to_email: str,
+        to_name: str,
+        inviter_name: str,
+        company_name: str,
+        invitation_token: str,
+        invitation_url: str
+    ) -> dict:
+        """
+        Send team invitation email.
+        
+        Args:
+            to_email: Recipient email address
+            to_name: Recipient name
+            inviter_name: Name of person sending invitation
+            company_name: Company/provider name
+            invitation_token: Invitation acceptance token (for reference, not used in URL)
+            invitation_url: Full invitation URL with token already included
+            
+        Returns:
+            dict with message ID and status
+        """
+        # invitation_url already contains the token, no need to append it
+        accept_link = invitation_url
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #7C3AED; color: white; padding: 20px; text-align: center; }}
+                .content {{ padding: 30px; background-color: #f9fafb; }}
+                .button {{ display: inline-block; padding: 12px 30px; background-color: #7C3AED; 
+                          color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }}
+                .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Team Invitation</h1>
+                </div>
+                <div class="content">
+                    <p>Hello {to_name},</p>
+                    <p><strong>{inviter_name}</strong> has invited you to join the team at <strong>{company_name}</strong> on Safe Algo Tourism!</p>
+                    <p>Click the button below to accept the invitation and set up your account:</p>
+                    <p style="text-align: center;">
+                        <a href="{accept_link}" class="button">Accept Invitation</a>
+                    </p>
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all; color: #666;">{accept_link}</p>
+                    <p>This invitation will expire in 7 days.</p>
+                    <p>If you weren't expecting this invitation, you can safely ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Safe Algo Tourism. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Hello {to_name},
+        
+        {inviter_name} has invited you to join the team at {company_name} on Safe Algo Tourism!
+        
+        Click this link to accept the invitation and set up your account:
+        {accept_link}
+        
+        This invitation will expire in 7 days.
+        
+        If you weren't expecting this invitation, you can safely ignore this email.
+        
+        © 2026 Safe Algo Tourism. All rights reserved.
+        """
+        
+        return await self.send_email(
+            to_email=to_email,
+            subject=f"Team Invitation from {company_name}",
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name
+        )
 
 
 # Singleton instance

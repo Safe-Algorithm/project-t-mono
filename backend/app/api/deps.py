@@ -96,6 +96,23 @@ def get_current_active_superuser(
         )
     return current_user
 
+
+def get_current_active_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """Get current active admin user (must be from ADMIN_PANEL source with SUPER_USER role)"""
+    if current_user.source != RequestSource.ADMIN_PANEL:
+        raise HTTPException(
+            status_code=403,
+            detail="The user doesn't have admin panel privileges",
+        )
+    if current_user.role != UserRole.SUPER_USER:
+        raise HTTPException(
+            status_code=403,
+            detail="The user doesn't have admin privileges",
+        )
+    return current_user
+
 def get_request_source(
     x_source: str = Header(..., alias="X-Source")
 ) -> RequestSource:

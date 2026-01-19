@@ -13,6 +13,10 @@ account recovery code: 9K8DDP2PDUZW69TNDUEXPE63
 
 api key: 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
 
+another sendgrid key: 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
+key name: Safe Algo Tourism Production
+key id: q-narE1sS8Wxt1OBVLt16g
+email send from for both: official@safealgo.sa
 
 
 Backblaze (first 10 gb free) (object storage):

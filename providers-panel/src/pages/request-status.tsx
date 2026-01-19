@@ -25,6 +25,11 @@ const RequestStatusPage = () => {
         const response = await api.get<ProviderRequest>('/providers/request-status');
         setRequest(response);
       } catch (err: any) {
+        // If request is already approved, redirect to dashboard
+        if (err.response?.data?.detail === 'Request already approved') {
+          window.location.href = '/dashboard';
+          return;
+        }
         setError(err.response?.data?.detail || 'Failed to fetch request status');
       } finally {
         setLoading(false);

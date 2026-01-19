@@ -18,21 +18,48 @@ const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUp
     <ul>
       {members.map((member) => (
         <li key={member.id}>
-                    <span>{member.name} ({member.email})</span>
-          <select 
-            value={member.role} 
-            onChange={(e) => onUpdateRole(member.id, e.target.value)}
-            disabled={isUpdating === member.id}
-          >
-            <option value="provider">Provider</option>
-            <option value="super_provider">Super Provider</option>
-          </select>
-          <button 
-            onClick={() => onDelete(member.id)} 
-            disabled={isDeleting === member.id}
-          >
-            {isDeleting === member.id ? 'Deleting...' : 'Delete'}
-          </button>
+          <span>{member.name} ({member.email})</span>
+          {!member.is_active && (
+            <span style={{ 
+              marginLeft: '10px', 
+              padding: '2px 8px', 
+              backgroundColor: '#FEF3C7', 
+              color: '#92400E',
+              borderRadius: '4px',
+              fontSize: '12px'
+            }}>
+              Pending Invitation
+            </span>
+          )}
+          {member.is_active && (
+            <>
+              <select 
+                value={member.role} 
+                onChange={(e) => onUpdateRole(member.id, e.target.value)}
+                disabled={isUpdating === member.id}
+                style={{ marginLeft: '10px' }}
+              >
+                <option value="normal">Normal</option>
+                <option value="super_user">Super User</option>
+              </select>
+              <button 
+                onClick={() => onDelete(member.id)} 
+                disabled={isDeleting === member.id}
+                style={{ marginLeft: '10px' }}
+              >
+                {isDeleting === member.id ? 'Deleting...' : 'Delete'}
+              </button>
+            </>
+          )}
+          {!member.is_active && (
+            <button 
+              onClick={() => onDelete(member.id)} 
+              disabled={isDeleting === member.id}
+              style={{ marginLeft: '10px' }}
+            >
+              {isDeleting === member.id ? 'Canceling...' : 'Cancel Invitation'}
+            </button>
+          )}
         </li>
       ))}
     </ul>

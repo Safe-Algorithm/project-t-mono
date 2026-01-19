@@ -177,38 +177,46 @@ Response: {
 ---
 
 #### **4. Email Verification**
-**Status**: 🟡 Partially implemented (infrastructure ready)  
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
-**Estimated Time**: 1 day (API endpoints only)
+**Completed**: January 2026
 
-**✅ Infrastructure Completed (January 2026)**:
-- ✅ SendGrid email service (`app/services/email.py`)
-- ✅ Email verification with styled HTML templates
-- ✅ Password reset emails
-- ✅ Booking confirmation emails
-- ✅ 10 unit tests passing
-- ✅ Credentials configured
+**What was implemented**:
+- ✅ Email verification endpoints (`POST /api/v1/send-verification-email`, `POST /api/v1/verify-email`)
+- ✅ Password reset flow with emails (`POST /api/v1/forgot-password`, `POST /api/v1/reset-password`)
+- ✅ Team invitation emails (`POST /api/v1/team/invite`, `POST /api/v1/team/accept-invitation`)
+- ✅ Trip registration confirmation emails (automatic on booking)
+- ✅ Secure token generation using `secrets.token_urlsafe(32)`
+- ✅ Redis-based token storage with expiry (24h for email, 1h for password, 7d for invitations)
+- ✅ Background task processing for async email sending
+- ✅ Team invitation email template with styled HTML
+- ✅ User activation flow for team invitations
+- ✅ Frontend URL configuration for email links
+- ✅ 10 email service unit tests passing
 
-**What's still needed**:
+**API Endpoints**:
 ```python
-# Send verification email
-POST /api/v1/verify-email/send
-Input: {email: str}
-Process: Generate token, send via email_service
+# Email Verification
+POST /api/v1/send-verification-email (authenticated)
+POST /api/v1/verify-email?token={token}
 
-# Verify email token
-POST /api/v1/verify-email/confirm
-Input: {token: str}
-Process: Validate token, set is_email_verified=True
+# Password Reset
+POST /api/v1/forgot-password?email={email}
+POST /api/v1/reset-password?token={token}&new_password={password}
+
+# Team Invitations
+POST /api/v1/team/invite (super provider only)
+POST /api/v1/team/accept-invitation?token={token}
+
+# Trip Registration (automatic email)
+POST /api/v1/trips/{trip_id}/register (sends confirmation email)
 ```
 
-**Implementation Steps**:
-1. Create verification API endpoints in `routes/auth.py`
-2. Generate secure verification token (JWT or UUID)
-3. Store token in Redis with 24-hour expiry
-4. Use `email_service.send_verification_email()`
-5. Validate token and update user
-6. Handle expired tokens
+**Email Templates**:
+1. **Email Verification** - Styled HTML with verification link (24h expiry)
+2. **Password Reset** - Styled HTML with reset link (1h expiry)
+3. **Team Invitation** - Styled HTML with invitation details (7d expiry)
+4. **Booking Confirmation** - Styled HTML with trip details and booking reference
 
 ---
 

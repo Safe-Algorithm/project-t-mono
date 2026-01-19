@@ -1,6 +1,7 @@
 from datetime import timedelta
+import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 from datetime import timedelta
@@ -8,11 +9,14 @@ from datetime import timedelta
 from app import crud
 from app.api import deps
 from app.core import security
+from app.core.redis import redis_client
+from app.core.config import settings
 from app.schemas.token import Token, RefreshTokenRequest
 from app.schemas.user import UserPublic, UserCreate, UserUpdate
 from app.models.user import User
 from app.models.source import RequestSource
 from app.schemas.msg import Msg
+from app.services.email import email_service
 
 router = APIRouter()
 
@@ -175,22 +179,38 @@ def read_users_me(current_user: User = Depends(deps.get_current_active_user)):
 
 
 @router.post("/forgot-password", response_model=Msg)
-def forgot_password(
+async def forgot_password(
     email: str,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(deps.get_session),
     source: RequestSource = Depends(deps.get_request_source),
 ) -> Msg:
     """
-    Forgot Password
+    Send password reset email.
     """
     user = crud.user.get_user_by_email_and_source(session, email=email, source=source)
     if not user:
-        raise HTTPException(
-            status_code=404,
-            detail="The user with this email does not exist for this source.",
-        )
-    # Send email logic here
-    return Msg(msg="Password recovery email sent")
+        # Don't reveal if user exists or not for security
+        return Msg(msg="If an account exists with this email, a password reset link has been sent")
+    
+    # Generate reset token
+    reset_token = secrets.token_urlsafe(32)
+    
+    # Store token in Redis with 1-hour expiry
+    redis_key = f"password_reset:{reset_token}"
+    redis_client.setex(redis_key, 60 * 60, f"{user.id}:{source.value}")
+    
+    # Send password reset email in background
+    reset_url = f"{settings.FRONTEND_URL}/reset-password"
+    background_tasks.add_task(
+        email_service.send_password_reset_email,
+        to_email=user.email,
+        to_name=user.name,
+        reset_token=reset_token,
+        reset_url=reset_url
+    )
+    
+    return Msg(msg="If an account exists with this email, a password reset link has been sent")
 
 
 @router.post("/reset-password", response_model=Msg)
@@ -198,32 +218,43 @@ def reset_password(
     token: str, 
     new_password: str, 
     session: Session = Depends(deps.get_session),
-    source: RequestSource = Depends(deps.get_request_source),
 ) -> Msg:
     """
-    Reset password
+    Reset password using token from email.
     """
-    try:
-        payload = security.decode_token(token)
-        email = payload.get("sub")
-        if not email:
-            raise HTTPException(status_code=400, detail="Invalid token")
-        
-        user = crud.user.get_user_by_email_and_source(session, email=email, source=source)
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        # Update password
-        hashed_password = security.get_password_hash(new_password)
-        user.hashed_password = hashed_password
-        session.add(user)
-        session.commit()
-        
-        # TODO: Invalidate all existing tokens for this user
-        
-        return Msg(msg="Password updated successfully")
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid or expired token")
+    # Check token in Redis
+    redis_key = f"password_reset:{token}"
+    user_data = redis_client.get(redis_key)
+    
+    if not user_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Parse user_id and source from stored data
+    import uuid
+    user_id_str, source_str = user_data.decode().split(":")
+    user_id = uuid.UUID(user_id_str)
+    source = RequestSource(source_str)
+    
+    # Get user
+    user = crud.user.get_user(session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update password
+    hashed_password = security.get_password_hash(new_password)
+    user.hashed_password = hashed_password
+    session.add(user)
+    session.commit()
+    
+    # Delete token from Redis
+    redis_client.delete(redis_key)
+    
+    # TODO: Invalidate all existing tokens for this user
+    
+    return Msg(msg="Password updated successfully")
 
 
 @router.post("/change-password", response_model=Msg)
@@ -248,4 +279,72 @@ def change_password(
     # TODO: Invalidate current token after password change
     
     return Msg(msg="Password updated successfully")
+
+
+@router.post("/send-verification-email", response_model=Msg)
+async def send_verification_email(
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Msg:
+    """
+    Send email verification link to current user.
+    """
+    if current_user.is_email_verified:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already verified"
+        )
+    
+    # Generate verification token
+    verification_token = secrets.token_urlsafe(32)
+    
+    # Store token in Redis with 24-hour expiry
+    redis_key = f"email_verification:{verification_token}"
+    redis_client.setex(redis_key, 24 * 60 * 60, str(current_user.id))
+    
+    # Send verification email in background
+    verification_url = f"{settings.FRONTEND_URL}/verify-email"
+    background_tasks.add_task(
+        email_service.send_verification_email,
+        to_email=current_user.email,
+        to_name=current_user.name,
+        verification_token=verification_token,
+        verification_url=verification_url
+    )
+    
+    return Msg(msg="Verification email sent")
+
+
+@router.post("/verify-email", response_model=Msg)
+def verify_email(
+    token: str,
+    session: Session = Depends(deps.get_session),
+) -> Msg:
+    """
+    Verify email using token from email link.
+    """
+    # Check token in Redis
+    redis_key = f"email_verification:{token}"
+    user_id = redis_client.get(redis_key)
+    
+    if not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token"
+        )
+    
+    # Get user and mark email as verified
+    import uuid
+    user = crud.user.get_user(session, user_id=uuid.UUID(user_id.decode()))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.is_email_verified = True
+    session.add(user)
+    session.commit()
+    
+    # Delete token from Redis
+    redis_client.delete(redis_key)
+    
+    return Msg(msg="Email verified successfully")
 

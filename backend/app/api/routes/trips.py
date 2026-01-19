@@ -2,7 +2,7 @@ import uuid
 import logging
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session
 from pydantic import BaseModel
 
@@ -870,8 +870,9 @@ def get_package_required_fields(
 
 # Trip Registration Endpoints
 @router.post("/{trip_id}/register", response_model=TripRegistration)
-def register_for_trip(
+async def register_for_trip(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     registration_in: TripRegistrationCreate,
@@ -959,6 +960,20 @@ def register_for_trip(
     
     session.commit()
     session.refresh(registration)
+    
+    # Send booking confirmation email in background
+    from app.services.email import email_service
+    booking_reference = f"BOOK-{registration.id}"
+    background_tasks.add_task(
+        email_service.send_booking_confirmation_email,
+        to_email=current_user.email,
+        to_name=current_user.name,
+        trip_name=trip.name,
+        booking_reference=booking_reference,
+        start_date=trip.start_date.strftime("%Y-%m-%d"),
+        total_amount=f"{registration.total_amount} SAR"
+    )
+    
     return registration
 
 

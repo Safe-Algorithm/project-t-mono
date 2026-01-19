@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     TWILIO_MESSAGING_SERVICE_SID: str = "MGaa171a12a0b31318ed0a20306a4b7dce"
 
     # SendGrid (Email)
-    SENDGRID_API_KEY: str = "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"
+    SENDGRID_API_KEY: str = ""  # Must be set via environment variable
     SENDGRID_FROM_EMAIL: str = "noreply@safealgo.com"
     SENDGRID_FROM_NAME: str = "Safe Algo Tourism"
 
@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     CHECKOUT_SECRET_KEY: str = "sk_sbox_p7gis5zzoeecmthcm7e4v4xfsu="
     CHECKOUT_PUBLIC_KEY: str = ""  # Set via environment variable
     CHECKOUT_API_URL: str = "https://g6ftayvr.api.sandbox.checkout.com"
+    
+    # Frontend URLs (for email links)
+    FRONTEND_URL: str = "http://localhost:3000"  # Mobile app (default)
+    ADMIN_PANEL_URL: str = "http://localhost:3001"  # Admin panel
+    PROVIDERS_PANEL_URL: str = "http://localhost:3002"  # Providers panel
 
     class Config:
         case_sensitive = True

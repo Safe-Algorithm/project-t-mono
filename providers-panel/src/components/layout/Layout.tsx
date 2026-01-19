@@ -30,8 +30,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         try {
           const response = await api.get<ProviderRequest>('/providers/request-status');
           setProviderStatus(response.status);
-        } catch (error) {
-          console.error('Failed to fetch provider status:', error);
+        } catch (error: any) {
+          // ApiError doesn't have response property - check error message directly
+          if (error.message === 'Request already approved' || error.message?.includes('404')) {
+            setProviderStatus('approved');
+          } else {
+            console.error('Failed to fetch provider status:', error);
+          }
         } finally {
           setStatusLoading(false);
         }
