@@ -37,6 +37,7 @@ def test_login_with_admin_source(client: TestClient, session: Session) -> None:
 
 
 def test_register(client: TestClient, session: Session) -> None:
+    # For admin/provider users (provide both email and phone)
     user_data = {
         "email": "test@example.com",
         "password": "password123",
@@ -46,7 +47,7 @@ def test_register(client: TestClient, session: Session) -> None:
     response = client.post(
         f"{settings.API_V1_STR}/register",
         json=user_data,
-        headers={"X-Source": "mobile_app"}
+        headers={"X-Source": "admin_panel"}
     )
     assert response.status_code == 200
     user = response.json()
@@ -55,7 +56,7 @@ def test_register(client: TestClient, session: Session) -> None:
 
 
 def test_register_duplicate_email_same_source(client: TestClient, session: Session) -> None:
-    user = create_random_user(session)
+    user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     user_data = {
         "email": user.email,
         "password": "password123",
@@ -65,7 +66,7 @@ def test_register_duplicate_email_same_source(client: TestClient, session: Sessi
     response = client.post(
         f"{settings.API_V1_STR}/register",
         json=user_data,
-        headers={"X-Source": "mobile_app"}
+        headers={"X-Source": "admin_panel"}
     )
     assert response.status_code == 400
     assert "already exists for this source" in response.json()["detail"]
@@ -110,41 +111,42 @@ def test_change_password(client: TestClient, session: Session) -> None:
     assert response.json()["msg"] == "Password updated successfully"
 
 
-@patch('app.core.security.decode_token')
-def test_reset_password(mock_decode_token, client: TestClient, session: Session) -> None:
-    user = create_random_user(session)
+@patch('app.api.routes.auth.redis_client')
+def test_reset_password(mock_redis, client: TestClient, session: Session) -> None:
+    # Create user with email (admin source ensures email exists)
+    user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     
-    # Mock the token decode to return valid payload
-    mock_decode_token.return_value = {"sub": user.email}
+    # Mock Redis to return user_id and source
+    mock_redis.get.return_value = f"{user.id}:{RequestSource.ADMIN_PANEL.value}".encode()
     
     # Test reset password
     response = client.post(
         f"{settings.API_V1_STR}/reset-password?token=fake_reset_token&new_password=newpassword123",
-        headers={"X-Source": "mobile_app"}
+        headers={"X-Source": "admin_panel"}
     )
     assert response.status_code == 200
     assert response.json()["msg"] == "Password updated successfully"
-    mock_decode_token.assert_called_once_with("fake_reset_token")
 
 
 def test_forgot_password(client: TestClient, session: Session) -> None:
-    user = create_random_user(session)
+    # Create user with email (admin source ensures email exists)
+    user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     
     response = client.post(
         f"{settings.API_V1_STR}/forgot-password?email={user.email}",
-        headers={"X-Source": "mobile_app"}
+        headers={"X-Source": "admin_panel"}
     )
     assert response.status_code == 200
-    assert response.json()["msg"] == "Password recovery email sent"
+    assert "password reset link has been sent" in response.json()["msg"]
 
 
 def test_forgot_password_user_not_found(client: TestClient, session: Session) -> None:
     response = client.post(
         f"{settings.API_V1_STR}/forgot-password?email=nonexistent@example.com",
-        headers={"X-Source": "mobile_app"}
+        headers={"X-Source": "admin_panel"}
     )
-    assert response.status_code == 404
-    assert "does not exist for this source" in response.json()["detail"]
+    assert response.status_code == 200  # Returns 200 for security (don't reveal if user exists)
+    assert "password reset link has been sent" in response.json()["msg"]
 
 
 def test_refresh_token(client: TestClient, session: Session) -> None:

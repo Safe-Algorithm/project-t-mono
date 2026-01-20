@@ -6,7 +6,10 @@ Provides SMS sending functionality using Twilio API.
 
 from typing import Optional
 import httpx
+import logging
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class TwilioSMSService:

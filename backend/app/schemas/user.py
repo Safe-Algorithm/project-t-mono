@@ -3,15 +3,16 @@ import enum
 from typing import Optional
 
 from sqlmodel import SQLModel
+from pydantic import field_validator, model_validator
 
 from app.models.user import UserRole
 
 
 # Shared properties
 class UserBase(SQLModel):
-    email: str
+    email: Optional[str] = None
     name: str
-    phone: str
+    phone: Optional[str] = None
     is_superuser: bool = False
 
 
@@ -20,6 +21,15 @@ class UserCreate(UserBase):
     password: str
     role: UserRole = UserRole.NORMAL
     provider_id: uuid.UUID | None = None
+    
+    @model_validator(mode='after')
+    def validate_email_or_phone(self):
+        """For mobile app users, ensure exactly one of email or phone is provided"""
+        # This validation will be enforced at the endpoint level based on source
+        # Here we just ensure at least one is provided
+        if not self.email and not self.phone:
+            raise ValueError("Either email or phone must be provided")
+        return self
 
 
 # Properties to receive via API on update, all are optional
@@ -40,6 +50,8 @@ class UserPublic(UserBase):
     is_active: bool
     role: UserRole
     provider_id: uuid.UUID | None = None
+    is_phone_verified: bool = False
+    is_email_verified: bool = False
 
 
 class UserPublicWithProvider(UserPublic):

@@ -443,6 +443,79 @@ class SendGridEmailService:
             text_content=text_content,
             to_name=to_name
         )
+    
+    async def send_otp_email(
+        self,
+        to_email: str,
+        otp_code: str,
+        to_name: Optional[str] = None
+    ) -> dict:
+        """
+        Send OTP verification code via email.
+        
+        Args:
+            to_email: Recipient email address
+            otp_code: 6-digit OTP code
+            to_name: Recipient name (optional)
+            
+        Returns:
+            dict with message ID and status
+        """
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+                .header {{ background-color: #4CAF50; color: white; padding: 20px; text-align: center; }}
+                .content {{ background-color: #f9f9f9; padding: 30px; border-radius: 5px; margin-top: 20px; }}
+                .otp-code {{ font-size: 32px; font-weight: bold; text-align: center; letter-spacing: 8px; color: #4CAF50; padding: 20px; background-color: #fff; border-radius: 5px; margin: 20px 0; }}
+                .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>Safe Algo Tourism</h1>
+                </div>
+                <div class="content">
+                    <h2>Email Verification</h2>
+                    <p>{"Hello " + to_name + "," if to_name else "Hello,"}</p>
+                    <p>Your verification code is:</p>
+                    <div class="otp-code">{otp_code}</div>
+                    <p>This code will expire in <strong>5 minutes</strong>.</p>
+                    <p>If you didn't request this code, please ignore this email.</p>
+                </div>
+                <div class="footer">
+                    <p>&copy; 2026 Safe Algo Tourism. All rights reserved.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        text_content = f"""
+        Safe Algo Tourism - Email Verification
+        
+        {"Hello " + to_name + "," if to_name else "Hello,"}
+        
+        Your verification code is: {otp_code}
+        
+        This code will expire in 5 minutes.
+        
+        If you didn't request this code, please ignore this email.
+        
+        © 2026 Safe Algo Tourism. All rights reserved.
+        """
+        
+        return await self.send_email(
+            to_email=to_email,
+            subject="Your Verification Code",
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name
+        )
 
 
 # Singleton instance

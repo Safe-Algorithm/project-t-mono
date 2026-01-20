@@ -221,38 +221,59 @@ POST /api/v1/trips/{trip_id}/register (sends confirmation email)
 ---
 
 #### **5. Phone OTP Verification**
-**Status**: 🟡 Partially implemented (infrastructure ready)  
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
-**Estimated Time**: 1 day (API endpoints only)
+**Completed**: January 2026
 
-**✅ Infrastructure Completed (January 2026)**:
-- ✅ Twilio SMS service (`app/services/sms.py`)
-- ✅ Send OTP codes
-- ✅ Send trip reminders
-- ✅ Send booking confirmations
-- ✅ 9 unit tests passing
-- ✅ Credentials configured
+**What was implemented**:
+- ✅ Complete OTP verification flow (`app/api/routes/otp.py`)
+- ✅ Phone OTP for authenticated users (`POST /api/v1/otp/send-otp`, `POST /api/v1/otp/verify-otp`)
+- ✅ Phone OTP for registration (`POST /api/v1/otp/send-otp-registration`, `POST /api/v1/otp/verify-otp-registration`)
+- ✅ Email OTP for registration (`POST /api/v1/otp/send-email-otp-registration`, `POST /api/v1/otp/verify-email-otp-registration`)
+- ✅ Mobile app registration flow with exclusive email/phone requirement
+- ✅ Verification token system for registration completion
+- ✅ Redis-based OTP storage with configurable expiry
+- ✅ Configurable rate limiting via environment variables
+- ✅ User profile update with re-verification for email/phone changes
+- ✅ Notification routing based on verified contact methods
+- ✅ Taskiq integration for scheduled SMS/email reminders
+- ✅ 12 unit tests passing
 
-**What's still needed**:
+**API Endpoints**:
 ```python
-# Send OTP
-POST /api/v1/verify-phone/send
-Input: {phone: str}
-Process: Generate 6-digit OTP, send via sms_service
+# Authenticated user OTP (for profile updates)
+POST /api/v1/otp/send-otp
+POST /api/v1/otp/verify-otp
 
-# Verify OTP
-POST /api/v1/verify-phone/confirm
-Input: {phone: str, otp: str}
-Process: Validate OTP, set is_phone_verified=True
+# Registration OTP (no authentication required)
+POST /api/v1/otp/send-otp-registration
+POST /api/v1/otp/verify-otp-registration
+POST /api/v1/otp/send-email-otp-registration
+POST /api/v1/otp/verify-email-otp-registration
+
+# User profile update with re-verification
+PATCH /api/v1/users/me?phone_verification_token={token}
+PATCH /api/v1/users/me?email_verification_token={token}
 ```
 
-**Implementation Steps**:
-1. Create OTP API endpoints in `routes/auth.py`
-2. Generate 6-digit OTP (random)
-3. Store OTP in Redis with 5-minute expiry
-4. Use `sms_service.send_otp()`
-5. Rate limit OTP requests (max 3 per hour)
-6. Validate OTP and update user
+**Features**:
+- ✅ 6-digit OTP generation
+- ✅ Configurable OTP expiry (default: 5 minutes)
+- ✅ Configurable verification token expiry (default: 10 minutes)
+- ✅ Configurable rate limiting (default: 3 attempts per hour)
+- ✅ E.164 phone format validation
+- ✅ Automatic rate limit clearing on successful verification
+- ✅ Mobile app users can register with either email OR phone (exclusive)
+- ✅ Admin/provider users require both email AND phone
+- ✅ Notification routing: SMS, email, or both based on verification status
+- ✅ Scheduled reminders via Taskiq (trip reminders, review reminders, payment reminders)
+
+**Configuration**:
+All rate limits configurable via environment variables in `.env`:
+- `OTP_MAX_ATTEMPTS` - Max OTP requests per time window
+- `OTP_TIME_WINDOW_SECONDS` - Rate limit time window
+- `OTP_EXPIRY_SECONDS` - OTP code validity period
+- `OTP_VERIFICATION_TOKEN_EXPIRY_SECONDS` - Token validity after OTP verification
 
 ---
 

@@ -39,8 +39,44 @@ services:
     ports:
       - "5432:5432"
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  taskiq-worker:
+    build:
+      context: ./backend
+      args:
+        INSTALL_DEV: ${INSTALL_DEV:-true}
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    command: ["/bin/bash", "/app/taskiq-worker-start.sh"]
+
+  taskiq-scheduler:
+    build:
+      context: ./backend
+      args:
+        INSTALL_DEV: ${INSTALL_DEV:-true}
+    depends_on:
+      - redis
+      - db
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+    command: ["/bin/bash", "/app/taskiq-scheduler-start.sh"]
+
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   default:

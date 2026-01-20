@@ -43,6 +43,21 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"  # Mobile app (default)
     ADMIN_PANEL_URL: str = "http://localhost:3001"  # Admin panel
     PROVIDERS_PANEL_URL: str = "http://localhost:3002"  # Providers panel
+    
+    # Rate Limiting Configuration
+    # OTP Rate Limits (max attempts per time window)
+    OTP_MAX_ATTEMPTS: int = 3  # Maximum OTP requests per time window
+    OTP_TIME_WINDOW_SECONDS: int = 3600  # Time window in seconds (default: 1 hour)
+    OTP_EXPIRY_SECONDS: int = 300  # OTP code expiry time (default: 5 minutes)
+    OTP_VERIFICATION_TOKEN_EXPIRY_SECONDS: int = 600  # Verification token expiry (default: 10 minutes)
+    
+    # Email Verification Rate Limits
+    EMAIL_VERIFICATION_MAX_ATTEMPTS: int = 3  # Maximum email verification requests per time window
+    EMAIL_VERIFICATION_TIME_WINDOW_SECONDS: int = 3600  # Time window in seconds (default: 1 hour)
+    
+    # Password Reset Rate Limits
+    PASSWORD_RESET_MAX_ATTEMPTS: int = 3  # Maximum password reset requests per time window
+    PASSWORD_RESET_TIME_WINDOW_SECONDS: int = 3600  # Time window in seconds (default: 1 hour)
 
     class Config:
         case_sensitive = True

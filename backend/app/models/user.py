@@ -28,9 +28,9 @@ class User(SQLModel, table=True):
     )
     
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    email: str = Field(index=True)
+    email: Optional[str] = Field(default=None, index=True)
     name: str
-    phone: str
+    phone: Optional[str] = Field(default=None)
     hashed_password: str
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)

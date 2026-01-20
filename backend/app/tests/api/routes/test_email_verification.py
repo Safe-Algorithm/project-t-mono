@@ -85,12 +85,13 @@ def test_verify_email_invalid_token(client: TestClient, session: Session) -> Non
 
 def test_forgot_password_sends_email(client: TestClient, session: Session) -> None:
     """Test forgot password sends reset email"""
-    user, _ = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    user, _ = user_authentication_headers(client, session, role=UserRole.NORMAL, source=RequestSource.ADMIN_PANEL)
     
     with patch('app.api.routes.auth.email_service.send_password_reset_email') as mock_send:
         response = client.post(
             f"{settings.API_V1_STR}/forgot-password",
-            params={"email": user.email}
+            params={"email": user.email},
+            headers={"X-Source": "admin_panel"}
         )
         
         assert response.status_code == 200
@@ -102,32 +103,34 @@ def test_forgot_password_nonexistent_user(client: TestClient, session: Session) 
     with patch('app.api.routes.auth.email_service.send_password_reset_email') as mock_send:
         response = client.post(
             f"{settings.API_V1_STR}/forgot-password",
-            params={"email": "nonexistent@example.com"}
+            params={"email": "nonexistent@example.com"},
+            headers={"X-Source": "admin_panel"}
         )
         
-        # Should return success message for security (don't reveal if user exists)
+        # Should return 200 for security (don't reveal if user exists)
         assert response.status_code == 200
         assert "password reset link has been sent" in response.json()["msg"]
         
-        # But email should not be sent
+        # Email should not be sent
         mock_send.assert_not_called()
 
 
 def test_reset_password_success(client: TestClient, session: Session) -> None:
     """Test successful password reset"""
-    user, _ = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    user, _ = user_authentication_headers(client, session, role=UserRole.NORMAL, source=RequestSource.ADMIN_PANEL)
     old_password_hash = user.hashed_password
     
     # Mock Redis to return user data
     with patch('app.api.routes.auth.redis_client') as mock_redis:
-        mock_redis.get.return_value = f"{user.id}:{RequestSource.MOBILE_APP.value}".encode()
+        mock_redis.get.return_value = f"{user.id}:{RequestSource.ADMIN_PANEL.value}".encode()
         
         response = client.post(
             f"{settings.API_V1_STR}/reset-password",
             params={
                 "token": "reset_token_123",
                 "new_password": "NewPassword123!"
-            }
+            },
+            headers={"X-Source": "admin_panel"}
         )
         
         assert response.status_code == 200
@@ -164,7 +167,7 @@ def test_change_password_success(client: TestClient, session: Session) -> None:
         f"{settings.API_V1_STR}/change-password",
         headers=headers,
         params={
-            "current_password": "password",
+            "current_password": "password123",  # Default password from create_random_user
             "new_password": "NewPassword123!"
         }
     )

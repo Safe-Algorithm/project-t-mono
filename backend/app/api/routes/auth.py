@@ -1,22 +1,25 @@
+import json
+import logging
 from datetime import timedelta
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
-from datetime import timedelta
 
 from app import crud
 from app.api import deps
 from app.core import security
-from app.core.redis import redis_client
 from app.core.config import settings
-from app.schemas.token import Token, RefreshTokenRequest
-from app.schemas.user import UserPublic, UserCreate, UserUpdate
+from app.core.redis import redis_client
 from app.models.user import User
 from app.models.source import RequestSource
+from app.schemas.token import Token, RefreshTokenRequest
+from app.schemas.user import UserPublic, UserCreate, UserUpdate
 from app.schemas.msg import Msg
 from app.services.email import email_service
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -30,20 +33,33 @@ def login_for_access_token(
 ) -> Token:
     """
     OAuth2 compatible token login, get an access token for future requests.
+    For mobile users, username can be either email or phone number.
     """
+    user = None
+    
+    # Try to find user by email first
     user = crud.user.get_user_by_email_and_source(session, email=form_data.username, source=source)
+    
+    # If not found and source is mobile app, try phone number
+    if not user and source == RequestSource.MOBILE_APP:
+        user = crud.user.get_user_by_phone_and_source(session, phone=form_data.username, source=source)
+    
     if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Incorrect credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    
+    # Use email or phone as subject for token
+    token_subject = user.email if user.email else user.phone
+    
     access_token_expires = timedelta(minutes=security.settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
-        data={"sub": user.email, "source": source.value}
+        data={"sub": token_subject, "source": source.value}
     )
     refresh_token = security.create_refresh_token(
-        data={"sub": user.email, "source": source.value}
+        data={"sub": token_subject, "source": source.value}
     )
     
     # Set refresh token as HttpOnly Secure SameSite cookie
@@ -65,27 +81,112 @@ def register(
     user_in: UserCreate,
     session: Session = Depends(deps.get_session),
     source: RequestSource = Depends(deps.get_request_source),
+    verification_token: str = None,
 ) -> User:
     """
     Create new user.
+    
+    For mobile app users:
+    - Must provide EITHER email OR phone (not both)
+    - Must provide verification_token from OTP verification
+    - Registration is via OTP, not email link
+    
+    For admin/provider users:
+    - Must provide both email AND phone
     """
-    # Check if user exists with same email and source
-    user = crud.user.get_user_by_email_and_source(session, email=user_in.email, source=source)
-    if user:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this email already exists for this source.",
-        )
+    # Mobile app specific validation
+    if source == RequestSource.MOBILE_APP:
+        # Ensure exactly one of email or phone is provided
+        if user_in.email and user_in.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Mobile app users must provide either email or phone, not both."
+            )
+        
+        if not user_in.email and not user_in.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Either email or phone must be provided."
+            )
+        
+        # Require verification token
+        if not verification_token:
+            raise HTTPException(
+                status_code=400,
+                detail="Verification token is required for mobile app registration."
+            )
+        
+        # Verify the token
+        verification_key = f"phone_verified:{verification_token}" if user_in.phone else f"email_verified:{verification_token}"
+        verification_data_str = redis_client.get(verification_key)
+        
+        if not verification_data_str:
+            raise HTTPException(
+                status_code=400,
+                detail="Verification token expired or invalid. Please verify again."
+            )
+        
+        # Parse verification data
+        if isinstance(verification_data_str, bytes):
+            verification_data = json.loads(verification_data_str.decode())
+        else:
+            verification_data = json.loads(verification_data_str)
+        
+        # Ensure contact method matches
+        if user_in.phone and verification_data.get("phone") != user_in.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Phone number does not match verified phone"
+            )
+        
+        if user_in.email and verification_data.get("email") != user_in.email:
+            raise HTTPException(
+                status_code=400,
+                detail="Email does not match verified email"
+            )
+        
+        # Delete verification token
+        redis_client.delete(verification_key)
     
-    # Check if user exists with same phone and source
-    user_by_phone = crud.user.get_user_by_phone_and_source(session, phone=user_in.phone, source=source)
-    if user_by_phone:
-        raise HTTPException(
-            status_code=400,
-            detail="The user with this phone number already exists for this source.",
-        )
+    else:
+        # Admin and provider users must provide both email and phone
+        if not user_in.email or not user_in.phone:
+            raise HTTPException(
+                status_code=400,
+                detail="Both email and phone are required for admin/provider registration."
+            )
     
+    # Check if user exists with same email and source (if email provided)
+    if user_in.email:
+        user = crud.user.get_user_by_email_and_source(session, email=user_in.email, source=source)
+        if user:
+            raise HTTPException(
+                status_code=400,
+                detail="The user with this email already exists for this source.",
+            )
+    
+    # Check if user exists with same phone and source (if phone provided)
+    if user_in.phone:
+        user_by_phone = crud.user.get_user_by_phone_and_source(session, phone=user_in.phone, source=source)
+        if user_by_phone:
+            raise HTTPException(
+                status_code=400,
+                detail="The user with this phone number already exists for this source.",
+            )
+    
+    # Create user
     user = crud.user.create_user(session, user_in=user_in, source=source)
+    
+    # Mark verified field based on what was verified
+    if source == RequestSource.MOBILE_APP and verification_token:
+        if user_in.phone:
+            user.is_phone_verified = True
+        if user_in.email:
+            user.is_email_verified = True
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+    
     return user
 
 
@@ -239,7 +340,7 @@ def reset_password(
     source = RequestSource(source_str)
     
     # Get user
-    user = crud.user.get_user(session, user_id=user_id)
+    user = crud.user.get_user_by_id(session, user_id=user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -335,7 +436,7 @@ def verify_email(
     
     # Get user and mark email as verified
     import uuid
-    user = crud.user.get_user(session, user_id=uuid.UUID(user_id.decode()))
+    user = crud.user.get_user_by_id(session, user_id=uuid.UUID(user_id.decode()))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
