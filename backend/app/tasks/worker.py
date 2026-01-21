@@ -18,17 +18,17 @@ from app.core.taskiq_app import broker, scheduler
 from app.core.config import settings
 from app.core.db import engine
 from app.models.trip import Trip
-from app.models.booking import Booking
+from app.models.trip_registration import TripRegistration
 from app.services.notification import NotificationService
 
 logger = logging.getLogger(__name__)
 
 
-@broker.task(schedule=[{"cron": "0 9 * * *"}])  # Run daily at 9 AM
+@broker.task(schedule=[{"cron": settings.TASKIQ_TRIP_REMINDER_CRON}])
 async def send_trip_reminders():
     """
     Send trip reminders to users 24 hours before their trip starts.
-    Runs daily at 9 AM to check for trips starting tomorrow.
+    Schedule configurable via TASKIQ_TRIP_REMINDER_CRON environment variable.
     """
     logger.info("Starting trip reminder task")
     
@@ -52,23 +52,29 @@ async def send_trip_reminders():
             
             # Send reminders for each trip
             for trip in trips:
-                # Get all bookings for this trip
-                booking_statement = select(Booking).where(
-                    Booking.trip_id == trip.id,
-                    Booking.status == "confirmed"
+                # Get all registrations for this trip
+                registration_statement = select(TripRegistration).where(
+                    TripRegistration.trip_id == trip.id,
+                    TripRegistration.status == "confirmed"
                 )
-                bookings = session.exec(booking_statement).all()
+                registrations = session.exec(registration_statement).all()
                 
-                for booking in bookings:
+                for registration in registrations:
                     try:
+                        # Send notification via NotificationService
                         await notification_service.send_trip_reminder(
-                            user=booking.user,
-                            trip=trip,
-                            booking=booking
+                            user=registration.user,
+                            trip_name=trip.name,
+                            start_date=trip.start_date.strftime("%Y-%m-%d %H:%M"),
+                            trip_details={
+                                "destination": trip.destination,
+                                "duration": f"{(trip.end_date - trip.start_date).days} days",
+                                "description": trip.description
+                            }
                         )
-                        logger.info(f"Sent trip reminder to user {booking.user_id} for trip {trip.id}")
+                        logger.info(f"Sent trip reminder to user {registration.user_id} for trip {trip.id}")
                     except Exception as e:
-                        logger.error(f"Failed to send trip reminder to user {booking.user_id}: {e}")
+                        logger.error(f"Failed to send trip reminder to user {registration.user_id}: {e}")
             
             logger.info("Trip reminder task completed")
     
@@ -77,18 +83,16 @@ async def send_trip_reminders():
         raise
 
 
-@broker.task(schedule=[{"cron": "0 10 * * *"}])  # Run daily at 10 AM
+@broker.task(schedule=[{"cron": settings.TASKIQ_REVIEW_REMINDER_CRON}])
 async def send_review_reminders():
     """
     Send review reminders to users 1 day after their trip ends.
-    Runs daily at 10 AM to check for trips that ended yesterday.
+    Schedule configurable via TASKIQ_REVIEW_REMINDER_CRON environment variable.
     """
     logger.info("Starting review reminder task")
     
     try:
         with Session(engine) as session:
-            notification_service = NotificationService()
-            
             # Get trips that ended yesterday
             yesterday = datetime.utcnow() - timedelta(days=1)
             yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -105,47 +109,64 @@ async def send_review_reminders():
             
             # Send review reminders for each trip
             for trip in trips:
-                # Get all confirmed bookings for this trip
-                booking_statement = select(Booking).where(
-                    Booking.trip_id == trip.id,
-                    Booking.status == "confirmed"
+                # Get all confirmed registrations for this trip
+                registration_statement = select(TripRegistration).where(
+                    TripRegistration.trip_id == trip.id,
+                    TripRegistration.status == "confirmed"
                 )
-                bookings = session.exec(booking_statement).all()
+                registrations = session.exec(registration_statement).all()
                 
-                for booking in bookings:
+                for registration in registrations:
                     try:
                         # Check if user already left a review
                         from app.models.review import Review
                         review_statement = select(Review).where(
                             Review.trip_id == trip.id,
-                            Review.user_id == booking.user_id
+                            Review.user_id == registration.user_id
                         )
                         existing_review = session.exec(review_statement).first()
                         
                         if not existing_review:
                             # Send review reminder via SMS/Email
                             message = (
-                                f"Hi {booking.user.name}! We hope you enjoyed your trip to {trip.destination}. "
+                                f"Hi {registration.user.name}! We hope you enjoyed your trip to {trip.destination}. "
                                 f"Please take a moment to share your experience and leave a review. "
                                 f"Your feedback helps other travelers!"
                             )
                             
-                            if booking.user.is_phone_verified and booking.user.phone:
+                            # Send SMS if phone verified
+                            if registration.user.is_phone_verified and registration.user.phone:
                                 from app.services.sms import sms_service
                                 await sms_service.send_sms(
-                                    to_phone=booking.user.phone,
+                                    to_phone=registration.user.phone,
                                     message=message
                                 )
+                                logger.info(f"Sent SMS review reminder to {registration.user.phone}")
                             
-                            if booking.user.is_email_verified and booking.user.email:
+                            # Send Email if email verified
+                            if registration.user.is_email_verified and registration.user.email:
                                 from app.services.email import email_service
-                                # TODO: Create dedicated review reminder email template
-                                logger.info(f"Would send review reminder email to {booking.user.email}")
+                                await email_service.send_email(
+                                    to_email=registration.user.email,
+                                    subject=f"Share your experience - {trip.name}",
+                                    html_content=f"""
+                                    <html>
+                                        <body>
+                                            <h2>How was your trip?</h2>
+                                            <p>Hi {registration.user.name}!</p>
+                                            <p>We hope you enjoyed your trip to {trip.destination}.</p>
+                                            <p>Please take a moment to share your experience and leave a review. Your feedback helps other travelers!</p>
+                                            <p>Thank you,<br>Safe Algo Tourism Team</p>
+                                        </body>
+                                    </html>
+                                    """
+                                )
+                                logger.info(f"Sent email review reminder to {registration.user.email}")
                             
-                            logger.info(f"Sent review reminder to user {booking.user_id} for trip {trip.id}")
+                            logger.info(f"Sent review reminder to user {registration.user_id} for trip {trip.id}")
                     
                     except Exception as e:
-                        logger.error(f"Failed to send review reminder to user {booking.user_id}: {e}")
+                        logger.error(f"Failed to send review reminder to user {registration.user_id}: {e}")
             
             logger.info("Review reminder task completed")
     
@@ -154,51 +175,70 @@ async def send_review_reminders():
         raise
 
 
-@broker.task(schedule=[{"cron": "0 */6 * * *"}])  # Run every 6 hours
+@broker.task(schedule=[{"cron": settings.TASKIQ_PAYMENT_REMINDER_CRON}])
 async def send_payment_reminders():
     """
-    Send payment reminders for pending bookings.
-    Runs every 6 hours to remind users with pending payments.
+    Send payment reminders for pending registrations.
+    Schedule configurable via TASKIQ_PAYMENT_REMINDER_CRON environment variable.
     """
     logger.info("Starting payment reminder task")
     
     try:
         with Session(engine) as session:
-            # Get bookings with pending payment older than 1 hour
+            # Get registrations with pending payment older than 1 hour
             one_hour_ago = datetime.utcnow() - timedelta(hours=1)
             
-            statement = select(Booking).where(
-                Booking.status == "pending",
-                Booking.created_at <= one_hour_ago
+            statement = select(TripRegistration).where(
+                TripRegistration.status == "pending",
+                TripRegistration.created_at <= one_hour_ago
             )
-            pending_bookings = session.exec(statement).all()
+            pending_registrations = session.exec(statement).all()
             
-            logger.info(f"Found {len(pending_bookings)} bookings with pending payment")
+            logger.info(f"Found {len(pending_registrations)} registrations with pending payment")
             
-            for booking in pending_bookings:
+            for registration in pending_registrations:
                 try:
                     # Send payment reminder
                     message = (
-                        f"Hi {booking.user.name}! You have a pending booking for {booking.trip.destination}. "
-                        f"Please complete your payment to confirm your reservation."
+                        f"Hi {registration.user.name}! You have a pending registration for {registration.trip.destination}. "
+                        f"Please complete your payment to confirm your reservation. "
+                        f"Amount: {registration.total_amount} SAR"
                     )
                     
-                    if booking.user.is_phone_verified and booking.user.phone:
+                    # Send SMS if phone verified
+                    if registration.user.is_phone_verified and registration.user.phone:
                         from app.services.sms import sms_service
                         await sms_service.send_sms(
-                            to_phone=booking.user.phone,
+                            to_phone=registration.user.phone,
                             message=message
                         )
+                        logger.info(f"Sent SMS payment reminder to {registration.user.phone}")
                     
-                    if booking.user.is_email_verified and booking.user.email:
+                    # Send Email if email verified
+                    if registration.user.is_email_verified and registration.user.email:
                         from app.services.email import email_service
-                        # TODO: Create dedicated payment reminder email template
-                        logger.info(f"Would send payment reminder email to {booking.user.email}")
+                        await email_service.send_email(
+                            to_email=registration.user.email,
+                            subject=f"Complete your payment - {registration.trip.name}",
+                            html_content=f"""
+                            <html>
+                                <body>
+                                    <h2>Complete Your Payment</h2>
+                                    <p>Hi {registration.user.name}!</p>
+                                    <p>You have a pending registration for <strong>{registration.trip.destination}</strong>.</p>
+                                    <p><strong>Amount:</strong> {registration.total_amount} SAR</p>
+                                    <p>Please complete your payment to confirm your reservation.</p>
+                                    <p>Thank you,<br>Safe Algo Tourism Team</p>
+                                </body>
+                            </html>
+                            """
+                        )
+                        logger.info(f"Sent email payment reminder to {registration.user.email}")
                     
-                    logger.info(f"Sent payment reminder to user {booking.user_id} for booking {booking.id}")
+                    logger.info(f"Sent payment reminder to user {registration.user_id} for registration {registration.id}")
                 
                 except Exception as e:
-                    logger.error(f"Failed to send payment reminder to user {booking.user_id}: {e}")
+                    logger.error(f"Failed to send payment reminder to user {registration.user_id}: {e}")
             
             logger.info("Payment reminder task completed")
     

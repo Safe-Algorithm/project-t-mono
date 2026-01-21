@@ -3,15 +3,16 @@ Taskiq broker and scheduler configuration for background tasks.
 """
 
 from taskiq import TaskiqScheduler
-from taskiq_redis import ListQueueBroker, RedisAsyncResultBackend
+from taskiq.schedule_sources import LabelScheduleSource
+from taskiq_redis import ListQueueBroker
 
 from app.core.config import settings
 
-# Create Redis result backend
-result_backend = RedisAsyncResultBackend(settings.REDIS_URL)
-
 # Create broker with Redis
-broker = ListQueueBroker(settings.REDIS_URL).with_result_backend(result_backend)
+broker = ListQueueBroker(settings.REDIS_URL)
 
-# Create scheduler
-scheduler = TaskiqScheduler(broker=broker)
+# Create scheduler with LabelScheduleSource
+scheduler = TaskiqScheduler(
+    broker=broker,
+    sources=[LabelScheduleSource(broker)],
+)

@@ -9,7 +9,7 @@ from sqlmodel import Session
 
 from app.tasks.worker import send_trip_reminders, send_review_reminders, send_payment_reminders
 from app.models.trip import Trip
-from app.models.booking import Booking
+from app.models.trip_registration import TripRegistration
 from app.models.user import User, UserRole
 from app.models.provider import Provider
 from app.models.source import RequestSource
@@ -63,14 +63,14 @@ async def test_send_trip_reminders_with_upcoming_trip(session: Session):
     session.add(user)
     session.commit()
     
-    # Create confirmed booking
-    booking = Booking(
+    # Create confirmed registration
+    registration = TripRegistration(
         trip_id=trip.id,
         user_id=user.id,
         status="confirmed",
         total_amount=1000.0
     )
-    session.add(booking)
+    session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
@@ -133,14 +133,14 @@ async def test_send_review_reminders_with_completed_trip(session: Session):
     session.add(user)
     session.commit()
     
-    # Create confirmed booking
-    booking = Booking(
+    # Create confirmed registration
+    registration = TripRegistration(
         trip_id=trip.id,
         user_id=user.id,
         status="confirmed",
         total_amount=1000.0
     )
-    session.add(booking)
+    session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
@@ -194,14 +194,14 @@ async def test_send_review_reminders_skips_existing_reviews(session: Session):
     session.add(user)
     session.commit()
     
-    # Create confirmed booking
-    booking = Booking(
+    # Create confirmed registration
+    registration = TripRegistration(
         trip_id=trip.id,
         user_id=user.id,
         status="confirmed",
         total_amount=1000.0
     )
-    session.add(booking)
+    session.add(registration)
     session.commit()
     
     # Create existing review
@@ -227,8 +227,8 @@ async def test_send_review_reminders_skips_existing_reviews(session: Session):
 
 
 @pytest.mark.asyncio
-async def test_send_payment_reminders_no_pending_bookings(session: Session):
-    """Test payment reminders when no pending bookings exist"""
+async def test_send_payment_reminders_no_pending_registrations(session: Session):
+    """Test payment reminders when no pending registrations exist"""
     with patch('app.tasks.worker.Session') as mock_session_class:
         mock_session_class.return_value.__enter__.return_value = session
         
@@ -239,8 +239,8 @@ async def test_send_payment_reminders_no_pending_bookings(session: Session):
 
 
 @pytest.mark.asyncio
-async def test_send_payment_reminders_with_pending_booking(session: Session):
-    """Test sending payment reminders for pending bookings"""
+async def test_send_payment_reminders_with_pending_registration(session: Session):
+    """Test sending payment reminders for pending registrations"""
     # Create provider
     provider = Provider(
         company_name="Test Provider",
@@ -272,16 +272,16 @@ async def test_send_payment_reminders_with_pending_booking(session: Session):
     session.add(user)
     session.commit()
     
-    # Create pending booking (older than 1 hour)
+    # Create pending registration (older than 1 hour)
     two_hours_ago = datetime.utcnow() - timedelta(hours=2)
-    booking = Booking(
+    registration = TripRegistration(
         trip_id=trip.id,
         user_id=user.id,
         status="pending",
         total_amount=1000.0,
         created_at=two_hours_ago
     )
-    session.add(booking)
+    session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
@@ -300,8 +300,8 @@ async def test_send_payment_reminders_with_pending_booking(session: Session):
 
 
 @pytest.mark.asyncio
-async def test_send_payment_reminders_skips_recent_bookings(session: Session):
-    """Test that payment reminders skip bookings created less than 1 hour ago"""
+async def test_send_payment_reminders_skips_recent_registrations(session: Session):
+    """Test that payment reminders skip registrations created less than 1 hour ago"""
     # Create provider
     provider = Provider(
         company_name="Test Provider",
@@ -333,15 +333,15 @@ async def test_send_payment_reminders_skips_recent_bookings(session: Session):
     session.add(user)
     session.commit()
     
-    # Create recent pending booking (less than 1 hour old)
-    booking = Booking(
+    # Create recent pending registration (less than 1 hour old)
+    registration = TripRegistration(
         trip_id=trip.id,
         user_id=user.id,
         status="pending",
         total_amount=1000.0,
         created_at=datetime.utcnow() - timedelta(minutes=30)
     )
-    session.add(booking)
+    session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
@@ -352,7 +352,7 @@ async def test_send_payment_reminders_skips_recent_bookings(session: Session):
         
         await send_payment_reminders()
         
-        # Verify SMS was NOT sent (booking too recent)
+        # Verify SMS was NOT sent (registration too recent)
         mock_sms.send_sms.assert_not_called()
 
 

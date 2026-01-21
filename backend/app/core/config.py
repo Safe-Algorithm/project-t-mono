@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # Password Reset Rate Limits
     PASSWORD_RESET_MAX_ATTEMPTS: int = 3  # Maximum password reset requests per time window
     PASSWORD_RESET_TIME_WINDOW_SECONDS: int = 3600  # Time window in seconds (default: 1 hour)
+    
+    # Taskiq Scheduled Task Cron Schedules
+    TASKIQ_TRIP_REMINDER_CRON: str = "0 9 * * *"  # Daily at 9 AM (24h before trip)
+    TASKIQ_REVIEW_REMINDER_CRON: str = "0 20 * * *"  # Daily at 8 PM (after trip ends)
+    TASKIQ_PAYMENT_REMINDER_CRON: str = "0 */6 * * *"  # Every 6 hours (pending payments)
 
     class Config:
         case_sensitive = True
