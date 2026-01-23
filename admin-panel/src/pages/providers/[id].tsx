@@ -38,15 +38,129 @@ interface User {
   role: string;
 }
 
+interface ProviderFile {
+  id: string;
+  file_name: string;
+  file_url: string;
+  file_size_bytes: number;
+  file_extension: string;
+  file_verification_status: 'processing' | 'accepted' | 'rejected';
+  uploaded_at: string;
+  file_definition?: {
+    name_en: string;
+    name_ar: string;
+  };
+}
+
 const ProviderDetailPage = () => {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [files, setFiles] = useState<ProviderFile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updatingFileStatus, setUpdatingFileStatus] = useState<{ [key: string]: boolean }>({});
   const [error, setError] = useState<string | null>(null);
+  const [rejectingFileId, setRejectingFileId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
   const { token } = useAuth();
   const router = useRouter();
   const { id } = router.query;
+
+  const updateFileStatus = async (fileId: string, status: 'accepted' | 'rejected' | 'processing', rejection_reason?: string) => {
+    setUpdatingFileStatus(prev => ({ ...prev, [fileId]: true }));
+    try {
+      const body: any = { file_verification_status: status };
+      if (status === 'rejected' && rejection_reason) {
+        body.rejection_reason = rejection_reason;
+      }
+      
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/files/admin/provider-files/${fileId}/status`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Source': 'admin_panel',
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update file status');
+      }
+
+      // Refresh files list
+      const filesResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/files/provider/${id}/files`,
+        {
+          headers: {
+            'X-Source': 'admin_panel',
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: 'include',
+        }
+      );
+
+      if (filesResponse.ok) {
+        const filesData = await filesResponse.json();
+        setFiles(filesData);
+      }
+    } catch (err) {
+      console.error('Error updating file status:', err);
+      setError('Failed to update file status');
+    } finally {
+      setUpdatingFileStatus(prev => ({ ...prev, [fileId]: false }));
+    }
+  };
+
+  const handleRejectClick = (fileId: string) => {
+    setRejectingFileId(fileId);
+    setRejectionReason('');
+  };
+
+  const handleRejectSubmit = async () => {
+    if (!rejectingFileId || !rejectionReason.trim()) {
+      setError('Rejection reason is required');
+      return;
+    }
+
+    await updateFileStatus(rejectingFileId, 'rejected', rejectionReason);
+    setRejectingFileId(null);
+    setRejectionReason('');
+  };
+
+  const handleRejectCancel = () => {
+    setRejectingFileId(null);
+    setRejectionReason('');
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return (
+          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+            <span className="mr-1">✓</span> Accepted
+          </span>
+        );
+      case 'rejected':
+        return (
+          <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full flex items-center">
+            <span className="mr-1">✗</span> Rejected
+          </span>
+        );
+      case 'processing':
+        return (
+          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center">
+            <span className="mr-1">⏳</span> Under Review
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
 
   useEffect(() => {
     if (!token || !id || typeof id !== 'string') return;
@@ -96,6 +210,19 @@ const ProviderDetailPage = () => {
         if (usersResponse.ok) {
           const usersData = await usersResponse.json();
           setUsers(usersData);
+        }
+
+        // Fetch provider files
+        const filesResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/files/provider/${id}/files`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-Source': 'admin_panel',
+          },
+        });
+        
+        if (filesResponse.ok) {
+          const filesData = await filesResponse.json();
+          setFiles(filesData);
         }
         
       } catch (err) {
@@ -218,6 +345,67 @@ const ProviderDetailPage = () => {
         )}
       </div>
 
+      {/* Provider Files */}
+      <div className="bg-white shadow-md rounded-lg p-6 mt-6">
+        <h2 className="text-2xl font-semibold mb-4">Uploaded Documents ({files.length})</h2>
+        {files.length === 0 ? (
+          <p className="text-gray-500">No documents uploaded yet.</p>
+        ) : (
+          <div className="space-y-2">
+            {files.map((file) => (
+              <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded border border-gray-200">
+                <div className="flex-1">
+                  <div className="flex items-center">
+                    <span className="text-2xl mr-3">📄</span>
+                    <div>
+                      {file.file_definition && (
+                        <p className="text-xs font-semibold text-gray-700 mb-1">
+                          {file.file_definition.name_en}
+                        </p>
+                      )}
+                      <a 
+                        href={file.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {file.file_name}
+                      </a>
+                      <p className="text-xs text-gray-500">
+                        {(file.file_size_bytes / 1024 / 1024).toFixed(2)} MB • 
+                        {file.file_extension.toUpperCase()} • 
+                        Uploaded {new Date(file.uploaded_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {getStatusBadge(file.file_verification_status)}
+                  {file.file_verification_status !== 'accepted' && (
+                    <button
+                      onClick={() => updateFileStatus(file.id, 'accepted')}
+                      disabled={updatingFileStatus[file.id]}
+                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
+                    >
+                      {updatingFileStatus[file.id] ? 'Updating...' : 'Accept'}
+                    </button>
+                  )}
+                  {file.file_verification_status !== 'rejected' && (
+                    <button
+                      onClick={() => handleRejectClick(file.id)}
+                      disabled={updatingFileStatus[file.id]}
+                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
+                    >
+                      {updatingFileStatus[file.id] ? 'Updating...' : 'Reject'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Provider Users */}
       <div className="bg-white shadow-md rounded-lg p-6 mt-6">
         <h2 className="text-2xl font-semibold mb-4">Users ({users.length})</h2>
@@ -258,6 +446,40 @@ const ProviderDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* Rejection Reason Modal */}
+      {rejectingFileId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Reject File</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for rejecting this file. The provider will see this message.
+            </p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[100px] focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              autoFocus
+            />
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleRejectCancel}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectSubmit}
+                disabled={!rejectionReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reject File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -7,6 +7,7 @@ from sqlalchemy import JSON
 if TYPE_CHECKING:
     from .user import User
     from .trip import Trip
+    from .provider_file import ProviderFile
 
 class Provider(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -21,6 +22,7 @@ class Provider(SQLModel, table=True):
     provider_request_id: Optional[uuid.UUID] = Field(default=None, foreign_key="providerrequest.id")
     provider_request: "ProviderRequest" = Relationship(back_populates="provider")
     trips: List["Trip"] = Relationship(back_populates="provider")
+    files: List["ProviderFile"] = Relationship(back_populates="provider")
 
 
 class ProviderRequest(SQLModel, table=True):

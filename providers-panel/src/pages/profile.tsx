@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/UserContext';
 import { providerService } from '@/services/providerService';
+import { providerFilesService, FileDefinition, ProviderFile } from '@/services/fileDefinitions';
 
 const ProfilePage = () => {
   const { user, isLoading } = useAuth();
@@ -11,6 +12,13 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  
+  // File management state
+  const [requestStatus, setRequestStatus] = useState<string>('');
+  const [uploadedFiles, setUploadedFiles] = useState<ProviderFile[]>([]);
+  const [missingDefinitions, setMissingDefinitions] = useState<FileDefinition[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<{ [key: string]: boolean }>({});
+  const [fileErrors, setFileErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const fetchProviderProfile = async () => {
@@ -21,6 +29,18 @@ const ProfilePage = () => {
           setCompanyName(providerData.company_name || '');
           setCompanyEmail(providerData.company_email || '');
           setCompanyPhone(providerData.company_phone || '');
+          
+          // Fetch request status
+          const statusData = await providerService.getRequestStatus();
+          setRequestStatus(statusData.status || 'pending');
+          
+          // Fetch uploaded files
+          const files = await providerFilesService.getUploadedFiles();
+          setUploadedFiles(files);
+          
+          // Fetch missing file definitions
+          const missing = await providerFilesService.getMissingFileDefinitions();
+          setMissingDefinitions(missing);
         } catch (error) {
           console.error('Failed to fetch provider profile:', error);
           setError('Failed to load profile data');
@@ -50,6 +70,56 @@ const ProfilePage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleFileUpload = async (fileDefinitionId: string, file: File, isReplacement: boolean = false) => {
+    setUploadingFiles(prev => ({ ...prev, [fileDefinitionId]: true }));
+    setFileErrors(prev => ({ ...prev, [fileDefinitionId]: '' }));
+
+    try {
+      if (isReplacement) {
+        // Use PUT endpoint for replacements (synchronous)
+        await providerFilesService.replaceFile(fileDefinitionId, file);
+      } else {
+        // Use POST endpoint for new uploads (background task)
+        await providerFilesService.uploadFile(fileDefinitionId, file);
+      }
+      
+      // Refresh uploaded files and missing definitions
+      const files = await providerFilesService.getUploadedFiles();
+      setUploadedFiles(files);
+      
+      const missing = await providerFilesService.getMissingFileDefinitions();
+      setMissingDefinitions(missing);
+      
+      setSuccess(isReplacement ? 'File replaced successfully!' : 'File uploaded successfully!');
+    } catch (error: any) {
+      console.error('File upload failed:', error);
+      setFileErrors(prev => ({ 
+        ...prev, 
+        [fileDefinitionId]: error.message || 'Failed to upload file' 
+      }));
+    } finally {
+      setUploadingFiles(prev => ({ ...prev, [fileDefinitionId]: false }));
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">✓ Accepted</span>;
+      case 'rejected':
+        return <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded">✗ Rejected</span>;
+      case 'processing':
+        return <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">⏳ Under Review</span>;
+      default:
+        return null;
+    }
+  };
+
+  const canReplaceFile = (file: ProviderFile) => {
+    // Only allow replacement if file status is rejected
+    return file.file_verification_status === 'rejected';
   };
 
   if (isLoading || !user) return <div className="flex justify-center items-center h-64"><p>Loading...</p></div>;
@@ -147,6 +217,152 @@ const ProfilePage = () => {
           </div>
         </form>
       </div>
+
+      {/* Uploaded Files Section */}
+      <div className="bg-white shadow rounded-lg mt-6">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-medium text-gray-900">Uploaded Documents</h2>
+          <p className="text-sm text-gray-600">
+            View your uploaded documents. You can replace rejected files.
+          </p>
+        </div>
+        <div className="px-6 py-4">
+          {uploadedFiles.length === 0 ? (
+            <p className="text-gray-500 text-sm">No documents uploaded yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {uploadedFiles.map((file) => (
+                <div key={file.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      {file.file_definition && (
+                        <p className="text-xs font-semibold text-gray-700 mb-1">
+                          {file.file_definition.name_en}
+                        </p>
+                      )}
+                      <a 
+                        href={file.file_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {file.file_name}
+                      </a>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {(file.file_size_bytes / 1024 / 1024).toFixed(2)} MB • 
+                        {file.file_extension.toUpperCase()} • 
+                        Uploaded {new Date(file.uploaded_at).toLocaleDateString()}
+                      </p>
+                      <div className="mt-2">
+                        {getStatusBadge(file.file_verification_status)}
+                        {file.file_verification_status === 'rejected' && file.rejection_reason && (
+                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                            <p className="font-semibold text-red-800 mb-1">Rejection Reason:</p>
+                            <p className="text-red-700">{file.rejection_reason}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {canReplaceFile(file) && (
+                      <div className="ml-4">
+                        {file.file_definition && file.file_definition.accepted_file_extensions && (
+                          <p className="text-xs text-gray-500 mb-1">
+                            Accepted: {file.file_definition.accepted_file_extensions.join(', ')}
+                          </p>
+                        )}
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept={file.file_definition?.accepted_file_extensions?.map((ext: string) => `.${ext}`).join(',')}
+                            onChange={(e) => {
+                              const selectedFile = e.target.files?.[0];
+                              if (selectedFile) {
+                                // Validate file extension
+                                const fileExt = selectedFile.name.split('.').pop()?.toLowerCase();
+                                const acceptedExts = file.file_definition?.accepted_file_extensions?.map((ext: string) => ext.toLowerCase());
+                                
+                                if (acceptedExts && fileExt && !acceptedExts.includes(fileExt)) {
+                                  setFileErrors(prev => ({
+                                    ...prev,
+                                    [file.file_definition_id]: `Invalid file type. Accepted: ${acceptedExts.join(', ')}`
+                                  }));
+                                  return;
+                                }
+                                
+                                handleFileUpload(file.file_definition_id, selectedFile, true);
+                              }
+                            }}
+                            disabled={uploadingFiles[file.file_definition_id]}
+                          />
+                          <span className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 disabled:opacity-50">
+                            {uploadingFiles[file.file_definition_id] ? 'Uploading...' : 'Replace'}
+                          </span>
+                        </label>
+                        {fileErrors[file.file_definition_id] && (
+                          <p className="text-xs text-red-600 mt-1">{fileErrors[file.file_definition_id]}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Missing File Definitions Section */}
+      {missingDefinitions.length > 0 && (
+        <div className="bg-white shadow rounded-lg mt-6">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-medium text-gray-900">Additional Documents</h2>
+            <p className="text-sm text-gray-600">
+              These documents are available for upload but not yet submitted.
+            </p>
+          </div>
+          <div className="px-6 py-4">
+            <div className="space-y-3">
+              {missingDefinitions.map((definition) => (
+                <div key={definition.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900">{definition.name_en}</p>
+                      <p className="text-xs text-gray-600 mt-1">{definition.description_en}</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Allowed: {definition.allowed_extensions.join(', ').toUpperCase()} • 
+                        Max size: {definition.max_size_mb}MB
+                      </p>
+                    </div>
+                    <div className="ml-4">
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept={definition.allowed_extensions.map(ext => `.${ext}`).join(',')}
+                          onChange={(e) => {
+                            const selectedFile = e.target.files?.[0];
+                            if (selectedFile) {
+                              handleFileUpload(definition.id, selectedFile);
+                            }
+                          }}
+                          disabled={uploadingFiles[definition.id]}
+                        />
+                        <span className="inline-flex items-center px-3 py-1 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 disabled:opacity-50">
+                          {uploadingFiles[definition.id] ? 'Uploading...' : 'Upload'}
+                        </span>
+                      </label>
+                      {fileErrors[definition.id] && (
+                        <p className="text-xs text-red-600 mt-1">{fileErrors[definition.id]}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

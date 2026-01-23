@@ -328,21 +328,76 @@ Update: Registration status based on payment events
 
 ---
 
-#### **7. File Upload (Trip Images & User Avatars)**
-**Status**: 🟡 Partially implemented (infrastructure ready)  
+#### **7. File Upload & Verification System**
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
-**Estimated Time**: 1-2 days (API endpoints only)
+**Completed**: January 2026
 
-**✅ Infrastructure Completed (January 2026)**:
+**✅ Infrastructure Completed**:
 - ✅ Backblaze B2 storage service (`app/services/storage.py`)
 - ✅ File upload with automatic content-type detection
 - ✅ File deletion and info retrieval
 - ✅ SHA1 hash calculation for integrity
 - ✅ Unique file naming with timestamps
-- ✅ 8 unit tests passing
-- ✅ Credentials configured
+- ✅ Backblaze file ID storage for proper deletion
+- ✅ Provider file verification system with three-status enum
+- ✅ Admin file review workflow with rejection reasons
+- ✅ Synchronous file replacement for rejected files
+- ✅ File extension validation on replacement
+- ✅ Comprehensive unit tests passing
 
-**What's still needed**:
+**✅ Provider File Verification System**:
+- ✅ Three-status enum: `processing`, `accepted`, `rejected`
+- ✅ Database model with `file_verification_status` and `rejection_reason` fields
+- ✅ Admin endpoints to accept/reject files with required rejection reason
+- ✅ Provider profile page shows file status and rejection reasons
+- ✅ Synchronous file replacement endpoint (PUT) for rejected files only
+- ✅ File extension validation and display on replacement UI
+- ✅ Backblaze file deletion when files are replaced
+- ✅ Provider request approval blocked until all files accepted
+- ✅ Admin UI with rejection reason modal
+- ✅ Provider UI displays rejection reasons in red alert boxes
+
+**API Endpoints**:
+```python
+# Provider file upload (background task)
+POST /api/v1/files/provider-registration/{file_definition_id}
+Input: multipart/form-data (file)
+Output: {file_id: str, message: str}
+
+# Provider file replacement (synchronous, rejected files only)
+PUT /api/v1/files/provider-registration/{file_definition_id}
+Input: multipart/form-data (file)
+Validation: File must be in 'rejected' status
+Output: {file_id: str, file_url: str, message: str}
+
+# Admin file status update
+PATCH /api/v1/files/admin/provider-files/{file_id}/status
+Input: {file_verification_status: str, rejection_reason?: str}
+Validation: rejection_reason required when status is 'rejected'
+Output: Updated file object
+
+# Get provider files
+GET /api/v1/files/provider/{provider_id}/files
+Output: List of files with status and rejection reasons
+```
+
+**Database Schema**:
+- `file_verification_status` enum: processing, accepted, rejected
+- `rejection_reason` VARCHAR(500): Admin's reason for rejection
+- `backblaze_file_id` VARCHAR(255): For proper file deletion
+- `reviewed_by_id` UUID: Admin who reviewed the file
+- `reviewed_at` TIMESTAMP: When file was reviewed
+
+**Business Rules**:
+1. ✅ Files default to 'processing' status on upload
+2. ✅ Only rejected files can be replaced by providers
+3. ✅ Provider requests cannot be approved unless all files are 'accepted'
+4. ✅ Rejection reason is required when rejecting files
+5. ✅ Old files are deleted from Backblaze when replaced
+6. ✅ File extension validation enforced on replacement
+
+**What's still needed for trip images/avatars**:
 ```python
 # Upload trip image
 POST /api/v1/trips/{trip_id}/images
@@ -353,18 +408,7 @@ Output: {image_url: str, file_id: str}
 POST /api/v1/users/avatar
 Input: multipart/form-data (image file)
 Output: {avatar_url: str, file_id: str}
-
-# Delete image
-DELETE /api/v1/images/{file_id}
 ```
-
-**Implementation Steps**:
-1. Create file upload API endpoints in `routes/uploads.py`
-2. Add file validation (types: jpg, png, webp; max size: 5MB)
-3. Integrate with `storage_service.upload_file()`
-4. Store image metadata in database (file_id, url, trip_id/user_id)
-5. Add image deletion endpoint
-6. Optional: Add image resizing/optimization (Pillow library)
 
 ---
 

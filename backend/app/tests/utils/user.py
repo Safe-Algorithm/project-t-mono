@@ -59,3 +59,10 @@ def user_authentication_headers(
     auth_token = response["access_token"]
     headers = {"Authorization": f"Bearer {auth_token}"}
     return user, headers
+
+
+def create_provider_with_user(
+    client: TestClient, session: Session, role: UserRole = UserRole.NORMAL
+) -> Tuple[User, Dict[str, str]]:
+    """Create a provider with a user and return authenticated headers."""
+    return user_authentication_headers(client, session, role=role, source=RequestSource.PROVIDERS_PANEL)

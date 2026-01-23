@@ -15,8 +15,14 @@ from app.schemas.trip import TripRead
 from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
 from app.models.trip_field import TripFieldType, FIELD_METADATA
-from app.crud import trip as trip_crud
+from app.crud import trip as trip_crud, file_definition as file_definition_crud
 from app.schemas.admin import ProviderRequestUpdate
+from app.schemas.file_definition import (
+    FileDefinitionCreate,
+    FileDefinitionUpdate,
+    FileDefinitionPublic,
+    FileDefinitionListResponse
+)
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
 from app.core.redis import redis_client
@@ -61,7 +67,12 @@ def approve_provider_request(
     request_id: uuid.UUID,
     current_user: User = Depends(get_current_active_superuser),
 ):
-    """Approve a provider request."""
+    """
+    Approve a provider request.
+    Requires all provider files to be accepted before approval.
+    """
+    from app.crud import provider_file as provider_file_crud
+    
     db_request = provider_crud.get_provider_request(session=session, id=request_id)
     if not db_request:
         raise HTTPException(status_code=404, detail="Provider request not found")
@@ -70,6 +81,13 @@ def approve_provider_request(
     provider = provider_crud.get_provider_by_user_id(session, user_id=db_request.user_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found for this user")
+
+    # Check if all provider files are accepted
+    if not provider_file_crud.are_all_files_accepted(session=session, provider_id=provider.id):
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot approve provider request: not all files are accepted. Please review and accept all provider files first."
+        )
 
     # Update the request status to approved
     updated_request = provider_crud.update_provider_request_status(
@@ -627,3 +645,96 @@ def get_provider_trips(
         ))
     
     return trip_responses
+
+
+# File Definition Settings Endpoints
+
+@router.post("/settings/file-definitions", response_model=FileDefinitionPublic, status_code=201)
+def create_file_definition(
+    *,
+    session: Session = Depends(get_session),
+    file_definition_in: FileDefinitionCreate,
+    current_user: User = Depends(get_current_active_superuser),
+) -> FileDefinitionPublic:
+    """Create a new file definition (Admin only)."""
+    file_definition = file_definition_crud.create_file_definition(
+        session=session,
+        file_definition_in=file_definition_in
+    )
+    return file_definition
+
+
+@router.get("/settings/file-definitions", response_model=FileDefinitionListResponse)
+def list_file_definitions(
+    *,
+    session: Session = Depends(get_session),
+    skip: int = 0,
+    limit: int = 100,
+    active_only: bool = False,
+    current_user: User = Depends(get_current_active_superuser),
+) -> FileDefinitionListResponse:
+    """List all file definitions (Admin only)."""
+    file_definitions = file_definition_crud.get_file_definitions(
+        session=session,
+        skip=skip,
+        limit=limit,
+        active_only=active_only
+    )
+    total = file_definition_crud.count_file_definitions(
+        session=session,
+        active_only=active_only
+    )
+    return FileDefinitionListResponse(items=file_definitions, total=total)
+
+
+@router.get("/settings/file-definitions/{file_definition_id}", response_model=FileDefinitionPublic)
+def get_file_definition(
+    *,
+    session: Session = Depends(get_session),
+    file_definition_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_superuser),
+) -> FileDefinitionPublic:
+    """Get a file definition by ID (Admin only)."""
+    file_definition = file_definition_crud.get_file_definition(
+        session=session,
+        file_definition_id=file_definition_id
+    )
+    if not file_definition:
+        raise HTTPException(status_code=404, detail="File definition not found")
+    return file_definition
+
+
+@router.put("/settings/file-definitions/{file_definition_id}", response_model=FileDefinitionPublic)
+def update_file_definition(
+    *,
+    session: Session = Depends(get_session),
+    file_definition_id: uuid.UUID,
+    file_definition_in: FileDefinitionUpdate,
+    current_user: User = Depends(get_current_active_superuser),
+) -> FileDefinitionPublic:
+    """Update a file definition (Admin only)."""
+    file_definition = file_definition_crud.update_file_definition(
+        session=session,
+        file_definition_id=file_definition_id,
+        file_definition_in=file_definition_in
+    )
+    if not file_definition:
+        raise HTTPException(status_code=404, detail="File definition not found")
+    return file_definition
+
+
+@router.delete("/settings/file-definitions/{file_definition_id}", status_code=204)
+def delete_file_definition(
+    *,
+    session: Session = Depends(get_session),
+    file_definition_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Delete a file definition (Admin only)."""
+    success = file_definition_crud.delete_file_definition(
+        session=session,
+        file_definition_id=file_definition_id
+    )
+    if not success:
+        raise HTTPException(status_code=404, detail="File definition not found")
+    return None

@@ -25,6 +25,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Link href="/providers" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Providers</Link>
           <Link href="/trips" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Trips</Link>
           <Link href="/users" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Users</Link>
+          <Link href="/settings/file-definitions" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Settings</Link>
         </nav>
         <div className="p-4 border-t border-gray-700 dark:border-gray-600">
           <button 

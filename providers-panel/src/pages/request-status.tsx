@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/UserContext';
 import { api } from '@/services/api';
+import { providerFilesService, ProviderFile } from '@/services/fileDefinitions';
 
 interface ProviderRequest {
   id: string;
@@ -16,6 +17,7 @@ interface ProviderRequest {
 const RequestStatusPage = () => {
   const { user } = useAuth();
   const [request, setRequest] = useState<ProviderRequest | null>(null);
+  const [uploadedFiles, setUploadedFiles] = useState<ProviderFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,6 +26,15 @@ const RequestStatusPage = () => {
       try {
         const response = await api.get<ProviderRequest>('/providers/request-status');
         setRequest(response);
+        
+        // Fetch uploaded files
+        try {
+          const files = await providerFilesService.getUploadedFiles();
+          setUploadedFiles(files);
+        } catch (fileErr) {
+          console.error('Failed to fetch uploaded files:', fileErr);
+          // Don't fail the whole page if files can't be fetched
+        }
       } catch (err: any) {
         // If request is already approved, redirect to dashboard
         if (err.response?.data?.detail === 'Request already approved') {
@@ -164,29 +175,87 @@ const RequestStatusPage = () => {
               <div>
                 <dt className="text-sm font-medium text-gray-500">Submitted</dt>
                 <dd className="text-sm text-gray-900">
-                  {new Date(request.created_at).toLocaleDateString('en-US', {
+                  {request.created_at ? new Date(request.created_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}
+                  }) : 'N/A'}
                 </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
                 <dd className="text-sm text-gray-900">
-                  {new Date(request.updated_at).toLocaleDateString('en-US', {
+                  {request.updated_at ? new Date(request.updated_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}
+                  }) : 'N/A'}
                 </dd>
               </div>
             </dl>
           </div>
+        </div>
+
+        {/* Uploaded Files Section */}
+        <div className="mt-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-3">Uploaded Documents</h3>
+          {uploadedFiles.length > 0 ? (
+            <div className="space-y-2">
+              {uploadedFiles.map((file) => (
+                <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200">
+                  <div className="flex-1">
+                    <div className="flex items-center">
+                      <span className="text-lg mr-2">📄</span>
+                      <div>
+                        {file.file_definition && (
+                          <p className="text-xs font-semibold text-gray-700 mb-1">
+                            {file.file_definition.name_en}
+                          </p>
+                        )}
+                        <a 
+                          href={file.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                        >
+                          {file.file_name}
+                        </a>
+                        <p className="text-xs text-gray-500">
+                          {(file.file_size_bytes / 1024 / 1024).toFixed(2)} MB • 
+                          Uploaded {file.uploaded_at ? new Date(file.uploaded_at).toLocaleDateString() : 'N/A'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {file.file_verification_status === 'accepted' && (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+                        <span className="mr-1">✓</span> Accepted
+                      </span>
+                    )}
+                    {file.file_verification_status === 'rejected' && (
+                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full flex items-center">
+                        <span className="mr-1">✗</span> Rejected
+                      </span>
+                    )}
+                    {file.file_verification_status === 'processing' && (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center">
+                        <span className="mr-1">⏳</span> Under Review
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 rounded p-4 text-center">
+              <p className="text-sm text-gray-500">No documents uploaded yet</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
