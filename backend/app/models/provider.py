@@ -14,6 +14,7 @@ class Provider(SQLModel, table=True):
     company_name: str
     company_email: str = Field(unique=True, index=True)
     company_phone: str
+    company_avatar_url: Optional[str] = Field(default=None)
     company_metadata: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

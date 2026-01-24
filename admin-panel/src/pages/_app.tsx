@@ -7,7 +7,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import '@/styles/globals.css';
 
-const publicPages = ['/login'];
+const publicPages = ['/login', '/forgot-password'];
 
 function AppContent({ Component, pageProps, router }: AppProps) {
   useTokenRefresh();

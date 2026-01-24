@@ -32,6 +32,9 @@ class User(SQLModel, table=True):
     name: str
     phone: Optional[str] = Field(default=None)
     hashed_password: str
+    avatar_url: Optional[str] = Field(default=None, max_length=500)
+    avatar_file_id: Optional[str] = Field(default=None, max_length=255)
+    avatar_file_name: Optional[str] = Field(default=None, max_length=500)
     is_active: bool = Field(default=True)
     is_superuser: bool = Field(default=False)
     is_phone_verified: bool = Field(default=False)

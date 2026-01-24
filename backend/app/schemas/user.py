@@ -13,6 +13,7 @@ class UserBase(SQLModel):
     email: Optional[str] = None
     name: str
     phone: Optional[str] = None
+    avatar_url: Optional[str] = None
     is_superuser: bool = False
 
 

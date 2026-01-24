@@ -7,6 +7,7 @@ interface Provider {
   company_name: string;
   company_email: string;
   company_phone: string;
+  company_avatar_url?: string;
   is_active?: boolean;
   status?: string;
 }
@@ -258,6 +259,18 @@ const ProviderDetailPage = () => {
       {/* Provider Information */}
       <div className="bg-white shadow-md rounded-lg p-6 mb-6">
         <h2 className="text-2xl font-semibold mb-4">Company Information</h2>
+        
+        {/* Company Avatar */}
+        {provider.company_avatar_url && (
+          <div className="mb-6 flex justify-center">
+            <img
+              src={provider.company_avatar_url}
+              alt={`${provider.company_name} avatar`}
+              className="h-32 w-32 rounded-full object-cover border-4 border-gray-200 shadow-lg"
+            />
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Company Name</label>

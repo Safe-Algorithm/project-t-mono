@@ -13,6 +13,8 @@ from app.schemas.trip_registration import TripRegistrationCreate, TripParticipan
 from app import crud
 import datetime
 import uuid
+from io import BytesIO
+from unittest.mock import patch, MagicMock, AsyncMock
 
 def test_create_trip(client: TestClient, session: Session) -> None:
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
@@ -1646,3 +1648,260 @@ def test_combined_filters_with_provider_and_rating(client: TestClient, session: 
     trips = response.json()
     assert len(trips) >= 1
     assert any(t["name"] == "Premium Desert Tour" for t in trips)
+
+
+def test_upload_trip_images(client: TestClient, session: Session) -> None:
+    """Test uploading images to a trip"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create a trip
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Test Trip for Images",
+            description="Testing image upload",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    # Mock the storage service
+    with patch('app.services.storage.storage_service') as mock_storage:
+        mock_storage.upload_file = AsyncMock(return_value={
+            "downloadUrl": "https://example.com/image1.jpg",
+            "fileId": "test-file-id"
+        })
+        
+        # Create fake image files
+        image1 = BytesIO(b"fake image content 1")
+        image2 = BytesIO(b"fake image content 2")
+        
+        files = [
+            ("files", ("test1.jpg", image1, "image/jpeg")),
+            ("files", ("test2.jpg", image2, "image/jpeg"))
+        ]
+        
+        response = client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/upload-images",
+            headers=headers,
+            files=files
+        )
+        
+        assert response.status_code == 200
+        content = response.json()
+        assert "uploaded_urls" in content
+        assert content["total_images"] == 2
+        
+        # Verify images were saved to database
+        session.refresh(trip)
+        assert trip.images is not None
+        assert len(trip.images) == 2
+
+
+def test_upload_trip_images_invalid_file_type(client: TestClient, session: Session) -> None:
+    """Test uploading invalid file type to a trip"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create a trip
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Test Trip for Invalid Images",
+            description="Testing invalid image upload",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    # Create fake PDF file
+    pdf_file = BytesIO(b"fake pdf content")
+    files = [("files", ("test.pdf", pdf_file, "application/pdf"))]
+    
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/upload-images",
+        headers=headers,
+        files=files
+    )
+    
+    assert response.status_code == 400
+    assert "Invalid file type" in response.json()["detail"]
+
+
+def test_upload_trip_images_file_too_large(client: TestClient, session: Session) -> None:
+    """Test uploading file that exceeds size limit"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create a trip
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Test Trip for Large Images",
+            description="Testing large image upload",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    # Create fake large file (6MB)
+    large_file = BytesIO(b"x" * (6 * 1024 * 1024))
+    files = [("files", ("large.jpg", large_file, "image/jpeg"))]
+    
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/upload-images",
+        headers=headers,
+        files=files
+    )
+    
+    assert response.status_code == 400
+    assert "too large" in response.json()["detail"]
+
+
+def test_delete_trip_image(client: TestClient, session: Session) -> None:
+    """Test deleting an image from a trip"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create a trip with images
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Test Trip for Image Deletion",
+            description="Testing image deletion",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    # Add images to trip
+    trip.images = [
+        "https://example.com/image1.jpg",
+        "https://example.com/image2.jpg",
+        "https://example.com/image3.jpg"
+    ]
+    session.add(trip)
+    session.commit()
+    
+    # Delete one image
+    response = client.delete(
+        f"{settings.API_V1_STR}/trips/{trip.id}/images",
+        headers=headers,
+        params={"image_url": "https://example.com/image2.jpg"}
+    )
+    
+    assert response.status_code == 200
+    content = response.json()
+    assert content["remaining_images"] == 2
+    
+    # Verify image was removed from database
+    session.refresh(trip)
+    assert len(trip.images) == 2
+    assert "https://example.com/image2.jpg" not in trip.images
+    assert "https://example.com/image1.jpg" in trip.images
+    assert "https://example.com/image3.jpg" in trip.images
+
+
+def test_delete_trip_image_not_found(client: TestClient, session: Session) -> None:
+    """Test deleting a non-existent image from a trip"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create a trip with images
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Test Trip for Missing Image",
+            description="Testing missing image deletion",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    trip.images = ["https://example.com/image1.jpg"]
+    session.add(trip)
+    session.commit()
+    
+    # Try to delete non-existent image
+    response = client.delete(
+        f"{settings.API_V1_STR}/trips/{trip.id}/images",
+        headers=headers,
+        params={"image_url": "https://example.com/nonexistent.jpg"}
+    )
+    
+    assert response.status_code == 404
+    assert "Image not found" in response.json()["detail"]
+
+
+def test_upload_trip_images_unauthorized(client: TestClient, session: Session) -> None:
+    """Test that users cannot upload images to trips they don't own"""
+    # Create first provider and trip
+    user1, headers1 = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="User1's Trip",
+            description="Testing unauthorized access",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user1.provider
+    )
+    
+    # Create second provider (will automatically create a new provider)
+    user2, headers2 = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Try to upload images to user1's trip as user2
+    image = BytesIO(b"fake image content")
+    files = [("files", ("test.jpg", image, "image/jpeg"))]
+    
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/upload-images",
+        headers=headers2,
+        files=files
+    )
+    
+    assert response.status_code == 403
+    assert "Not authorized" in response.json()["detail"]
+
+
+def test_trip_read_includes_images(client: TestClient, session: Session) -> None:
+    """Test that reading a trip includes the images field"""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    # Create trip with images
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name="Trip with Images",
+            description="Testing image field in response",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+    
+    trip.images = ["https://example.com/image1.jpg", "https://example.com/image2.jpg"]
+    session.add(trip)
+    session.commit()
+    
+    # Create package (required)
+    package = TripPackage(trip_id=trip.id, name="Standard", description="Basic", price=100.0, is_active=True)
+    session.add(package)
+    session.commit()
+    
+    # Read trip
+    response = client.get(f"{settings.API_V1_STR}/trips/{trip.id}", headers=headers)
+    assert response.status_code == 200
+    content = response.json()
+    assert "images" in content
+    assert len(content["images"]) == 2
+    assert "https://example.com/image1.jpg" in content["images"]

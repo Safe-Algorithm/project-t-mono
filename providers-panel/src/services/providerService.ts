@@ -44,10 +44,32 @@ const getRequestStatus = async (): Promise<any> => {
   return response;
 };
 
+const uploadCompanyAvatar = async (file: File): Promise<{ message: string; avatar_url: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/providers/upload-avatar`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('provider_access_token')}`,
+      'X-Source': 'providers_panel',
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to upload avatar');
+  }
+
+  return response.json();
+};
+
 export const providerService = {
   getProviderProfile,
   updateProviderProfile,
   registerProvider,
   login,
   getRequestStatus,
+  uploadCompanyAvatar,
 };

@@ -1,6 +1,6 @@
 import json
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from sqlmodel import Session
 from app import crud
 from app.api import deps
@@ -10,6 +10,7 @@ from app.schemas.user import UserCreate, UserPublic, UserUpdate
 from app.models.user import User
 from app.services.sms import sms_service
 from app.services.email import email_service
+from app.services.storage import storage_service
 
 router = APIRouter()
 
@@ -165,3 +166,74 @@ def update_user_me(
     session.refresh(current_user)
     
     return current_user
+
+
+@router.post("/me/avatar", response_model=UserPublic)
+async def upload_avatar(
+    *,
+    session: Session = Depends(deps.get_session),
+    current_user: User = Depends(deps.get_current_active_user),
+    file: UploadFile = File(...),
+):
+    """
+    Upload user avatar/profile picture.
+    
+    Accepts image files (jpg, jpeg, png, gif, webp).
+    Maximum file size: 5MB
+    """
+    # Validate file type
+    allowed_extensions = ["jpg", "jpeg", "png", "gif", "webp"]
+    file_extension = file.filename.split(".")[-1].lower() if file.filename else ""
+    
+    if file_extension not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Allowed types: {', '.join(allowed_extensions)}"
+        )
+    
+    # Validate file size (5MB max)
+    max_size = 5 * 1024 * 1024  # 5MB in bytes
+    file_content = await file.read()
+    if len(file_content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail="File size exceeds 5MB limit"
+        )
+    
+    # Reset file pointer
+    await file.seek(0)
+    
+    # Delete old avatar if exists
+    if current_user.avatar_file_id and current_user.avatar_file_name:
+        try:
+            await storage_service.delete_file(
+                file_id=current_user.avatar_file_id,
+                file_name=current_user.avatar_file_name
+            )
+        except Exception as e:
+            # Log but don't fail if old avatar deletion fails
+            print(f"Failed to delete old avatar: {e}")
+    
+    # Upload new avatar
+    try:
+        upload_result = await storage_service.upload_file(
+            file_data=file_content,
+            file_name=file.filename,
+            folder=f"avatars/user_{current_user.id}",
+            content_type=file.content_type
+        )
+        
+        # Update user avatar URL, file ID, and file name
+        current_user.avatar_url = upload_result["downloadUrl"]
+        current_user.avatar_file_id = upload_result["fileId"]
+        current_user.avatar_file_name = upload_result["fileName"]
+        session.add(current_user)
+        session.commit()
+        session.refresh(current_user)
+        
+        return current_user
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload avatar: {str(e)}"
+        )

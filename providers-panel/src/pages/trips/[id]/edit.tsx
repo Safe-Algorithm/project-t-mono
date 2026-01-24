@@ -37,16 +37,36 @@ const TripEditPage = () => {
     payload: TripUpdatePayload, 
     packages?: CreateTripPackage[], 
     packageFields?: { [index: number]: string[] },
-    validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } }
+    validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
+    imageData?: { newImages: File[], imagesToDelete: string[] }
   ) => {
     if (!id || typeof id !== 'string') return;
     setIsSubmitting(true);
     setError(null);
+
     try {
-      // Update the trip first
       await tripService.update(id, payload);
       
-      // Handle package updates if provided
+      // Handle image deletions
+      if (imageData?.imagesToDelete && imageData.imagesToDelete.length > 0) {
+        for (const imageUrl of imageData.imagesToDelete) {
+          try {
+            await tripService.deleteImage(id, imageUrl);
+          } catch (err) {
+            console.error('Failed to delete image:', err);
+          }
+        }
+      }
+      
+      // Handle new image uploads
+      if (imageData?.newImages && imageData.newImages.length > 0) {
+        try {
+          await tripService.uploadImages(id, imageData.newImages);
+        } catch (err) {
+          console.error('Failed to upload images:', err);
+        }
+      }
+      
       if (packages && packages.length > 0) {
         // For simplicity in editing, we'll recreate packages
         // In a production app, you might want more sophisticated package management

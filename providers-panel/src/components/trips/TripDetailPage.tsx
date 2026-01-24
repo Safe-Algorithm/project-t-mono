@@ -79,6 +79,31 @@ const TripDetailPage: React.FC = () => {
         </div>
       </div>
 
+      {/* Trip Images */}
+      {trip.images && trip.images.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h3>Trip Images</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
+            {trip.images.map((imageUrl, index) => (
+              <div key={index} style={{ position: 'relative', cursor: 'pointer' }}>
+                <img
+                  src={imageUrl}
+                  alt={`${trip.name} - Image ${index + 1}`}
+                  style={{ 
+                    width: '100%', 
+                    height: '200px', 
+                    objectFit: 'cover', 
+                    borderRadius: '8px',
+                    border: '2px solid #ddd'
+                  }}
+                  onClick={() => window.open(imageUrl, '_blank')}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div>
         <h3>Trip Packages ({trip.packages.length})</h3>
         {trip.packages.length === 0 ? (

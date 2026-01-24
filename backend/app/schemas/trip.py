@@ -12,6 +12,7 @@ class TripBase(BaseModel):
     start_date: datetime
     end_date: datetime
     max_participants: int
+    images: Optional[List[str]] = None
     trip_metadata: Optional[dict] = None
 
 

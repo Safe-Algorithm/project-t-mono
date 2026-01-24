@@ -2,7 +2,7 @@ import uuid
 import logging
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
 from sqlmodel import Session
 from pydantic import BaseModel
 
@@ -139,6 +139,7 @@ def read_trips(
             start_date=trip.start_date,
             end_date=trip.end_date,
             max_participants=trip.max_participants,
+            images=trip.images,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
             packages=packages_with_fields
@@ -258,6 +259,7 @@ def read_trip(
         start_date=trip.start_date,
         end_date=trip.end_date,
         max_participants=trip.max_participants,
+        images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
         packages=packages_with_fields
@@ -338,6 +340,7 @@ def update_trip(
         start_date=trip.start_date,
         end_date=trip.end_date,
         max_participants=trip.max_participants,
+        images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
         packages=packages_with_fields
@@ -462,6 +465,7 @@ def list_all_trips(
             start_date=trip.start_date,
             end_date=trip.end_date,
             max_participants=trip.max_participants,
+            images=trip.images,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
             packages=packages_with_fields
@@ -1059,4 +1063,111 @@ def validate_field_value_endpoint(
         "validation_config": request.validation_config,
         "is_valid": len(errors) == 0,
         "errors": errors
+    }
+
+
+@router.post("/{trip_id}/upload-images")
+async def upload_trip_images(
+    trip_id: uuid.UUID,
+    files: List[UploadFile] = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Upload images for a trip."""
+    from app.services.storage import storage_service
+    
+    # Get trip and verify ownership
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not authorized to upload images for this trip")
+    
+    # Validate file types and sizes
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    max_size = 5 * 1024 * 1024  # 5MB
+    
+    uploaded_urls = []
+    
+    for file in files:
+        # Validate file type
+        if file.content_type not in allowed_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type: {file.content_type}. Allowed types: {', '.join(allowed_types)}"
+            )
+        
+        # Read file content
+        content = await file.read()
+        
+        # Validate file size
+        if len(content) > max_size:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File {file.filename} is too large. Maximum size is 5MB"
+            )
+        
+        # Upload to storage
+        try:
+            file_info = await storage_service.upload_file(
+                file_data=content,
+                file_name=file.filename,
+                content_type=file.content_type,
+                folder="trip_images"
+            )
+            uploaded_urls.append(file_info["downloadUrl"])
+        except Exception as e:
+            logger.error(f"Error uploading file {file.filename}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to upload {file.filename}")
+    
+    # Update trip with new image URLs
+    current_images = trip.images or []
+    trip.images = current_images + uploaded_urls
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    
+    return {
+        "message": f"Successfully uploaded {len(uploaded_urls)} images",
+        "uploaded_urls": uploaded_urls,
+        "total_images": len(trip.images)
+    }
+
+
+@router.delete("/{trip_id}/images")
+async def delete_trip_image(
+    trip_id: uuid.UUID,
+    image_url: str,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Delete a specific image from a trip."""
+    from app.services.storage import storage_service
+    
+    # Get trip and verify ownership
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete images for this trip")
+    
+    if not trip.images or image_url not in trip.images:
+        raise HTTPException(status_code=404, detail="Image not found in trip")
+    
+    # Remove image URL from trip - create new list to ensure SQLAlchemy detects the change
+    trip.images = [img for img in trip.images if img != image_url]
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    
+    # Note: We only have the URL, not the file_id needed for Backblaze deletion
+    # In production, you might want to store file_id separately or extract it from URL
+    # For now, we just remove the reference from the database
+    logger.info(f"Removed image reference from trip: {image_url}")
+    
+    return {
+        "message": "Image deleted successfully",
+        "remaining_images": len(trip.images)
     }

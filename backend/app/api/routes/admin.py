@@ -502,6 +502,7 @@ def get_trip_details(
         start_date=trip.start_date,
         end_date=trip.end_date,
         max_participants=trip.max_participants,
+        images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
         packages=packages_with_fields
@@ -560,6 +561,7 @@ def get_provider_details(
         company_name=provider.company_name,
         company_email=provider.company_email,
         company_phone=provider.company_phone,
+        company_avatar_url=provider.company_avatar_url,
         company_metadata=provider.company_metadata,
         status=provider_request.status if provider_request else "unknown"
     )

@@ -5,7 +5,13 @@ import ValidationConfigComponent from './ValidationConfig';
 
 interface TripFormProps {
   trip?: Trip;
-  onSubmit: (payload: TripCreatePayload | TripUpdatePayload, packages?: CreateTripPackage[], packageFields?: { [index: number]: string[] }, validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } }) => void;
+  onSubmit: (
+    payload: TripCreatePayload | TripUpdatePayload, 
+    packages?: CreateTripPackage[], 
+    packageFields?: { [index: number]: string[] }, 
+    validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
+    imageData?: { newImages: File[], imagesToDelete: string[] }
+  ) => void;
   isSubmitting: boolean;
 }
 
@@ -18,6 +24,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     max_participants: '',
     is_active: true,
   });
+
+  const [tripImages, setTripImages] = useState<string[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
 
   const [packages, setPackages] = useState<CreateTripPackage[]>([
     { name: '', description: '', price: 0, currency: 'SAR' }
@@ -76,6 +86,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         is_active: trip.is_active,
       });
 
+      // Load existing images
+      if (trip.images && trip.images.length > 0) {
+        setTripImages(trip.images);
+      }
+
       // Populate existing packages
       if (trip.packages && trip.packages.length > 0) {
         const existingPackages: CreateTripPackage[] = trip.packages.map(pkg => ({
@@ -118,7 +133,14 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    
+    // For datetime inputs, ensure seconds are always set to 00
+    if ((name === 'start_date' || name === 'end_date') && value) {
+      const dateValue = value + ':00'; // Append :00 for seconds
+      setFormData((prev) => ({ ...prev, [name]: dateValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    }
   };
 
   const addPackage = () => {
@@ -209,6 +231,22 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     }));
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setNewImageFiles(prev => [...prev, ...filesArray]);
+    }
+  };
+
+  const removeNewImage = (index: number) => {
+    setNewImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingImage = (imageUrl: string) => {
+    setTripImages(prev => prev.filter(url => url !== imageUrl));
+    setImagesToDelete(prev => [...prev, imageUrl]);
+  };
+
   const validateForm = (): boolean => {
     const newErrors: string[] = [];
 
@@ -247,7 +285,13 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
     };
-    onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs);
+    
+    const imageData = {
+      newImages: newImageFiles,
+      imagesToDelete: imagesToDelete
+    };
+    
+    onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs, imageData);
   };
 
   return (
@@ -273,6 +317,119 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} />
         Active
       </label>
+
+      <h3>Trip Images</h3>
+      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px' }}>
+        <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+          Upload images to showcase your trip destination (max 5MB per image)
+        </p>
+        
+        {/* Existing images */}
+        {tripImages.length > 0 && (
+          <div style={{ marginBottom: '1rem' }}>
+            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Current Images:</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem' }}>
+              {tripImages.map((imageUrl, index) => (
+                <div key={index} style={{ position: 'relative', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                  <img src={imageUrl} alt={`Trip ${index + 1}`} style={{ width: '100%', height: '150px', objectFit: 'cover' }} />
+                  <button
+                    type="button"
+                    onClick={() => removeExistingImage(imageUrl)}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(255, 0, 0, 0.8)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* New images to upload */}
+        {newImageFiles.length > 0 && (
+          <div style={{ marginBottom: '1rem' }}>
+            <h4 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>New Images to Upload:</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '0.5rem' }}>
+              {newImageFiles.map((file, index) => (
+                <div key={index} style={{ position: 'relative', border: '1px solid #ddd', borderRadius: '4px', overflow: 'hidden' }}>
+                  <img 
+                    src={URL.createObjectURL(file)} 
+                    alt={`New ${index + 1}`} 
+                    style={{ width: '100%', height: '150px', objectFit: 'cover' }} 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeNewImage(index)}
+                    style={{
+                      position: 'absolute',
+                      top: '4px',
+                      right: '4px',
+                      background: 'rgba(255, 0, 0, 0.8)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    Remove
+                  </button>
+                  <div style={{ 
+                    position: 'absolute', 
+                    bottom: '4px', 
+                    left: '4px', 
+                    background: 'rgba(0, 0, 0, 0.7)', 
+                    color: 'white', 
+                    padding: '2px 6px', 
+                    borderRadius: '4px',
+                    fontSize: '0.75rem'
+                  }}>
+                    {file.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Upload button */}
+        <div>
+          <input
+            type="file"
+            accept="image/jpeg,image/jpg,image/png,image/webp"
+            multiple
+            onChange={handleImageFileChange}
+            style={{ display: 'none' }}
+            id="trip-image-upload"
+          />
+          <label
+            htmlFor="trip-image-upload"
+            style={{
+              display: 'inline-block',
+              padding: '0.5rem 1rem',
+              backgroundColor: '#4CAF50',
+              color: 'white',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '0.9rem'
+            }}
+          >
+            + Add Images
+          </label>
+        </div>
+      </div>
 
       <h3>Trip Packages (At least one required)</h3>
       {packages.map((pkg, index) => (

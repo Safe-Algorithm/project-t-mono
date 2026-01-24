@@ -118,4 +118,45 @@ export const tripService = {
       validation_config: validationConfig
     });
   },
+
+  uploadImages: async (tripId: string, images: File[]): Promise<{ message: string; uploaded_urls: string[]; total_images: number }> => {
+    const formData = new FormData();
+    images.forEach((image) => {
+      formData.append('files', image);
+    });
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/${tripId}/upload-images`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('provider_access_token')}`,
+        'X-Source': 'providers_panel',
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to upload images');
+    }
+
+    return response.json();
+  },
+
+  deleteImage: async (tripId: string, imageUrl: string): Promise<{ message: string; remaining_images: number }> => {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/${tripId}/images?image_url=${encodeURIComponent(imageUrl)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('provider_access_token')}`,
+        'Content-Type': 'application/json',
+        'X-Source': 'providers_panel',
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete image');
+    }
+
+    return response.json();
+  },
 };

@@ -7,7 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/router';
 import '@/styles/globals.css';
 
-const publicPages = ['/login', '/register', '/'];
+const publicPages = ['/login', '/register', '/forgot-password', '/'];
 
 const GlobalAuthHandler: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isLoading, error, token } = useAuth();

@@ -195,6 +195,30 @@ export const api = {
     return handleResponse(response, makeRequest);
   },
 
+  async patch<T>(endpoint: string, body: any): Promise<T> {
+    const makeRequest = () => {
+      const token = getAuthToken();
+      if (!token) {
+        window.location.href = '/login';
+        throw new ApiError('No authentication token');
+      }
+      
+      return fetch(`${BASE_URL}${endpoint}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Source': 'providers_panel',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include', // Include cookies for refresh token
+        body: JSON.stringify(body),
+      });
+    };
+
+    const response = await makeRequest();
+    return handleResponse(response, makeRequest);
+  },
+
   async del<T>(endpoint: string): Promise<T> {
     const makeRequest = () => {
       const token = getAuthToken();

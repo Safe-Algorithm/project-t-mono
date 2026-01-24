@@ -6,6 +6,7 @@ Provides file upload, download, and deletion functionality using Backblaze B2.
 
 import hashlib
 import mimetypes
+import asyncio
 from typing import Optional, BinaryIO
 from datetime import datetime
 import httpx
@@ -25,6 +26,25 @@ class BackblazeStorageService:
         self._auth_token: Optional[str] = None
         self._api_url: Optional[str] = None
         self._download_url: Optional[str] = None
+    
+    async def _retry_with_backoff(self, func, max_retries: int = 3):
+        """
+        Retry a function with exponential backoff for transient errors.
+        Handles DNS resolution errors and network timeouts.
+        """
+        for attempt in range(max_retries):
+            try:
+                return await func()
+            except (httpx.ConnectError, httpx.TimeoutException, OSError) as e:
+                if attempt == max_retries - 1:
+                    raise
+                # Exponential backoff: 1s, 2s, 4s
+                wait_time = 2 ** attempt
+                print(f"Network error (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {wait_time}s...")
+                await asyncio.sleep(wait_time)
+            except Exception as e:
+                # Don't retry on other errors (auth, validation, etc.)
+                raise
         
     async def _authorize(self) -> dict:
         """
@@ -36,14 +56,16 @@ class BackblazeStorageService:
             
         auth_url = "https://api.backblazeb2.com/b2api/v2/b2_authorize_account"
         
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                auth_url,
-                auth=(self.key_id, self.application_key)
-            )
-            response.raise_for_status()
-            
-        data = response.json()
+        async def _do_auth():
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(
+                    auth_url,
+                    auth=(self.key_id, self.application_key)
+                )
+                response.raise_for_status()
+                return response.json()
+        
+        data = await self._retry_with_backoff(_do_auth)
         self._auth_token = data["authorizationToken"]
         self._api_url = data["apiUrl"]
         self._download_url = data["downloadUrl"]
@@ -57,16 +79,18 @@ class BackblazeStorageService:
             
         if not self.bucket_id:
             raise ValueError("BACKBLAZE_BUCKET_ID not configured")
-            
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self._api_url}/b2api/v2/b2_get_upload_url",
-                headers={"Authorization": self._auth_token},
-                json={"bucketId": self.bucket_id}
-            )
-            response.raise_for_status()
-            
-        return response.json()
+        
+        async def _do_get_url():
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self._api_url}/b2api/v2/b2_get_upload_url",
+                    headers={"Authorization": self._auth_token},
+                    json={"bucketId": self.bucket_id}
+                )
+                response.raise_for_status()
+                return response.json()
+        
+        return await self._retry_with_backoff(_do_get_url)
     
     async def upload_file(
         self,
@@ -105,22 +129,23 @@ class BackblazeStorageService:
         upload_url = upload_data["uploadUrl"]
         upload_auth_token = upload_data["authorizationToken"]
         
-        # Upload file
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                upload_url,
-                headers={
-                    "Authorization": upload_auth_token,
-                    "X-Bz-File-Name": unique_name,
-                    "Content-Type": content_type,
-                    "X-Bz-Content-Sha1": sha1_hash,
-                },
-                content=file_data,
-                timeout=60.0
-            )
-            response.raise_for_status()
+        # Upload file with retry logic
+        async def _do_upload():
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    upload_url,
+                    headers={
+                        "Authorization": upload_auth_token,
+                        "X-Bz-File-Name": unique_name,
+                        "Content-Type": content_type,
+                        "X-Bz-Content-Sha1": sha1_hash,
+                    },
+                    content=file_data
+                )
+                response.raise_for_status()
+                return response.json()
         
-        file_info = response.json()
+        file_info = await self._retry_with_backoff(_do_upload)
         
         # Add download URL
         file_info["downloadUrl"] = f"{self._download_url}/file/{self.bucket_name}/{unique_name}"
@@ -141,18 +166,20 @@ class BackblazeStorageService:
         if not self._auth_token:
             await self._authorize()
         
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{self._api_url}/b2api/v2/b2_delete_file_version",
-                headers={"Authorization": self._auth_token},
-                json={
-                    "fileId": file_id,
-                    "fileName": file_name
-                }
-            )
-            response.raise_for_status()
+        async def _do_delete():
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    f"{self._api_url}/b2api/v2/b2_delete_file_version",
+                    headers={"Authorization": self._auth_token},
+                    json={
+                        "fileId": file_id,
+                        "fileName": file_name
+                    }
+                )
+                response.raise_for_status()
+                return response.json()
         
-        return response.json()
+        return await self._retry_with_backoff(_do_delete)
     
     async def get_file_info(self, file_id: str) -> dict:
         """

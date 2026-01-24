@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session
 
 logging.basicConfig(level=logging.INFO)
@@ -157,3 +157,65 @@ def update_provider_profile(
         session, db_provider=provider, provider_in=provider_in
     )
     return provider
+
+
+@router.post("/upload-avatar")
+async def upload_company_avatar(
+    file: UploadFile = File(...),
+    session: Session = Depends(deps.get_session),
+    current_user: User = Depends(deps.get_current_active_super_provider),
+):
+    """Upload company avatar for the provider."""
+    from app.services.storage import storage_service
+    
+    provider = provider_crud.get_provider_by_id(session, id=current_user.provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {file.content_type}. Allowed types: {', '.join(allowed_types)}"
+        )
+    
+    # Read file content
+    content = await file.read()
+    
+    # Validate file size (5MB max)
+    max_size = 5 * 1024 * 1024
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail="File is too large. Maximum size is 5MB"
+        )
+    
+    # Delete old avatar if exists
+    # Note: We only have the URL, not the file_id needed for deletion
+    # In production, you might want to store file_id separately or extract it from URL
+    if provider.company_avatar_url:
+        logger.info(f"Old avatar will be replaced: {provider.company_avatar_url}")
+    
+    # Upload new avatar
+    try:
+        file_info = await storage_service.upload_file(
+            file_data=content,
+            file_name=file.filename,
+            content_type=file.content_type,
+            folder="company_avatars"
+        )
+        
+        # Update provider with new avatar URL
+        provider.company_avatar_url = file_info["downloadUrl"]
+        session.add(provider)
+        session.commit()
+        session.refresh(provider)
+        
+        return {
+            "message": "Company avatar uploaded successfully",
+            "avatar_url": file_info["downloadUrl"]
+        }
+    except Exception as e:
+        logger.error(f"Error uploading company avatar: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload avatar")

@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional, List
 
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlalchemy.ext.mutable import MutableList
 
 from .links import TripParticipant, TripRating
 
@@ -22,6 +23,7 @@ class Trip(SQLModel, table=True):
     end_date: datetime
     max_participants: int
     is_active: bool = Field(default=True)
+    images: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
 
     # Using JSONB for flexible metadata like itinerary, inclusions, exclusions
     trip_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))

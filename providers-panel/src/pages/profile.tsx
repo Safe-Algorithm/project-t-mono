@@ -9,6 +9,10 @@ const ProfilePage = () => {
   const [companyName, setCompanyName] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
   const [companyPhone, setCompanyPhone] = useState('');
+  const [companyAvatar, setCompanyAvatar] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -29,6 +33,7 @@ const ProfilePage = () => {
           setCompanyName(providerData.company_name || '');
           setCompanyEmail(providerData.company_email || '');
           setCompanyPhone(providerData.company_phone || '');
+          setCompanyAvatar(providerData.company_avatar_url || null);
           
           // Fetch request status
           const statusData = await providerService.getRequestStatus();
@@ -50,6 +55,35 @@ const ProfilePage = () => {
 
     fetchProviderProfile();
   }, [user]);
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAvatarUpload = async () => {
+    if (!avatarFile) return;
+
+    setUploadingAvatar(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await providerService.uploadCompanyAvatar(avatarFile);
+      setCompanyAvatar(response.avatar_url);
+      setAvatarFile(null);
+      setAvatarPreview(null);
+      setSuccess('Company avatar uploaded successfully!');
+    } catch (error: any) {
+      console.error('Avatar upload failed:', error);
+      setError(error.message || 'Failed to upload avatar');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,6 +169,58 @@ const ProfilePage = () => {
         </div>
         
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-6">
+          {/* Company Avatar Section */}
+          <div className="border-b border-gray-200 pb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Company Avatar
+            </label>
+            <div className="flex items-center space-x-4">
+              <div className="flex-shrink-0">
+                {(avatarPreview || companyAvatar) ? (
+                  <img
+                    src={avatarPreview || companyAvatar || ''}
+                    alt="Company Avatar"
+                    className="h-24 w-24 rounded-full object-cover border-2 border-gray-300"
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                    <svg className="h-12 w-12 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleAvatarChange}
+                  className="hidden"
+                  id="avatar-upload"
+                />
+                <label
+                  htmlFor="avatar-upload"
+                  className="inline-block px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                >
+                  Choose Image
+                </label>
+                {avatarFile && (
+                  <button
+                    type="button"
+                    onClick={handleAvatarUpload}
+                    disabled={uploadingAvatar}
+                    className="ml-2 inline-block px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {uploadingAvatar ? 'Uploading...' : 'Upload Avatar'}
+                  </button>
+                )}
+                <p className="text-xs text-gray-500 mt-2">
+                  JPG, PNG or WEBP. Max size 5MB.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div>
             <label htmlFor="userEmail" className="block text-sm font-medium text-gray-700 mb-2">
               User Email

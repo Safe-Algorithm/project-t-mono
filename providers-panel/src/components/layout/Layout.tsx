@@ -64,20 +64,27 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Provider Panel</h1>
               </div>
               <div className="flex space-x-4">
-                {/* Profile tab is always visible */}
-                <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                  Profile
-                </Link>
+                {/* Company Profile and User Profile tabs - only visible when logged in */}
+                {user && (
+                  <>
+                    <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                      Company Profile
+                    </Link>
+                    <Link href="/user-profile" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
+                      User Profile
+                    </Link>
+                  </>
+                )}
                 
                 {/* Request Status tab - only show for non-approved providers */}
-                {!statusLoading && !isApproved && (
+                {!statusLoading && !isApproved && user && (
                   <Link href="/request-status" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
                     Request Status
                   </Link>
                 )}
                 
                 {/* Dashboard and Trips tabs - only show for approved providers */}
-                {!statusLoading && isApproved && (
+                {!statusLoading && isApproved && user && (
                   <>
                     <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
                       Dashboard

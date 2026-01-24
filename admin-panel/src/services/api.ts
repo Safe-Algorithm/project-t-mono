@@ -147,6 +147,54 @@ export const api = {
     return handleResponse(response, makeRequest);
   },
 
+  async patch<T>(endpoint: string, body: any): Promise<T> {
+    const makeRequest = () => {
+      const token = getAuthToken();
+      if (!token) {
+        window.location.href = '/login';
+        throw new ApiError('No authentication token');
+      }
+      
+      return fetch(`${BASE_URL}${endpoint}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Source': 'admin_panel',
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: 'include', // Include cookies for refresh token
+        body: JSON.stringify(body),
+      });
+    };
+
+    const response = await makeRequest();
+    return handleResponse(response, makeRequest);
+  },
+
+  async postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    const makeRequest = () => {
+      const token = getAuthToken();
+      if (!token) {
+        window.location.href = '/login';
+        throw new ApiError('No authentication token');
+      }
+      
+      return fetch(`${BASE_URL}${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'X-Source': 'admin_panel',
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type - browser will set it with boundary
+        },
+        credentials: 'include', // Include cookies for refresh token
+        body: formData,
+      });
+    };
+
+    const response = await makeRequest();
+    return handleResponse(response, makeRequest);
+  },
+
   async del<T>(endpoint: string): Promise<T> {
     const makeRequest = () => {
       const token = getAuthToken();

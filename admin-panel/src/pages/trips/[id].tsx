@@ -37,6 +37,7 @@ interface Trip {
   is_active: boolean;
   provider_id: string;
   provider: Provider;
+  images?: string[];
   trip_metadata?: any;
   packages: TripPackage[];
 }
@@ -172,6 +173,30 @@ const TripDetailPage = () => {
           <label className="block text-sm font-medium text-gray-700">Description</label>
           <p className="mt-1 text-sm text-gray-900">{trip.description}</p>
         </div>
+        
+        {/* Trip Images */}
+        {trip.images && trip.images.length > 0 && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Trip Images</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {trip.images.map((imageUrl, index) => (
+                <div key={index} className="relative group">
+                  <img
+                    src={imageUrl}
+                    alt={`${trip.name} - Image ${index + 1}`}
+                    className="w-full h-48 object-cover rounded-lg border-2 border-gray-200 shadow-md hover:shadow-xl transition-shadow cursor-pointer"
+                    onClick={() => window.open(imageUrl, '_blank')}
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg flex items-center justify-center pointer-events-none">
+                    <span className="text-white opacity-0 group-hover:opacity-100 text-sm font-medium">
+                      Click to view full size
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Trip Packages */}

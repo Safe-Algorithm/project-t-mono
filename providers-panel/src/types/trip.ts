@@ -43,6 +43,7 @@ export interface Trip {
   max_participants: number;
   is_active: boolean;
   provider_id: string; // uuid
+  images?: string[];
   trip_metadata?: Record<string, any>;
   packages: TripPackage[];
 }
