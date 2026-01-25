@@ -73,20 +73,19 @@ async def process_provider_file_upload(
         logger.info(f"Backblaze upload complete: {file_url}, File ID: {backblaze_file_id}")
         
         # Delete old file from Backblaze if replacing
+        # Note: This only happens during registration (before approval) when a provider
+        # uploads a file multiple times. The old database record is already deleted,
+        # so we don't have access to backblaze_file_id. For approved providers replacing
+        # rejected files, the synchronous PUT endpoint is used which has proper deletion.
         if old_file_url:
             try:
-                # Extract file name from URL for deletion
-                # URL format: https://domain/file/bucket_name/folder/filename
+                # We don't have backblaze_file_id here since the old DB record was deleted
+                # Old files will remain in Backblaze but won't be referenced in DB
+                # This is acceptable for pre-approval uploads as they're temporary
                 old_file_name = old_file_url.split('/')[-1]
-                # Note: We don't have the fileId stored, so we'll use delete by name
-                # This requires the file name to match exactly
-                logger.info(f"Attempting to delete old file from Backblaze: {old_file_name}")
-                # TODO: Implement proper deletion when we start storing Backblaze fileId
-                # For now, old files will remain in Backblaze but won't be referenced in DB
-                logger.warning(f"Old file deletion skipped - fileId not stored: {old_file_name}")
+                logger.info(f"Old file from pre-approval upload will remain in Backblaze: {old_file_name}")
             except Exception as delete_error:
-                # Don't fail the upload if deletion fails
-                logger.error(f"Failed to delete old file from Backblaze: {str(delete_error)}")
+                logger.error(f"Error processing old file info: {str(delete_error)}")
         
         # Create database record
         with Session(engine) as db_session:

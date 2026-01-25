@@ -35,9 +35,18 @@ const ProfilePage = () => {
           setCompanyPhone(providerData.company_phone || '');
           setCompanyAvatar(providerData.company_avatar_url || null);
           
-          // Fetch request status
-          const statusData = await providerService.getRequestStatus();
-          setRequestStatus(statusData.status || 'pending');
+          // Fetch request status - 404 is expected for approved providers
+          try {
+            const statusData = await providerService.getRequestStatus();
+            setRequestStatus(statusData.status || 'pending');
+          } catch (statusError: any) {
+            // If 404, provider is approved (no pending request)
+            if (statusError.message?.includes('404') || statusError.message?.includes('approved')) {
+              setRequestStatus('approved');
+            } else {
+              throw statusError; // Re-throw if it's a different error
+            }
+          }
           
           // Fetch uploaded files
           const files = await providerFilesService.getUploadedFiles();

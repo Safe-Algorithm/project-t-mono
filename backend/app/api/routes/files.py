@@ -269,14 +269,33 @@ async def replace_provider_file(
         backblaze_file_id = upload_result.get('fileId')
         logger.info(f"File uploaded to Backblaze: {file_url}, File ID: {backblaze_file_id}")
         
-        # Delete old file from Backblaze if we have the file ID
-        if existing_file.backblaze_file_id:
+        # Delete old file from Backblaze
+        if existing_file.backblaze_file_id and existing_file.file_url:
             try:
-                await storage_service.delete_file(existing_file.backblaze_file_id)
-                logger.info(f"Deleted old file from Backblaze: {existing_file.backblaze_file_id}")
+                # Extract full file path from URL - Backblaze needs the full path including folder
+                # URL format: https://domain/file/bucket_name/folder/subfolder/filename
+                # We need: folder/subfolder/filename
+                url_parts = existing_file.file_url.split('/')
+                # Find the bucket name and get everything after it
+                try:
+                    bucket_index = url_parts.index(storage_service.bucket_name)
+                    old_file_path = '/'.join(url_parts[bucket_index + 1:])
+                except (ValueError, AttributeError):
+                    # Fallback: just use the last part (filename only)
+                    old_file_path = url_parts[-1]
+                
+                await storage_service.delete_file(
+                    file_id=existing_file.backblaze_file_id,
+                    file_name=old_file_path
+                )
+                logger.info(f"Deleted old file from Backblaze: {existing_file.backblaze_file_id} ({old_file_path})")
             except Exception as e:
                 logger.warning(f"Failed to delete old file from Backblaze: {str(e)}")
                 # Continue even if deletion fails - we'll still replace the database record
+        elif existing_file.file_url:
+            # Log warning if we can't delete because backblaze_file_id is missing
+            logger.warning(f"Cannot delete old file from Backblaze - missing backblaze_file_id for file: {existing_file.id}")
+        
         
         # Delete old file record
         crud.provider_file.delete_provider_file(session=session, file_id=existing_file.id)
