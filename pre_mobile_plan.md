@@ -470,22 +470,31 @@ Output: Updated user object with new avatar_url
 ---
 
 #### **9. User Registration History**
-**Status**: ❌ Not implemented  
+**Status**: ✅ Implemented  
 **Priority**: Medium  
 **Estimated Time**: 1 day
 
-**What's needed**:
+**Implemented**:
 ```python
-@router.get("/my-registrations", response_model=List[TripRegistrationRead])
-def get_my_registrations(
-    current_user: User = Depends(get_current_active_user),
-    session: Session = Depends(get_session),
-    status: Optional[str] = None  # Filter by status
-):
-    # Return user's trip registrations with trip details
-    # Include participant information
-    # Support filtering by status (pending, confirmed, cancelled)
+GET /api/v1/users/me/registrations
+
+# Query params:
+# - skip: int = 0
+# - limit: int = 100
+
+# Returns:
+# - Current user's trip registrations
+# - Includes participant information
+# - Includes trip details + provider company_name
+# - Ordered by registration_date DESC (newest first)
 ```
+
+**Notes**:
+- Status filtering is not implemented yet (can be added later if needed).
+
+**Unit Tests**:
+- Added: `backend/app/tests/api/routes/test_registration_history.py`
+- Covers: empty history, ordering (newest first), user isolation, pagination
 
 ---
 

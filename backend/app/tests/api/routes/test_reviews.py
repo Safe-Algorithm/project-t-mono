@@ -4,6 +4,9 @@ Unit tests for trip reviews and ratings API
 
 import uuid
 from datetime import datetime, timedelta, date
+import io
+from unittest.mock import patch, AsyncMock
+
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -636,3 +639,129 @@ def test_get_my_reviews(client: TestClient, session: Session):
     data = response.json()
     assert len(data) == 2
     assert all(r["user_id"] == str(user.id) for r in data)
+
+
+def _create_reviewable_trip_with_confirmed_registration(
+    client: TestClient,
+    session: Session,
+    *,
+    user_role: UserRole = UserRole.NORMAL,
+):
+    user, headers = user_authentication_headers(client, session, role=user_role)
+    trip = create_random_trip(session)
+
+    trip.end_date = date.today() - timedelta(days=1)
+    session.add(trip)
+
+    package = TripPackage(
+        trip_id=trip.id,
+        name="Standard Package",
+        description="Standard package",
+        price=1000.00,
+        is_active=True,
+    )
+    session.add(package)
+    session.commit()
+
+    registration = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        total_participants=1,
+        total_amount=1000.00,
+        status="confirmed",
+    )
+    session.add(registration)
+    session.commit()
+
+    response = client.post(
+        f"{settings.API_V1_STR}/reviews/trips/{trip.id}",
+        headers=headers,
+        json={"rating": 5, "comment": "Great"},
+    )
+    assert response.status_code == 200
+    review_id = response.json()["id"]
+    return user, headers, trip, review_id
+
+
+def test_upload_review_images_success_max_5(client: TestClient, session: Session) -> None:
+    user, headers, _trip, review_id = _create_reviewable_trip_with_confirmed_registration(
+        client, session
+    )
+
+    with patch("app.api.routes.reviews.storage_service") as mock_storage:
+        mock_storage.upload_file = AsyncMock(side_effect=[
+            {"downloadUrl": "https://cdn.test/rev1.webp"},
+            {"downloadUrl": "https://cdn.test/rev2.webp"},
+        ])
+
+        files = [
+            ("files", ("a.webp", io.BytesIO(b"img1"), "image/webp")),
+            ("files", ("b.webp", io.BytesIO(b"img2"), "image/webp")),
+        ]
+        response = client.post(
+            f"{settings.API_V1_STR}/reviews/{review_id}/images",
+            headers=headers,
+            files=files,
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(review_id)
+        assert data["user_id"] == str(user.id)
+        assert data["images"] == ["https://cdn.test/rev1.webp", "https://cdn.test/rev2.webp"]
+
+
+def test_upload_review_images_reject_over_5(client: TestClient, session: Session) -> None:
+    user, headers, _trip, review_id = _create_reviewable_trip_with_confirmed_registration(
+        client, session
+    )
+
+    with patch("app.api.routes.reviews.storage_service") as mock_storage:
+        mock_storage.upload_file = AsyncMock(return_value={"downloadUrl": "https://cdn.test/x.webp"})
+
+        files = [
+            ("files", (f"{i}.webp", io.BytesIO(b"img"), "image/webp")) for i in range(6)
+        ]
+        response = client.post(
+            f"{settings.API_V1_STR}/reviews/{review_id}/images",
+            headers=headers,
+            files=files,
+        )
+        assert response.status_code == 400
+        assert "Maximum 5 images per review" in response.json()["detail"]
+
+
+def test_upload_review_images_reject_invalid_extension(client: TestClient, session: Session) -> None:
+    _user, headers, _trip, review_id = _create_reviewable_trip_with_confirmed_registration(
+        client, session
+    )
+
+    with patch("app.api.routes.reviews.storage_service") as mock_storage:
+        mock_storage.upload_file = AsyncMock(return_value={"downloadUrl": "https://cdn.test/x.webp"})
+
+        files = [("files", ("x.gif", io.BytesIO(b"gif"), "image/gif"))]
+        response = client.post(
+            f"{settings.API_V1_STR}/reviews/{review_id}/images",
+            headers=headers,
+            files=files,
+        )
+        assert response.status_code == 400
+        assert "Invalid file type" in response.json()["detail"]
+
+
+def test_upload_review_images_not_owner_forbidden(client: TestClient, session: Session) -> None:
+    _user1, headers1, _trip, review_id = _create_reviewable_trip_with_confirmed_registration(
+        client, session
+    )
+    _user2, headers2 = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    with patch("app.api.routes.reviews.storage_service") as mock_storage:
+        mock_storage.upload_file = AsyncMock(return_value={"downloadUrl": "https://cdn.test/x.webp"})
+
+        files = [("files", ("a.webp", io.BytesIO(b"img"), "image/webp"))]
+        response = client.post(
+            f"{settings.API_V1_STR}/reviews/{review_id}/images",
+            headers=headers2,
+            files=files,
+        )
+        assert response.status_code == 403

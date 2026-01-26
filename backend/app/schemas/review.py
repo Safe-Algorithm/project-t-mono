@@ -3,7 +3,7 @@ Schemas for trip reviews and ratings
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 import uuid
 from pydantic import BaseModel, Field, validator
 
@@ -43,6 +43,7 @@ class ReviewRead(BaseModel):
     trip_id: uuid.UUID
     rating: int
     comment: Optional[str]
+    images: Optional[List[str]] = None
     created_at: datetime
     user_name: Optional[str] = None  # Populated from user relationship
     

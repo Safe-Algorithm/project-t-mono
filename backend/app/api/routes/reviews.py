@@ -4,13 +4,14 @@ API routes for trip reviews and ratings
 
 import uuid
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlmodel import Session
 
 from app.api.deps import get_session, get_current_active_user
 from app.models.user import User
 from app.schemas.review import ReviewCreate, ReviewUpdate, ReviewRead, TripAverageRating
 from app import crud
+from app.services.storage import storage_service
 
 router = APIRouter()
 
@@ -161,3 +162,59 @@ def delete_review(
     )
     
     return None
+
+
+@router.post("/{review_id}/images", response_model=ReviewRead)
+async def upload_review_images(
+    review_id: uuid.UUID,
+    files: List[UploadFile] = File(...),
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    review = crud.review.get_review(session=session, review_id=review_id)
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    if review.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="You can only upload images to your own reviews")
+
+    if not files:
+        raise HTTPException(status_code=400, detail="No files provided")
+
+    allowed_extensions = ["jpg", "jpeg", "png", "webp"]
+    max_size = 5 * 1024 * 1024
+
+    existing_images = list(review.images or [])
+    if len(existing_images) + len(files) > 5:
+        raise HTTPException(status_code=400, detail="Maximum 5 images per review")
+
+    new_urls: List[str] = []
+    for upload in files:
+        file_extension = upload.filename.split(".")[-1].lower() if upload.filename else ""
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type. Allowed types: {', '.join(allowed_extensions)}",
+            )
+
+        file_content = await upload.read()
+        if len(file_content) > max_size:
+            raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
+
+        unique_name = f"{uuid.uuid4()}.{file_extension}"
+        upload_result = await storage_service.upload_file(
+            file_data=file_content,
+            file_name=unique_name,
+            folder=f"reviews/review_{review_id}",
+            content_type=upload.content_type,
+        )
+
+        new_urls.append(upload_result["downloadUrl"])
+
+    review.images = existing_images + new_urls
+    session.add(review)
+    session.commit()
+    session.refresh(review)
+
+    review_dict = ReviewRead.from_orm(review)
+    review_dict.user_name = current_user.name
+    return review_dict

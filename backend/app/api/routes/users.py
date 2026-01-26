@@ -1,7 +1,9 @@
 import json
 import secrets
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app import crud
 from app.api import deps
 from app.core.redis import redis_client
@@ -11,6 +13,7 @@ from app.models.user import User
 from app.services.sms import sms_service
 from app.services.email import email_service
 from app.services.storage import storage_service
+from app.schemas.registration_history import RegistrationHistoryItem
 
 router = APIRouter()
 
@@ -237,3 +240,71 @@ async def upload_avatar(
             status_code=500,
             detail=f"Failed to upload avatar: {str(e)}"
         )
+
+
+@router.get("/me/registrations", response_model=List[RegistrationHistoryItem])
+def get_my_registration_history(
+    *,
+    session: Session = Depends(deps.get_session),
+    current_user: User = Depends(deps.get_current_active_user),
+    skip: int = 0,
+    limit: int = 100,
+) -> List[RegistrationHistoryItem]:
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.trip import Trip as TripModel
+    from app.models.provider import Provider as ProviderModel
+
+    statement = (
+        select(TripRegistrationModel)
+        .where(TripRegistrationModel.user_id == current_user.id)
+        .order_by(TripRegistrationModel.registration_date.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    registrations = list(session.exec(statement).all())
+
+    items: List[RegistrationHistoryItem] = []
+    for registration in registrations:
+        # Relationship loading can vary depending on session config; ensure we always have trip/provider.
+        trip: TripModel | None = registration.trip
+        if trip is None:
+            trip = session.get(TripModel, registration.trip_id)
+        if trip is None:
+            raise HTTPException(status_code=500, detail="Registration has missing trip")
+
+        provider: ProviderModel | None = trip.provider
+        if provider is None:
+            provider = session.get(ProviderModel, trip.provider_id)
+
+        provider_payload = {
+            "id": provider.id if provider else trip.provider_id,
+            "company_name": provider.company_name if provider else "Unknown",
+        }
+
+        trip_payload = {
+            "id": trip.id,
+            "name": trip.name,
+            "description": trip.description,
+            "start_date": trip.start_date,
+            "end_date": trip.end_date,
+            "provider_id": trip.provider_id,
+            "provider": provider_payload,
+        }
+
+        items.append(
+            RegistrationHistoryItem.model_validate(
+                {
+                    "id": registration.id,
+                    "trip_id": registration.trip_id,
+                    "user_id": registration.user_id,
+                    "registration_date": registration.registration_date,
+                    "total_participants": registration.total_participants,
+                    "total_amount": registration.total_amount,
+                    "status": registration.status,
+                    "participants": list(registration.participants or []),
+                    "trip": trip_payload,
+                }
+            )
+        )
+
+    return items

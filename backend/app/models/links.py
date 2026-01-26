@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, List
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, Column, JSON
+from sqlalchemy.ext.mutable import MutableList
 
 if TYPE_CHECKING:
     from .user import User
@@ -21,6 +22,7 @@ class TripRating(SQLModel, table=True):
     trip_id: uuid.UUID = Field(foreign_key="trip.id")
     rating: int
     comment: Optional[str] = None
+    images: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     user: "User" = Relationship(back_populates="trip_ratings")
