@@ -15,6 +15,9 @@ if TYPE_CHECKING:
     from .provider_request import ProviderRequest
     from .trip import Trip
     from .links import TripRating
+    from .trip_favorite import TripFavorite
+    from .trip_like import TripLike
+    from .trip_bookmark import TripBookmark
 
 
 class UserRole(str, Enum):
@@ -51,3 +54,6 @@ class User(SQLModel, table=True):
 
     trips: List["Trip"] = Relationship(back_populates="participants", link_model=TripParticipant)
     trip_ratings: List["TripRating"] = Relationship(back_populates="user")
+    favorite_trips: List["TripFavorite"] = Relationship(back_populates="user")
+    liked_trips: List["TripLike"] = Relationship(back_populates="user")
+    bookmarked_trips: List["TripBookmark"] = Relationship(back_populates="user")

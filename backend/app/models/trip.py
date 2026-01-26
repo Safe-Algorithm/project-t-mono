@@ -11,6 +11,9 @@ if TYPE_CHECKING:
     from .provider import Provider
     from .user import User
     from .trip_package import TripPackage
+    from .trip_favorite import TripFavorite
+    from .trip_like import TripLike
+    from .trip_bookmark import TripBookmark
 
 
 
@@ -36,3 +39,6 @@ class Trip(SQLModel, table=True):
     participants: List["User"] = Relationship(back_populates="trips", link_model=TripParticipant, sa_relationship_kwargs={"cascade": "all, delete"})
     ratings: List[TripRating] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     packages: List["TripPackage"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    favorited_by: List["TripFavorite"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    liked_by: List["TripLike"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    bookmarked_by: List["TripBookmark"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

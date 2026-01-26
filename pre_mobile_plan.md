@@ -550,22 +550,55 @@ def cancel_registration(
 
 ---
 
-#### **12. Favorites/Bookmarks**
-**Status**: ❌ Not implemented  
+#### **12. Favorites/Likes/Bookmarks**
+**Status**: ✅ **COMPLETED**  
 **Priority**: Low  
-**Estimated Time**: 1 day
+**Completed**: January 2026
 
-**What's needed**:
+**What was implemented**:
+Three separate systems for different user intentions:
+
+1. **Favorites** - General favorites system
+2. **Likes** - Indicate a trip was good (social signal)
+3. **Bookmarks** - Save for later viewing (personal organization)
+
+**API Endpoints**:
 ```python
-# Add to favorites
+# FAVORITES
 POST /api/v1/trips/{trip_id}/favorite
-
-# Remove from favorites
 DELETE /api/v1/trips/{trip_id}/favorite
-
-# List favorites
 GET /api/v1/favorites
+
+# LIKES
+POST /api/v1/trips/{trip_id}/like
+DELETE /api/v1/trips/{trip_id}/like
+GET /api/v1/likes
+
+# BOOKMARKS
+POST /api/v1/trips/{trip_id}/bookmark
+DELETE /api/v1/trips/{trip_id}/bookmark
+GET /api/v1/bookmarks
 ```
+
+**Features**:
+- ✅ Separate database tables: `trip_favorites`, `trip_likes`, `trip_bookmarks`
+- ✅ UUID primary keys following project conventions
+- ✅ Unique constraints to prevent duplicates
+- ✅ Cascade delete when trips are deleted
+- ✅ Ordered by most recently added (desc)
+- ✅ Pagination support (skip/limit)
+- ✅ User isolation (users only see their own)
+- ✅ Users can like AND bookmark the same trip
+- ✅ Independent systems - likes don't affect bookmarks
+
+**Tests**:
+- ✅ 26 comprehensive unit tests passing
+- ✅ Covers all CRUD operations
+- ✅ Tests independence of likes and bookmarks
+- ✅ Tests user isolation
+- ✅ Tests authentication requirements
+- ✅ Tests duplicate prevention
+- ✅ Tests pagination
 
 ---
 
