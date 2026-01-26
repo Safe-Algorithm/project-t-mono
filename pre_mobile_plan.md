@@ -277,54 +277,62 @@ All rate limits configurable via environment variables in `.env`:
 
 ---
 
-#### **6. Payment Integration (Checkout.com)**
-**Status**: 🟡 Partially implemented (infrastructure ready)  
+#### **6. Payment Integration (Moyasar)**
+**Status**: ❌ Not implemented  
 **Priority**: Critical (for revenue)  
-**Estimated Time**: 2-3 days (API endpoints only)
+**Estimated Time**: 3-4 days
 
-**✅ Infrastructure Completed (January 2026)**:
-- ✅ Checkout.com payment service (`app/services/payment.py`)
-- ✅ Create payments with 3D Secure support
-- ✅ Capture, refund, and void operations
-- ✅ Webhook signature verification
-- ✅ 13 unit tests passing
-- ✅ Credentials configured
+**What's needed**:
+- Replace existing Checkout.com implementation with Moyasar
+- Moyasar is a Saudi Arabian payment gateway
+- Supports: Mada, Visa, Mastercard, Apple Pay, STC Pay
+- Better suited for Saudi market
 
-**What's still needed**:
+**API Endpoints to implement**:
 ```python
 # Create payment for trip registration
 POST /api/v1/payments/create
-Input: {registration_id: UUID}
+Input: {registration_id: UUID, payment_method: str}
 Output: {payment_id: str, redirect_url: str, amount: Decimal}
 
-# Payment callback (after 3D Secure)
+# Payment callback (after payment completion)
 GET /api/v1/payments/callback
-Process: Verify payment status, update registration
+Process: Verify payment status with Moyasar, update registration
 
-# Handle webhooks (IMPORTANT!)
+# Handle webhooks
 POST /api/v1/payments/webhook
-Process: Handle payment.captured, payment.declined events
+Process: Handle payment.paid, payment.failed events
 Verify: Webhook signature with secret key
 Update: Registration status based on payment events
 ```
 
 **Implementation Steps**:
-1. Create payment API endpoints in `routes/payments.py`
-2. Link payments to trip registrations
-3. **Set up webhooks in Checkout.com dashboard**
-4. **Add webhook secret key to config**
-5. Implement webhook handler endpoint
-6. Update registration status on payment events
-7. Send confirmation emails/SMS on success
-8. Handle payment failures gracefully
-9. Implement refund flow for cancellations
+1. Remove Checkout.com service (`app/services/payment.py`)
+2. Create new Moyasar payment service
+3. Implement payment creation with Moyasar API
+4. Add support for multiple payment methods (Mada, Visa, Mastercard, Apple Pay, STC Pay)
+5. Create payment API endpoints in `routes/payments.py`
+6. Link payments to trip registrations
+7. Set up webhooks in Moyasar dashboard
+8. Implement webhook handler with signature verification
+9. Update registration status on payment events
+10. Send confirmation emails/SMS on success
+11. Handle payment failures gracefully
+12. Implement refund flow for cancellations
+13. Add comprehensive unit tests
 
-**⚠️ Webhook Setup Required**:
-- Create webhook endpoint: `POST /api/v1/payments/webhook`
-- Add webhook URL in Checkout.com dashboard
-- Get webhook secret key from Checkout.com
-- Add secret to `accounts.txt` and config
-- Test webhook events (payment.captured, payment.declined, etc.)
+**Moyasar Integration**:
+- API Base URL: `https://api.moyasar.com/v1/`
+- Authentication: API key (Basic Auth)
+- Webhook signature verification required
+- Support for 3D Secure (SCA)
+- Test mode available
+
+**Configuration Required**:
+- Moyasar API key (publishable and secret)
+- Webhook secret key
+- Callback URLs for success/failure
+- Currency: SAR (Saudi Riyal)
 
 ---
 
@@ -604,18 +612,216 @@ GET /api/v1/bookmarks
 
 ### **⚪ Nice to Have**
 
-#### **13. Social Features**
-- Share trips (generate shareable links)
-- Invite friends to trips
-- Group booking discounts
+#### **13. Trip Sharing with Social Preview**
+**Status**: ❌ Not implemented  
+**Priority**: High  
+**Estimated Time**: 2-3 days
 
-#### **14. In-App Chat**
-- Contact provider messaging
+**What's needed**:
+- Generate shareable trip links with unique tokens
+- Public trip view endpoint (no authentication required)
+- Open Graph meta tags for social media image previews
+- WhatsApp/social apps show first trip image as preview
+- Track share analytics (views, conversions)
+
+**API Endpoints**:
+```python
+GET /api/v1/trips/{trip_id}/share        # Generate share link
+GET /api/v1/public/trips/{share_token}   # Public trip view
+```
+
+**Database**:
+- `TripShare` model: share_token, trip_id, view_count, created_at
+
+---
+
+#### **14. Discounts System**
+**Status**: ❌ Not implemented  
+**Priority**: High  
+**Estimated Time**: 3-4 days
+
+**What's needed**:
+Two discount types:
+
+**A. Promo Code Discounts**:
+- Provider creates codes (e.g., "WELCOME" for 15% off)
+- User enters code during registration
+- Validates code and applies discount
+- Track usage limits and expiration
+
+**B. Group Size Discounts**:
+- Automatic discount when registering X+ participants
+- Provider sets: "5+ people = 10% off"
+- Applied automatically at checkout
+
+**API Endpoints**:
+```python
+POST /api/v1/trips/{trip_id}/discounts              # Create discount
+GET /api/v1/trips/{trip_id}/discounts               # List discounts
+POST /api/v1/trips/{trip_id}/validate-discount      # Validate promo code
+POST /api/v1/registrations/calculate-price          # Calculate with discounts
+```
+
+**Database**:
+- `TripDiscount` model: discount_type, code, percentage, min_participants, valid_from, valid_until, max_uses
+
+---
+
+#### **15. User Wallet/Balance System**
+**Status**: ❌ Not implemented  
+**Priority**: Medium  
+**Estimated Time**: 3-4 days
+
+**What's needed**:
+- User wallet with balance in SAR
+- Payment options: Card only, Wallet only, or Split payment
+- Transaction history tracking
+- Admin can manually adjust balance
+- Future: Referral rewards, promotional credits
+
+**API Endpoints**:
+```python
+GET /api/v1/wallet                              # Get balance
+GET /api/v1/wallet/transactions                 # Transaction history
+POST /api/v1/wallet/deposit                     # Add funds
+POST /api/v1/registrations (modified)           # Support wallet payment
+POST /api/v1/admin/wallet/{user_id}/adjust      # Admin adjustment
+```
+
+**Database**:
+- `UserWallet` model: user_id, balance, currency
+- `WalletTransaction` model: wallet_id, type, amount, description, reference_id
+
+---
+
+#### **16. Customer Support Ticketing System**
+**Status**: ❌ Not implemented  
+**Priority**: High  
+**Estimated Time**: 4-5 days
+
+**What's needed**:
+Two separate ticketing systems:
+
+**A. User → Admin Support**:
+- Users report issues to admin
+- Admin views/manages tickets in admin panel
+- Categories: Technical, Billing, General
+- Priority levels: Low, Medium, High, Urgent
+
+**B. User → Provider Support (Trip-Specific)**:
+- Users raise tickets for specific trip registrations
+- Provider handles tickets in provider panel
+- Only available after user registers for trip
+
+**API Endpoints**:
+```python
+# User → Admin
+POST /api/v1/support/tickets                    # Create admin ticket
+GET /api/v1/support/tickets                     # List my tickets
+POST /api/v1/support/tickets/{id}/messages      # Reply
+
+# User → Provider
+POST /api/v1/trips/{trip_id}/support            # Create provider ticket
+GET /api/v1/registrations/{reg_id}/support      # List trip tickets
+
+# Admin Panel
+GET /api/v1/admin/support/tickets               # View all admin tickets
+
+# Provider Panel
+GET /api/v1/provider/support/tickets            # View tickets for my trips
+```
+
+**Database**:
+- `SupportTicket` model: user_id, subject, description, status, priority, category
+- `TripSupportTicket` model: registration_id, user_id, provider_id, trip_id, subject, status
+- `TicketMessage` model: ticket_id, sender_id, sender_type, message, attachments
+
+---
+
+#### **17. QR Code Check-In System**
+**Status**: ❌ Not implemented  
+**Priority**: Medium  
+**Estimated Time**: 2-3 days
+
+**What's needed**:
+- Optional check-in system (provider can enable per trip)
+- Generate unique QR code for each registration participant
+- Provider scans QR codes via provider panel
+- Manual check-in option (without QR scan)
+- Real-time check-in statistics
+
+**API Endpoints**:
+```python
+POST /api/v1/trips/{trip_id}/enable-checkin              # Enable check-in
+GET /api/v1/registrations/{reg_id}/qr-codes              # Get QR codes
+POST /api/v1/provider/checkin/scan                       # Scan QR code
+POST /api/v1/provider/checkin/manual/{participant_id}    # Manual check-in
+GET /api/v1/provider/trips/{trip_id}/checkin-status      # View all check-ins
+```
+
+**Database**:
+- `Trip` model: add `enable_checkin` boolean field
+- `TripRegistrationParticipant` model: add `qr_code_token`, `checked_in`, `checked_in_at`, `checked_in_by`, `check_in_method`
+
+**QR Code**:
+- Contains: `{registration_id}:{participant_id}:{unique_token}`
+- Generated using Python `qrcode` library
+
+---
+
+#### **18. Trip Updates/Notifications**
+**Status**: ❌ Not implemented  
+**Priority**: High  
+**Estimated Time**: 2-3 days
+
+**What's needed**:
+- Provider sends updates to registered users
+- Text message with optional file attachments (PDFs, images)
+- Send to all registered users OR specific user
+- Examples: "Flight tickets ready", "Itinerary updated", "Important notice"
+- Read receipts tracking
+
+**API Endpoints**:
+```python
+# Provider sends updates
+POST /api/v1/provider/trips/{trip_id}/updates           # Send to all users
+POST /api/v1/provider/registrations/{reg_id}/updates    # Send to specific user
+
+# User views updates
+GET /api/v1/trips/{trip_id}/updates                     # Get my trip updates
+POST /api/v1/updates/{id}/mark-read                     # Mark as read
+```
+
+**Database**:
+- `TripUpdate` model: trip_id, provider_id, registration_id (nullable), title, message, attachments, is_important
+- `TripUpdateReceipt` model: update_id, user_id, read_at
+
+**Features**:
+- File upload support for PDFs/images
+- Push notifications integration (when implemented)
+- Important flag for urgent updates
+
+---
+
+#### **19. In-App Chat** (Future)
+**Status**: ❌ Not implemented  
+**Priority**: Low  
+**Estimated Time**: 5-7 days
+
+- Real-time messaging between users and providers
 - Customer support chat
+- WebSocket integration required
 
-#### **15. Offline Support**
+---
+
+#### **20. Offline Support** (Future)
+**Status**: ❌ Not implemented  
+**Priority**: Low  
+**Estimated Time**: 3-4 days
+
 - Cache trip data for offline viewing
 - Queue actions when offline
+- Sync when connection restored
 
 ---
 
@@ -714,8 +920,10 @@ I can implement a full-featured, production-quality React Native mobile app with
 ### **Payments**
 ```json
 {
-  "gateway": "Checkout.com SDK",
-  "integration": "Native modules for iOS/Android"
+  "gateway": "Moyasar SDK",
+  "payment_methods": ["Mada", "Visa", "Mastercard", "Apple Pay", "STC Pay"],
+  "integration": "Moyasar React Native SDK or WebView",
+  "currency": "SAR"
 }
 ```
 
@@ -833,7 +1041,7 @@ mobile-app/
 **Week 2: Authentication & Payments**
 - [ ] Day 1-2: Email verification flow
 - [ ] Day 3-4: Phone OTP verification
-- [ ] Day 5-7: Payment integration (Checkout.com)
+- [ ] Day 5-7: Payment integration (Moyasar)
 
 **Additional Tasks**
 - [ ] File upload (S3 integration) - 2-3 days
@@ -929,9 +1137,10 @@ mobile-app/
 
 **Week 3: Payment & Completion**
 - [ ] Day 1-3: Payment integration
-  - Checkout.com SDK integration
-  - Payment screen
-  - 3D Secure support
+  - Moyasar SDK integration
+  - Payment screen with multiple payment methods
+  - 3D Secure (SCA) support
+  - Apple Pay integration
   - Payment confirmation
 - [ ] Day 4-5: Booking confirmation
   - Success screen
