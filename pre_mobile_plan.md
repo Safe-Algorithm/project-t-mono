@@ -610,9 +610,567 @@ GET /api/v1/bookmarks
 
 ---
 
+#### **13. Additional Trip Fields**
+**Status**: ❌ Not implemented  
+**Priority**: Critical  
+**Estimated Time**: 3-4 days
+
+**What's needed**:
+Four new sets of fields to enhance trip information:
+
+**A. Extra Fees System**:
+- Trips may have additional costs not included in package price
+- Examples: Resort entry fees, pool access, equipment rental
+- Provider can add multiple extra fees per trip
+- Each fee has: name, description, amount (SAR)
+
+**B. Refundability**:
+- Boolean flag indicating if trip allows refunds
+- If `is_refundable = false`: User cannot request refund after payment
+- If `is_refundable = true`: User can request refund (refund logic implemented separately)
+
+**C. Trip Amenities**:
+- Multi-select list of what's included in trip cost
+- Examples: Flight tickets, bus transportation, tour guide, tours, hotel accommodation, meals, travel insurance, visa assistance
+- Displayed as checkboxes in provider panel
+- Shown as badges/icons in mobile app
+
+**D. Meeting Place**:
+- Optional meeting location for trip departure
+- If enabled: location address and meeting time required
+- Users need to know where and when to meet for trip
+
+**Database Models**:
+```python
+# Extra Fees (separate table)
+class TripExtraFee(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    trip_id: uuid.UUID = Field(foreign_key="trip.id")
+    name_en: str = Field(max_length=100)
+    name_ar: str = Field(max_length=100)
+    description_en: Optional[str] = Field(max_length=500)
+    description_ar: Optional[str] = Field(max_length=500)
+    amount: Decimal = Field(max_digits=10, decimal_places=2)
+    currency: str = Field(default="SAR", max_length=3)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    trip: "Trip" = Relationship(back_populates="extra_fees")
+
+# Trip model additions
+class Trip(SQLModel, table=True):
+    # ... existing fields ...
+    
+    # Refundability
+    is_refundable: bool = Field(default=True)
+    
+    # Amenities (JSON array)
+    amenities: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    # Values: ["flight_tickets", "bus", "tour_guide", "tours", "hotel", 
+    #          "meals", "insurance", "visa_assistance"]
+    
+    # Meeting Place
+    has_meeting_place: bool = Field(default=False)
+    meeting_location: Optional[str] = Field(default=None, max_length=500)
+    meeting_time: Optional[datetime] = Field(default=None)
+    
+    # Relationships
+    extra_fees: List["TripExtraFee"] = Relationship(
+        back_populates="trip", 
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+```
+
+**API Endpoints**:
+```python
+# Extra Fees Management
+POST /api/v1/trips/{trip_id}/extra-fees
+GET /api/v1/trips/{trip_id}/extra-fees
+PUT /api/v1/trips/{trip_id}/extra-fees/{fee_id}
+DELETE /api/v1/trips/{trip_id}/extra-fees/{fee_id}
+
+# Trip Update (include new fields)
+PATCH /api/v1/trips/{trip_id}
+Input: {
+    is_refundable?: bool,
+    amenities?: List[str],
+    has_meeting_place?: bool,
+    meeting_location?: str,
+    meeting_time?: datetime
+}
+```
+
+**Amenities Enum**:
+```python
+class TripAmenity(str, Enum):
+    FLIGHT_TICKETS = "flight_tickets"
+    BUS = "bus"
+    TOUR_GUIDE = "tour_guide"
+    TOURS = "tours"
+    HOTEL = "hotel"
+    MEALS = "meals"
+    INSURANCE = "insurance"
+    VISA_ASSISTANCE = "visa_assistance"
+```
+
+**Frontend UI**:
+- Provider Panel: Checkboxes for amenities, toggle for refundability, form for extra fees
+- Mobile App: Display amenities as icons/badges, show extra fees in trip details, show meeting place info
+
+**Migration**:
+- Add new columns to `trip` table
+- Create `trip_extra_fees` table
+- Update trip schemas to include new fields
+
+---
+
+#### **14. Full Localization (Arabic/English)**
+**Status**: ❌ Not implemented  
+**Priority**: Critical  
+**Estimated Time**: 5-7 days
+
+**What's needed**:
+Complete bilingual support for Arabic and English across backend and frontend.
+
+**Backend Localization**:
+All user-facing text fields must have `_en` and `_ar` versions:
+
+**Models to Update**:
+```python
+# Trip Model
+class Trip(SQLModel, table=True):
+    name_en: str = Field(max_length=200)
+    name_ar: str = Field(max_length=200)
+    description_en: str
+    description_ar: str
+    # ... other fields ...
+
+# TripPackage Model
+class TripPackage(SQLModel, table=True):
+    name_en: str = Field(max_length=150)
+    name_ar: str = Field(max_length=150)
+    description_en: str
+    description_ar: str
+    # ... other fields ...
+
+# TripPackageRequiredField Model
+class TripPackageRequiredField(SQLModel, table=True):
+    label_en: str = Field(max_length=100)
+    label_ar: str = Field(max_length=100)
+    placeholder_en: Optional[str] = Field(max_length=200)
+    placeholder_ar: Optional[str] = Field(max_length=200)
+    # ... other fields ...
+
+# TripExtraFee Model (already has _en/_ar in design above)
+# Destination Model (already has _en/_ar in design below)
+# Place Model (already has _en/_ar in design below)
+
+# Provider Model
+class Provider(SQLModel, table=True):
+    company_name: str  # Keep single (company names don't translate)
+    bio_en: Optional[str] = Field(max_length=1000)
+    bio_ar: Optional[str] = Field(max_length=1000)
+    # ... other fields ...
+
+# SupportTicket / TripSupportTicket
+class SupportTicket(SQLModel, table=True):
+    subject: str  # User-generated, no translation
+    description: str  # User-generated, no translation
+    # Admin responses could be bilingual but not required initially
+
+# TripUpdate Model
+class TripUpdate(SQLModel, table=True):
+    title_en: str
+    title_ar: str
+    message_en: str
+    message_ar: str
+    # ... other fields ...
+```
+
+**API Response Strategy**:
+```python
+# Option 1: Return both languages, let client choose
+{
+    "name_en": "Desert Safari Adventure",
+    "name_ar": "مغامرة سفاري الصحراء",
+    "description_en": "...",
+    "description_ar": "..."
+}
+
+# Option 2: Accept language header and return only requested language
+# Header: Accept-Language: ar or Accept-Language: en
+{
+    "name": "مغامرة سفاري الصحراء",  # Based on header
+    "description": "..."
+}
+
+# Recommendation: Use Option 1 initially (simpler, more flexible)
+```
+
+**Frontend Localization**:
+
+**Admin Panel & Provider Panel (React)**:
+```json
+{
+  "library": "react-i18next",
+  "structure": {
+    "public/locales/en/translation.json": "English UI strings",
+    "public/locales/ar/translation.json": "Arabic UI strings"
+  },
+  "features": [
+    "Language switcher in header",
+    "RTL support for Arabic",
+    "Persist language preference in localStorage",
+    "Format numbers/dates per locale"
+  ]
+}
+```
+
+**Mobile App (React Native)**:
+```json
+{
+  "library": "react-i18next or i18n-js",
+  "structure": {
+    "src/locales/en.json": "English UI strings",
+    "src/locales/ar.json": "Arabic UI strings"
+  },
+  "features": [
+    "Detect device language on first launch",
+    "Language switcher in settings",
+    "RTL layout support for Arabic",
+    "Persist language in AsyncStorage",
+    "Format currency (SAR) per locale"
+  ]
+}
+```
+
+**Translation Files Structure**:
+```json
+// en.json
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete"
+  },
+  "trips": {
+    "title": "Trips",
+    "search": "Search trips...",
+    "filters": "Filters"
+  },
+  "booking": {
+    "confirm": "Confirm Booking",
+    "total": "Total Amount"
+  }
+}
+
+// ar.json
+{
+  "common": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف"
+  },
+  "trips": {
+    "title": "الرحلات",
+    "search": "البحث عن رحلات...",
+    "filters": "الفلاتر"
+  },
+  "booking": {
+    "confirm": "تأكيد الحجز",
+    "total": "المبلغ الإجمالي"
+  }
+}
+```
+
+**Implementation Steps**:
+1. Update all database models to add `_en` and `_ar` fields
+2. Create Alembic migration for schema changes
+3. Update all schemas (Pydantic) to include localized fields
+4. Update CRUD operations to handle both languages
+5. Update API endpoints to return localized data
+6. Set up i18n in admin panel (react-i18next)
+7. Set up i18n in provider panel (react-i18next)
+8. Set up i18n in mobile app (react-i18next or i18n-js)
+9. Create translation files for all UI text
+10. Implement RTL support for Arabic
+11. Add language switcher UI components
+12. Test all features in both languages
+
+**Migration Strategy**:
+```python
+# For existing data, copy current values to _en field
+# Leave _ar field empty or use Google Translate API for initial translation
+# Provider/Admin can update Arabic translations manually
+```
+
+**RTL Support**:
+- CSS: `direction: rtl` for Arabic
+- React: Use `react-i18next` with RTL detection
+- React Native: Use `I18nManager.forceRTL(true)` for Arabic
+
+---
+
+#### **15. Destinations System**
+**Status**: ❌ Not implemented  
+**Priority**: Critical  
+**Estimated Time**: 4-5 days
+
+**What's needed**:
+Hierarchical destination system with countries, cities, and places.
+
+**Database Models**:
+```python
+class DestinationType(str, Enum):
+    COUNTRY = "country"
+    CITY = "city"
+
+class Destination(SQLModel, table=True):
+    __tablename__ = "destinations"
+    __table_args__ = (
+        UniqueConstraint("parent_id", "slug", name="unique_parent_slug"),
+        UniqueConstraint("full_slug", name="unique_full_slug"),
+    )
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    
+    type: DestinationType = Field(sa_column=Column(SQLEnum(DestinationType)))
+    parent_id: Optional[uuid.UUID] = Field(default=None, foreign_key="destinations.id")
+    
+    country_code: str = Field(max_length=2)  # ISO-3166 (SA, TR, AE, etc.)
+    slug: str = Field(max_length=100)  # riyadh, istanbul, dubai
+    full_slug: str = Field(max_length=200)  # saudi-arabia/riyadh
+    
+    name_en: str = Field(max_length=120)
+    name_ar: str = Field(max_length=120)
+    
+    timezone: str = Field(max_length=50)  # Asia/Riyadh, Europe/Istanbul
+    currency_code: str = Field(max_length=3)  # SAR, TRY, AED
+    
+    google_place_id: Optional[str] = Field(default=None, max_length=120)
+    is_active: bool = Field(default=False)  # Inactive by default, admin activates
+    
+    display_order: int = Field(default=0)  # For sorting
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    parent: Optional["Destination"] = Relationship(
+        back_populates="children",
+        sa_relationship_kwargs={"remote_side": "Destination.id"}
+    )
+    children: List["Destination"] = Relationship(back_populates="parent")
+    places: List["Place"] = Relationship(back_populates="destination")
+    trip_destinations: List["TripDestination"] = Relationship(back_populates="destination")
+
+
+class PlaceType(str, Enum):
+    AREA = "area"
+    DISTRICT = "district"
+    ATTRACTION = "attraction"
+    RESORT = "resort"
+    THEME_PARK = "theme_park"
+    LANDMARK = "landmark"
+    EXPERIENCE = "experience"
+
+class Place(SQLModel, table=True):
+    __tablename__ = "places"
+    __table_args__ = (
+        UniqueConstraint("destination_id", "slug", name="unique_destination_place_slug"),
+    )
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    
+    destination_id: uuid.UUID = Field(foreign_key="destinations.id")
+    
+    type: PlaceType = Field(sa_column=Column(SQLEnum(PlaceType)))
+    slug: str = Field(max_length=120)
+    
+    name_en: str = Field(max_length=150)
+    name_ar: str = Field(max_length=150)
+    
+    latitude: Optional[Decimal] = Field(default=None, max_digits=9, decimal_places=6)
+    longitude: Optional[Decimal] = Field(default=None, max_digits=9, decimal_places=6)
+    
+    google_place_id: Optional[str] = Field(default=None, max_length=120)
+    is_active: bool = Field(default=True)
+    
+    display_order: int = Field(default=0)
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    destination: "Destination" = Relationship(back_populates="places")
+
+
+class TripDestination(SQLModel, table=True):
+    """Many-to-many relationship between trips and destinations"""
+    __tablename__ = "trip_destinations"
+    __table_args__ = (
+        UniqueConstraint("trip_id", "destination_id", name="unique_trip_destination"),
+    )
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    trip_id: uuid.UUID = Field(foreign_key="trip.id")
+    destination_id: uuid.UUID = Field(foreign_key="destinations.id")
+    
+    # Optional: Link to specific place within destination
+    place_id: Optional[uuid.UUID] = Field(default=None, foreign_key="places.id")
+    
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    trip: "Trip" = Relationship(back_populates="trip_destinations")
+    destination: "Destination" = Relationship(back_populates="trip_destinations")
+    place: Optional["Place"] = Relationship()
+```
+
+**API Endpoints**:
+```python
+# Admin - Destination Management
+POST /api/v1/admin/destinations                    # Create country or city
+GET /api/v1/admin/destinations                     # List all (with hierarchy)
+GET /api/v1/admin/destinations/{id}                # Get single destination
+PATCH /api/v1/admin/destinations/{id}              # Update destination
+DELETE /api/v1/admin/destinations/{id}             # Delete destination
+PATCH /api/v1/admin/destinations/{id}/activate     # Activate destination
+
+# Admin - Place Management
+POST /api/v1/admin/destinations/{dest_id}/places   # Create place
+GET /api/v1/admin/destinations/{dest_id}/places    # List places for destination
+PATCH /api/v1/admin/places/{id}                    # Update place
+DELETE /api/v1/admin/places/{id}                   # Delete place
+
+# Public - Get Active Destinations (for trip creation)
+GET /api/v1/destinations                           # Get active destinations tree
+GET /api/v1/destinations/{id}/places               # Get places for destination
+
+# Provider - Trip Destinations
+POST /api/v1/trips/{trip_id}/destinations          # Add destination to trip
+DELETE /api/v1/trips/{trip_id}/destinations/{id}   # Remove destination from trip
+GET /api/v1/trips/{trip_id}/destinations           # List trip destinations
+```
+
+**Validation Rules**:
+1. Provider must add at least 1 destination per trip
+2. Must include full hierarchy: country + city (minimum)
+3. Place is optional
+4. Cannot add duplicate destinations to same trip
+5. Can add multiple destinations (multi-destination trips)
+
+**Seed Script**:
+```python
+# Script: backend/scripts/seed_destinations.py
+
+"""
+Seed worldwide destinations (countries and major cities)
+Data sources:
+- REST Countries API: https://restcountries.com/v3.1/all
+- GeoNames: http://download.geonames.org/export/dump/
+
+Process:
+1. Fetch all countries with ISO codes, timezones, currencies
+2. For each country, fetch major cities (population > 100k)
+3. Insert into database with is_active=False
+4. Admin can activate destinations as needed
+
+Estimated data:
+- ~200 countries
+- ~10,000+ major cities
+"""
+
+import requests
+from app.models import Destination, DestinationType
+from app.core.db import get_session
+
+def seed_destinations():
+    # Fetch countries
+    countries_response = requests.get("https://restcountries.com/v3.1/all")
+    countries = countries_response.json()
+    
+    for country in countries:
+        # Create country destination
+        country_dest = Destination(
+            type=DestinationType.COUNTRY,
+            country_code=country["cca2"],  # ISO code
+            slug=slugify(country["name"]["common"]),
+            full_slug=slugify(country["name"]["common"]),
+            name_en=country["name"]["common"],
+            name_ar=country["translations"].get("ara", {}).get("common", ""),
+            timezone=country["timezones"][0],
+            currency_code=list(country["currencies"].keys())[0],
+            is_active=False
+        )
+        session.add(country_dest)
+        session.flush()
+        
+        # Fetch and add major cities for this country
+        # (Implementation details for city data fetching)
+    
+    session.commit()
+```
+
+**Provider UI for Adding Destinations**:
+```
+┌─────────────────────────────────────────┐
+│ Select Destinations *                   │
+│ ┌─────────────────────────────────────┐ │
+│ │ Search destination...            🔍 │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ Selected Destinations:                  │
+│ ┌─────────────────────────────────────┐ │
+│ │ 🇸🇦 Saudi Arabia → Riyadh        ✕ │ │
+│ │    └ 📍 Diriyah (optional)          │ │
+│ │                                     │ │
+│ │ 🇹🇷 Turkey → Istanbul             ✕ │ │
+│ │    └ 📍 Sultanahmet (optional)      │ │
+│ └─────────────────────────────────────┘ │
+│                                         │
+│ Available Destinations:                 │
+│ ┌─────────────────────────────────────┐ │
+│ │ 🇸🇦 Saudi Arabia                    │ │
+│ │   └ Riyadh                          │ │
+│ │      └ Diriyah                      │ │
+│ │      └ Six Flags Qiddiya            │ │
+│ │   └ Jeddah                          │ │
+│ │      └ Historic Jeddah              │ │
+│ │ 🇹🇷 Turkey                          │ │
+│ │   └ Istanbul                        │ │
+│ │      └ Sultanahmet                  │ │
+│ │      └ Taksim                       │ │
+│ │ 🇦🇪 UAE                             │ │
+│ │   └ Dubai                           │ │
+│ │      └ Burj Khalifa                 │ │
+│ └─────────────────────────────────────┘ │
+└─────────────────────────────────────────┘
+```
+
+**Admin Panel CRUD**:
+- List view with hierarchy (tree structure)
+- Add country form (name_en, name_ar, country_code, timezone, currency)
+- Add city form (select parent country, name_en, name_ar)
+- Add place form (select destination, type, name_en, name_ar, coordinates)
+- Activate/deactivate toggle
+- Bulk activate countries/cities
+- Search and filter
+
+**Indexes**:
+```sql
+CREATE INDEX idx_destinations_country_code ON destinations(country_code);
+CREATE INDEX idx_destinations_type ON destinations(type);
+CREATE INDEX idx_destinations_is_active ON destinations(is_active);
+CREATE INDEX idx_places_destination_id ON places(destination_id);
+CREATE INDEX idx_places_type ON places(type);
+CREATE INDEX idx_trip_destinations_trip_id ON trip_destinations(trip_id);
+```
+
+---
+
 ### **⚪ Nice to Have**
 
-#### **13. Trip Sharing with Social Preview**
+#### **16. Trip Sharing with Social Preview**
 **Status**: ❌ Not implemented  
 **Priority**: High  
 **Estimated Time**: 2-3 days
@@ -635,7 +1193,7 @@ GET /api/v1/public/trips/{share_token}   # Public trip view
 
 ---
 
-#### **14. Discounts System**
+#### **17. Discounts System**
 **Status**: ❌ Not implemented  
 **Priority**: High  
 **Estimated Time**: 3-4 days
@@ -667,7 +1225,7 @@ POST /api/v1/registrations/calculate-price          # Calculate with discounts
 
 ---
 
-#### **15. User Wallet/Balance System**
+#### **18. User Wallet/Balance System**
 **Status**: ❌ Not implemented  
 **Priority**: Medium  
 **Estimated Time**: 3-4 days
@@ -694,7 +1252,7 @@ POST /api/v1/admin/wallet/{user_id}/adjust      # Admin adjustment
 
 ---
 
-#### **16. Customer Support Ticketing System**
+#### **19. Customer Support Ticketing System**
 **Status**: ❌ Not implemented  
 **Priority**: High  
 **Estimated Time**: 4-5 days
@@ -738,7 +1296,7 @@ GET /api/v1/provider/support/tickets            # View tickets for my trips
 
 ---
 
-#### **17. QR Code Check-In System**
+#### **20. QR Code Check-In System**
 **Status**: ❌ Not implemented  
 **Priority**: Medium  
 **Estimated Time**: 2-3 days
@@ -769,7 +1327,7 @@ GET /api/v1/provider/trips/{trip_id}/checkin-status      # View all check-ins
 
 ---
 
-#### **18. Trip Updates/Notifications**
+#### **21. Trip Updates/Notifications**
 **Status**: ❌ Not implemented  
 **Priority**: High  
 **Estimated Time**: 2-3 days
@@ -803,7 +1361,7 @@ POST /api/v1/updates/{id}/mark-read                     # Mark as read
 
 ---
 
-#### **19. In-App Chat** (Future)
+#### **22. In-App Chat** (Future)
 **Status**: ❌ Not implemented  
 **Priority**: Low  
 **Estimated Time**: 5-7 days
@@ -814,7 +1372,7 @@ POST /api/v1/updates/{id}/mark-read                     # Mark as read
 
 ---
 
-#### **20. Offline Support** (Future)
+#### **23. Offline Support** (Future)
 **Status**: ❌ Not implemented  
 **Priority**: Low  
 **Estimated Time**: 3-4 days
