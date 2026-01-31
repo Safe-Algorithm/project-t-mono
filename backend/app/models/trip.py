@@ -6,6 +6,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 from sqlalchemy.ext.mutable import MutableList
 
 from .links import TripParticipant, TripRating
+from .trip_amenity import TripAmenity
 
 if TYPE_CHECKING:
     from .provider import Provider
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
     from .trip_favorite import TripFavorite
     from .trip_like import TripLike
     from .trip_bookmark import TripBookmark
+    from .trip_amenity import TripExtraFee
 
 
 
@@ -30,6 +32,18 @@ class Trip(SQLModel, table=True):
 
     # Using JSONB for flexible metadata like itinerary, inclusions, exclusions
     trip_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
+    
+    # Refundability
+    is_refundable: bool = Field(default=True)
+    
+    # Amenities (stored as JSON array of enum values)
+    amenities: Optional[List[TripAmenity]] = Field(default=None, sa_column=Column(JSON))
+    
+    # Meeting Place
+    has_meeting_place: bool = Field(default=False)
+    meeting_location: Optional[str] = Field(default=None, max_length=500)
+    meeting_time: Optional[datetime] = Field(default=None)
+    
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -42,3 +56,4 @@ class Trip(SQLModel, table=True):
     favorited_by: List["TripFavorite"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     liked_by: List["TripLike"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     bookmarked_by: List["TripBookmark"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    extra_fees: List["TripExtraFee"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

@@ -9,6 +9,11 @@ export interface TripCreatePayload {
   price: number;
   max_participants: number;
   trip_metadata?: Record<string, any>;
+  is_refundable?: boolean;
+  amenities?: string[];
+  has_meeting_place?: boolean;
+  meeting_location?: string;
+  meeting_time?: string;
 }
 
 export interface TripUpdatePayload extends Partial<TripCreatePayload> {

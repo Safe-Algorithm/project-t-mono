@@ -46,6 +46,47 @@ export interface Trip {
   images?: string[];
   trip_metadata?: Record<string, any>;
   packages: TripPackage[];
+  is_refundable?: boolean;
+  amenities?: string[];
+  has_meeting_place?: boolean;
+  meeting_location?: string;
+  meeting_time?: string;
+  extra_fees?: TripExtraFee[];
+}
+
+export interface TripExtraFee {
+  id: string;
+  trip_id: string;
+  name_en: string;
+  name_ar: string;
+  description_en?: string;
+  description_ar?: string;
+  amount: number;
+  currency: string;
+  is_mandatory: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateTripExtraFee {
+  name_en: string;
+  name_ar: string;
+  description_en?: string;
+  description_ar?: string;
+  amount: number;
+  currency?: string;
+  is_mandatory?: boolean;
+}
+
+export enum TripAmenity {
+  FLIGHT_TICKETS = 'flight_tickets',
+  BUS = 'bus',
+  TOUR_GUIDE = 'tour_guide',
+  TOURS = 'tours',
+  HOTEL = 'hotel',
+  MEALS = 'meals',
+  INSURANCE = 'insurance',
+  VISA_ASSISTANCE = 'visa_assistance',
 }
 
 export interface CreateTripPackage {

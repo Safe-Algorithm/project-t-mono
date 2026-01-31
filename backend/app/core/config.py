@@ -34,10 +34,10 @@ class Settings(BaseSettings):
     SENDGRID_FROM_EMAIL: str = "noreply@safealgo.com"
     SENDGRID_FROM_NAME: str = "Safe Algo Tourism"
 
-    # Checkout.com (Payment Gateway)
-    CHECKOUT_SECRET_KEY: str = "sk_sbox_p7gis5zzoeecmthcm7e4v4xfsu="
-    CHECKOUT_PUBLIC_KEY: str = ""  # Set via environment variable
-    CHECKOUT_API_URL: str = "https://g6ftayvr.api.sandbox.checkout.com"
+    # Moyasar (Payment Gateway)
+    MOYASAR_API_KEY: str = ""  # Secret key - must be set via environment variable
+    MOYASAR_API_URL: str = "https://api.moyasar.com/v1"
+    MOYASAR_WEBHOOK_SECRET: str = ""  # Webhook secret for signature verification
     
     # Frontend URLs (for email links)
     FRONTEND_URL: str = "http://localhost:3000"  # Mobile app (default)

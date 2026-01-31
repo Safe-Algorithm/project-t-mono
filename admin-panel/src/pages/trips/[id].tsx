@@ -40,6 +40,11 @@ interface Trip {
   images?: string[];
   trip_metadata?: any;
   packages: TripPackage[];
+  is_refundable?: boolean;
+  amenities?: string[];
+  has_meeting_place?: boolean;
+  meeting_location?: string;
+  meeting_time?: string;
 }
 
 interface FieldMetadata {
@@ -60,6 +65,17 @@ const TripDetailPage = () => {
   const { token } = useAuth();
   const router = useRouter();
   const { id } = router.query;
+
+  const amenityLabels: Record<string, string> = {
+    'flight_tickets': 'Flight Tickets',
+    'bus': 'Bus Transportation',
+    'tour_guide': 'Tour Guide',
+    'tours': 'Tours',
+    'hotel': 'Hotel Accommodation',
+    'meals': 'Meals',
+    'insurance': 'Travel Insurance',
+    'visa_assistance': 'Visa Assistance',
+  };
 
   useEffect(() => {
     if (!token || !id || typeof id !== 'string') return;
@@ -168,12 +184,59 @@ const TripDetailPage = () => {
               {trip.is_active ? 'Active' : 'Cancelled'}
             </p>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Refundable</label>
+            <p className={`mt-1 text-sm font-semibold ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>
+              {trip.is_refundable ? 'Yes' : 'No'}
+            </p>
+          </div>
         </div>
         <div className="mt-4">
           <label className="block text-sm font-medium text-gray-700">Description</label>
           <p className="mt-1 text-sm text-gray-900">{trip.description}</p>
         </div>
         
+        {/* Trip Amenities */}
+        {trip.amenities && trip.amenities.length > 0 && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Trip Amenities & Inclusions</label>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {trip.amenities.map((amenity) => (
+                <div 
+                  key={amenity}
+                  className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
+                >
+                  <span className="text-blue-600 text-lg">✓</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    {amenityLabels[amenity] || amenity}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Meeting Place Information */}
+        {trip.has_meeting_place && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-3">Meeting Place Information</label>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              {trip.meeting_location && (
+                <div className="mb-2">
+                  <span className="font-medium text-gray-700">📍 Location:</span>
+                  <span className="ml-2 text-gray-900">{trip.meeting_location}</span>
+                </div>
+              )}
+              {trip.meeting_time && (
+                <div>
+                  <span className="font-medium text-gray-700">🕐 Time:</span>
+                  <span className="ml-2 text-gray-900">{new Date(trip.meeting_time).toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Trip Images */}
         {trip.images && trip.images.length > 0 && (
           <div className="mt-6">

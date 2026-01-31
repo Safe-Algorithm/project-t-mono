@@ -493,6 +493,12 @@ def get_trip_details(
         "company_name": provider.company_name
     } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
     
+    # Get extra fees
+    from app.models.trip_amenity import TripExtraFee
+    extra_fees = session.query(TripExtraFee).filter(
+        TripExtraFee.trip_id == trip_id
+    ).all()
+    
     return TripRead(
         id=trip.id,
         provider_id=trip.provider_id,
@@ -505,7 +511,13 @@ def get_trip_details(
         images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
-        packages=packages_with_fields
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        packages=packages_with_fields,
+        extra_fees=extra_fees
     )
 
 

@@ -16,6 +16,8 @@ from app.models.field_validation import get_available_validations_for_field, val
 from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
 from app.schemas.trip_package import TripPackageCreate, TripPackage, TripPackageUpdate, TripPackageWithRequiredFields
 from app.schemas.trip_registration import TripRegistrationCreate, TripRegistration
+from app.schemas.trip_extra_fee import TripExtraFeeCreate, TripExtraFeeUpdate, TripExtraFeeResponse
+from app.crud import trip_extra_fee
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -249,6 +251,12 @@ def read_trip(
         "company_name": provider.company_name
     } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
     
+    # Get extra fees
+    from app.models.trip_amenity import TripExtraFee
+    extra_fees = session.query(TripExtraFee).filter(
+        TripExtraFee.trip_id == trip_id
+    ).all()
+    
     # Create response with packages including required fields
     return TripRead(
         id=trip.id,
@@ -262,7 +270,13 @@ def read_trip(
         images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
-        packages=packages_with_fields
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        packages=packages_with_fields,
+        extra_fees=extra_fees
     )
 
 
@@ -331,6 +345,12 @@ def update_trip(
         "company_name": provider.company_name
     } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
     
+    # Get extra fees
+    from app.models.trip_amenity import TripExtraFee
+    extra_fees = session.query(TripExtraFee).filter(
+        TripExtraFee.trip_id == trip_id
+    ).all()
+    
     return TripRead(
         id=trip.id,
         provider_id=trip.provider_id,
@@ -343,7 +363,13 @@ def update_trip(
         images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
-        packages=packages_with_fields
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        packages=packages_with_fields,
+        extra_fees=extra_fees
     )
 
 
@@ -1171,3 +1197,96 @@ async def delete_trip_image(
         "message": "Image deleted successfully",
         "remaining_images": len(trip.images)
     }
+
+
+# ===== Extra Fees Management =====
+
+@router.post("/{trip_id}/extra-fees", response_model=TripExtraFeeResponse)
+def create_trip_extra_fee(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    extra_fee_in: TripExtraFeeCreate,
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Create a new extra fee for a trip."""
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not authorized to add fees to this trip")
+    
+    extra_fee = trip_extra_fee.create_extra_fee(
+        session=session,
+        trip_id=trip_id,
+        extra_fee_data=extra_fee_in
+    )
+    return extra_fee
+
+
+@router.get("/{trip_id}/extra-fees", response_model=List[TripExtraFeeResponse])
+def get_trip_extra_fees(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+):
+    """Get all extra fees for a trip (public endpoint)."""
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    return trip_extra_fee.get_trip_extra_fees(session=session, trip_id=trip_id)
+
+
+@router.put("/{trip_id}/extra-fees/{fee_id}", response_model=TripExtraFeeResponse)
+def update_trip_extra_fee(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    fee_id: uuid.UUID,
+    extra_fee_in: TripExtraFeeUpdate,
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Update an extra fee."""
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not authorized to update fees for this trip")
+    
+    extra_fee = trip_extra_fee.get_extra_fee(session=session, extra_fee_id=fee_id)
+    if not extra_fee or extra_fee.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Extra fee not found")
+    
+    updated_fee = trip_extra_fee.update_extra_fee(
+        session=session,
+        extra_fee=extra_fee,
+        extra_fee_data=extra_fee_in
+    )
+    return updated_fee
+
+
+@router.delete("/{trip_id}/extra-fees/{fee_id}")
+def delete_trip_extra_fee(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    fee_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Delete an extra fee."""
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete fees for this trip")
+    
+    extra_fee = trip_extra_fee.get_extra_fee(session=session, extra_fee_id=fee_id)
+    if not extra_fee or extra_fee.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Extra fee not found")
+    
+    trip_extra_fee.delete_extra_fee(session=session, extra_fee=extra_fee)
+    return {"message": "Extra fee deleted successfully"}

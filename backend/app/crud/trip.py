@@ -184,7 +184,7 @@ def search_and_filter_trips(
 
 
 def update_trip(*, session: Session, db_trip: Trip, trip_in: TripUpdate) -> Trip:
-    trip_data = trip_in.dict(exclude_unset=True)
+    trip_data = trip_in.model_dump(exclude_unset=True)
     for key, value in trip_data.items():
         setattr(db_trip, key, value)
     session.add(db_trip)

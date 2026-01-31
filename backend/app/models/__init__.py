@@ -11,3 +11,6 @@ from .provider_file import ProviderFile
 from .trip_favorite import TripFavorite
 from .trip_like import TripLike
 from .trip_bookmark import TripBookmark
+from .payment import Payment, PaymentStatus, PaymentMethod
+from .payment_audit_log import PaymentAuditLog, PaymentEventType
+from .trip_amenity import TripAmenity, TripExtraFee

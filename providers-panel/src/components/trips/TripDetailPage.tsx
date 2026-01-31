@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Trip, TripPackage, FieldMetadata, PackageRequiredField } from '../../types/trip';
+import { Trip, TripPackage, FieldMetadata, PackageRequiredField, TripAmenity } from '../../types/trip';
 import { tripService } from '../../services/tripService';
 
 const TripDetailPage: React.FC = () => {
@@ -47,6 +47,17 @@ const TripDetailPage: React.FC = () => {
     return field ? field.display_name : fieldType;
   };
 
+  const amenityLabels: Record<string, string> = {
+    [TripAmenity.FLIGHT_TICKETS]: 'Flight Tickets',
+    [TripAmenity.BUS]: 'Bus Transportation',
+    [TripAmenity.TOUR_GUIDE]: 'Tour Guide',
+    [TripAmenity.TOURS]: 'Tours',
+    [TripAmenity.HOTEL]: 'Hotel Accommodation',
+    [TripAmenity.MEALS]: 'Meals',
+    [TripAmenity.INSURANCE]: 'Travel Insurance',
+    [TripAmenity.VISA_ASSISTANCE]: 'Visa Assistance',
+  };
+
   if (loading) return <div>Loading trip details...</div>;
   if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
   if (!trip) return <div>Trip not found</div>;
@@ -76,8 +87,77 @@ const TripDetailPage: React.FC = () => {
           <p><strong>End Date:</strong> {new Date(trip.end_date).toLocaleString()}</p>
           <p><strong>Max Participants:</strong> {trip.max_participants}</p>
           <p><strong>Status:</strong> {trip.is_active ? 'Active' : 'Inactive'}</p>
+          <p>
+            <strong>Refundable:</strong>{' '}
+            <span style={{ 
+              color: trip.is_refundable ? '#28a745' : '#dc3545',
+              fontWeight: 'bold'
+            }}>
+              {trip.is_refundable ? 'Yes' : 'No'}
+            </span>
+          </p>
         </div>
       </div>
+
+      {/* Trip Amenities */}
+      {trip.amenities && trip.amenities.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h3>Trip Amenities & Inclusions</h3>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
+            gap: '0.75rem',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa',
+            borderRadius: '8px',
+            border: '1px solid #dee2e6'
+          }}>
+            {trip.amenities.map((amenity) => (
+              <div 
+                key={amenity}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  padding: '0.5rem',
+                  backgroundColor: '#e3f2fd',
+                  borderRadius: '4px',
+                  border: '1px solid #90caf9'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>✓</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: '500' }}>
+                  {amenityLabels[amenity] || amenity}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Place Information */}
+      {trip.has_meeting_place && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h3>Meeting Place Information</h3>
+          <div style={{ 
+            padding: '1rem',
+            backgroundColor: '#fff3cd',
+            borderRadius: '8px',
+            border: '1px solid #ffc107'
+          }}>
+            {trip.meeting_location && (
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                <strong>📍 Location:</strong> {trip.meeting_location}
+              </p>
+            )}
+            {trip.meeting_time && (
+              <p style={{ margin: '0' }}>
+                <strong>🕐 Time:</strong> {new Date(trip.meeting_time).toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Trip Images */}
       {trip.images && trip.images.length > 0 && (

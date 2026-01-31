@@ -1,5 +1,5 @@
 import React, { useState, useEffect, FormEvent } from 'react';
-import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig } from '../../types/trip';
+import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig, TripAmenity } from '../../types/trip';
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
 import ValidationConfigComponent from './ValidationConfig';
 
@@ -23,7 +23,13 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     end_date: '',
     max_participants: '',
     is_active: true,
+    is_refundable: true,
+    has_meeting_place: false,
+    meeting_location: '',
+    meeting_time: '',
   });
+
+  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
   const [tripImages, setTripImages] = useState<string[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
@@ -84,7 +90,16 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         end_date: new Date(trip.end_date).toISOString().substring(0, 16),
         max_participants: trip.max_participants.toString(),
         is_active: trip.is_active,
+        is_refundable: trip.is_refundable ?? true,
+        has_meeting_place: trip.has_meeting_place ?? false,
+        meeting_location: trip.meeting_location ?? '',
+        meeting_time: trip.meeting_time ? new Date(trip.meeting_time).toISOString().substring(0, 16) : '',
       });
+
+      // Populate amenities
+      if (trip.amenities && trip.amenities.length > 0) {
+        setSelectedAmenities(trip.amenities);
+      }
 
       // Load existing images
       if (trip.images && trip.images.length > 0) {
@@ -135,12 +150,31 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     const checked = (e.target as HTMLInputElement).checked;
     
     // For datetime inputs, ensure seconds are always set to 00
-    if ((name === 'start_date' || name === 'end_date') && value) {
+    if ((name === 'start_date' || name === 'end_date' || name === 'meeting_time') && value) {
       const dateValue = value + ':00'; // Append :00 for seconds
       setFormData((prev) => ({ ...prev, [name]: dateValue }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     }
+  };
+
+  const toggleAmenity = (amenity: string) => {
+    setSelectedAmenities(prev => 
+      prev.includes(amenity) 
+        ? prev.filter(a => a !== amenity)
+        : [...prev, amenity]
+    );
+  };
+
+  const amenityLabels: Record<string, string> = {
+    [TripAmenity.FLIGHT_TICKETS]: 'Flight Tickets',
+    [TripAmenity.BUS]: 'Bus Transportation',
+    [TripAmenity.TOUR_GUIDE]: 'Tour Guide',
+    [TripAmenity.TOURS]: 'Tours',
+    [TripAmenity.HOTEL]: 'Hotel Accommodation',
+    [TripAmenity.MEALS]: 'Meals',
+    [TripAmenity.INSURANCE]: 'Travel Insurance',
+    [TripAmenity.VISA_ASSISTANCE]: 'Visa Assistance',
   };
 
   const addPackage = () => {
@@ -284,6 +318,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         max_participants: parseInt(formData.max_participants, 10),
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
+        amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
+        meeting_time: formData.has_meeting_place && formData.meeting_time 
+          ? new Date(formData.meeting_time).toISOString() 
+          : undefined,
     };
     
     const imageData = {
@@ -317,6 +355,101 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} />
         Active
       </label>
+
+      <h3>Trip Policies</h3>
+      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+          <input 
+            type="checkbox" 
+            name="is_refundable" 
+            checked={formData.is_refundable} 
+            onChange={handleChange} 
+          />
+          <span>Refundable Trip</span>
+        </label>
+        <p style={{ fontSize: '0.85rem', color: '#666', margin: '0.5rem 0 0 1.5rem' }}>
+          If checked, customers can request refunds for this trip
+        </p>
+      </div>
+
+      <h3>Trip Amenities & Inclusions</h3>
+      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
+        <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+          Select what's included in this trip package:
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+          {Object.entries(amenityLabels).map(([value, label]) => (
+            <label 
+              key={value}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                padding: '0.5rem',
+                border: '1px solid #e0e0e0',
+                borderRadius: '4px',
+                backgroundColor: selectedAmenities.includes(value) ? '#e3f2fd' : '#fff',
+                cursor: 'pointer'
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={selectedAmenities.includes(value)}
+                onChange={() => toggleAmenity(value)}
+              />
+              <span style={{ fontSize: '0.9rem' }}>{label}</span>
+            </label>
+          ))}
+        </div>
+        {selectedAmenities.length > 0 && (
+          <p style={{ fontSize: '0.85rem', color: '#666', marginTop: '0.75rem' }}>
+            Selected: {selectedAmenities.length} amenity/amenities
+          </p>
+        )}
+      </div>
+
+      <h3>Meeting Place (Optional)</h3>
+      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <input 
+            type="checkbox" 
+            name="has_meeting_place" 
+            checked={formData.has_meeting_place} 
+            onChange={handleChange} 
+          />
+          <span>This trip has a designated meeting place</span>
+        </label>
+        
+        {formData.has_meeting_place && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginLeft: '1.5rem' }}>
+            <div>
+              <label style={{ fontSize: '0.9rem', fontWeight: '500', display: 'block', marginBottom: '0.25rem' }}>
+                Meeting Location
+              </label>
+              <input
+                type="text"
+                name="meeting_location"
+                value={formData.meeting_location}
+                onChange={handleChange}
+                placeholder="e.g., Airport Terminal 3, Hotel Lobby"
+                style={{ width: '100%' }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.9rem', fontWeight: '500', display: 'block', marginBottom: '0.25rem' }}>
+                Meeting Time
+              </label>
+              <input
+                type="datetime-local"
+                name="meeting_time"
+                value={formData.meeting_time}
+                onChange={handleChange}
+                style={{ width: '100%' }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
 
       <h3>Trip Images</h3>
       <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px' }}>

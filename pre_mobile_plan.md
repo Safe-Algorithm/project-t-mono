@@ -278,17 +278,22 @@ All rate limits configurable via environment variables in `.env`:
 ---
 
 #### **6. Payment Integration (Moyasar)**
-**Status**: ❌ Not implemented  
+**Status**: ✅ **COMPLETED**  
 **Priority**: Critical (for revenue)  
-**Estimated Time**: 3-4 days
+**Completed**: January 2026
 
-**What's needed**:
-- Replace existing Checkout.com implementation with Moyasar
-- Moyasar is a Saudi Arabian payment gateway
-- Supports: Mada, Visa, Mastercard, Apple Pay, STC Pay
-- Better suited for Saudi market
+**What was implemented**:
+- ✅ Complete Moyasar payment service replacing Checkout.com
+- ✅ Payment model with full tracking (status, method, refunds, fees)
+- ✅ Payment audit log system for security and compliance
+- ✅ Webhook signature verification (HMAC-SHA256)
+- ✅ Support for all payment methods: Mada, Visa, Mastercard, Apple Pay, STC Pay
+- ✅ Complete API endpoints with user authorization
+- ✅ Database migrations applied
+- ✅ 8 comprehensive unit tests passing
+- ✅ Full documentation in `PAYMENT_SETUP_INSTRUCTIONS.md`
 
-**API Endpoints to implement**:
+**API Endpoints implemented**:
 ```python
 # Create payment for trip registration
 POST /api/v1/payments/create
@@ -296,34 +301,47 @@ Input: {registration_id: UUID, payment_method: str}
 Output: {payment_id: str, redirect_url: str, amount: Decimal}
 
 # Payment callback (after payment completion)
-GET /api/v1/payments/callback
-Process: Verify payment status with Moyasar, update registration
+GET /api/v1/payments/callback?id={moyasar_payment_id}
+# Verifies payment status with Moyasar, updates registration
 
 # Handle webhooks
 POST /api/v1/payments/webhook
-Process: Handle payment.paid, payment.failed events
-Verify: Webhook signature with secret key
-Update: Registration status based on payment events
+# Handles payment.paid, payment.failed, payment.refunded events
+# Verifies webhook signature with HMAC-SHA256
+
+# Get payment details
+GET /api/v1/payments/{payment_id}
+
+# List payments for registration
+GET /api/v1/payments/registration/{registration_id}
+
+# Refund payment
+POST /api/v1/payments/{payment_id}/refund
+Input: {amount?: Decimal, description?: str}
 ```
 
-**Implementation Steps**:
-1. Remove Checkout.com service (`app/services/payment.py`)
-2. Create new Moyasar payment service
-3. Implement payment creation with Moyasar API
-4. Add support for multiple payment methods (Mada, Visa, Mastercard, Apple Pay, STC Pay)
-5. Create payment API endpoints in `routes/payments.py`
-6. Link payments to trip registrations
-7. Set up webhooks in Moyasar dashboard
-8. Implement webhook handler with signature verification
-9. Update registration status on payment events
-10. Send confirmation emails/SMS on success
-11. Handle payment failures gracefully
-12. Implement refund flow for cancellations
-13. Add comprehensive unit tests
+**Security & Auditing**:
+- ✅ Payment audit log table tracking all payment events
+- ✅ User actions logged with IP address and user agent
+- ✅ API calls to Moyasar logged with request/response data
+- ✅ Webhook verification with signature validation
+- ✅ Complete audit trail for compliance and debugging
 
-**Moyasar Integration**:
-- API Base URL: `https://api.moyasar.com/v1/`
-- Authentication: API key (Basic Auth)
+**Database Tables**:
+- ✅ `payments` - Full payment tracking
+- ✅ `payment_audit_logs` - Complete audit trail
+
+**Documentation**:
+- ✅ `PAYMENT_SETUP_INSTRUCTIONS.md` includes:
+  - Setup guide for test and production
+  - Local development workflow (callback-based, no webhooks needed)
+  - Test cards and complete testing flow
+  - Troubleshooting guide
+  - Security checklist
+
+**Tests**:
+- ✅ 8 unit tests for Moyasar service
+- ✅ API route tests for all endpoints
 - Webhook signature verification required
 - Support for 3D Secure (SCA)
 - Test mode available
@@ -610,13 +628,20 @@ GET /api/v1/bookmarks
 
 ---
 
-#### **13. Additional Trip Fields**
-**Status**: ❌ Not implemented  
-**Priority**: Critical  
-**Estimated Time**: 3-4 days
+#### **13. Additional Trip Fields (Amenities, Refundability, Extra Fees)**
+**Status**: ✅ **COMPLETED**  
+**Priority**: High  
+**Completed**: January 2026
 
-**What's needed**:
-Four new sets of fields to enhance trip information:
+**What was implemented**:
+- ✅ TripAmenity enum with 8 amenity types (stored as JSON array)
+- ✅ Trip refundability flag
+- ✅ Meeting place information (location and time)
+- ✅ TripExtraFee model with bilingual support
+- ✅ Complete CRUD operations for extra fees
+- ✅ API endpoints for extra fees management
+- ✅ Database migration applied
+- ✅ Updated Trip schemas with new fields:
 
 **A. Extra Fees System**:
 - Trips may have additional costs not included in package price

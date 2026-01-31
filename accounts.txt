@@ -40,3 +40,10 @@ Auth Token: 144141840e925febcc8d58215faf2803
 phone number: +18128182666
 
 Safe Algo SMS Service ID: MGaa171a12a0b31318ed0a20306a4b7dce
+
+
+Moyasar APi gateway
+
+
+basic integration guide: https://docs.moyasar.com/guides/card-payments/basic-integration/
+test cards: https://docs.moyasar.com/guides/card-payments/test-cards/

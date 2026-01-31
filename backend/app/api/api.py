@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import admin, auth, dashboard, favorites, file_definitions, files, otp, providers, provider_profiles, public_trips, reviews, team, trips, users, users_by_role
+from app.api.routes import admin, auth, dashboard, favorites, file_definitions, files, otp, payments, providers, provider_profiles, public_trips, reviews, team, trips, users, users_by_role
 
 api_router = APIRouter()
 
@@ -19,3 +19,4 @@ api_router.include_router(trips.router, prefix="/trips", tags=["trips"])
 api_router.include_router(team.router, prefix="/team", tags=["team"])
 api_router.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
 api_router.include_router(favorites.router, tags=["favorites"])
+api_router.include_router(payments.router, prefix="/payments", tags=["payments"])
