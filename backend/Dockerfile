@@ -17,4 +17,8 @@ RUN bash -c "if [ $INSTALL_DEV == 'true' ] ; then poetry install --no-root ; els
 # Copy the rest of the application
 COPY . /app
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Make prestart script executable
+RUN chmod +x /app/prestart.sh
+
+# Run migrations and start the application
+CMD ["sh", "-c", "/app/prestart.sh && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

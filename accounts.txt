@@ -47,3 +47,8 @@ Moyasar APi gateway
 
 basic integration guide: https://docs.moyasar.com/guides/card-payments/basic-integration/
 test cards: https://docs.moyasar.com/guides/card-payments/test-cards/
+
+
+Neon Sandbox DB:
+
+connection string: 'postgresql://neondb_owner:npg_CY4xkzd9MmDo@ep-falling-butterfly-age9na2w-pooler.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
