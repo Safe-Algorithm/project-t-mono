@@ -13,8 +13,10 @@ interface TripPackageRequiredFieldDetail {
 
 interface TripPackage {
   id: string;
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   price: number;
   currency: string;
   is_active: boolean;
@@ -29,8 +31,10 @@ interface Provider {
 
 interface Trip {
   id: string;
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   start_date: string;
   end_date: string;
   max_participants: number;
@@ -154,8 +158,12 @@ const TripDetailPage = () => {
         <h2 className="text-2xl font-semibold mb-4">Trip Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Trip Name</label>
-            <p className="mt-1 text-sm text-gray-900">{trip.name}</p>
+            <label className="block text-sm font-medium text-gray-700">Trip Name (English)</label>
+            <p className="mt-1 text-sm text-gray-900">{trip.name_en}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Trip Name (Arabic)</label>
+            <p className="mt-1 text-sm text-gray-900" dir="rtl">{trip.name_ar}</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Provider</label>
@@ -192,8 +200,12 @@ const TripDetailPage = () => {
           </div>
         </div>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">Description</label>
-          <p className="mt-1 text-sm text-gray-900">{trip.description}</p>
+          <label className="block text-sm font-medium text-gray-700">Description (English)</label>
+          <p className="mt-1 text-sm text-gray-900">{trip.description_en}</p>
+        </div>
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700">Description (Arabic)</label>
+          <p className="mt-1 text-sm text-gray-900" dir="rtl">{trip.description_ar}</p>
         </div>
         
         {/* Trip Amenities */}
@@ -246,7 +258,7 @@ const TripDetailPage = () => {
                 <div key={index} className="relative group">
                   <img
                     src={imageUrl}
-                    alt={`${trip.name} - Image ${index + 1}`}
+                    alt={`${trip.name_en} - Image ${index + 1}`}
                     className="w-full h-48 object-cover rounded-lg border-2 border-gray-200 shadow-md hover:shadow-xl transition-shadow cursor-pointer"
                     onClick={() => window.open(imageUrl, '_blank')}
                   />
@@ -272,7 +284,10 @@ const TripDetailPage = () => {
             {trip.packages.map((pkg, index) => (
               <div key={pkg.id} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex justify-between items-start mb-3">
-                  <h3 className="text-lg font-semibold">{pkg.name}</h3>
+                  <div>
+                    <h3 className="text-lg font-semibold">{pkg.name_en}</h3>
+                    <p className="text-sm text-gray-500" dir="rtl">{pkg.name_ar}</p>
+                  </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                     pkg.is_active 
                       ? 'bg-green-100 text-green-800' 
@@ -284,8 +299,12 @@ const TripDetailPage = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Description</label>
-                    <p className="mt-1 text-sm text-gray-900">{pkg.description}</p>
+                    <label className="block text-sm font-medium text-gray-700">Description (English)</label>
+                    <p className="mt-1 text-sm text-gray-900">{pkg.description_en}</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Description (Arabic)</label>
+                    <p className="mt-1 text-sm text-gray-900" dir="rtl">{pkg.description_ar}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Price</label>

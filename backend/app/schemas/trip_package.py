@@ -8,8 +8,10 @@ from app.models.trip_package import Currency
 
 
 class TripPackageBase(BaseModel):
-    name: str
-    description: str
+    name_en: str
+    name_ar: str
+    description_en: str
+    description_ar: str
     price: Decimal
     currency: Currency = Currency.SAR
     is_active: bool = True
@@ -20,8 +22,10 @@ class TripPackageCreate(TripPackageBase):
 
 
 class TripPackageUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
     price: Optional[Decimal] = None
     currency: Optional[Currency] = None
     is_active: Optional[bool] = None

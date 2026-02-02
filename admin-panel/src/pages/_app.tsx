@@ -6,6 +6,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import '@/styles/globals.css';
+import '@/i18n'; // Initialize i18n
 
 const publicPages = ['/login', '/forgot-password'];
 

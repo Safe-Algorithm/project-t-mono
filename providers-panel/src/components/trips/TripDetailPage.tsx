@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Trip, TripPackage, FieldMetadata, PackageRequiredField, TripAmenity } from '../../types/trip';
 import { tripService } from '../../services/tripService';
+import { useTranslation } from 'react-i18next';
 
 const TripDetailPage: React.FC = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { id: tripId } = router.query;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
@@ -58,35 +60,45 @@ const TripDetailPage: React.FC = () => {
     [TripAmenity.VISA_ASSISTANCE]: 'Visa Assistance',
   };
 
-  if (loading) return <div>Loading trip details...</div>;
-  if (error) return <div style={{ color: 'red' }}>Error: {error}</div>;
-  if (!trip) return <div>Trip not found</div>;
+  if (loading) return <div>{t('status.loading')}</div>;
+  if (error) return <div style={{ color: 'red' }}>{t('status.error')}: {error}</div>;
+  if (!trip) return <div>{t('status.notFound')}</div>;
 
   return (
     <div style={{ padding: '2rem', maxWidth: '1000px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1>{trip.name}</h1>
+        <div>
+          <h1>{trip.name_en}</h1>
+          <h2 style={{ color: '#666', fontSize: '1.5rem', marginTop: '0.5rem' }} dir="rtl">{trip.name_ar}</h2>
+        </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button 
             onClick={() => router.push(`/trips/${tripId}/edit`)} 
             style={{ padding: '0.5rem 1rem', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}
           >
-            Edit Trip
+            {t('action.editTrip')}
           </button>
           <button onClick={() => router.push('/trips')} style={{ padding: '0.5rem 1rem' }}>
-            Back to Trips
+            {t('action.backToTrips')}
           </button>
         </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
         <div>
-          <h3>Trip Information</h3>
-          <p><strong>Description:</strong> {trip.description}</p>
+          <h3>{t('trip.information')}</h3>
+          <div style={{ marginBottom: '1rem' }}>
+            <p><strong>Description (English):</strong></p>
+            <p>{trip.description_en}</p>
+          </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <p><strong>Description (Arabic):</strong></p>
+            <p dir="rtl">{trip.description_ar}</p>
+          </div>
           <p><strong>Start Date:</strong> {new Date(trip.start_date).toLocaleString()}</p>
           <p><strong>End Date:</strong> {new Date(trip.end_date).toLocaleString()}</p>
           <p><strong>Max Participants:</strong> {trip.max_participants}</p>
-          <p><strong>Status:</strong> {trip.is_active ? 'Active' : 'Inactive'}</p>
+          <p><strong>{t('trip.status')}:</strong> {trip.is_active ? t('status.active') : t('status.inactive')}</p>
           <p>
             <strong>Refundable:</strong>{' '}
             <span style={{ 
@@ -102,7 +114,7 @@ const TripDetailPage: React.FC = () => {
       {/* Trip Amenities */}
       {trip.amenities && trip.amenities.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
-          <h3>Trip Amenities & Inclusions</h3>
+          <h3>{t('trip.amenities')}</h3>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', 
@@ -138,7 +150,7 @@ const TripDetailPage: React.FC = () => {
       {/* Meeting Place Information */}
       {trip.has_meeting_place && (
         <div style={{ marginBottom: '2rem' }}>
-          <h3>Meeting Place Information</h3>
+          <h3>{t('trip.meetingPlace')}</h3>
           <div style={{ 
             padding: '1rem',
             backgroundColor: '#fff3cd',
@@ -162,13 +174,13 @@ const TripDetailPage: React.FC = () => {
       {/* Trip Images */}
       {trip.images && trip.images.length > 0 && (
         <div style={{ marginBottom: '2rem' }}>
-          <h3>Trip Images</h3>
+          <h3>{t('trip.images')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1rem' }}>
             {trip.images.map((imageUrl, index) => (
               <div key={index} style={{ position: 'relative', cursor: 'pointer' }}>
                 <img
                   src={imageUrl}
-                  alt={`${trip.name} - Image ${index + 1}`}
+                  alt={`${trip.name_en} - Image ${index + 1}`}
                   style={{ 
                     width: '100%', 
                     height: '200px', 
@@ -196,8 +208,10 @@ const TripDetailPage: React.FC = () => {
               <div key={pkg.id} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
                   <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0' }}>{pkg.name}</h4>
-                    <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>{pkg.description}</p>
+                    <h4 style={{ margin: '0 0 0.5rem 0' }}>{pkg.name_en}</h4>
+                    <p style={{ margin: '0 0 0.5rem 0', color: '#999', fontSize: '0.9rem' }} dir="rtl">{pkg.name_ar}</p>
+                    <p style={{ margin: '0 0 0.5rem 0', color: '#666' }}>{pkg.description_en}</p>
+                    <p style={{ margin: '0 0 0.5rem 0', color: '#999', fontSize: '0.9rem' }} dir="rtl">{pkg.description_ar}</p>
                     <p style={{ margin: '0', fontWeight: 'bold' }}>Price: {pkg.price} {pkg.currency || 'SAR'}</p>
                   </div>
                   <div>

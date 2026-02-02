@@ -748,18 +748,187 @@ class TripAmenity(str, Enum):
 
 ---
 
-#### **14. Full Localization (Arabic/English)**
+#### **14. Provider Rating System**
 **Status**: ❌ Not implemented  
-**Priority**: Critical  
-**Estimated Time**: 5-7 days
+**Priority**: High  
+**Estimated Time**: 2-3 days
 
 **What's needed**:
-Complete bilingual support for Arabic and English across backend and frontend.
+Allow users to rate and review providers (companies) in addition to trips. This helps users make informed decisions about which providers to book with.
 
-**Backend Localization**:
-All user-facing text fields must have `_en` and `_ar` versions:
+**Current State**:
+- ✅ Trip ratings exist (`TripRating` model in `links.py`)
+- ❌ Provider ratings don't exist yet
 
-**Models to Update**:
+**Database Models**:
+```python
+# New model to add
+class ProviderRating(SQLModel, table=True):
+    """User ratings and reviews for providers"""
+    __tablename__ = "provider_ratings"
+    
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    provider_id: uuid.UUID = Field(foreign_key="provider.id", index=True)
+    
+    # Rating (1-5 stars)
+    rating: int = Field(ge=1, le=5)
+    
+    # Optional review text
+    comment: Optional[str] = Field(default=None, max_length=1000)
+    
+    # Optional review images
+    images: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
+    
+    # Timestamps
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    # Relationships
+    user: "User" = Relationship(back_populates="provider_ratings")
+    provider: "Provider" = Relationship(back_populates="ratings")
+    
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint("user_id", "provider_id", name="unique_user_provider_rating"),
+    )
+
+# Update Provider model
+class Provider(SQLModel, table=True):
+    # ... existing fields ...
+    
+    # Add relationship
+    ratings: List["ProviderRating"] = Relationship(
+        back_populates="provider",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+
+# Update User model
+class User(SQLModel, table=True):
+    # ... existing fields ...
+    
+    # Add relationship
+    provider_ratings: List["ProviderRating"] = Relationship(
+        back_populates="user",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
+```
+
+**API Endpoints**:
+```python
+# Create provider rating
+POST /api/v1/providers/{provider_id}/ratings
+Input: {rating: int (1-5), comment: str (optional), images: List[str] (optional)}
+Validation:
+  - User must be authenticated
+  - User must have completed at least one trip with this provider
+  - User can only rate provider once (can update existing rating)
+
+# List ratings for a provider
+GET /api/v1/providers/{provider_id}/ratings
+Query params: skip, limit (pagination)
+Output: List of ratings with user names (paginated)
+
+# Get provider average rating
+GET /api/v1/providers/{provider_id}/rating
+Output: {
+    average_rating: float,
+    total_ratings: int,
+    rating_distribution: {
+        "5": int,
+        "4": int,
+        "3": int,
+        "2": int,
+        "1": int
+    }
+}
+
+# Update own rating (user only)
+PUT /api/v1/providers/ratings/{rating_id}
+Input: {rating: int, comment: str, images: List[str]}
+
+# Delete own rating (user only)
+DELETE /api/v1/providers/ratings/{rating_id}
+
+# Get user's rating for a provider
+GET /api/v1/providers/{provider_id}/ratings/me
+Output: User's rating if exists, 404 if not
+```
+
+**Business Rules**:
+1. User must have completed at least one trip with provider to rate them
+2. One rating per user per provider (can update/delete their own)
+3. Rating must be 1-5 stars
+4. Comment is optional but recommended
+5. Images are optional (up to 5 images)
+6. Provider cannot rate themselves
+7. Admin can delete any rating (moderation)
+
+**CRUD Operations** (`crud/provider_rating.py`):
+```python
+def create_provider_rating(session, user_id, provider_id, rating_in)
+def get_provider_rating(session, rating_id)
+def get_provider_ratings(session, provider_id, skip, limit)
+def get_user_provider_rating(session, user_id, provider_id)
+def update_provider_rating(session, db_rating, rating_in)
+def delete_provider_rating(session, db_rating)
+def get_provider_average_rating(session, provider_id)
+def has_user_completed_trip_with_provider(session, user_id, provider_id)
+```
+
+**Validation Logic**:
+- Check if user has completed trip with provider before allowing rating
+- Prevent duplicate ratings (enforce unique constraint)
+- Validate rating is between 1-5
+- Validate comment length if provided
+
+**Frontend Integration**:
+- **Mobile App**: 
+  - Show provider rating on trip cards
+  - Provider detail page with rating breakdown
+  - Rate provider after trip completion
+  - View all provider reviews
+  
+- **Provider Panel**:
+  - View own ratings and reviews
+  - Respond to reviews (future feature)
+  - Rating analytics dashboard
+  
+- **Admin Panel**:
+  - View all provider ratings
+  - Moderate/delete inappropriate reviews
+  - Rating statistics per provider
+
+**Migration**:
+- Create `provider_ratings` table
+- Add relationships to `Provider` and `User` models
+- Add indexes on `user_id`, `provider_id`, and `created_at`
+
+**Testing**:
+- Unit tests for CRUD operations
+- API endpoint tests
+- Validation tests (trip completion check)
+- Duplicate rating prevention test
+- Average rating calculation test
+
+---
+
+#### **15. Full Localization (Arabic/English)**
+**Status**: ✅ **COMPLETED**  
+**Priority**: Critical  
+**Completed**: February 2026
+
+**What was implemented**:
+Complete bilingual support for Arabic and English across backend and frontend, including database, API, and UI.
+
+**✅ Backend Implementation**:
+
+**Database Migration**:
+- ✅ Migration: `e9fa94929987_update_bilingual_fields_trip_package_provider`
+- ✅ Applied successfully with data migration
+- ✅ Existing data copied to both `_en` and `_ar` fields
+
+**Models Updated**:
 ```python
 # Trip Model
 class Trip(SQLModel, table=True):
@@ -777,165 +946,111 @@ class TripPackage(SQLModel, table=True):
     description_ar: str
     # ... other fields ...
 
-# TripPackageRequiredField Model
-class TripPackageRequiredField(SQLModel, table=True):
-    label_en: str = Field(max_length=100)
-    label_ar: str = Field(max_length=100)
-    placeholder_en: Optional[str] = Field(max_length=200)
-    placeholder_ar: Optional[str] = Field(max_length=200)
-    # ... other fields ...
-
-# TripExtraFee Model (already has _en/_ar in design above)
-# Destination Model (already has _en/_ar in design below)
-# Place Model (already has _en/_ar in design below)
-
 # Provider Model
 class Provider(SQLModel, table=True):
-    company_name: str  # Keep single (company names don't translate)
-    bio_en: Optional[str] = Field(max_length=1000)
-    bio_ar: Optional[str] = Field(max_length=1000)
+    bio_en: Optional[str]
+    bio_ar: Optional[str]
     # ... other fields ...
 
-# SupportTicket / TripSupportTicket
-class SupportTicket(SQLModel, table=True):
-    subject: str  # User-generated, no translation
-    description: str  # User-generated, no translation
-    # Admin responses could be bilingual but not required initially
-
-# TripUpdate Model
-class TripUpdate(SQLModel, table=True):
-    title_en: str
-    title_ar: str
-    message_en: str
-    message_ar: str
+# TripExtraFee Model (already bilingual)
+class TripExtraFee(SQLModel, table=True):
+    name_en: str
+    name_ar: str
+    description_en: Optional[str]
+    description_ar: Optional[str]
     # ... other fields ...
 ```
 
+**✅ Backend Infrastructure**:
+
+**Language Utilities** (`app/core/language.py`):
+- ✅ `get_localized_field()` - Returns appropriate field based on language
+- ✅ `localize_dict()` - Localizes entire dictionaries
+- ✅ `get_language_from_header()` - Parses Accept-Language header
+
+**API Dependencies** (`app/api/deps.py`):
+- ✅ `get_language()` - Extracts language from query param or header
+- ✅ Supports both `?lang=ar` and `Accept-Language: ar-SA` header
+
+**API Localization** (`app/api/localization.py`):
+- ✅ Helper functions to localize trip and package responses
+- ✅ Can return localized or bilingual responses
+
+**Schemas Updated**:
+- ✅ `app/schemas/trip.py` - Bilingual fields
+- ✅ `app/schemas/trip_package.py` - Bilingual fields
+- ✅ `app/schemas/provider.py` - Bilingual bio fields
+
+**API Routes Updated**:
+- ✅ `app/api/routes/trips.py` - All endpoints return bilingual data
+- ✅ `app/api/routes/admin.py` - All endpoints return bilingual data
+- ✅ `app/api/routes/public_trips.py` - Public endpoints return bilingual data
+
+**✅ Frontend Implementation**:
+
+**Admin Panel**:
+- ✅ Installed: `react-i18next`, `i18next`, `i18next-browser-languagedetector`
+- ✅ Configuration: `admin-panel/src/i18n.ts`
+- ✅ Language switcher: `admin-panel/src/components/LanguageSwitcher.tsx`
+- ✅ Layout integration: Navigation items translated
+- ✅ RTL support: Automatic direction switching
+- ✅ Persistence: localStorage (`i18nextLng`)
+
+**Provider Panel**:
+- ✅ Installed: `react-i18next`, `i18next`, `i18next-browser-languagedetector`
+- ✅ Configuration: `providers-panel/src/i18n.ts` with 60+ translation keys
+- ✅ Language switcher: `providers-panel/src/components/LanguageSwitcher.tsx`
+- ✅ Layout integration: All navigation items translated
+- ✅ Forms: TripForm fully localized with all labels, buttons, messages
+- ✅ Detail pages: TripDetailPage fully localized
+- ✅ RTL support: Arabic inputs with `dir="rtl"`
+- ✅ Persistence: localStorage (`i18nextLng`)
+
+**Translation Coverage**:
+- ✅ Navigation: Dashboard, Trips, Profile, Settings, Logout
+- ✅ Trip forms: All labels, placeholders, buttons
+- ✅ Package forms: All fields and actions
+- ✅ Status messages: Active, Inactive, Loading, Error
+- ✅ Actions: Create, Update, Edit, Remove, Back
+- ✅ Validation messages: Required fields, errors
+
 **API Response Strategy**:
+✅ **Implemented**: Return both languages (Option 1)
 ```python
-# Option 1: Return both languages, let client choose
 {
     "name_en": "Desert Safari Adventure",
     "name_ar": "مغامرة سفاري الصحراء",
     "description_en": "...",
     "description_ar": "..."
 }
-
-# Option 2: Accept language header and return only requested language
-# Header: Accept-Language: ar or Accept-Language: en
-{
-    "name": "مغامرة سفاري الصحراء",  # Based on header
-    "description": "..."
-}
-
-# Recommendation: Use Option 1 initially (simpler, more flexible)
-```
-
-**Frontend Localization**:
-
-**Admin Panel & Provider Panel (React)**:
-```json
-{
-  "library": "react-i18next",
-  "structure": {
-    "public/locales/en/translation.json": "English UI strings",
-    "public/locales/ar/translation.json": "Arabic UI strings"
-  },
-  "features": [
-    "Language switcher in header",
-    "RTL support for Arabic",
-    "Persist language preference in localStorage",
-    "Format numbers/dates per locale"
-  ]
-}
-```
-
-**Mobile App (React Native)**:
-```json
-{
-  "library": "react-i18next or i18n-js",
-  "structure": {
-    "src/locales/en.json": "English UI strings",
-    "src/locales/ar.json": "Arabic UI strings"
-  },
-  "features": [
-    "Detect device language on first launch",
-    "Language switcher in settings",
-    "RTL layout support for Arabic",
-    "Persist language in AsyncStorage",
-    "Format currency (SAR) per locale"
-  ]
-}
-```
-
-**Translation Files Structure**:
-```json
-// en.json
-{
-  "common": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete"
-  },
-  "trips": {
-    "title": "Trips",
-    "search": "Search trips...",
-    "filters": "Filters"
-  },
-  "booking": {
-    "confirm": "Confirm Booking",
-    "total": "Total Amount"
-  }
-}
-
-// ar.json
-{
-  "common": {
-    "save": "حفظ",
-    "cancel": "إلغاء",
-    "delete": "حذف"
-  },
-  "trips": {
-    "title": "الرحلات",
-    "search": "البحث عن رحلات...",
-    "filters": "الفلاتر"
-  },
-  "booking": {
-    "confirm": "تأكيد الحجز",
-    "total": "المبلغ الإجمالي"
-  }
-}
-```
-
-**Implementation Steps**:
-1. Update all database models to add `_en` and `_ar` fields
-2. Create Alembic migration for schema changes
-3. Update all schemas (Pydantic) to include localized fields
-4. Update CRUD operations to handle both languages
-5. Update API endpoints to return localized data
-6. Set up i18n in admin panel (react-i18next)
-7. Set up i18n in provider panel (react-i18next)
-8. Set up i18n in mobile app (react-i18next or i18n-js)
-9. Create translation files for all UI text
-10. Implement RTL support for Arabic
-11. Add language switcher UI components
-12. Test all features in both languages
-
-**Migration Strategy**:
-```python
-# For existing data, copy current values to _en field
-# Leave _ar field empty or use Google Translate API for initial translation
-# Provider/Admin can update Arabic translations manually
 ```
 
 **RTL Support**:
-- CSS: `direction: rtl` for Arabic
-- React: Use `react-i18next` with RTL detection
-- React Native: Use `I18nManager.forceRTL(true)` for Arabic
+- ✅ CSS: `direction: rtl` applied automatically for Arabic
+- ✅ React: `useTranslation` hook with language detection
+- ✅ Document direction: `document.dir` set based on language
+- ✅ Arabic inputs: `dir="rtl"` attribute on Arabic fields
+
+**Documentation**:
+- ✅ `LOCALIZATION_COMPLETE.md` - Complete implementation guide
+- ✅ `LOCALIZATION_UI_COMPLETE.md` - Comprehensive UI localization details
+- ✅ `LOCALIZATION_IMPLEMENTATION.md` - Technical implementation summary
+
+**Tests**:
+- ✅ Backend: All API routes updated and working
+- ✅ Frontend: Both panels build successfully
+- ✅ Language switching: Works in both admin and provider panels
+- ✅ RTL: Properly applied for Arabic
+
+**What's Ready for Mobile App**:
+- ✅ All backend APIs return bilingual data
+- ✅ Mobile app can use same i18n approach (react-i18next)
+- ✅ Translation keys can be reused from provider panel
+- ✅ RTL support pattern established
 
 ---
 
-#### **15. Destinations System**
+#### **16. Destinations System**
 **Status**: ❌ Not implemented  
 **Priority**: Critical  
 **Estimated Time**: 4-5 days

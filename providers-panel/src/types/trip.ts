@@ -25,8 +25,10 @@ export interface TripPackageRequiredField {
 export interface TripPackage {
   id: string; // uuid
   trip_id: string; // uuid
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   price: number;
   currency: string;
   is_active: boolean;
@@ -36,8 +38,10 @@ export interface TripPackage {
 
 export interface Trip {
   id: string; // uuid
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   start_date: string; // datetime
   end_date: string; // datetime
   max_participants: number;
@@ -90,15 +94,19 @@ export enum TripAmenity {
 }
 
 export interface CreateTripPackage {
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   price: number;
   currency: string;
 }
 
 export interface UpdateTripPackage {
-  name?: string;
-  description?: string;
+  name_en?: string;
+  name_ar?: string;
+  description_en?: string;
+  description_ar?: string;
   price?: number;
   currency?: string;
   is_active?: boolean;

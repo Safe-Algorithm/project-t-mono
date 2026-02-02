@@ -9,8 +9,10 @@ from app.models.trip_amenity import TripAmenity
 
 
 class TripBase(BaseModel):
-    name: str
-    description: str
+    name_en: str
+    name_ar: str
+    description_en: str
+    description_ar: str
     start_date: datetime
     end_date: datetime
     max_participants: int
@@ -28,8 +30,10 @@ class TripCreate(TripBase):
 
 
 class TripUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
     max_participants: Optional[int] = None

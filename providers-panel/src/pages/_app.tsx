@@ -6,6 +6,7 @@ import { useTokenRefresh } from '@/hooks/useTokenRefresh';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/router';
 import '@/styles/globals.css';
+import '@/i18n'; // Initialize i18n
 
 const publicPages = ['/login', '/register', '/forgot-password', '/'];
 

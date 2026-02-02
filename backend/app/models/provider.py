@@ -15,6 +15,11 @@ class Provider(SQLModel, table=True):
     company_email: str = Field(unique=True, index=True)
     company_phone: str
     company_avatar_url: Optional[str] = Field(default=None)
+    
+    # Bilingual bio fields
+    bio_en: Optional[str] = Field(default=None, max_length=1000)
+    bio_ar: Optional[str] = Field(default=None, max_length=1000)
+    
     company_metadata: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

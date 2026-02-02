@@ -33,6 +33,8 @@ class ProviderUpdate(SQLModel):
     company_email: Optional[str] = None
     company_phone: Optional[str] = None
     company_avatar_url: Optional[str] = None
+    bio_en: Optional[str] = None
+    bio_ar: Optional[str] = None
     company_metadata: Optional[Dict[str, Any]] = None
 
 
@@ -43,6 +45,8 @@ class ProviderPublic(SQLModel):
     company_email: str
     company_phone: str
     company_avatar_url: Optional[str] = None
+    bio_en: Optional[str] = None
+    bio_ar: Optional[str] = None
     company_metadata: Optional[Dict[str, Any]] = None
     status: Optional[str] = None  # Status from provider request
 
@@ -52,6 +56,8 @@ class ProviderProfilePublic(SQLModel):
     id: uuid.UUID
     company_name: str
     company_avatar_url: Optional[str] = None
+    bio_en: Optional[str] = None
+    bio_ar: Optional[str] = None
     company_metadata: Optional[Dict[str, Any]] = None
     total_trips: int = 0
     active_trips: int = 0

@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { useAuth } from '@/context/UserContext';
 import { UserRole } from '@/types/user';
 import ThemeToggle from '@/components/ThemeToggle';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { api } from '@/services/api';
+import { useTranslation } from 'react-i18next';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,6 +23,7 @@ interface ProviderRequest {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, isLoading, logout } = useAuth();
+  const { t } = useTranslation();
   const [providerStatus, setProviderStatus] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
 
@@ -61,17 +64,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-8">
               <div className="flex-shrink-0">
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Provider Panel</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t('nav.dashboard')}</h1>
               </div>
               <div className="flex space-x-4">
                 {/* Company Profile and User Profile tabs - only visible when logged in */}
                 {user && (
                   <>
                     <Link href="/profile" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                      Company Profile
+                      {t('nav.profile')}
                     </Link>
                     <Link href="/user-profile" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                      User Profile
+                      {t('nav.profile')}
                     </Link>
                   </>
                 )}
@@ -79,7 +82,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {/* Request Status tab - only show for non-approved providers */}
                 {!statusLoading && !isApproved && user && (
                   <Link href="/request-status" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                    Request Status
+                    {t('nav.settings')}
                   </Link>
                 )}
                 
@@ -87,10 +90,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {!statusLoading && isApproved && user && (
                   <>
                     <Link href="/" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                      Dashboard
+                      {t('nav.dashboard')}
                     </Link>
                     <Link href="/trips" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                      Trips
+                      {t('nav.trips')}
                     </Link>
                   </>
                 )}
@@ -98,13 +101,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 {/* Team tab only for approved super users */}
                 {!isLoading && !statusLoading && user?.role === UserRole.SUPER_USER && isApproved && (
                   <Link href="/team" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                    Team
+                    {t('nav.settings')}
                   </Link>
                 )}
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
+              <LanguageSwitcher />
               {user && (
                 <div className="flex items-center space-x-4">
                   <span className="text-sm text-gray-700 dark:text-gray-300">Welcome, {user.name}</span>
@@ -112,7 +116,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onClick={handleLogout}
                     className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
                   >
-                    Logout
+                    {t('nav.logout')}
                   </button>
                 </div>
               )}

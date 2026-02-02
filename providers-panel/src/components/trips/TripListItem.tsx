@@ -12,7 +12,8 @@ const TripListItem: React.FC<TripListItemProps> = ({ trip }) => {
   return (
     <div className="bg-white p-4 rounded-lg shadow-md flex justify-between items-center">
       <div>
-        <h3 className="text-xl font-semibold">{trip.name}</h3>
+        <h3 className="text-xl font-semibold">{trip.name_en}</h3>
+        <p className="text-sm text-gray-500" dir="rtl">{trip.name_ar}</p>
         <p className="text-gray-600">Dates: {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}</p>
         <div className="flex items-center gap-4 mt-2">
           <p className={`text-sm font-medium ${trip.is_active ? 'text-green-600' : 'text-red-600'}`}>

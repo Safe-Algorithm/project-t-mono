@@ -19,8 +19,13 @@ class TripPackage(SQLModel, table=True):
     """Model for trip packages with different pricing options"""
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     trip_id: uuid.UUID = Field(foreign_key="trip.id")
-    name: str = Field(max_length=255)
-    description: str
+    
+    # Bilingual fields for localization
+    name_en: str = Field(max_length=150)
+    name_ar: str = Field(max_length=150)
+    description_en: str
+    description_ar: str
+    
     price: Decimal = Field(decimal_places=2, max_digits=10)
     currency: Currency = Field(default=Currency.SAR)
     is_active: bool = Field(default=True)

@@ -124,3 +124,32 @@ def get_request_source(
             status_code=400,
             detail=f"Invalid source. Must be one of: {[source.value for source in RequestSource]}"
         )
+
+
+def get_language(
+    lang: str = None,
+    accept_language: str = Header(None, alias="Accept-Language")
+) -> str:
+    """
+    Get language preference from query parameter or Accept-Language header.
+    
+    Priority:
+    1. Query parameter 'lang' (e.g., ?lang=ar)
+    2. Accept-Language header
+    3. Default to 'en'
+    
+    Returns:
+        Language code ('en' or 'ar')
+    """
+    from app.core.language import get_language_from_header
+    
+    # Check query parameter first
+    if lang and lang in ['en', 'ar']:
+        return lang
+    
+    # Check Accept-Language header
+    if accept_language:
+        return get_language_from_header(accept_language)
+    
+    # Default to English
+    return 'en'

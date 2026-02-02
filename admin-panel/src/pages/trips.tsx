@@ -10,15 +10,18 @@ interface Provider {
 
 interface TripPackage {
   id: string;
-  name: string;
+  name_en: string;
+  name_ar: string;
   price: number;
   currency: string;
 }
 
 interface Trip {
   id: string;
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   start_date: string;
   end_date: string;
   max_participants: number;
@@ -316,7 +319,10 @@ const TripsPage = () => {
                 className="hover:bg-gray-50 cursor-pointer"
                 onClick={() => router.push(`/trips/${trip.id}`)}
               >
-                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{trip.name}</td>
+                <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">
+                  <div>{trip.name_en}</div>
+                  <div className="text-xs text-gray-500" dir="rtl">{trip.name_ar}</div>
+                </td>
                 <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800 cursor-pointer" onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/providers/${trip.provider.id}`);

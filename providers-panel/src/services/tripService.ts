@@ -2,8 +2,10 @@ import { api } from './api';
 import { Trip, TripPackage, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata, ValidationMetadata, ValidationConfig } from '../types/trip';
 
 export interface TripCreatePayload {
-  name: string;
-  description: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string;
+  description_ar: string;
   start_date: string;
   end_date: string;
   price: number;
