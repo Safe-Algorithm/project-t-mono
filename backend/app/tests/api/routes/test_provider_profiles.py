@@ -68,10 +68,10 @@ def test_get_provider_profile_with_reviews(client: TestClient, session: Session)
     # Create packages
     for trip in [trip1, trip2]:
         package = TripPackage(
-            trip_id=trip.id,
-            name="Standard Package",
-            description="Standard package",
-            price=1000.00,
+        trip_id=trip.id,
+        name_en="Standard Package",
+        description_en="Standard package",
+        price=1000.00,
             is_active=True
         )
         session.add(package)
@@ -228,10 +228,10 @@ def test_get_provider_profile_only_counts_own_reviews(client: TestClient, sessio
     # Create packages
     for trip in [trip1, trip2]:
         package = TripPackage(
-            trip_id=trip.id,
-            name="Standard Package",
-            description="Standard package",
-            price=1000.00,
+        trip_id=trip.id,
+        name_en="Standard Package",
+        description_en="Standard package",
+        price=1000.00,
             is_active=True
         )
         session.add(package)

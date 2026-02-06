@@ -15,8 +15,10 @@ class RegistrationHistoryProviderInfo(BaseModel):
 
 class RegistrationHistoryTripInfo(BaseModel):
     id: uuid.UUID
-    name: str
-    description: str
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
     start_date: datetime
     end_date: datetime
     provider_id: uuid.UUID

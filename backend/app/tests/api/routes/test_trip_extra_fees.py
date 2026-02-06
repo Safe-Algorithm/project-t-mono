@@ -20,8 +20,8 @@ def test_create_extra_fee(client: TestClient, session: Session):
     
     # Create a trip
     trip_in = TripCreate(
-        name="Test Trip",
-        description="Test Description",
+        name_en="Test Trip",
+        description_en="Test Description",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         max_participants=10
@@ -58,8 +58,8 @@ def test_get_trip_extra_fees(client: TestClient, session: Session):
     
     # Create a trip
     trip_in = TripCreate(
-        name="Test Trip",
-        description="Test Description",
+        name_en="Test Trip",
+        description_en="Test Description",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         max_participants=10
@@ -103,8 +103,8 @@ def test_update_extra_fee(client: TestClient, session: Session):
     
     # Create a trip
     trip_in = TripCreate(
-        name="Test Trip",
-        description="Test Description",
+        name_en="Test Trip",
+        description_en="Test Description",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         max_participants=10
@@ -149,8 +149,8 @@ def test_delete_extra_fee(client: TestClient, session: Session):
     
     # Create a trip
     trip_in = TripCreate(
-        name="Test Trip",
-        description="Test Description",
+        name_en="Test Trip",
+        description_en="Test Description",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         max_participants=10

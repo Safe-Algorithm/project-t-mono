@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from app import crud
 from app.api.deps import get_current_active_provider, get_session, get_current_active_user
 from app.models.user import User
+from app.utils.localization import get_name, get_description
 from app.schemas.trip import TripCreate, TripRead, TripUpdate
 from app.schemas.trip_package_field import TripPackageRequiredFieldsResponse, PackageRequiredFieldWithValidation, TripPackageRequiredFieldsSet, TripPackageRequiredFieldsSetWithValidation
 from app.models.trip_field import TripFieldType, FIELD_METADATA
@@ -478,8 +479,8 @@ def list_all_trips(
             packages_with_fields.append(TripPackageWithRequiredFields(
                 id=package.id,
                 trip_id=package.trip_id,
-                name=package.name,
-                description=package.description,
+                name=get_name(package),
+                description=get_description(package),
                 price=package.price,
                 currency=package.currency,
                 is_active=package.is_active,
@@ -971,7 +972,7 @@ async def register_for_trip(
                 if required_field.is_required and (field_value is None or (isinstance(field_value, str) and not field_value.strip())):
                     raise HTTPException(
                         status_code=400, 
-                        detail=f"Required field '{field_type.value}' is missing for participant with package '{package.name}'"
+                        detail=f"Required field '{field_type.value}' is missing for participant with package '{get_name(package)}'"
                     )
                 
                 # Validate field value against validation config if present
@@ -980,7 +981,7 @@ async def register_for_trip(
                     if validation_errors:
                         raise HTTPException(
                             status_code=400,
-                            detail=f"Validation failed for field '{field_type.value}' in package '{package.name}': {', '.join(validation_errors)}"
+                            detail=f"Validation failed for field '{field_type.value}' in package '{get_name(package)}': {', '.join(validation_errors)}"
                         )
     
     # Create registration
@@ -1018,7 +1019,7 @@ async def register_for_trip(
         email_service.send_booking_confirmation_email,
         to_email=current_user.email,
         to_name=current_user.name,
-        trip_name=trip.name_en,
+        trip_name=get_name(trip),
         booking_reference=booking_reference,
         start_date=trip.start_date.strftime("%Y-%m-%d"),
         total_amount=f"{registration.total_amount} SAR"

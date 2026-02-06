@@ -4,16 +4,51 @@ Unit tests for Taskiq worker scheduled tasks.
 
 import pytest
 from datetime import datetime, timedelta
+from decimal import Decimal
 from unittest.mock import patch, AsyncMock, MagicMock
 from sqlmodel import Session
 
 from app.tasks.worker import send_trip_reminders, send_review_reminders, send_payment_reminders
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
+from app.models.links import TripRating
 from app.models.user import User, UserRole
 from app.models.provider import Provider
 from app.models.source import RequestSource
 from app.tests.utils.user import create_random_user
+
+
+def _create_provider(session: Session) -> Provider:
+    """Helper to create a valid provider."""
+    import uuid
+    provider = Provider(
+        company_name="Test Provider",
+        company_email=f"provider_{uuid.uuid4().hex[:8]}@test.com",
+        company_phone="0501234567",
+    )
+    session.add(provider)
+    session.commit()
+    session.refresh(provider)
+    return provider
+
+
+def _create_trip(session: Session, provider: Provider, **kwargs) -> Trip:
+    """Helper to create a valid trip with bilingual fields."""
+    defaults = dict(
+        name_en="Test Trip",
+        description_en="Test trip description",
+        start_date=datetime.utcnow() + timedelta(days=7),
+        end_date=datetime.utcnow() + timedelta(days=9),
+        max_participants=20,
+        provider_id=provider.id,
+        is_active=True,
+    )
+    defaults.update(kwargs)
+    trip = Trip(**defaults)
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    return trip
 
 
 @pytest.mark.asyncio
@@ -29,33 +64,19 @@ async def test_send_trip_reminders_no_trips(session: Session):
         assert True
 
 
-@pytest.mark.skip(reason="Provider model constraint issues - unrelated to file verification")
 @pytest.mark.asyncio
 async def test_send_trip_reminders_with_upcoming_trip(session: Session):
     """Test sending trip reminders for trips starting tomorrow"""
-    # Create provider
-    provider = Provider(
-        company_name="Test Provider",
-        company_metadata={}
-    )
-    session.add(provider)
-    session.commit()
-    session.refresh(provider)
+    provider = _create_provider(session)
     
     # Create trip starting tomorrow
     tomorrow = datetime.utcnow() + timedelta(days=1)
-    trip = Trip(
-        name="Tomorrow's Trip",
-        destination="Test Destination",
-        description="Test trip",
+    trip = _create_trip(
+        session, provider,
+        name_en="Tomorrow's Trip",
         start_date=tomorrow.replace(hour=10, minute=0, second=0, microsecond=0),
         end_date=tomorrow + timedelta(days=2),
-        provider_id=provider.id,
-        is_active=True
     )
-    session.add(trip)
-    session.commit()
-    session.refresh(trip)
     
     # Create user with verified phone
     user = create_random_user(session)
@@ -69,7 +90,8 @@ async def test_send_trip_reminders_with_upcoming_trip(session: Session):
         trip_id=trip.id,
         user_id=user.id,
         status="confirmed",
-        total_amount=1000.0
+        total_participants=1,
+        total_amount=Decimal("1000.00"),
     )
     session.add(registration)
     session.commit()
@@ -100,33 +122,19 @@ async def test_send_review_reminders_no_completed_trips(session: Session):
         assert True
 
 
-@pytest.mark.skip(reason="Provider model constraint issues - unrelated to file verification")
 @pytest.mark.asyncio
 async def test_send_review_reminders_with_completed_trip(session: Session):
     """Test sending review reminders for trips that ended yesterday"""
-    # Create provider
-    provider = Provider(
-        company_name="Test Provider",
-        company_metadata={}
-    )
-    session.add(provider)
-    session.commit()
-    session.refresh(provider)
+    provider = _create_provider(session)
     
     # Create trip that ended yesterday
     yesterday = datetime.utcnow() - timedelta(days=1)
-    trip = Trip(
-        name="Yesterday's Trip",
-        destination="Test Destination",
-        description="Test trip",
+    trip = _create_trip(
+        session, provider,
+        name_en="Yesterday's Trip",
         start_date=yesterday - timedelta(days=2),
         end_date=yesterday.replace(hour=18, minute=0, second=0, microsecond=0),
-        provider_id=provider.id,
-        is_active=True
     )
-    session.add(trip)
-    session.commit()
-    session.refresh(trip)
     
     # Create user with verified phone
     user = create_random_user(session)
@@ -140,13 +148,14 @@ async def test_send_review_reminders_with_completed_trip(session: Session):
         trip_id=trip.id,
         user_id=user.id,
         status="confirmed",
-        total_amount=1000.0
+        total_participants=1,
+        total_amount=Decimal("1000.00"),
     )
     session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
-         patch('app.tasks.worker.sms_service') as mock_sms:
+         patch('app.services.sms.sms_service') as mock_sms:
         
         mock_session_class.return_value.__enter__.return_value = session
         mock_sms.send_sms = AsyncMock()
@@ -160,35 +169,19 @@ async def test_send_review_reminders_with_completed_trip(session: Session):
         assert 'review' in call_args[1]['message'].lower()
 
 
-@pytest.mark.skip(reason="Provider model constraint issues - unrelated to file verification")
 @pytest.mark.asyncio
 async def test_send_review_reminders_skips_existing_reviews(session: Session):
     """Test that review reminders are not sent if user already reviewed"""
-    from app.models.review import Review
-    
-    # Create provider
-    provider = Provider(
-        company_name="Test Provider",
-        company_metadata={}
-    )
-    session.add(provider)
-    session.commit()
-    session.refresh(provider)
+    provider = _create_provider(session)
     
     # Create trip that ended yesterday
     yesterday = datetime.utcnow() - timedelta(days=1)
-    trip = Trip(
-        name="Yesterday's Trip",
-        destination="Test Destination",
-        description="Test trip",
+    trip = _create_trip(
+        session, provider,
+        name_en="Yesterday's Trip",
         start_date=yesterday - timedelta(days=2),
         end_date=yesterday.replace(hour=18, minute=0, second=0, microsecond=0),
-        provider_id=provider.id,
-        is_active=True
     )
-    session.add(trip)
-    session.commit()
-    session.refresh(trip)
     
     # Create user
     user = create_random_user(session)
@@ -202,23 +195,24 @@ async def test_send_review_reminders_skips_existing_reviews(session: Session):
         trip_id=trip.id,
         user_id=user.id,
         status="confirmed",
-        total_amount=1000.0
+        total_participants=1,
+        total_amount=Decimal("1000.00"),
     )
     session.add(registration)
     session.commit()
     
-    # Create existing review
-    review = Review(
+    # Create existing review (TripRating)
+    review = TripRating(
         trip_id=trip.id,
         user_id=user.id,
         rating=5,
-        comment="Great trip!"
+        comment="Great trip!",
     )
     session.add(review)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
-         patch('app.tasks.worker.sms_service') as mock_sms:
+         patch('app.services.sms.sms_service') as mock_sms:
         
         mock_session_class.return_value.__enter__.return_value = session
         mock_sms.send_sms = AsyncMock()
@@ -241,33 +235,19 @@ async def test_send_payment_reminders_no_pending_registrations(session: Session)
         assert True
 
 
-@pytest.mark.skip(reason="Provider model constraint issues - unrelated to file verification")
 @pytest.mark.asyncio
 async def test_send_payment_reminders_with_pending_registration(session: Session):
     """Test sending payment reminders for pending registrations"""
-    # Create provider
-    provider = Provider(
-        company_name="Test Provider",
-        company_metadata={}
-    )
-    session.add(provider)
-    session.commit()
-    session.refresh(provider)
+    provider = _create_provider(session)
     
     # Create future trip
     future = datetime.utcnow() + timedelta(days=7)
-    trip = Trip(
-        name="Future Trip",
-        destination="Test Destination",
-        description="Test trip",
+    trip = _create_trip(
+        session, provider,
+        name_en="Future Trip",
         start_date=future,
         end_date=future + timedelta(days=2),
-        provider_id=provider.id,
-        is_active=True
     )
-    session.add(trip)
-    session.commit()
-    session.refresh(trip)
     
     # Create user with verified phone
     user = create_random_user(session)
@@ -282,14 +262,15 @@ async def test_send_payment_reminders_with_pending_registration(session: Session
         trip_id=trip.id,
         user_id=user.id,
         status="pending",
-        total_amount=1000.0,
-        created_at=two_hours_ago
+        total_participants=1,
+        total_amount=Decimal("1000.00"),
+        created_at=two_hours_ago,
     )
     session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
-         patch('app.tasks.worker.sms_service') as mock_sms:
+         patch('app.services.sms.sms_service') as mock_sms:
         
         mock_session_class.return_value.__enter__.return_value = session
         mock_sms.send_sms = AsyncMock()
@@ -303,33 +284,19 @@ async def test_send_payment_reminders_with_pending_registration(session: Session
         assert 'payment' in call_args[1]['message'].lower()
 
 
-@pytest.mark.skip(reason="Provider model constraint issues - unrelated to file verification")
 @pytest.mark.asyncio
 async def test_send_payment_reminders_skips_recent_registrations(session: Session):
     """Test that payment reminders skip registrations created less than 1 hour ago"""
-    # Create provider
-    provider = Provider(
-        company_name="Test Provider",
-        company_metadata={}
-    )
-    session.add(provider)
-    session.commit()
-    session.refresh(provider)
+    provider = _create_provider(session)
     
     # Create future trip
     future = datetime.utcnow() + timedelta(days=7)
-    trip = Trip(
-        name="Future Trip",
-        destination="Test Destination",
-        description="Test trip",
+    trip = _create_trip(
+        session, provider,
+        name_en="Future Trip",
         start_date=future,
         end_date=future + timedelta(days=2),
-        provider_id=provider.id,
-        is_active=True
     )
-    session.add(trip)
-    session.commit()
-    session.refresh(trip)
     
     # Create user
     user = create_random_user(session)
@@ -343,14 +310,15 @@ async def test_send_payment_reminders_skips_recent_registrations(session: Sessio
         trip_id=trip.id,
         user_id=user.id,
         status="pending",
-        total_amount=1000.0,
-        created_at=datetime.utcnow() - timedelta(minutes=30)
+        total_participants=1,
+        total_amount=Decimal("1000.00"),
+        created_at=datetime.utcnow() - timedelta(minutes=30),
     )
     session.add(registration)
     session.commit()
     
     with patch('app.tasks.worker.Session') as mock_session_class, \
-         patch('app.tasks.worker.sms_service') as mock_sms:
+         patch('app.services.sms.sms_service') as mock_sms:
         
         mock_session_class.return_value.__enter__.return_value = session
         mock_sms.send_sms = AsyncMock()
@@ -361,7 +329,6 @@ async def test_send_payment_reminders_skips_recent_registrations(session: Sessio
         mock_sms.send_sms.assert_not_called()
 
 
-@pytest.mark.skip(reason="Provider model constraint issues - unrelated to file verification")
 @pytest.mark.asyncio
 async def test_worker_handles_errors_gracefully(session: Session):
     """Test that worker tasks handle errors without crashing"""
@@ -369,10 +336,13 @@ async def test_worker_handles_errors_gracefully(session: Session):
         # Simulate database error
         mock_session_class.return_value.__enter__.side_effect = Exception("Database error")
         
-        # Should not raise exception
-        try:
+        # Worker tasks catch exceptions and re-raise, so they should raise
+        # but the important thing is they don't crash with unhandled errors
+        with pytest.raises(Exception, match="Database error"):
             await send_trip_reminders()
+        
+        with pytest.raises(Exception, match="Database error"):
             await send_review_reminders()
+        
+        with pytest.raises(Exception, match="Database error"):
             await send_payment_reminders()
-        except Exception as e:
-            pytest.fail(f"Worker task should handle errors gracefully, but raised: {e}")

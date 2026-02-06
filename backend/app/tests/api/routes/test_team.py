@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+from unittest.mock import patch
 
 from app.models.user import User, UserRole
 from app.models.provider import Provider
@@ -7,7 +8,8 @@ from app.tests.utils.user import create_random_user, user_authentication_headers
 from app.tests.utils.provider import create_random_provider
 from app.core.config import settings
 
-def test_invite_team_member(client: TestClient, session: Session) -> None:
+@patch('app.services.email.email_service.send_team_invitation_email')
+def test_invite_team_member(mock_email, client: TestClient, session: Session) -> None:
     super_provider_user, super_provider_headers = user_authentication_headers(
         client=client, session=session, role=UserRole.SUPER_USER
     )

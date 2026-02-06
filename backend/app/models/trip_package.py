@@ -1,5 +1,5 @@
 import uuid
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 from decimal import Decimal
 from enum import Enum
 
@@ -20,11 +20,11 @@ class TripPackage(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     trip_id: uuid.UUID = Field(foreign_key="trip.id")
     
-    # Bilingual fields for localization
-    name_en: str = Field(max_length=150)
-    name_ar: str = Field(max_length=150)
-    description_en: str
-    description_ar: str
+    # Bilingual fields for localization (at least one language required)
+    name_en: Optional[str] = Field(default=None, max_length=150)
+    name_ar: Optional[str] = Field(default=None, max_length=150)
+    description_en: Optional[str] = Field(default=None)
+    description_ar: Optional[str] = Field(default=None)
     
     price: Decimal = Field(decimal_places=2, max_digits=10)
     currency: Currency = Field(default=Currency.SAR)

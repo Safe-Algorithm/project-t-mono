@@ -2,11 +2,16 @@
 
 import uuid
 from datetime import datetime
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
-from sqlmodel import Session, select
 from decimal import Decimal
-
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Header
+from sqlmodel import Session, select
+from typing import List, Optional
+import uuid
+import hmac
+import hashlib
+import json
+from app.utils.localization import get_name
 from app.api.deps import get_session
 from app.models.user import User
 from app.models.payment import Payment, PaymentStatus, PaymentMethod
@@ -70,7 +75,7 @@ async def create_payment(
     
     # Get trip details for description
     trip = registration.trip
-    description = f"Trip: {trip.name} - Registration #{registration.id}"
+    description = f"Trip: {get_name(trip)} - Registration #{registration.id}"
     
     # Build callback URL
     callback_url = payment_in.callback_url or f"{settings.FRONTEND_URL}/payments/callback"
@@ -78,7 +83,7 @@ async def create_payment(
     # Create payment in database
     payment = Payment(
         registration_id=payment_in.registration_id,
-        amount=registration.total_price,
+        amount=registration.total_amount,
         currency="SAR",
         status=PaymentStatus.INITIATED,
         payment_method=payment_in.payment_method,
@@ -92,7 +97,7 @@ async def create_payment(
     try:
         # Create payment with Moyasar
         moyasar_response = await payment_service.create_payment(
-            amount=registration.total_price,
+            amount=registration.total_amount,
             currency="SAR",
             description=description,
             callback_url=callback_url,
@@ -170,7 +175,6 @@ async def payment_callback(
             registration = session.get(TripRegistration, payment.registration_id)
             if registration:
                 registration.status = "confirmed"
-                registration.payment_status = "paid"
                 session.add(registration)
         
         elif moyasar_payment["status"] == "failed":
@@ -247,7 +251,6 @@ async def payment_webhook(
         registration = session.get(TripRegistration, payment.registration_id)
         if registration and registration.status == "pending_payment":
             registration.status = "confirmed"
-            registration.payment_status = "paid"
             session.add(registration)
     
     elif webhook_status == "failed":
@@ -265,7 +268,6 @@ async def payment_webhook(
         registration = session.get(TripRegistration, payment.registration_id)
         if registration:
             registration.status = "cancelled"
-            registration.payment_status = "refunded"
             session.add(registration)
     
     payment.updated_at = datetime.utcnow()
@@ -365,7 +367,6 @@ async def refund_payment(
         
         # Update registration status
         registration.status = "cancelled"
-        registration.payment_status = "refunded"
         
         session.add(payment)
         session.add(registration)

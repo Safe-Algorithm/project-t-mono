@@ -34,8 +34,8 @@ def test_create_review_success(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -86,8 +86,8 @@ def test_create_review_trip_not_ended(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -159,8 +159,8 @@ def test_create_review_pending_registration(client: TestClient, session: Session
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -206,8 +206,8 @@ def test_create_review_duplicate(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -261,8 +261,8 @@ def test_create_review_invalid_rating(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -309,8 +309,8 @@ def test_list_trip_reviews(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -367,8 +367,8 @@ def test_get_trip_average_rating(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -430,8 +430,8 @@ def test_update_review(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -489,8 +489,8 @@ def test_update_review_not_owner(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -539,8 +539,8 @@ def test_delete_review(client: TestClient, session: Session):
     # Create package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True
     )
@@ -596,10 +596,10 @@ def test_get_my_reviews(client: TestClient, session: Session):
         
         # Create package
         package = TripPackage(
-            trip_id=trip.id,
-            name="Standard Package",
-            description="Standard package",
-            price=1000.00,
+        trip_id=trip.id,
+        name_en="Standard Package",
+        description_en="Standard package",
+        price=1000.00,
             is_active=True
         )
         session.add(package)
@@ -655,8 +655,8 @@ def _create_reviewable_trip_with_confirmed_registration(
 
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.00,
         is_active=True,
     )

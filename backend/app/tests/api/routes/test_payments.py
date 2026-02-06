@@ -2,6 +2,7 @@
 
 import pytest
 import uuid
+import datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi.testclient import TestClient
@@ -10,7 +11,71 @@ from sqlmodel import Session, select
 from app.models.payment import Payment, PaymentStatus, PaymentMethod
 from app.models.trip_registration import TripRegistration
 from app.models.trip import Trip
-from app.models.user import User
+from app.models.trip_package import TripPackage
+from app.models.user import User, UserRole
+from app.models.provider import Provider
+from app.tests.utils.user import create_random_user
+from app.core.config import settings
+
+
+@pytest.fixture
+def test_user(session: Session) -> User:
+    """Create a test user."""
+    return create_random_user(session)
+
+
+@pytest.fixture
+def test_trip(session: Session) -> Trip:
+    """Create a test trip with package."""
+    # Create provider first
+    provider = Provider(
+        company_name="Test Provider",
+        company_email="test@provider.com",
+        company_phone="0501234567",
+        bio_en="Test bio",
+        bio_ar="Test bio AR"
+    )
+    session.add(provider)
+    session.commit()
+    session.refresh(provider)
+    
+    # Create trip
+    trip = Trip(
+        name_en="Test Trip",
+        description_en="Test Description",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=35),
+        max_participants=10,
+        provider_id=provider.id
+    )
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    
+    # Add a package
+    package = TripPackage(
+        trip_id=trip.id,
+        name_en="Standard Package",
+        description_en="Standard package",
+        price=100.0,
+        currency="SAR"
+    )
+    session.add(package)
+    session.commit()
+    
+    return trip
+
+
+@pytest.fixture
+def auth_headers(client: TestClient, session: Session, test_user: User) -> dict:
+    """Create authentication headers for test user."""
+    response = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": test_user.email, "password": "password123"},
+        headers={"X-Source": "mobile_app"}
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}", "X-Source": "mobile_app"}
 
 
 @pytest.fixture
@@ -78,7 +143,7 @@ def test_create_payment_success(
         "metadata": {}
     }
     
-    with patch('app.services.moyasar.payment_service.create_payment', new_callable=AsyncMock) as mock_create:
+    with patch('app.api.routes.payments.payment_service.create_payment', new_callable=AsyncMock) as mock_create:
         mock_create.return_value = mock_moyasar_response
         
         response = client.post(
@@ -94,7 +159,7 @@ def test_create_payment_success(
     data = response.json()
     assert data["moyasar_payment_id"] == "pay_moyasar_123"
     assert data["status"] == "initiated"
-    assert data["amount"] == 100.0
+    assert float(data["amount"]) == 100.0
     
     # Verify payment was created in database
     payment = session.exec(
@@ -209,7 +274,7 @@ def test_get_payment_success(
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == str(test_payment.id)
-    assert data["amount"] == 100.0
+    assert float(data["amount"]) == 100.0
 
 
 def test_get_payment_not_found(
@@ -257,7 +322,7 @@ def test_payment_callback_success(
         "fee": 300
     }
     
-    with patch('app.services.moyasar.payment_service.get_payment_details', new_callable=AsyncMock) as mock_get:
+    with patch('app.api.routes.payments.payment_service.get_payment_details', new_callable=AsyncMock) as mock_get:
         mock_get.return_value = mock_payment_details
         
         response = client.get(
@@ -297,7 +362,7 @@ def test_payment_webhook_paid(
         "source": {"type": "creditcard"}
     }
     
-    with patch('app.services.moyasar.payment_service.verify_webhook_signature') as mock_verify:
+    with patch('app.api.routes.payments.payment_service.verify_webhook_signature') as mock_verify:
         mock_verify.return_value = True
         
         response = client.post(
@@ -323,7 +388,7 @@ def test_payment_webhook_invalid_signature(
         "status": "paid"
     }
     
-    with patch('app.services.moyasar.payment_service.verify_webhook_signature') as mock_verify:
+    with patch('app.api.routes.payments.payment_service.verify_webhook_signature') as mock_verify:
         mock_verify.return_value = False
         
         response = client.post(
@@ -355,7 +420,7 @@ def test_refund_payment_success(
         "refunded_at": "2024-01-01T00:00:00Z"
     }
     
-    with patch('app.services.moyasar.payment_service.refund_payment', new_callable=AsyncMock) as mock_refund:
+    with patch('app.api.routes.payments.payment_service.refund_payment', new_callable=AsyncMock) as mock_refund:
         mock_refund.return_value = mock_refund_response
         
         response = client.post(

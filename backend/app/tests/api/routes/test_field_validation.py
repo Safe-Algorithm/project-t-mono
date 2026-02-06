@@ -495,12 +495,10 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
     # Create provider and trip
     provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
-        name="Test Trip with Validation",
-        description="A trip to test validation integration",
+        name_en="Test Trip with Validation",
+        description_en="A trip to test validation integration",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -508,9 +506,11 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
     # Create package with validation config
     package = TripPackageModel(
         trip_id=trip.id,
-        name="Adult Package",
-        description="Package for adults with age validation",
-        price=150.0,
+        name_en="Adult Package",
+        name_ar="Adult Package AR",
+        description_en="Package for adults with age validation",
+        description_ar="Package for adults with age validation AR",
+        price=100.0,
         is_active=True
     )
     session.add(package)
@@ -595,20 +595,20 @@ def test_package_creation_with_validation_config(client: TestClient, session: Se
     # Create provider and trip
     provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
-        name="Test Trip for Package Validation Config",
-        description="A trip to test package validation config",
+        name_en="Test Trip for Package Validation Config",
+        description_en="A trip to test package validation config",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
     
     # Create package
     package_data = {
-        "name": "Validated Package",
-        "description": "Package with validation rules",
+        "name_en": "Validated Package",
+            "name_ar": "Validated Package AR",
+        "description_en": "Package with validation rules",
+            "description_ar": "Package with validation rules AR",
         "price": 150.0
     }
     package_response = client.post(
@@ -652,12 +652,10 @@ def test_set_package_required_fields_with_validation_api(client: TestClient, ses
     # Create provider and trip
     provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip_in = TripCreate(
-        name="Test Trip for Validation API",
-        description="A trip to test validation API",
+        name_en="Test Trip for Validation API",
+        description_en="A trip to test validation API",
         start_date=datetime.datetime.utcnow(),
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
-        location="Test Location",
-        price=100.0,
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -665,9 +663,11 @@ def test_set_package_required_fields_with_validation_api(client: TestClient, ses
     # Create package
     package = TripPackageModel(
         trip_id=trip.id,
-        name="Test Package",
-        description="Package for validation API test",
-        price=150.0,
+        name_en="Test Package",
+        name_ar="Test Package AR",
+        description_en="Package for validation API test",
+        description_ar="Package for validation API test AR",
+        price=100.0,
         is_active=True
     )
     session.add(package)

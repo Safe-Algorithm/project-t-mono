@@ -41,9 +41,9 @@ def test_my_registration_history_orders_newest_first_and_filters_to_user(
     trip1 = crud.trip.create_trip(
         session=session,
         trip_in=TripCreate(
-            name="Trip 1",
-            description="Desc 1",
-            start_date=datetime.datetime.utcnow(),
+        name_en="Trip 1",
+        description_en="Desc 1",
+        start_date=datetime.datetime.utcnow(),
             end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
             max_participants=10,
         ),
@@ -53,9 +53,9 @@ def test_my_registration_history_orders_newest_first_and_filters_to_user(
     trip2 = crud.trip.create_trip(
         session=session,
         trip_in=TripCreate(
-            name="Trip 2",
-            description="Desc 2",
-            start_date=datetime.datetime.utcnow(),
+        name_en="Trip 2",
+        description_en="Desc 2",
+        start_date=datetime.datetime.utcnow(),
             end_date=datetime.datetime.utcnow() + datetime.timedelta(days=2),
             max_participants=10,
         ),
@@ -144,9 +144,9 @@ def test_my_registration_history_pagination(client: TestClient, session: Session
     trip = crud.trip.create_trip(
         session=session,
         trip_in=TripCreate(
-            name="Trip Paginated",
-            description="Desc",
-            start_date=datetime.datetime.utcnow(),
+        name_en="Trip Paginated",
+        description_en="Desc",
+        start_date=datetime.datetime.utcnow(),
             end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
             max_participants=10,
         ),

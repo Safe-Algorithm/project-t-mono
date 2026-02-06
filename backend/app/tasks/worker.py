@@ -20,6 +20,7 @@ from app.core.db import engine
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
 from app.services.notification import NotificationService
+from app.utils.localization import get_name, get_description
 
 logger = logging.getLogger(__name__)
 
@@ -62,14 +63,14 @@ async def send_trip_reminders():
                 for registration in registrations:
                     try:
                         # Send notification via NotificationService
+                        trip_name = get_name(trip)
                         await notification_service.send_trip_reminder(
                             user=registration.user,
-                            trip_name=trip.name,
+                            trip_name=trip_name,
                             start_date=trip.start_date.strftime("%Y-%m-%d %H:%M"),
                             trip_details={
-                                "destination": trip.destination,
                                 "duration": f"{(trip.end_date - trip.start_date).days} days",
-                                "description": trip.description
+                                "description": get_description(trip)
                             }
                         )
                         logger.info(f"Sent trip reminder to user {registration.user_id} for trip {trip.id}")
@@ -119,17 +120,18 @@ async def send_review_reminders():
                 for registration in registrations:
                     try:
                         # Check if user already left a review
-                        from app.models.review import Review
-                        review_statement = select(Review).where(
-                            Review.trip_id == trip.id,
-                            Review.user_id == registration.user_id
+                        from app.models.links import TripRating
+                        review_statement = select(TripRating).where(
+                            TripRating.trip_id == trip.id,
+                            TripRating.user_id == registration.user_id
                         )
                         existing_review = session.exec(review_statement).first()
                         
                         if not existing_review:
                             # Send review reminder via SMS/Email
+                            trip_name = get_name(trip)
                             message = (
-                                f"Hi {registration.user.name}! We hope you enjoyed your trip to {trip.destination}. "
+                                f"Hi {registration.user.name}! We hope you enjoyed your trip '{trip_name}'. "
                                 f"Please take a moment to share your experience and leave a review. "
                                 f"Your feedback helps other travelers!"
                             )
@@ -148,13 +150,13 @@ async def send_review_reminders():
                                 from app.services.email import email_service
                                 await email_service.send_email(
                                     to_email=registration.user.email,
-                                    subject=f"Share your experience - {trip.name}",
+                                    subject=f"Share your experience - {trip_name}",
                                     html_content=f"""
                                     <html>
                                         <body>
                                             <h2>How was your trip?</h2>
                                             <p>Hi {registration.user.name}!</p>
-                                            <p>We hope you enjoyed your trip to {trip.destination}.</p>
+                                            <p>We hope you enjoyed your trip '{trip_name}'.</p>
                                             <p>Please take a moment to share your experience and leave a review. Your feedback helps other travelers!</p>
                                             <p>Thank you,<br>Safe Algo Tourism Team</p>
                                         </body>
@@ -199,8 +201,9 @@ async def send_payment_reminders():
             for registration in pending_registrations:
                 try:
                     # Send payment reminder
+                    trip_name = get_name(registration.trip)
                     message = (
-                        f"Hi {registration.user.name}! You have a pending registration for {registration.trip.destination}. "
+                        f"Hi {registration.user.name}! You have a pending registration for '{trip_name}'. "
                         f"Please complete your payment to confirm your reservation. "
                         f"Amount: {registration.total_amount} SAR"
                     )
@@ -219,13 +222,13 @@ async def send_payment_reminders():
                         from app.services.email import email_service
                         await email_service.send_email(
                             to_email=registration.user.email,
-                            subject=f"Complete your payment - {registration.trip.name}",
+                            subject=f"Complete your payment - {trip_name}",
                             html_content=f"""
                             <html>
                                 <body>
                                     <h2>Complete Your Payment</h2>
                                     <p>Hi {registration.user.name}!</p>
-                                    <p>You have a pending registration for <strong>{registration.trip.destination}</strong>.</p>
+                                    <p>You have a pending registration for <strong>{trip_name}</strong>.</p>
                                     <p><strong>Amount:</strong> {registration.total_amount} SAR</p>
                                     <p>Please complete your payment to confirm your reservation.</p>
                                     <p>Thank you,<br>Safe Algo Tourism Team</p>

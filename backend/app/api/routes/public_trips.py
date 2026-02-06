@@ -7,12 +7,14 @@ from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends
-from sqlmodel import Session
-
-from app import crud
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlmodel import Session, select
+from typing import List, Optional
+import uuid
+from app.utils.localization import get_name, get_description
 from app.api.deps import get_session
 from app.schemas.trip import TripRead
+import app.crud as crud
 from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
@@ -158,8 +160,8 @@ def get_public_trip(
         packages_with_fields.append(TripPackageWithRequiredFields(
             id=package.id,
             trip_id=package.trip_id,
-            name=package.name,
-            description=package.description,
+            name=get_name(package),
+            description=get_description(package),
             price=package.price,
             currency=package.currency,
             is_active=package.is_active,
@@ -178,8 +180,8 @@ def get_public_trip(
         id=trip.id,
         provider_id=trip.provider_id,
         provider=provider_info,
-        name=trip.name,
-        description=trip.description,
+        name=get_name(trip),
+        description=get_description(trip),
         start_date=trip.start_date,
         end_date=trip.end_date,
         max_participants=trip.max_participants,

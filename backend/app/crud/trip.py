@@ -107,15 +107,20 @@ def search_and_filter_trips(
     if is_active is not None:
         conditions.append(Trip.is_active == is_active)
     
-    # Search query (name or description)
+    # Search query (name or description) - handle optional fields
     if search_query:
         search_pattern = f"%{search_query}%"
-        conditions.append(
-            or_(
-                Trip.name.ilike(search_pattern),
-                Trip.description.ilike(search_pattern)
-            )
-        )
+        search_conditions = []
+        if Trip.name_en is not None:
+            search_conditions.append(Trip.name_en.ilike(search_pattern))
+        if Trip.name_ar is not None:
+            search_conditions.append(Trip.name_ar.ilike(search_pattern))
+        if Trip.description_en is not None:
+            search_conditions.append(Trip.description_en.ilike(search_pattern))
+        if Trip.description_ar is not None:
+            search_conditions.append(Trip.description_ar.ilike(search_pattern))
+        if search_conditions:
+            conditions.append(or_(*search_conditions))
     
     # Date filters
     if start_date_from:

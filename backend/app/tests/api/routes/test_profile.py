@@ -87,10 +87,11 @@ def test_upload_avatar_success(client: TestClient, session: Session) -> None:
         client, session, role=UserRole.NORMAL, source=RequestSource.MOBILE_APP
     )
     
-    with patch('app.services.storage.storage_service') as mock_storage:
+    with patch('app.api.routes.users.storage_service') as mock_storage:
         mock_storage.upload_file = AsyncMock(return_value={
             'downloadUrl': 'https://test-bucket.s3.amazonaws.com/avatars/user_123/avatar.jpg',
-            'fileId': 'test-file-id'
+            'fileId': 'test-file-id',
+            'fileName': 'avatars/user_123/avatar.jpg'
         })
         
         # Create test image file
@@ -161,11 +162,12 @@ def test_upload_avatar_replaces_old_avatar(client: TestClient, session: Session)
         client, session, role=UserRole.NORMAL, source=RequestSource.MOBILE_APP
     )
     
-    with patch('app.services.storage.storage_service') as mock_storage:
+    with patch('app.api.routes.users.storage_service') as mock_storage:
         # Mock both upload and delete methods
         mock_storage.upload_file = AsyncMock(return_value={
             'downloadUrl': 'https://test-bucket.s3.amazonaws.com/avatars/user_123/avatar1.jpg',
-            'fileId': 'test-file-id-1'
+            'fileId': 'test-file-id-1',
+            'fileName': 'avatars/user_123/avatar1.jpg'
         })
         mock_storage.delete_file = AsyncMock(return_value=True)
         
@@ -183,7 +185,8 @@ def test_upload_avatar_replaces_old_avatar(client: TestClient, session: Session)
         # Upload second avatar - update the mock return value
         mock_storage.upload_file = AsyncMock(return_value={
             'downloadUrl': 'https://test-bucket.s3.amazonaws.com/avatars/user_123/avatar2.jpg',
-            'fileId': 'test-file-id-2'
+            'fileId': 'test-file-id-2',
+            'fileName': 'avatars/user_123/avatar2.jpg'
         })
         
         files2 = {
@@ -258,10 +261,11 @@ def test_avatar_upload_works_for_all_sources(client: TestClient, session: Sessio
             client, session, role=role, source=source
         )
         
-        with patch('app.services.storage.storage_service') as mock_storage:
+        with patch('app.api.routes.users.storage_service') as mock_storage:
             mock_storage.upload_file = AsyncMock(return_value={
                 'downloadUrl': f'https://test-bucket.s3.amazonaws.com/avatars/user_{user.id}/avatar.jpg',
-                'fileId': 'test-file-id'
+                'fileId': 'test-file-id',
+                'fileName': f'avatars/user_{user.id}/avatar.jpg'
             })
             
             files = {

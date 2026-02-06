@@ -128,7 +128,8 @@ def test_reset_password(mock_redis, client: TestClient, session: Session) -> Non
     assert response.json()["msg"] == "Password updated successfully"
 
 
-def test_forgot_password(client: TestClient, session: Session) -> None:
+@patch('app.services.email.email_service.send_password_reset_email')
+def test_forgot_password(mock_email, client: TestClient, session: Session) -> None:
     # Create user with email (admin source ensures email exists)
     user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     

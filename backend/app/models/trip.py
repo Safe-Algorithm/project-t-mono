@@ -23,11 +23,11 @@ if TYPE_CHECKING:
 class Trip(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     
-    # Bilingual fields for localization
-    name_en: str = Field(max_length=200)
-    name_ar: str = Field(max_length=200)
-    description_en: str
-    description_ar: str
+    # Bilingual fields for localization (at least one language required)
+    name_en: Optional[str] = Field(default=None, max_length=200)
+    name_ar: Optional[str] = Field(default=None, max_length=200)
+    description_en: Optional[str] = Field(default=None)
+    description_ar: Optional[str] = Field(default=None)
     
     start_date: datetime
     end_date: datetime

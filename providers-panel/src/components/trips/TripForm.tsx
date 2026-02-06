@@ -299,11 +299,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
     // Validate package details
     packages.forEach((pkg, index) => {
-      if (!pkg.name_en.trim() || !pkg.name_ar.trim()) {
-        newErrors.push(`Package ${index + 1}: Name in both languages is required`);
+      if (!pkg.name_en.trim() && !pkg.name_ar.trim()) {
+        newErrors.push(`Package ${index + 1}: Name in at least one language (EN or AR) is required`);
       }
-      if (!pkg.description_en.trim() || !pkg.description_ar.trim()) {
-        newErrors.push(`Package ${index + 1}: Description in both languages is required`);
+      if (!pkg.description_en.trim() && !pkg.description_ar.trim()) {
+        newErrors.push(`Package ${index + 1}: Description in at least one language (EN or AR) is required`);
       }
       if (pkg.price <= 0) {
         newErrors.push(`Package ${index + 1}: Price must be greater than 0`);
@@ -354,21 +354,24 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       )}
 
       <h3>{t('trip.details')}</h3>
+      <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+        Provide trip information in at least one language (English or Arabic)
+      </p>
       <div>
-        <label>{t('trip.nameEn')}</label>
-        <input name="name_en" value={formData.name_en} onChange={handleChange} placeholder={t('trip.nameEn')} required />
+        <label>{t('trip.nameEn')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if Arabic provided)</span></label>
+        <input name="name_en" value={formData.name_en} onChange={handleChange} placeholder={t('trip.nameEn')} />
       </div>
       <div>
-        <label>{t('trip.nameAr')}</label>
-        <input name="name_ar" value={formData.name_ar} onChange={handleChange} placeholder={t('trip.nameAr')} required dir="rtl" />
+        <label>{t('trip.nameAr')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if English provided)</span></label>
+        <input name="name_ar" value={formData.name_ar} onChange={handleChange} placeholder={t('trip.nameAr')} dir="rtl" />
       </div>
       <div>
-        <label>{t('trip.descriptionEn')}</label>
-        <textarea name="description_en" value={formData.description_en} onChange={handleChange} placeholder={t('trip.descriptionEn')} required />
+        <label>{t('trip.descriptionEn')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if Arabic provided)</span></label>
+        <textarea name="description_en" value={formData.description_en} onChange={handleChange} placeholder={t('trip.descriptionEn')} />
       </div>
       <div>
-        <label>{t('trip.descriptionAr')}</label>
-        <textarea name="description_ar" value={formData.description_ar} onChange={handleChange} placeholder={t('trip.descriptionAr')} required dir="rtl" />
+        <label>{t('trip.descriptionAr')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if English provided)</span></label>
+        <textarea name="description_ar" value={formData.description_ar} onChange={handleChange} placeholder={t('trip.descriptionAr')} dir="rtl" />
       </div>
       <input type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange} required />
       <input type="datetime-local" name="end_date" value={formData.end_date} onChange={handleChange} required />
@@ -587,6 +590,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       </div>
 
       <h3>{t('nav.trips')} ({t('package.atLeastOne')})</h3>
+      <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+        Provide package information in at least one language (English or Arabic)
+      </p>
       {packages.map((pkg, index) => (
         <div key={index} style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
@@ -598,40 +604,36 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             )}
           </div>
           <div>
-            <label>{t('package.nameEn')}</label>
+            <label>{t('package.nameEn')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if Arabic provided)</span></label>
             <input
               value={pkg.name_en}
               onChange={(e) => updatePackage(index, 'name_en', e.target.value)}
               placeholder={t('package.nameEn')}
-              required
             />
           </div>
           <div>
-            <label>{t('package.nameAr')}</label>
+            <label>{t('package.nameAr')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if English provided)</span></label>
             <input
               value={pkg.name_ar}
               onChange={(e) => updatePackage(index, 'name_ar', e.target.value)}
               placeholder={t('package.nameAr')}
-              required
               dir="rtl"
             />
           </div>
           <div>
-            <label>{t('package.descriptionEn')}</label>
+            <label>{t('package.descriptionEn')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if Arabic provided)</span></label>
             <textarea
               value={pkg.description_en}
               onChange={(e) => updatePackage(index, 'description_en', e.target.value)}
               placeholder={t('package.descriptionEn')}
-              required
             />
           </div>
           <div>
-            <label>{t('package.descriptionAr')}</label>
+            <label>{t('package.descriptionAr')} <span style={{ fontSize: '0.85rem', color: '#666' }}>(optional if English provided)</span></label>
             <textarea
               value={pkg.description_ar}
               onChange={(e) => updatePackage(index, 'description_ar', e.target.value)}
               placeholder={t('package.descriptionAr')}
-              required
               dir="rtl"
             />
           </div>

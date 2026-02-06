@@ -29,8 +29,8 @@ def test_provider(session: Session) -> Provider:
 def test_trip(session: Session, test_provider: Provider) -> Trip:
     """Create a test trip."""
     trip = Trip(
-        name="Test Trip",
-        description="A test trip",
+        name_en="Test Trip",
+        description_en="A test trip",
         start_date=datetime.utcnow() + timedelta(days=30),
         end_date=datetime.utcnow() + timedelta(days=35),
         max_participants=10,
@@ -43,8 +43,8 @@ def test_trip(session: Session, test_provider: Provider) -> Trip:
     # Add a package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
+        name_en="Standard Package",
+        description_en="Standard package",
         price=1000.0,
         currency="SAR"
     )
@@ -58,8 +58,8 @@ def test_trip(session: Session, test_provider: Provider) -> Trip:
 def test_trip2(session: Session, test_provider: Provider) -> Trip:
     """Create a second test trip."""
     trip = Trip(
-        name="Test Trip 2",
-        description="Another test trip",
+        name_en="Test Trip 2",
+        description_en="Another test trip",
         start_date=datetime.utcnow() + timedelta(days=40),
         end_date=datetime.utcnow() + timedelta(days=45),
         max_participants=10,
@@ -72,9 +72,9 @@ def test_trip2(session: Session, test_provider: Provider) -> Trip:
     # Add a package
     package = TripPackage(
         trip_id=trip.id,
-        name="Standard Package",
-        description="Standard package",
-        price=1500.0,
+        name_en="Standard Package",
+        description_en="Standard package",
+        price=1000.0,
         currency="SAR"
     )
     session.add(package)
@@ -251,7 +251,7 @@ def test_get_user_likes_single_trip(
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == str(test_trip.id)
-    assert data[0]["name"] == test_trip.name
+    assert data[0]["name_en"] == test_trip.name_en
 
 
 def test_get_user_likes_multiple_trips(
@@ -472,7 +472,7 @@ def test_get_user_bookmarks_single_trip(
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == str(test_trip.id)
-    assert data[0]["name"] == test_trip.name
+    assert data[0]["name_en"] == test_trip.name_en
 
 
 def test_get_user_bookmarks_multiple_trips(

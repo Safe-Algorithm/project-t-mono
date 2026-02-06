@@ -2,17 +2,17 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from .trip_package import TripPackageWithRequiredFields
 from .trip_extra_fee import TripExtraFeeResponse
 from app.models.trip_amenity import TripAmenity
 
 
 class TripBase(BaseModel):
-    name_en: str
-    name_ar: str
-    description_en: str
-    description_ar: str
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
     start_date: datetime
     end_date: datetime
     max_participants: int
@@ -26,7 +26,15 @@ class TripBase(BaseModel):
 
 
 class TripCreate(TripBase):
-    pass
+    @model_validator(mode='after')
+    def validate_bilingual_fields(self):
+        # Check if at least one name field is provided
+        if not self.name_en and not self.name_ar:
+            raise ValueError('At least one of name_en or name_ar must be provided')
+        # Check if at least one description field is provided
+        if not self.description_en and not self.description_ar:
+            raise ValueError('At least one of description_en or description_ar must be provided')
+        return self
 
 
 class TripUpdate(BaseModel):

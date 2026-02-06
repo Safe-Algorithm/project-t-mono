@@ -283,8 +283,10 @@ def get_my_registration_history(
 
         trip_payload = {
             "id": trip.id,
-            "name": trip.name,
-            "description": trip.description,
+            "name_en": trip.name_en,
+            "name_ar": trip.name_ar,
+            "description_en": trip.description_en,
+            "description_ar": trip.description_ar,
             "start_date": trip.start_date,
             "end_date": trip.end_date,
             "provider_id": trip.provider_id,
