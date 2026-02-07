@@ -14,3 +14,4 @@ from .trip_bookmark import TripBookmark
 from .payment import Payment, PaymentStatus, PaymentMethod
 from .payment_audit_log import PaymentAuditLog, PaymentEventType
 from .trip_amenity import TripAmenity, TripExtraFee
+from .provider_rating import ProviderRating

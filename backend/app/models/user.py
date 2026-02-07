@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .trip_favorite import TripFavorite
     from .trip_like import TripLike
     from .trip_bookmark import TripBookmark
+    from .provider_rating import ProviderRating
 
 
 class UserRole(str, Enum):
@@ -57,3 +58,4 @@ class User(SQLModel, table=True):
     favorite_trips: List["TripFavorite"] = Relationship(back_populates="user")
     liked_trips: List["TripLike"] = Relationship(back_populates="user")
     bookmarked_trips: List["TripBookmark"] = Relationship(back_populates="user")
+    provider_ratings: List["ProviderRating"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

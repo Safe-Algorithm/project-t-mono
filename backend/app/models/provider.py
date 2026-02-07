@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from .user import User
     from .trip import Trip
     from .provider_file import ProviderFile
+    from .provider_rating import ProviderRating
 
 class Provider(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -29,6 +30,7 @@ class Provider(SQLModel, table=True):
     provider_request: "ProviderRequest" = Relationship(back_populates="provider")
     trips: List["Trip"] = Relationship(back_populates="provider")
     files: List["ProviderFile"] = Relationship(back_populates="provider")
+    ratings: List["ProviderRating"] = Relationship(back_populates="provider", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
 
 class ProviderRequest(SQLModel, table=True):
