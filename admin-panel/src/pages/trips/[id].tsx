@@ -24,6 +24,25 @@ interface TripPackage {
   required_fields_details?: TripPackageRequiredFieldDetail[];
 }
 
+interface TripDestinationInfo {
+  id: string;
+  destination_id: string;
+  place_id: string | null;
+  destination: {
+    id: string;
+    name_en: string;
+    name_ar: string;
+    country_code: string;
+    type: string;
+  } | null;
+  place: {
+    id: string;
+    name_en: string;
+    name_ar: string;
+    type: string;
+  } | null;
+}
+
 interface Provider {
   id: string;
   company_name: string;
@@ -64,6 +83,7 @@ interface FieldMetadata {
 const TripDetailPage = () => {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [fieldMetadata, setFieldMetadata] = useState<FieldMetadata>({});
+  const [tripDestinations, setTripDestinations] = useState<TripDestinationInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
@@ -121,6 +141,22 @@ const TripDetailPage = () => {
             });
           }
           setFieldMetadata(metadataObject);
+        }
+
+        // Fetch trip destinations
+        try {
+          const destsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/${id}/destinations`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-Source': 'admin_panel',
+            },
+          });
+          if (destsResponse.ok) {
+            const destsData = await destsResponse.json();
+            setTripDestinations(destsData);
+          }
+        } catch (destErr) {
+          console.error('Failed to fetch trip destinations:', destErr);
         }
         
       } catch (err) {
@@ -273,6 +309,34 @@ const TripDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* Trip Destinations */}
+      {tripDestinations.length > 0 && (
+        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+          <h2 className="text-2xl font-semibold mb-4">Trip Destinations ({tripDestinations.length})</h2>
+          <div className="flex flex-wrap gap-3">
+            {tripDestinations.map((td) => (
+              <div key={td.id} className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-sm font-medium text-blue-800">
+                  {td.destination ? td.destination.name_en : 'Unknown'}
+                </span>
+                {td.destination?.name_ar && (
+                  <span className="text-xs text-gray-500" dir="rtl">({td.destination.name_ar})</span>
+                )}
+                {td.place && (
+                  <>
+                    <span className="text-gray-400">&rarr;</span>
+                    <span className="text-sm text-gray-700">{td.place.name_en}</span>
+                    {td.place.name_ar && (
+                      <span className="text-xs text-gray-500" dir="rtl">({td.place.name_ar})</span>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Trip Packages */}
       <div className="bg-white shadow-md rounded-lg p-6">

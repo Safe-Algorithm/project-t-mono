@@ -2,6 +2,7 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig, TripAmenity } from '../../types/trip';
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
 import ValidationConfigComponent from './ValidationConfig';
+import DestinationSelector, { DestinationSelection } from './DestinationSelector';
 import { useTranslation } from 'react-i18next';
 
 interface TripFormProps {
@@ -11,7 +12,8 @@ interface TripFormProps {
     packages?: CreateTripPackage[], 
     packageFields?: { [index: number]: string[] }, 
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
-    imageData?: { newImages: File[], imagesToDelete: string[] }
+    imageData?: { newImages: File[], imagesToDelete: string[] },
+    destinationSelections?: DestinationSelection[]
   ) => void;
   isSubmitting: boolean;
 }
@@ -54,6 +56,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [showValidationConfig, setShowValidationConfig] = useState<{ [packageIndex: number]: { [fieldName: string]: boolean } }>({});
+
+  // Destination selections (form-state mode for new trips)
+  const [destinationSelections, setDestinationSelections] = useState<DestinationSelection[]>([]);
 
   useEffect(() => {
     // Load available fields on component mount
@@ -337,7 +342,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       imagesToDelete: imagesToDelete
     };
     
-    onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs, imageData);
+    onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs, imageData, destinationSelections);
   };
 
   return (
@@ -380,6 +385,16 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} />
         {t('status.active')}
       </label>
+
+      {/* Destinations - form-state mode for new trips, API mode for existing */}
+      {trip ? (
+        <DestinationSelector tripId={trip.id} />
+      ) : (
+        <DestinationSelector
+          selections={destinationSelections}
+          onSelectionsChange={setDestinationSelections}
+        />
+      )}
 
       <h3>{t('trip.policies')}</h3>
       <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>

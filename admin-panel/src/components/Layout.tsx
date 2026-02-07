@@ -30,6 +30,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <Link href="/provider-requests" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.providers')}</Link>
           <Link href="/providers" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.providers')}</Link>
           <Link href="/trips" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.trips')}</Link>
+          <Link href="/destinations" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Destinations</Link>
           <Link href="/users" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.users')}</Link>
           <Link href="/settings/file-definitions" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.settings')}</Link>
           <Link href="/profile" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.profile')}</Link>

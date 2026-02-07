@@ -15,3 +15,6 @@ from .payment import Payment, PaymentStatus, PaymentMethod
 from .payment_audit_log import PaymentAuditLog, PaymentEventType
 from .trip_amenity import TripAmenity, TripExtraFee
 from .provider_rating import ProviderRating
+from .destination import Destination, DestinationType
+from .place import Place, PlaceType
+from .trip_destination import TripDestination

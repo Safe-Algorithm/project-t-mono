@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { Trip, TripPackage, FieldMetadata, PackageRequiredField, TripAmenity } from '../../types/trip';
 import { tripService } from '../../services/tripService';
+import { destinationService, TripDestination } from '../../services/destinationService';
 import { useTranslation } from 'react-i18next';
 
 const TripDetailPage: React.FC = () => {
@@ -10,12 +11,14 @@ const TripDetailPage: React.FC = () => {
   const { id: tripId } = router.query;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
+  const [tripDestinations, setTripDestinations] = useState<TripDestination[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     if (router.isReady && tripId && typeof tripId === 'string') {
       loadTripDetails();
       loadAvailableFields();
+      loadTripDestinations();
     }
   }, [tripId, router.isReady]);
 
@@ -41,6 +44,16 @@ const TripDetailPage: React.FC = () => {
     } catch (err) {
       console.error('Failed to load available fields:', err);
       setAvailableFields([]);
+    }
+  };
+
+  const loadTripDestinations = async () => {
+    if (!tripId || typeof tripId !== 'string') return;
+    try {
+      const dests = await destinationService.getTripDestinations(tripId);
+      setTripDestinations(dests);
+    } catch (err) {
+      console.error('Failed to load trip destinations:', err);
     }
   };
 
@@ -110,6 +123,41 @@ const TripDetailPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Trip Destinations */}
+      {tripDestinations.length > 0 && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h3>Destinations</h3>
+          <div style={{ 
+            display: 'flex', flexWrap: 'wrap', gap: '0.5rem',
+            padding: '1rem', backgroundColor: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6'
+          }}>
+            {tripDestinations.map((td) => (
+              <div key={td.id} style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0.75rem', backgroundColor: '#e3f2fd',
+                borderRadius: '6px', border: '1px solid #90caf9',
+              }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 500, color: '#1565c0' }}>
+                  {td.destination ? td.destination.name_en : 'Unknown'}
+                </span>
+                {td.destination?.name_ar && (
+                  <span style={{ fontSize: '0.8rem', color: '#666' }} dir="rtl">({td.destination.name_ar})</span>
+                )}
+                {td.place && (
+                  <>
+                    <span style={{ color: '#999' }}>&rarr;</span>
+                    <span style={{ fontSize: '0.85rem', color: '#333' }}>{td.place.name_en}</span>
+                    {td.place.name_ar && (
+                      <span style={{ fontSize: '0.8rem', color: '#666' }} dir="rtl">({td.place.name_ar})</span>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Trip Amenities */}
       {trip.amenities && trip.amenities.length > 0 && (

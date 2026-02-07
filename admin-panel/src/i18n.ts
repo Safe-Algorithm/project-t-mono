@@ -12,6 +12,7 @@ const resources = {
       "nav.providers": "Providers",
       "nav.users": "Users",
       "nav.settings": "Settings",
+      "nav.profile": "Profile",
       "nav.logout": "Logout",
       
       // Common
@@ -60,6 +61,7 @@ const resources = {
       "nav.providers": "مقدمو الخدمات",
       "nav.users": "المستخدمون",
       "nav.settings": "الإعدادات",
+      "nav.profile": "الملف الشخصي",
       "nav.logout": "تسجيل الخروج",
       
       // Common

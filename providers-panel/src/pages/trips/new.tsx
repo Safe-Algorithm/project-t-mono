@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import TripForm from '../../components/trips/TripForm';
 import { tripService, TripCreatePayload, TripUpdatePayload } from '../../services/tripService';
+import { destinationService } from '../../services/destinationService';
+import { DestinationSelection } from '../../components/trips/DestinationSelector';
 import { CreateTripPackage, PackageRequiredField, ValidationConfig } from '../../types/trip';
 
 const NewTripPage = () => {
@@ -14,7 +16,8 @@ const NewTripPage = () => {
     packages?: CreateTripPackage[], 
     packageFields?: { [index: number]: string[] },
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
-    imageData?: { newImages: File[], imagesToDelete: string[] }
+    imageData?: { newImages: File[], imagesToDelete: string[] },
+    destinationSelections?: DestinationSelection[]
   ) => {
     setIsSubmitting(true);
     setError(null);
@@ -55,6 +58,21 @@ const NewTripPage = () => {
             } else {
               await tripService.setPackageRequiredFields(createdTrip.id, createdPackage.id, fields);
             }
+          }
+        }
+      }
+      
+      // Add destinations
+      if (destinationSelections && destinationSelections.length > 0) {
+        for (const sel of destinationSelections) {
+          try {
+            await destinationService.addTripDestination(
+              createdTrip.id,
+              sel.destination_id,
+              sel.place_id
+            );
+          } catch (err) {
+            console.error('Failed to add destination:', err);
           }
         }
       }
