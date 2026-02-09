@@ -120,11 +120,11 @@ const TripsPage = () => {
 
       {/* Search and Filter Section */}
       {showFilters && (
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
+        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {/* Search */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Search
               </label>
               <input
@@ -138,7 +138,7 @@ const TripsPage = () => {
 
             {/* Provider Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Provider Name
               </label>
               <input
@@ -152,7 +152,7 @@ const TripsPage = () => {
 
             {/* Start Date From */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start Date From
               </label>
               <input
@@ -165,7 +165,7 @@ const TripsPage = () => {
 
             {/* Start Date To */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Start Date To
               </label>
               <input
@@ -179,7 +179,7 @@ const TripsPage = () => {
             {/* Price Range */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Min Price
                 </label>
                 <input
@@ -191,7 +191,7 @@ const TripsPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Max Price
                 </label>
                 <input
@@ -207,7 +207,7 @@ const TripsPage = () => {
             {/* Participants Range */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Min Participants
                 </label>
                 <input
@@ -219,7 +219,7 @@ const TripsPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Max Participants
                 </label>
                 <input
@@ -235,7 +235,7 @@ const TripsPage = () => {
             {/* Min Rating */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Minimum Rating
                 </label>
                 <label className="flex items-center cursor-pointer">
@@ -245,7 +245,7 @@ const TripsPage = () => {
                     onChange={(e) => setRatingEnabled(e.target.checked)}
                     className="mr-2"
                   />
-                  <span className="text-sm text-gray-600">Enable</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Enable</span>
                 </label>
               </div>
               {ratingEnabled && (
@@ -259,7 +259,7 @@ const TripsPage = () => {
                     onChange={(e) => setMinRating(parseFloat(e.target.value))}
                     className="w-full"
                   />
-                  <div className="flex justify-between text-sm text-gray-600">
+                  <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                     <span>⭐ {minRating.toFixed(1)} stars & above</span>
                   </div>
                 </div>
@@ -268,7 +268,7 @@ const TripsPage = () => {
 
             {/* Status */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Status
               </label>
               <select
@@ -296,12 +296,12 @@ const TripsPage = () => {
       )}
 
       {/* Results Count */}
-      <div className="mb-4 text-sm text-gray-600">
+      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
         Showing {trips.length} trip{trips.length !== 1 ? 's' : ''}
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white dark:bg-gray-800">
           <thead>
             <tr>
               <th className="py-2 px-4 border-b">Trip Name</th>
@@ -316,7 +316,7 @@ const TripsPage = () => {
             {trips.map((trip) => (
               <tr 
                 key={trip.id} 
-                className="hover:bg-gray-50 cursor-pointer"
+                className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                 onClick={() => router.push(`/trips/${trip.id}`)}
               >
                 <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">

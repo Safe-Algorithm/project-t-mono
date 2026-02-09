@@ -90,7 +90,7 @@ const ProviderRequestsPageContent = () => {
       <h1 className="text-2xl font-bold mb-4">Provider Applications</h1>
       
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
           <div className="flex items-start">
             <svg className="w-5 h-5 text-red-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -112,7 +112,7 @@ const ProviderRequestsPageContent = () => {
       )}
       
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white dark:bg-gray-800">
           <thead>
             <tr>
               <th className="py-2 px-4 border-b">Company Name</th>
@@ -126,7 +126,7 @@ const ProviderRequestsPageContent = () => {
             {requests.map((request) => (
               <tr 
                 key={request.id}
-                className="hover:bg-gray-50 cursor-pointer"
+                className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                 onClick={() => router.push(`/providers/${request.provider_id}`)}
               >
                 <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{request.company_name}</td>

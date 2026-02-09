@@ -22,7 +22,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Name Field */}
       <div>
-        <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Full Name <span className="text-red-500">*</span>
         </label>
         <input
@@ -31,7 +31,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
+          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
           placeholder="Enter team member's full name"
         />
         {errors.name && (
@@ -46,7 +46,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
 
       {/* Email Field */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Email Address <span className="text-red-500">*</span>
         </label>
         <input
@@ -55,7 +55,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
+          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
           placeholder="member@example.com"
         />
         {errors.email && (
@@ -70,7 +70,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
 
       {/* Phone Field */}
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Phone Number <span className="text-red-500">*</span>
         </label>
         <input
@@ -79,7 +79,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
+          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
           placeholder="+966501234567"
         />
         {errors.phone && (
@@ -94,7 +94,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
 
       {/* Password Field */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+        <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Temporary Password <span className="text-red-500">*</span>
         </label>
         <input
@@ -103,7 +103,7 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
+          className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 outline-none"
           placeholder="Enter a temporary password"
         />
         <p className="mt-2 text-xs text-gray-500">
@@ -120,11 +120,11 @@ const TeamInvitationForm: React.FC<TeamInvitationFormProps> = ({ onSubmit, isSub
       </div>
 
       {/* Submit Button */}
-      <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200">
+      <div className="flex items-center justify-end space-x-4 pt-4 border-t border-gray-200 dark:border-gray-700">
         <button
           type="button"
           onClick={() => window.history.back()}
-          className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition duration-200"
+          className="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 font-medium hover:bg-gray-50 dark:hover:bg-gray-600 transition duration-200"
         >
           Cancel
         </button>

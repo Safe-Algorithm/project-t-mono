@@ -122,7 +122,7 @@ const RequestStatusPage = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-6">Provider Request Status</h1>
       
-      <div className="bg-white shadow rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div className="mb-6">
           <div className="flex items-center mb-4">
             <span className="text-2xl mr-3">{getStatusIcon(request.status)}</span>
@@ -139,7 +139,7 @@ const RequestStatusPage = () => {
           )}
           
           {request.status.toLowerCase() === 'denied' && request.denial_reason && (
-            <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 px-4 py-3 rounded mb-4">
               <p className="font-medium">Request Denied</p>
               <p className="text-sm"><strong>Reason:</strong> {request.denial_reason}</p>
             </div>
@@ -148,33 +148,33 @@ const RequestStatusPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Company Information</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Company Information</h3>
             <dl className="space-y-2">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Company Name</dt>
-                <dd className="text-sm text-gray-900">{request.company_name}</dd>
+                <dd className="text-sm text-gray-900 dark:text-white">{request.company_name}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Company Email</dt>
-                <dd className="text-sm text-gray-900">{request.company_email}</dd>
+                <dd className="text-sm text-gray-900 dark:text-white">{request.company_email}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Company Phone</dt>
-                <dd className="text-sm text-gray-900">{request.company_phone}</dd>
+                <dd className="text-sm text-gray-900 dark:text-white">{request.company_phone}</dd>
               </div>
             </dl>
           </div>
           
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">Request Details</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Request Details</h3>
             <dl className="space-y-2">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Request ID</dt>
-                <dd className="text-sm text-gray-900 font-mono">{request.id}</dd>
+                <dd className="text-sm text-gray-900 dark:text-white font-mono">{request.id}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Submitted</dt>
-                <dd className="text-sm text-gray-900">
+                <dd className="text-sm text-gray-900 dark:text-white">
                   {request.created_at ? new Date(request.created_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -186,7 +186,7 @@ const RequestStatusPage = () => {
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                <dd className="text-sm text-gray-900">
+                <dd className="text-sm text-gray-900 dark:text-white">
                   {request.updated_at ? new Date(request.updated_at).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -202,17 +202,17 @@ const RequestStatusPage = () => {
 
         {/* Uploaded Files Section */}
         <div className="mt-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-3">Uploaded Documents</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">Uploaded Documents</h3>
           {uploadedFiles.length > 0 ? (
             <div className="space-y-2">
               {uploadedFiles.map((file) => (
-                <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200">
+                <div key={file.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200 dark:border-gray-700">
                   <div className="flex-1">
                     <div className="flex items-center">
                       <span className="text-lg mr-2">📄</span>
                       <div>
                         {file.file_definition && (
-                          <p className="text-xs font-semibold text-gray-700 mb-1">
+                          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                             {file.file_definition.name_en}
                           </p>
                         )}

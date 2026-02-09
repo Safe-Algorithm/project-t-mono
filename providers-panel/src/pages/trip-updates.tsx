@@ -140,13 +140,13 @@ const TripUpdatesPage = () => {
       <p className="text-gray-500 mb-6 text-sm">{t('tripUpdates.subtitle')}</p>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-800 dark:text-red-300 text-sm">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">{t('common.dismiss')}</button>
         </div>
       )}
       {success && (
-        <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 text-green-800 text-sm">
+        <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-green-800 dark:text-green-300 text-sm">
           {success}
           <button onClick={() => setSuccess(null)} className="ml-2 underline">{t('common.dismiss')}</button>
         </div>

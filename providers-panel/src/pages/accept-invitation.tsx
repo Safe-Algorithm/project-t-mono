@@ -40,14 +40,14 @@ const AcceptInvitationPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white shadow-lg rounded-lg p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
         <h1 className="text-2xl font-bold text-center mb-6">Team Invitation</h1>
         
         {isLoading && (
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-            <p className="text-gray-600">Activating your account...</p>
+            <p className="text-gray-600 dark:text-gray-400">Activating your account...</p>
           </div>
         )}
 
@@ -68,7 +68,7 @@ const AcceptInvitationPage = () => {
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
             <p className="font-bold">Success!</p>
             <p className="mb-4">Your account has been activated. You can now log in to the providers panel.</p>
-            <p className="text-sm text-gray-600">Redirecting to login page...</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Redirecting to login page...</p>
           </div>
         )}
 

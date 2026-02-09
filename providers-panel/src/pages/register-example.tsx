@@ -133,22 +133,22 @@ export default function ProviderRegistrationExample() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
           <div className="mb-8">
             <div className="flex justify-between items-center mb-4">
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 {language === 'ar' ? 'تسجيل مزود الخدمة' : 'Provider Registration'}
               </h1>
               <button
                 onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 {language === 'en' ? 'العربية' : 'English'}
               </button>
             </div>
-            <p className="text-gray-600">
+            <p className="text-gray-600 dark:text-gray-400">
               {language === 'ar' 
                 ? 'يرجى ملء جميع الحقول المطلوبة وتحميل المستندات اللازمة'
                 : 'Please fill in all required fields and upload necessary documents'}
@@ -156,7 +156,7 @@ export default function ProviderRegistrationExample() {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700">
               {error}
             </div>
           )}
@@ -164,46 +164,46 @@ export default function ProviderRegistrationExample() {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="border-b border-gray-200 pb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 {language === 'ar' ? 'معلومات الشركة' : 'Company Information'}
               </h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {language === 'ar' ? 'اسم الشركة' : 'Company Name'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.company_name}
                     onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {language === 'ar' ? 'البريد الإلكتروني للشركة' : 'Company Email'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     value={formData.company_email}
                     onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {language === 'ar' ? 'هاتف الشركة' : 'Company Phone'} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="tel"
                     value={formData.company_phone}
                     onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
                   />
                 </div>
@@ -212,7 +212,7 @@ export default function ProviderRegistrationExample() {
 
             {/* Required Documents */}
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                 {language === 'ar' ? 'المستندات المطلوبة' : 'Required Documents'}
               </h2>
               
@@ -239,7 +239,7 @@ export default function ProviderRegistrationExample() {
             </div>
 
             {/* Submit Button */}
-            <div className="pt-6 border-t border-gray-200">
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 type="submit"
                 disabled={submitting}

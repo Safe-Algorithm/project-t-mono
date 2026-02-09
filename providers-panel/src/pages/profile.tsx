@@ -169,18 +169,18 @@ const ProfilePage = () => {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Provider Profile</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Provider Profile</h1>
       
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Company Information</h2>
-          <p className="text-sm text-gray-600">Update your company details and contact information.</p>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Company Information</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Update your company details and contact information.</p>
         </div>
         
         <form onSubmit={handleSubmit} className="px-6 py-4 space-y-6">
           {/* Company Avatar Section */}
           <div className="border-b border-gray-200 pb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Company Avatar
             </label>
             <div className="flex items-center space-x-4">
@@ -189,10 +189,10 @@ const ProfilePage = () => {
                   <img
                     src={avatarPreview || companyAvatar || ''}
                     alt="Company Avatar"
-                    className="h-24 w-24 rounded-full object-cover border-2 border-gray-300"
+                    className="h-24 w-24 rounded-full object-cover border-2 border-gray-300 dark:border-gray-600"
                   />
                 ) : (
-                  <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300">
+                  <div className="h-24 w-24 rounded-full bg-gray-200 flex items-center justify-center border-2 border-gray-300 dark:border-gray-600">
                     <svg className="h-12 w-12 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
                     </svg>
@@ -209,7 +209,7 @@ const ProfilePage = () => {
                 />
                 <label
                   htmlFor="avatar-upload"
-                  className="inline-block px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+                  className="inline-block px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
                 >
                   Choose Image
                 </label>
@@ -231,7 +231,7 @@ const ProfilePage = () => {
           </div>
 
           <div>
-            <label htmlFor="userEmail" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="userEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               User Email
             </label>
             <input
@@ -239,13 +239,13 @@ const ProfilePage = () => {
               type="email"
               value={user.email}
               disabled
-              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
             />
             <p className="text-xs text-gray-500 mt-1">Your user email cannot be changed</p>
           </div>
 
           <div>
-            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Company Name *
             </label>
             <input
@@ -254,13 +254,13 @@ const ProfilePage = () => {
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your company name"
             />
           </div>
 
           <div>
-            <label htmlFor="companyEmail" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="companyEmail" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Company Email *
             </label>
             <input
@@ -269,13 +269,13 @@ const ProfilePage = () => {
               value={companyEmail}
               onChange={(e) => setCompanyEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your company email"
             />
           </div>
 
           <div>
-            <label htmlFor="companyPhone" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="companyPhone" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Company Phone *
             </label>
             <input
@@ -284,24 +284,24 @@ const ProfilePage = () => {
               value={companyPhone}
               onChange={(e) => setCompanyPhone(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Enter your company phone number"
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border border-green-200 rounded-md p-4">
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-4">
               <p className="text-sm text-green-600">{success}</p>
             </div>
           )}
 
-          <div className="flex justify-end pt-4 border-t border-gray-200">
+          <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="submit"
               disabled={loading}
@@ -314,10 +314,10 @@ const ProfilePage = () => {
       </div>
 
       {/* Uploaded Files Section */}
-      <div className="bg-white shadow rounded-lg mt-6">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Uploaded Documents</h2>
-          <p className="text-sm text-gray-600">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg mt-6">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-medium text-gray-900 dark:text-white">Uploaded Documents</h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             View your uploaded documents. You can replace rejected files.
           </p>
         </div>
@@ -331,7 +331,7 @@ const ProfilePage = () => {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       {file.file_definition && (
-                        <p className="text-xs font-semibold text-gray-700 mb-1">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                           {file.file_definition.name_en}
                         </p>
                       )}
@@ -351,7 +351,7 @@ const ProfilePage = () => {
                       <div className="mt-2">
                         {getStatusBadge(file.file_verification_status)}
                         {file.file_verification_status === 'rejected' && file.rejection_reason && (
-                          <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                          <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded text-xs">
                             <p className="font-semibold text-red-800 mb-1">Rejection Reason:</p>
                             <p className="text-red-700">{file.rejection_reason}</p>
                           </div>
@@ -390,7 +390,7 @@ const ProfilePage = () => {
                             }}
                             disabled={uploadingFiles[file.file_definition_id]}
                           />
-                          <span className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 disabled:opacity-50">
+                          <span className="inline-flex items-center px-3 py-1 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">
                             {uploadingFiles[file.file_definition_id] ? 'Uploading...' : 'Replace'}
                           </span>
                         </label>
@@ -409,10 +409,10 @@ const ProfilePage = () => {
 
       {/* Missing File Definitions Section */}
       {missingDefinitions.length > 0 && (
-        <div className="bg-white shadow rounded-lg mt-6">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Additional Documents</h2>
-            <p className="text-sm text-gray-600">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg mt-6">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-lg font-medium text-gray-900 dark:text-white">Additional Documents</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               These documents are available for upload but not yet submitted.
             </p>
           </div>
@@ -422,7 +422,7 @@ const ProfilePage = () => {
                 <div key={definition.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">{definition.name_en}</p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{definition.name_en}</p>
                       <p className="text-xs text-gray-600 mt-1">{definition.description_en}</p>
                       <p className="text-xs text-gray-500 mt-1">
                         Allowed: {definition.allowed_extensions.join(', ').toUpperCase()} • 
@@ -443,7 +443,7 @@ const ProfilePage = () => {
                           }}
                           disabled={uploadingFiles[definition.id]}
                         />
-                        <span className="inline-flex items-center px-3 py-1 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white hover:bg-blue-50 disabled:opacity-50">
+                        <span className="inline-flex items-center px-3 py-1 border border-blue-600 rounded-md text-sm font-medium text-blue-600 bg-white dark:bg-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50">
                           {uploadingFiles[definition.id] ? 'Uploading...' : 'Upload'}
                         </span>
                       </label>

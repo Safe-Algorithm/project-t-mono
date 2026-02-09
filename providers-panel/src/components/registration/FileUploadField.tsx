@@ -116,7 +116,7 @@ export default function FileUploadField({
 
   return (
     <div className="mb-6">
-      <label className="block text-sm font-medium text-gray-700 mb-2">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         {name}
         {definition.is_required && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -148,7 +148,7 @@ export default function FileUploadField({
           {uploading ? (
             <div className="flex flex-col items-center">
               <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-              <p className="text-sm text-gray-600">Uploading...</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Uploading...</p>
             </div>
           ) : (
             <>
@@ -175,7 +175,7 @@ export default function FileUploadField({
           )}
         </div>
       ) : (
-        <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
+        <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
           <div className="flex items-start justify-between">
             <div className="flex items-start gap-3 flex-1">
               <svg
@@ -192,7 +192,7 @@ export default function FileUploadField({
                 />
               </svg>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {uploadedFile.file_name}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">

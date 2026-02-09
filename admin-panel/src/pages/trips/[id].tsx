@@ -223,19 +223,19 @@ const TripDetailPage = () => {
       </div>
 
       {/* Trip Information */}
-      <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
         <h2 className="text-2xl font-semibold mb-4">{t('tripDetail.tripInfo')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.nameEn')}</label>
-            <p className="mt-1 text-sm text-gray-900">{trip.name_en}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.nameEn')}</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{trip.name_en}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.nameAr')}</label>
-            <p className="mt-1 text-sm text-gray-900" dir="rtl">{trip.name_ar}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.nameAr')}</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white" dir="rtl">{trip.name_ar}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.provider')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.provider')}</label>
             <p 
               className="mt-1 text-sm text-blue-600 hover:text-blue-800 cursor-pointer underline"
               onClick={() => router.push(`/providers/${trip.provider.id}`)}
@@ -244,43 +244,43 @@ const TripDetailPage = () => {
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.startDate')}</label>
-            <p className="mt-1 text-sm text-gray-900">{new Date(trip.start_date).toLocaleDateString()}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.startDate')}</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{new Date(trip.start_date).toLocaleDateString()}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.endDate')}</label>
-            <p className="mt-1 text-sm text-gray-900">{new Date(trip.end_date).toLocaleDateString()}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.endDate')}</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{new Date(trip.end_date).toLocaleDateString()}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.maxParticipants')}</label>
-            <p className="mt-1 text-sm text-gray-900">{trip.max_participants}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.maxParticipants')}</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{trip.max_participants}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.status')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.status')}</label>
             <p className={`mt-1 text-sm font-semibold ${trip.is_active ? 'text-green-600' : 'text-red-600'}`}>
               {trip.is_active ? t('tripDetail.active') : t('tripDetail.cancelled')}
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">{t('tripDetail.refundable')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.refundable')}</label>
             <p className={`mt-1 text-sm font-semibold ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>
               {trip.is_refundable ? t('common.yes') : t('common.no')}
             </p>
           </div>
         </div>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">{t('tripDetail.descEn')}</label>
-          <p className="mt-1 text-sm text-gray-900">{trip.description_en}</p>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.descEn')}</label>
+          <p className="mt-1 text-sm text-gray-900 dark:text-white">{trip.description_en}</p>
         </div>
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700">{t('tripDetail.descAr')}</label>
-          <p className="mt-1 text-sm text-gray-900" dir="rtl">{trip.description_ar}</p>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.descAr')}</label>
+          <p className="mt-1 text-sm text-gray-900 dark:text-white" dir="rtl">{trip.description_ar}</p>
         </div>
         
         {/* Trip Amenities */}
         {trip.amenities && trip.amenities.length > 0 && (
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">{t('tripDetail.amenities')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('tripDetail.amenities')}</label>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {trip.amenities.map((amenity) => (
                 <div 
@@ -288,7 +288,7 @@ const TripDetailPage = () => {
                   className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg"
                 >
                   <span className="text-blue-600 text-lg">✓</span>
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {amenityLabels[amenity] || amenity}
                   </span>
                 </div>
@@ -300,18 +300,18 @@ const TripDetailPage = () => {
         {/* Meeting Place Information */}
         {trip.has_meeting_place && (
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">{t('tripDetail.meetingPlace')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('tripDetail.meetingPlace')}</label>
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               {trip.meeting_location && (
                 <div className="mb-2">
-                  <span className="font-medium text-gray-700">📍 {t('tripDetail.meetingLocation')}:</span>
-                  <span className="ml-2 text-gray-900">{trip.meeting_location}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">📍 {t('tripDetail.meetingLocation')}:</span>
+                  <span className="ml-2 text-gray-900 dark:text-white">{trip.meeting_location}</span>
                 </div>
               )}
               {trip.meeting_time && (
                 <div>
-                  <span className="font-medium text-gray-700">🕐 {t('tripDetail.meetingTime')}:</span>
-                  <span className="ml-2 text-gray-900">{new Date(trip.meeting_time).toLocaleString()}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">🕐 {t('tripDetail.meetingTime')}:</span>
+                  <span className="ml-2 text-gray-900 dark:text-white">{new Date(trip.meeting_time).toLocaleString()}</span>
                 </div>
               )}
             </div>
@@ -321,7 +321,7 @@ const TripDetailPage = () => {
         {/* Trip Images */}
         {trip.images && trip.images.length > 0 && (
           <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-3">{t('tripDetail.images')}</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('tripDetail.images')}</label>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {trip.images.map((imageUrl, index) => (
                 <div key={index} className="relative group">
@@ -345,7 +345,7 @@ const TripDetailPage = () => {
 
       {/* Trip Destinations */}
       {tripDestinations.length > 0 && (
-        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
           <h2 className="text-2xl font-semibold mb-4">{t('tripDetail.tripDestinations')} ({tripDestinations.length})</h2>
           <div className="flex flex-wrap gap-3">
             {tripDestinations.map((td) => (
@@ -359,7 +359,7 @@ const TripDetailPage = () => {
                 {td.place && (
                   <>
                     <span className="text-gray-400">&rarr;</span>
-                    <span className="text-sm text-gray-700">{td.place.name_en}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{td.place.name_en}</span>
                     {td.place.name_ar && (
                       <span className="text-xs text-gray-500" dir="rtl">({td.place.name_ar})</span>
                     )}
@@ -373,7 +373,7 @@ const TripDetailPage = () => {
 
       {/* Trip Updates */}
       {tripUpdates.length > 0 && (
-        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
           <h2 className="text-2xl font-semibold mb-4">{t('tripDetail.tripUpdates')} ({tripUpdates.length})</h2>
           <div className="space-y-3">
             {tripUpdates.map((u) => (
@@ -390,7 +390,7 @@ const TripDetailPage = () => {
                   </div>
                   <span className="text-xs text-gray-400">{new Date(u.created_at).toLocaleString()}</span>
                 </div>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap mb-2">{u.message}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mb-2">{u.message}</p>
                 <div className="text-xs text-gray-500">
                   {t('tripUpdates.readCol')}: {u.read_count} / {u.total_recipients} {t('tripDetail.recipients')}
                 </div>
@@ -401,7 +401,7 @@ const TripDetailPage = () => {
       )}
 
       {/* Trip Packages */}
-      <div className="bg-white shadow-md rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-semibold mb-4">{t('tripDetail.tripPackages')} ({trip.packages.length})</h2>
         {trip.packages.length === 0 ? (
           <p className="text-gray-500">{t('tripDetail.noPackages')}</p>
@@ -416,8 +416,8 @@ const TripDetailPage = () => {
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                     pkg.is_active 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-red-100 text-red-800'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                   }`}>
                     {pkg.is_active ? t('common.active') : t('common.inactive')}
                   </span>
@@ -425,22 +425,22 @@ const TripDetailPage = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('tripDetail.descEn')}</label>
-                    <p className="mt-1 text-sm text-gray-900">{pkg.description_en}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.descEn')}</label>
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white">{pkg.description_en}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('tripDetail.descAr')}</label>
-                    <p className="mt-1 text-sm text-gray-900" dir="rtl">{pkg.description_ar}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.descAr')}</label>
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white" dir="rtl">{pkg.description_ar}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">{t('tripDetail.price')}</label>
-                    <p className="mt-1 text-sm text-gray-900">{pkg.price} {pkg.currency || 'SAR'}</p>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.price')}</label>
+                    <p className="mt-1 text-sm text-gray-900 dark:text-white">{pkg.price} {pkg.currency || 'SAR'}</p>
                   </div>
                 </div>
 
                 {/* Required Fields */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('tripDetail.requiredFields')}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tripDetail.requiredFields')}</label>
                   {pkg.required_fields.length === 0 ? (
                     <p className="text-sm text-gray-500">{t('tripDetail.noRequiredFields')}</p>
                   ) : (
@@ -452,7 +452,7 @@ const TripDetailPage = () => {
                         );
                         
                         return (
-                          <div key={fieldType} className="bg-gray-50 p-3 rounded border">
+                          <div key={fieldType} className="bg-gray-50 dark:bg-gray-700 p-3 rounded border dark:border-gray-600">
                             <p className="text-sm font-medium">
                               {metadata?.display_name || fieldType}
                             </p>

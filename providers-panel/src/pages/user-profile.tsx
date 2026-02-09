@@ -208,7 +208,7 @@ const UserProfile: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8 text-gray-900">User Profile Settings</h1>
+      <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">User Profile Settings</h1>
 
       {message && (
         <div className={`mb-6 p-4 rounded-lg ${
@@ -219,15 +219,15 @@ const UserProfile: React.FC = () => {
       )}
 
       {/* Avatar Section */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Profile Picture</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Profile Picture</h2>
         <div className="flex items-center gap-6">
           <div className="relative">
             {avatarPreview ? (
               <img 
                 src={avatarPreview} 
                 alt="Avatar" 
-                className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700"
               />
             ) : (
               <div className="w-32 h-32 rounded-full bg-gray-200 flex items-center justify-center">
@@ -269,24 +269,24 @@ const UserProfile: React.FC = () => {
       </div>
 
       {/* Profile Information */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Profile Information</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Profile Information</h2>
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               👤 Name
             </label>
             <input
               type="text"
               value={profileData.name}
               onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               ✉️ Email
             </label>
             {!changingEmail ? (
@@ -294,7 +294,7 @@ const UserProfile: React.FC = () => {
                 <input
                   type="email"
                   value={profileData.email}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                   disabled
                 />
                 <button
@@ -313,7 +313,7 @@ const UserProfile: React.FC = () => {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     placeholder="Enter new email"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <button
                     type="button"
@@ -332,7 +332,7 @@ const UserProfile: React.FC = () => {
                       onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                       placeholder="Enter 6-digit OTP"
                       maxLength={6}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                     <button
                       type="button"
@@ -352,7 +352,7 @@ const UserProfile: React.FC = () => {
                     setEmailOtp('');
                     setEmailOtpSent(false);
                   }}
-                  className="text-sm text-gray-600 hover:text-gray-800"
+                  className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-200"
                 >
                   Cancel
                 </button>
@@ -361,14 +361,14 @@ const UserProfile: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               📱 Phone
             </label>
             <input
               type="tel"
               value={profileData.phone}
               onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -383,31 +383,31 @@ const UserProfile: React.FC = () => {
       </div>
 
       {/* Change Password */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4 text-gray-900">Change Password</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Change Password</h2>
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               🔒 New Password
             </label>
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               minLength={8}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               🔒 Confirm New Password
             </label>
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               minLength={8}
             />
           </div>

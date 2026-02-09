@@ -134,7 +134,7 @@ const UsersPage = () => {
       
       {/* Tabs */}
       <div className="mb-6">
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="-mb-px flex space-x-8">
             {(['admin', 'provider', 'normal'] as UserTab[]).map((tab) => (
               <button
@@ -154,14 +154,14 @@ const UsersPage = () => {
       </div>
 
       {/* Content */}
-      <div className="bg-white shadow-md rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-4">{getTabTitle()} ({users.length})</h2>
         
         {users.length === 0 ? (
           <p className="text-gray-500">No {activeTab} users found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
+            <table className="min-w-full bg-white dark:bg-gray-800">
               <thead>
                 <tr>
                   <th className="py-2 px-4 border-b text-left">Name</th>
@@ -176,17 +176,17 @@ const UsersPage = () => {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-2 px-4 border-b">{user.name}</td>
                     <td className="py-2 px-4 border-b">{user.email}</td>
                     <td className="py-2 px-4 border-b">{user.phone}</td>
                     <td className="py-2 px-4 border-b">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         user.role === 'admin' 
-                          ? 'bg-red-100 text-red-800'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                           : user.role === 'provider'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}>
                         {user.role}
                       </span>
@@ -194,7 +194,7 @@ const UsersPage = () => {
                     {activeTab === 'provider' && (
                       <td className="py-2 px-4 border-b">
                         {user.provider_company_name ? (
-                          <span className="text-sm text-gray-700">{user.provider_company_name}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{user.provider_company_name}</span>
                         ) : (
                           <span className="text-sm text-gray-400">-</span>
                         )}
@@ -202,7 +202,7 @@ const UsersPage = () => {
                     )}
                     <td className="py-2 px-4 border-b">
                       {user.is_active ? (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
                           Active
                         </span>
                       ) : (
@@ -222,7 +222,7 @@ const UsersPage = () => {
       {/* Invite Modal */}
       {showInviteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <h2 className="text-xl font-bold mb-4">Invite New Admin</h2>
             
             {inviteError && (

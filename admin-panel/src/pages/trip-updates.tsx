@@ -34,7 +34,7 @@ const TripUpdatesPage = () => {
       <p className="text-gray-500 mb-6 text-sm">{t('tripUpdates.subtitle')}</p>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-800 dark:text-red-300 text-sm">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">{t('common.dismiss')}</button>
         </div>

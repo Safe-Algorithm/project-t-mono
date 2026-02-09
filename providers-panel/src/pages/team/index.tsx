@@ -44,8 +44,8 @@ const TeamManagementPage = () => {
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Team Management</h1>
-            <p className="mt-2 text-sm text-gray-600">Manage your team members and their roles</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Team Management</h1>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage your team members and their roles</p>
           </div>
           <Link href="/team/invite">
             <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
@@ -57,23 +57,23 @@ const TeamManagementPage = () => {
 
       {/* Error Messages */}
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 px-4 py-3 rounded-lg">
           {error}
         </div>
       )}
       {deleteError && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 px-4 py-3 rounded-lg">
           {deleteError}
         </div>
       )}
       {updateError && (
-        <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 px-4 py-3 rounded-lg">
           {updateError}
         </div>
       )}
 
       {/* Content */}
-      <div className="bg-white shadow-md rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
         {isLoading ? (
           <div className="flex justify-center items-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>

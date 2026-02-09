@@ -10,18 +10,18 @@ const STATUS_OPTIONS = ['open', 'in_progress', 'waiting_on_user', 'resolved', 'c
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
 
 const statusColors: Record<string, string> = {
-  open: 'bg-blue-100 text-blue-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  waiting_on_user: 'bg-orange-100 text-orange-800',
-  resolved: 'bg-green-100 text-green-800',
-  closed: 'bg-gray-100 text-gray-800',
+  open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  in_progress: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
+  waiting_on_user: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  closed: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
 };
 
 const priorityColors: Record<string, string> = {
-  low: 'bg-gray-100 text-gray-700',
-  medium: 'bg-blue-100 text-blue-700',
-  high: 'bg-orange-100 text-orange-700',
-  urgent: 'bg-red-100 text-red-700',
+  low: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
+  medium: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  high: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+  urgent: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
 const ProviderSupportPage = () => {
@@ -218,7 +218,7 @@ const ProviderSupportPage = () => {
       <p className="text-gray-500 mb-4 text-sm">{t('support.subtitle')}</p>
 
       {error && (
-        <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
+        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-800 dark:text-red-300 text-sm">
           {error}
           <button onClick={() => setError(null)} className="ml-2 underline">{t('support.dismiss')}</button>
         </div>

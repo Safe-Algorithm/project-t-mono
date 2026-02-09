@@ -26,7 +26,7 @@ const TripsPage = () => {
 
       <TripFilters onFilterChange={handleFilterChange} />
 
-      <div className="mb-4 text-sm text-gray-600">
+      <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
         Showing {trips.length} trip{trips.length !== 1 ? 's' : ''}
       </div>
 

@@ -47,7 +47,7 @@ const ProvidersPage = () => {
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Providers</h1>
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white">
+        <table className="min-w-full bg-white dark:bg-gray-800">
           <thead>
             <tr>
               <th className="py-2 px-4 border-b">Company Name</th>
@@ -60,7 +60,7 @@ const ProvidersPage = () => {
             {providers.map((provider) => (
               <tr 
                 key={provider.id} 
-                className="hover:bg-gray-50 cursor-pointer"
+                className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                 onClick={() => router.push(`/providers/${provider.id}`)}
               >
                 <td className="py-2 px-4 border-b text-blue-600 hover:text-blue-800">{provider.company_name}</td>
@@ -69,12 +69,12 @@ const ProvidersPage = () => {
                 <td className="py-2 px-4 border-b">
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                     provider.status === 'approved' 
-                      ? 'bg-green-100 text-green-800' 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
                       : provider.status === 'pending'
-                      ? 'bg-yellow-100 text-yellow-800'
+                      ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                       : provider.status === 'denied'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                   }`}>
                     {provider.status || 'unknown'}
                   </span>

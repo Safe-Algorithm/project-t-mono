@@ -39,12 +39,12 @@ const StatCard = ({ title, value, subtitle, color }: StatCardProps) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-l-current">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border-l-4 border-l-current">
       <div className={`inline-flex items-center justify-center w-12 h-12 rounded-full ${colorClasses[color]} mb-4`}>
         <span className="text-2xl font-bold">{value}</span>
       </div>
-      <h3 className="text-lg font-semibold text-gray-800 mb-1">{title}</h3>
-      {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">{title}</h3>
+      {subtitle && <p className="text-sm text-gray-600 dark:text-gray-400">{subtitle}</p>}
     </div>
   );
 };
@@ -76,20 +76,20 @@ export default function Dashboard() {
     fetchDashboardStats();
   }, [token]);
 
-  if (loading) return <p>Loading dashboard...</p>;
-  if (error) return <p>Error: {error}</p>;
-  if (!stats) return <p>No data available</p>;
+  if (loading) return <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>;
+  if (error) return <p className="text-red-600 dark:text-red-400">Error: {error}</p>;
+  if (!stats) return <p className="text-gray-600 dark:text-gray-400">No data available</p>;
 
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">Overview of system statistics and metrics</p>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Admin Dashboard</h1>
+        <p className="text-gray-600 dark:text-gray-400">Overview of system statistics and metrics</p>
       </div>
 
       {/* Provider Requests Section */}
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Provider Requests</h2>
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Provider Requests</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatCard
             title="Pending Requests"
@@ -114,7 +114,7 @@ export default function Dashboard() {
 
       {/* Providers Section */}
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Providers</h2>
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Providers</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <StatCard
             title="Total Providers"
@@ -139,7 +139,7 @@ export default function Dashboard() {
 
       {/* Trips Section */}
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Trips</h2>
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Trips</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard
             title="Total Trips"
@@ -169,8 +169,8 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-semibold text-gray-800 mb-4">Quick Actions</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+        <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button className="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors">
             Review Requests

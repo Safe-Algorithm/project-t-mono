@@ -142,7 +142,7 @@ const ProviderDetailPage = () => {
     switch (status) {
       case 'accepted':
         return (
-          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs rounded-full flex items-center">
+          <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full flex items-center">
             <span className="mr-1">✓</span> Accepted
           </span>
         );
@@ -257,7 +257,7 @@ const ProviderDetailPage = () => {
       </div>
 
       {/* Provider Information */}
-      <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
         <h2 className="text-2xl font-semibold mb-4">Company Information</h2>
         
         {/* Company Avatar */}
@@ -273,27 +273,27 @@ const ProviderDetailPage = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Company Name</label>
-            <p className="mt-1 text-sm text-gray-900">{provider.company_name}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{provider.company_name}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <p className="mt-1 text-sm text-gray-900">{provider.company_email}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{provider.company_email}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
-            <p className="mt-1 text-sm text-gray-900">{provider.company_phone}</p>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{provider.company_phone}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Status</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
             <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-semibold ${
               provider.status === 'approved' 
-                ? 'bg-green-100 text-green-800' 
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
                 : provider.status === 'pending'
-                ? 'bg-yellow-100 text-yellow-800'
+                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
                 : provider.status === 'denied'
-                ? 'bg-red-100 text-red-800'
-                : 'bg-gray-100 text-gray-800'
+                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
             }`}>
               {provider.status || 'unknown'}
             </span>
@@ -302,13 +302,13 @@ const ProviderDetailPage = () => {
       </div>
 
       {/* Provider Trips */}
-      <div className="bg-white shadow-md rounded-lg p-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
         <h2 className="text-2xl font-semibold mb-4">Trips ({trips.length})</h2>
         {trips.length === 0 ? (
           <p className="text-gray-500">No trips found for this provider.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
+            <table className="min-w-full bg-white dark:bg-gray-800">
               <thead>
                 <tr>
                   <th className="py-2 px-4 border-b text-left">Trip Name</th>
@@ -323,7 +323,7 @@ const ProviderDetailPage = () => {
                 {trips.map((trip) => (
                   <tr 
                     key={trip.id} 
-                    className="hover:bg-gray-50 cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                     onClick={() => router.push(`/trips/${trip.id}`)}
                   >
                     <td className="py-2 px-4 border-b">
@@ -344,8 +344,8 @@ const ProviderDetailPage = () => {
                     <td className="py-2 px-4 border-b">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         trip.is_active 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                       }`}>
                         {trip.is_active ? 'Active' : 'Cancelled'}
                       </span>
@@ -359,20 +359,20 @@ const ProviderDetailPage = () => {
       </div>
 
       {/* Provider Files */}
-      <div className="bg-white shadow-md rounded-lg p-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-6">
         <h2 className="text-2xl font-semibold mb-4">Uploaded Documents ({files.length})</h2>
         {files.length === 0 ? (
           <p className="text-gray-500">No documents uploaded yet.</p>
         ) : (
           <div className="space-y-2">
             {files.map((file) => (
-              <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded border border-gray-200">
+              <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded border border-gray-200 dark:border-gray-700">
                 <div className="flex-1">
                   <div className="flex items-center">
                     <span className="text-2xl mr-3">📄</span>
                     <div>
                       {file.file_definition && (
-                        <p className="text-xs font-semibold text-gray-700 mb-1">
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
                           {file.file_definition.name_en}
                         </p>
                       )}
@@ -420,13 +420,13 @@ const ProviderDetailPage = () => {
       </div>
 
       {/* Provider Users */}
-      <div className="bg-white shadow-md rounded-lg p-6 mt-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-6">
         <h2 className="text-2xl font-semibold mb-4">Users ({users.length})</h2>
         {users.length === 0 ? (
           <p className="text-gray-500">No users found for this provider.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
+            <table className="min-w-full bg-white dark:bg-gray-800">
               <thead>
                 <tr>
                   <th className="py-2 px-4 border-b text-left">Name</th>
@@ -437,17 +437,17 @@ const ProviderDetailPage = () => {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-2 px-4 border-b">{user.name}</td>
                     <td className="py-2 px-4 border-b">{user.email}</td>
                     <td className="py-2 px-4 border-b">{user.phone}</td>
                     <td className="py-2 px-4 border-b">
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                         user.role === 'admin' 
-                          ? 'bg-red-100 text-red-800'
+                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                           : user.role === 'provider'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}>
                         {user.role}
                       </span>
@@ -463,7 +463,7 @@ const ProviderDetailPage = () => {
       {/* Rejection Reason Modal */}
       {rejectingFileId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Reject File</h3>
             <p className="text-sm text-gray-600 mb-4">
               Please provide a reason for rejecting this file. The provider will see this message.
@@ -478,7 +478,7 @@ const ProviderDetailPage = () => {
             <div className="flex justify-end space-x-3">
               <button
                 onClick={handleRejectCancel}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancel
               </button>
