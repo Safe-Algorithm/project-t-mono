@@ -127,6 +127,127 @@ const resources = {
       "form.submitting": "Submitting...",
       "form.createTrip": "Create Trip",
       "form.updateTrip": "Update Trip",
+
+      // Nav extras
+      "nav.supportTickets": "Support Tickets",
+      "nav.tripUpdates": "Trip Updates",
+      "nav.team": "Team",
+      "nav.welcome": "Welcome",
+
+      // Support Tickets
+      "support.title": "Customer Support Tickets",
+      "support.subtitle": "Tickets raised by customers for your trips.",
+      "support.noTickets": "No support tickets found.",
+      "support.loadingTickets": "Loading tickets...",
+      "support.allStatuses": "All statuses",
+      "support.backToList": "← Back to list",
+      "support.created": "Created",
+      "support.userId": "User ID",
+      "support.tripId": "Trip ID",
+      "support.status": "Status",
+      "support.priority": "Priority",
+      "support.subject": "Subject",
+      "support.messages": "Messages",
+      "support.noMessages": "No messages yet.",
+      "support.replyPlaceholder": "Type your reply to the customer...",
+      "support.reply": "Reply",
+      "support.you": "You (Provider)",
+      "support.customer": "Customer",
+      "support.dismiss": "Dismiss",
+
+      // Ticket statuses
+      "ticketStatus.open": "open",
+      "ticketStatus.in_progress": "in progress",
+      "ticketStatus.waiting_on_user": "waiting on user",
+      "ticketStatus.resolved": "resolved",
+      "ticketStatus.closed": "closed",
+
+      // Ticket priorities
+      "ticketPriority.low": "low",
+      "ticketPriority.medium": "medium",
+      "ticketPriority.high": "high",
+      "ticketPriority.urgent": "urgent",
+
+      // Trip Updates
+      "tripUpdates.title": "Trip Updates",
+      "tripUpdates.subtitle": "Send updates and notifications to your trip registrants.",
+      "tripUpdates.selectTrip": "Select Trip",
+      "tripUpdates.sendUpdate": "+ Send Update",
+      "tripUpdates.cancel": "Cancel",
+      "tripUpdates.sendNew": "Send New Update",
+      "tripUpdates.allRegistered": "All registered users",
+      "tripUpdates.specificRegistration": "Specific registration",
+      "tripUpdates.registration": "Registration",
+      "tripUpdates.selectRegistration": "Select a registration...",
+      "tripUpdates.titleLabel": "Title",
+      "tripUpdates.titlePlaceholder": "e.g. Flight tickets ready",
+      "tripUpdates.messageLabel": "Message",
+      "tripUpdates.messagePlaceholder": "Write your update message...",
+      "tripUpdates.markImportant": "Mark as important",
+      "tripUpdates.sending": "Sending...",
+      "tripUpdates.send": "Send Update",
+      "tripUpdates.sentSuccess": "Update sent successfully!",
+      "tripUpdates.noUpdates": "No updates sent for this trip yet.",
+      "tripUpdates.important": "Important",
+      "tripUpdates.targeted": "Targeted",
+      "tripUpdates.recipients": "Recipients",
+      "tripUpdates.read": "Read",
+      "tripUpdates.viewReceipts": "View receipts",
+      "tripUpdates.hideReceipts": "Hide receipts",
+      "tripUpdates.noReads": "No one has read this update yet.",
+      "tripUpdates.readAt": "read at",
+      "tripUpdates.loading": "Loading updates...",
+      "tripUpdates.participant": "participant",
+      "tripUpdates.participants": "participants",
+      "tripUpdates.user": "User",
+
+      // Destinations
+      "destinations.title": "Trip Destinations",
+      "destinations.selectCountry": "Select Country",
+      "destinations.selectCity": "Select City (optional)",
+      "destinations.selectPlace": "Select Place (optional)",
+      "destinations.add": "Add",
+      "destinations.noDestinations": "No destinations added yet.",
+      "destinations.loadingCountries": "Loading countries...",
+
+      // Dashboard
+      "dashboard.title": "Provider Dashboard",
+      "dashboard.totalTrips": "Total Trips",
+      "dashboard.activeTrips": "Active Trips",
+      "dashboard.totalRegistrations": "Total Registrations",
+      "dashboard.revenue": "Revenue",
+
+      // Profile
+      "profile.companyProfile": "Company Profile",
+      "profile.companyName": "Company Name",
+      "profile.companyEmail": "Company Email",
+      "profile.companyPhone": "Company Phone",
+      "profile.bioEn": "Bio (English)",
+      "profile.bioAr": "Bio (Arabic)",
+      "profile.editProfile": "Edit Profile",
+      "profile.userProfile": "User Profile",
+
+      // Team
+      "team.title": "Team Management",
+      "team.inviteMember": "Invite Member",
+
+      // Trips list
+      "trips.title": "My Trips",
+      "trips.createNew": "Create New Trip",
+      "trips.noTrips": "No trips found.",
+
+      // Common extras
+      "common.confirm": "Confirm",
+      "common.dismiss": "Dismiss",
+      "common.backToList": "← Back to list",
+      "common.all": "All",
+      "common.date": "Date",
+      "common.actions": "Actions",
+      "common.details": "Details",
+      "common.close": "Close",
+      "common.open": "Open",
+      "common.send": "Send",
+      "common.noData": "No data found.",
     }
   },
   ar: {
@@ -252,6 +373,127 @@ const resources = {
       "form.submitting": "جاري الإرسال...",
       "form.createTrip": "إنشاء رحلة",
       "form.updateTrip": "تحديث الرحلة",
+
+      // Nav extras
+      "nav.supportTickets": "تذاكر الدعم",
+      "nav.tripUpdates": "تحديثات الرحلات",
+      "nav.team": "الفريق",
+      "nav.welcome": "مرحباً",
+
+      // Support Tickets
+      "support.title": "تذاكر دعم العملاء",
+      "support.subtitle": "التذاكر المرفوعة من العملاء لرحلاتك.",
+      "support.noTickets": "لا توجد تذاكر دعم.",
+      "support.loadingTickets": "جاري تحميل التذاكر...",
+      "support.allStatuses": "جميع الحالات",
+      "support.backToList": "→ العودة للقائمة",
+      "support.created": "تاريخ الإنشاء",
+      "support.userId": "معرف المستخدم",
+      "support.tripId": "معرف الرحلة",
+      "support.status": "الحالة",
+      "support.priority": "الأولوية",
+      "support.subject": "الموضوع",
+      "support.messages": "الرسائل",
+      "support.noMessages": "لا توجد رسائل بعد.",
+      "support.replyPlaceholder": "اكتب ردك للعميل...",
+      "support.reply": "رد",
+      "support.you": "أنت (مقدم الخدمة)",
+      "support.customer": "العميل",
+      "support.dismiss": "إغلاق",
+
+      // Ticket statuses
+      "ticketStatus.open": "مفتوحة",
+      "ticketStatus.in_progress": "قيد المعالجة",
+      "ticketStatus.waiting_on_user": "بانتظار المستخدم",
+      "ticketStatus.resolved": "تم الحل",
+      "ticketStatus.closed": "مغلقة",
+
+      // Ticket priorities
+      "ticketPriority.low": "منخفضة",
+      "ticketPriority.medium": "متوسطة",
+      "ticketPriority.high": "عالية",
+      "ticketPriority.urgent": "عاجلة",
+
+      // Trip Updates
+      "tripUpdates.title": "تحديثات الرحلات",
+      "tripUpdates.subtitle": "أرسل تحديثات وإشعارات للمسجلين في رحلاتك.",
+      "tripUpdates.selectTrip": "اختر الرحلة",
+      "tripUpdates.sendUpdate": "+ إرسال تحديث",
+      "tripUpdates.cancel": "إلغاء",
+      "tripUpdates.sendNew": "إرسال تحديث جديد",
+      "tripUpdates.allRegistered": "جميع المسجلين",
+      "tripUpdates.specificRegistration": "تسجيل محدد",
+      "tripUpdates.registration": "التسجيل",
+      "tripUpdates.selectRegistration": "اختر تسجيلاً...",
+      "tripUpdates.titleLabel": "العنوان",
+      "tripUpdates.titlePlaceholder": "مثال: تذاكر الطيران جاهزة",
+      "tripUpdates.messageLabel": "الرسالة",
+      "tripUpdates.messagePlaceholder": "اكتب رسالة التحديث...",
+      "tripUpdates.markImportant": "تحديد كمهم",
+      "tripUpdates.sending": "جاري الإرسال...",
+      "tripUpdates.send": "إرسال التحديث",
+      "tripUpdates.sentSuccess": "تم إرسال التحديث بنجاح!",
+      "tripUpdates.noUpdates": "لم يتم إرسال تحديثات لهذه الرحلة بعد.",
+      "tripUpdates.important": "مهم",
+      "tripUpdates.targeted": "موجّه",
+      "tripUpdates.recipients": "المستلمون",
+      "tripUpdates.read": "مقروء",
+      "tripUpdates.viewReceipts": "عرض إيصالات القراءة",
+      "tripUpdates.hideReceipts": "إخفاء الإيصالات",
+      "tripUpdates.noReads": "لم يقرأ أحد هذا التحديث بعد.",
+      "tripUpdates.readAt": "قُرئ في",
+      "tripUpdates.loading": "جاري تحميل التحديثات...",
+      "tripUpdates.participant": "مشارك",
+      "tripUpdates.participants": "مشاركين",
+      "tripUpdates.user": "المستخدم",
+
+      // Destinations
+      "destinations.title": "وجهات الرحلة",
+      "destinations.selectCountry": "اختر الدولة",
+      "destinations.selectCity": "اختر المدينة (اختياري)",
+      "destinations.selectPlace": "اختر المكان (اختياري)",
+      "destinations.add": "إضافة",
+      "destinations.noDestinations": "لم تتم إضافة وجهات بعد.",
+      "destinations.loadingCountries": "جاري تحميل الدول...",
+
+      // Dashboard
+      "dashboard.title": "لوحة تحكم مقدم الخدمة",
+      "dashboard.totalTrips": "إجمالي الرحلات",
+      "dashboard.activeTrips": "الرحلات النشطة",
+      "dashboard.totalRegistrations": "إجمالي التسجيلات",
+      "dashboard.revenue": "الإيرادات",
+
+      // Profile
+      "profile.companyProfile": "ملف الشركة",
+      "profile.companyName": "اسم الشركة",
+      "profile.companyEmail": "بريد الشركة",
+      "profile.companyPhone": "هاتف الشركة",
+      "profile.bioEn": "النبذة (إنجليزي)",
+      "profile.bioAr": "النبذة (عربي)",
+      "profile.editProfile": "تعديل الملف",
+      "profile.userProfile": "الملف الشخصي",
+
+      // Team
+      "team.title": "إدارة الفريق",
+      "team.inviteMember": "دعوة عضو",
+
+      // Trips list
+      "trips.title": "رحلاتي",
+      "trips.createNew": "إنشاء رحلة جديدة",
+      "trips.noTrips": "لا توجد رحلات.",
+
+      // Common extras
+      "common.confirm": "تأكيد",
+      "common.dismiss": "إغلاق",
+      "common.backToList": "→ العودة للقائمة",
+      "common.all": "الكل",
+      "common.date": "التاريخ",
+      "common.actions": "الإجراءات",
+      "common.details": "التفاصيل",
+      "common.close": "إغلاق",
+      "common.open": "فتح",
+      "common.send": "إرسال",
+      "common.noData": "لا توجد بيانات.",
     }
   }
 };

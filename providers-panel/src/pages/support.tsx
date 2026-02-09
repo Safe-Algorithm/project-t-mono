@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   supportService,
   TripSupportTicket,
@@ -24,6 +25,7 @@ const priorityColors: Record<string, string> = {
 };
 
 const ProviderSupportPage = () => {
+  const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [tickets, setTickets] = useState<TripSupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<TripSupportTicketWithMessages | null>(null);
@@ -111,14 +113,14 @@ const ProviderSupportPage = () => {
   if (selectedTicket) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <button onClick={closeDetail} className="mb-4 text-blue-600 hover:underline">&larr; Back to list</button>
+        <button onClick={closeDetail} className="mb-4 text-blue-600 hover:underline">{t('support.backToList')}</button>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-4">
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-2xl font-bold">{selectedTicket.subject}</h2>
-              <p className="text-sm text-gray-500 mt-1">Created: {formatDate(selectedTicket.created_at)}</p>
-              <p className="text-sm text-gray-500">User ID: {selectedTicket.user_id}</p>
-              <p className="text-sm text-gray-500">Trip ID: {selectedTicket.trip_id}</p>
+              <p className="text-sm text-gray-500 mt-1">{t('support.created')}: {formatDate(selectedTicket.created_at)}</p>
+              <p className="text-sm text-gray-500">{t('support.userId')}: {selectedTicket.user_id}</p>
+              <p className="text-sm text-gray-500">{t('support.tripId')}: {selectedTicket.trip_id}</p>
             </div>
             <div className="flex gap-2">
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusColors[selectedTicket.status] || ''}`}>
@@ -133,7 +135,7 @@ const ProviderSupportPage = () => {
 
           <div className="flex gap-4 border-t pt-4">
             <div>
-              <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Status</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">{t('support.status')}</label>
               <select
                 value={selectedTicket.status}
                 onChange={(e) => handleUpdateStatus(e.target.value)}
@@ -144,7 +146,7 @@ const ProviderSupportPage = () => {
               </select>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">Priority</label>
+              <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">{t('support.priority')}</label>
               <select
                 value={selectedTicket.priority}
                 onChange={(e) => handleUpdatePriority(e.target.value)}
@@ -159,10 +161,10 @@ const ProviderSupportPage = () => {
 
         {/* Messages */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Messages ({selectedTicket.messages.length})</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('support.messages')} ({selectedTicket.messages.length})</h3>
           <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
             {selectedTicket.messages.length === 0 && (
-              <p className="text-gray-500 text-sm">No messages yet.</p>
+              <p className="text-gray-500 text-sm">{t('support.noMessages')}</p>
             )}
             {selectedTicket.messages.map((msg) => (
               <div
@@ -177,7 +179,7 @@ const ProviderSupportPage = () => {
                   <span className={`text-xs font-medium ${
                     msg.sender_type === 'provider' ? 'text-green-600' : 'text-gray-600 dark:text-gray-400'
                   }`}>
-                    {msg.sender_type === 'provider' ? 'You (Provider)' : 'Customer'}
+                    {msg.sender_type === 'provider' ? t('support.you') : t('support.customer')}
                   </span>
                   <span className="text-xs text-gray-400">{formatDate(msg.created_at)}</span>
                 </div>
@@ -191,7 +193,7 @@ const ProviderSupportPage = () => {
               <textarea
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Type your reply to the customer..."
+                placeholder={t('support.replyPlaceholder')}
                 className="flex-1 border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 resize-none"
                 rows={2}
               />
@@ -200,7 +202,7 @@ const ProviderSupportPage = () => {
                 disabled={updating || !replyText.trim()}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium self-end"
               >
-                Reply
+                {t('support.reply')}
               </button>
             </div>
           )}
@@ -212,13 +214,13 @@ const ProviderSupportPage = () => {
   // List view
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6">Customer Support Tickets</h1>
-      <p className="text-gray-500 mb-4 text-sm">Tickets raised by customers for your trips.</p>
+      <h1 className="text-3xl font-bold mb-6">{t('support.title')}</h1>
+      <p className="text-gray-500 mb-4 text-sm">{t('support.subtitle')}</p>
 
       {error && (
         <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-800 text-sm">
           {error}
-          <button onClick={() => setError(null)} className="ml-2 underline">Dismiss</button>
+          <button onClick={() => setError(null)} className="ml-2 underline">{t('support.dismiss')}</button>
         </div>
       )}
 
@@ -229,42 +231,42 @@ const ProviderSupportPage = () => {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600"
         >
-          <option value="">All statuses</option>
+          <option value="">{t('support.allStatuses')}</option>
           {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
         </select>
       </div>
 
       {loading ? (
-        <p className="text-gray-500">Loading tickets...</p>
+        <p className="text-gray-500">{t('support.loadingTickets')}</p>
       ) : (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {tickets.length === 0 ? (
-            <p className="p-6 text-gray-500">No support tickets found.</p>
+            <p className="p-6 text-gray-500">{t('support.noTickets')}</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium">Subject</th>
-                  <th className="text-left px-4 py-3 font-medium">Priority</th>
-                  <th className="text-left px-4 py-3 font-medium">Status</th>
-                  <th className="text-left px-4 py-3 font-medium">Created</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('support.subject')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('support.priority')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('support.status')}</th>
+                  <th className="text-left px-4 py-3 font-medium">{t('support.created')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {tickets.map((t) => (
+                {tickets.map((ticket) => (
                   <tr
-                    key={t.id}
-                    onClick={() => openTicket(t.id)}
+                    key={ticket.id}
+                    onClick={() => openTicket(ticket.id)}
                     className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                   >
-                    <td className="px-4 py-3 font-medium">{t.subject}</td>
+                    <td className="px-4 py-3 font-medium">{ticket.subject}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${priorityColors[t.priority] || ''}`}>{t.priority}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[t.status] || ''}`}>{t.status.replace(/_/g, ' ')}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g, ' ')}</span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(t.created_at)}</td>
+                    <td className="px-4 py-3 text-gray-500">{formatDate(ticket.created_at)}</td>
                   </tr>
                 ))}
               </tbody>

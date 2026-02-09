@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { destinationService, Destination, Place, CreateDestination, CreatePlace, UpdateDestination, UpdatePlace } from '@/services/destinationService';
 
@@ -9,6 +10,7 @@ function slugify(text: string): string {
 }
 
 export default function DestinationsPage() {
+  const { t } = useTranslation();
   const { token } = useAuth();
   const [destinations, setDestinations] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,18 +103,18 @@ export default function DestinationsPage() {
   });
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-lg text-gray-500">Loading destinations...</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="text-lg text-gray-500">{t('destinations.loading')}</div></div>;
   }
 
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Destinations Management</h1>
+        <h1 className="text-2xl font-bold">{t('destinations.title')}</h1>
         <button
           onClick={() => { setEditingDestination(null); setShowCountryModal(true); }}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          + Add Country
+          {t('destinations.addCountry')}
         </button>
       </div>
 
@@ -127,7 +129,7 @@ export default function DestinationsPage() {
       <div className="mb-4">
         <input
           type="text"
-          placeholder="Search countries, cities..."
+          placeholder={t('destinations.search')}
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
           className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
@@ -136,9 +138,9 @@ export default function DestinationsPage() {
 
       {/* Stats */}
       <div className="mb-4 flex gap-4 text-sm text-gray-500 dark:text-gray-400">
-        <span>{destinations.length} countries</span>
-        <span>{destinations.reduce((sum, c) => sum + (c.children?.length || 0), 0)} cities</span>
-        <span>{destinations.filter(c => c.is_active).length} active countries</span>
+        <span>{destinations.length} {t('destinations.countries')}</span>
+        <span>{destinations.reduce((sum, c) => sum + (c.children?.length || 0), 0)} {t('destinations.cities')}</span>
+        <span>{destinations.filter(c => c.is_active).length} {t('destinations.activeCountries')}</span>
       </div>
 
       {/* Tree View */}
@@ -154,31 +156,31 @@ export default function DestinationsPage() {
               <span className="font-medium">{country.name_en}</span>
               <span className="text-gray-500 dark:text-gray-400 text-sm" dir="rtl">{country.name_ar}</span>
               <span className="text-xs text-gray-400 ml-auto">
-                {country.children?.length || 0} cities
+                {country.children?.length || 0} {t('destinations.cities')}
               </span>
               <button
                 onClick={() => handleActivate(country.id, !country.is_active)}
                 className={`px-2 py-0.5 text-xs rounded ${country.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
               >
-                {country.is_active ? 'Active' : 'Inactive'}
+                {country.is_active ? t('destinations.activate') : t('destinations.deactivate')}
               </button>
               <button
                 onClick={() => { setSelectedCountry(country); setEditingDestination(null); setShowCityModal(true); }}
                 className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded hover:bg-blue-200"
               >
-                + City
+                {t('destinations.addCity')}
               </button>
               <button
                 onClick={() => { setEditingDestination(country); setShowCountryModal(true); }}
                 className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded hover:bg-yellow-200"
               >
-                Edit
+                {t('destinations.edit')}
               </button>
               <button
                 onClick={() => handleDeleteDestination(country.id, country.name_en)}
                 className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200"
               >
-                Delete
+                {t('destinations.delete')}
               </button>
             </div>
 
@@ -195,31 +197,31 @@ export default function DestinationsPage() {
                       <span className="font-medium text-sm">{city.name_en}</span>
                       <span className="text-gray-500 dark:text-gray-400 text-xs" dir="rtl">{city.name_ar}</span>
                       <span className="text-xs text-gray-400 ml-auto">
-                        {city.places?.length || 0} places
+                        {city.places?.length || 0} {t('destinations.places')}
                       </span>
                       <button
                         onClick={() => handleActivate(city.id, !city.is_active)}
                         className={`px-2 py-0.5 text-xs rounded ${city.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
                       >
-                        {city.is_active ? 'Active' : 'Inactive'}
+                        {city.is_active ? t('destinations.activate') : t('destinations.deactivate')}
                       </button>
                       <button
                         onClick={() => { setSelectedCity(city); setEditingPlace(null); setShowPlaceModal(true); }}
                         className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded hover:bg-purple-200"
                       >
-                        + Place
+                        {t('destinations.addPlace')}
                       </button>
                       <button
                         onClick={() => { setEditingDestination(city); setSelectedCountry(country); setShowCityModal(true); }}
                         className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded hover:bg-yellow-200"
                       >
-                        Edit
+                        {t('destinations.edit')}
                       </button>
                       <button
                         onClick={() => handleDeleteDestination(city.id, city.name_en)}
                         className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200"
                       >
-                        Delete
+                        {t('destinations.delete')}
                       </button>
                     </div>
 
@@ -237,13 +239,13 @@ export default function DestinationsPage() {
                               onClick={() => { setEditingPlace(place); setSelectedCity(city); setShowPlaceModal(true); }}
                               className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded hover:bg-yellow-200"
                             >
-                              Edit
+                              {t('destinations.edit')}
                             </button>
                             <button
                               onClick={() => handleDeletePlace(place.id, place.name_en)}
                               className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200"
                             >
-                              Delete
+                              {t('destinations.delete')}
                             </button>
                           </div>
                         ))}
@@ -259,7 +261,7 @@ export default function DestinationsPage() {
 
       {filteredDestinations.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          {searchQuery ? 'No destinations match your search.' : 'No destinations found. Add a country to get started.'}
+          {t('destinations.noResults')}
         </div>
       )}
 
@@ -297,6 +299,7 @@ export default function DestinationsPage() {
 
 // ===== Country Modal =====
 function CountryModal({ destination, onClose, onSaved }: { destination: Destination | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
   const isEdit = !!destination;
   const [form, setForm] = useState({
     name_en: destination?.name_en || '',
@@ -348,23 +351,23 @@ function CountryModal({ destination, onClose, onSaved }: { destination: Destinat
   };
 
   return (
-    <ModalWrapper title={isEdit ? 'Edit Country' : 'Add Country'} onClose={onClose}>
+    <ModalWrapper title={isEdit ? t('destinations.editCountryTitle') : t('destinations.addCountryTitle')} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Name (English) *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.nameEn')} *</label>
             <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Name (Arabic) *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.nameAr')} *</label>
             <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           {!isEdit && (
             <div>
-              <label className="block text-sm font-medium mb-1">Country Code *</label>
+              <label className="block text-sm font-medium mb-1">{t('destinations.countryCode')} *</label>
               <input required maxLength={2} value={form.country_code} onChange={e => setForm(f => ({ ...f, country_code: e.target.value.toUpperCase() }))} placeholder="SA" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 uppercase" />
             </div>
           )}
@@ -389,14 +392,14 @@ function CountryModal({ destination, onClose, onSaved }: { destination: Destinat
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm">Active</span>
+              <span className="text-sm">{t('destinations.isActive')}</span>
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">Cancel</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">{t('destinations.cancel')}</button>
           <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-            {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+            {saving ? t('destinations.save') + '...' : isEdit ? t('action.update') : t('action.create')}
           </button>
         </div>
       </form>
@@ -406,6 +409,7 @@ function CountryModal({ destination, onClose, onSaved }: { destination: Destinat
 
 // ===== City Modal =====
 function CityModal({ country, city, onClose, onSaved }: { country: Destination; city: Destination | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
   const isEdit = !!city;
   const [form, setForm] = useState({
     name_en: city?.name_en || '',
@@ -457,16 +461,16 @@ function CityModal({ country, city, onClose, onSaved }: { country: Destination; 
   };
 
   return (
-    <ModalWrapper title={isEdit ? `Edit City in ${country.name_en}` : `Add City to ${country.name_en}`} onClose={onClose}>
+    <ModalWrapper title={isEdit ? `${t('destinations.editCityTitle')} - ${country.name_en}` : `${t('destinations.addCityTitle')} - ${country.name_en}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">City Name (English) *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.nameEn')} *</label>
             <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">City Name (Arabic) *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.nameAr')} *</label>
             <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
           </div>
         </div>
@@ -492,14 +496,14 @@ function CityModal({ country, city, onClose, onSaved }: { country: Destination; 
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm">Active</span>
+              <span className="text-sm">{t('destinations.isActive')}</span>
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">Cancel</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">{t('destinations.cancel')}</button>
           <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-            {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+            {saving ? t('destinations.save') + '...' : isEdit ? t('action.update') : t('action.create')}
           </button>
         </div>
       </form>
@@ -509,6 +513,7 @@ function CityModal({ country, city, onClose, onSaved }: { country: Destination; 
 
 // ===== Place Modal =====
 function PlaceModal({ city, place, onClose, onSaved }: { city: Destination; place: Place | null; onClose: () => void; onSaved: () => void }) {
+  const { t } = useTranslation();
   const isEdit = !!place;
   const [form, setForm] = useState({
     name_en: place?.name_en || '',
@@ -553,24 +558,24 @@ function PlaceModal({ city, place, onClose, onSaved }: { city: Destination; plac
   };
 
   return (
-    <ModalWrapper title={isEdit ? `Edit Place in ${city.name_en}` : `Add Place to ${city.name_en}`} onClose={onClose}>
+    <ModalWrapper title={isEdit ? `${t('destinations.editPlaceTitle')} - ${city.name_en}` : `${t('destinations.addPlaceTitle')} - ${city.name_en}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <div className="p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Place Name (English) *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.nameEn')} *</label>
             <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Place Name (Arabic) *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.nameAr')} *</label>
             <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Type *</label>
+            <label className="block text-sm font-medium mb-1">{t('destinations.type')} *</label>
             <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600">
-              {PLACE_TYPES.map(t => <option key={t} value={t}>{t.replace('_', ' ')}</option>)}
+              {PLACE_TYPES.map(pt => <option key={pt} value={pt}>{pt.replace('_', ' ')}</option>)}
             </select>
           </div>
           <div>
@@ -596,14 +601,14 @@ function PlaceModal({ city, place, onClose, onSaved }: { city: Destination; plac
           <div className="flex items-end">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm">Active</span>
+              <span className="text-sm">{t('destinations.isActive')}</span>
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">Cancel</button>
+          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">{t('destinations.cancel')}</button>
           <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-            {saving ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+            {saving ? t('destinations.save') + '...' : isEdit ? t('action.update') : t('action.create')}
           </button>
         </div>
       </form>

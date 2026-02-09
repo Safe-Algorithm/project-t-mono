@@ -19,7 +19,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       <aside className="w-64 bg-gray-800 dark:bg-gray-800 text-white flex flex-col">
         <div className="p-4 flex items-center justify-between">
-          <span className="text-2xl font-bold">Admin Panel</span>
+          <span className="text-2xl font-bold">{t('nav.dashboard')}</span>
           <div className="flex gap-2">
             <ThemeToggle />
             <LanguageSwitcher />
@@ -27,12 +27,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
         <nav className="flex-1 px-2 py-4 space-y-2">
           <Link href="/" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.dashboard')}</Link>
-          <Link href="/provider-requests" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.providers')}</Link>
+          <Link href="/provider-requests" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.providerRequests')}</Link>
           <Link href="/providers" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.providers')}</Link>
           <Link href="/trips" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.trips')}</Link>
-          <Link href="/destinations" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Destinations</Link>
-          <Link href="/support" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Support Tickets</Link>
-          <Link href="/trip-updates" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">Trip Updates</Link>
+          <Link href="/destinations" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.destinations')}</Link>
+          <Link href="/support" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.supportTickets')}</Link>
+          <Link href="/trip-updates" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.tripUpdates')}</Link>
           <Link href="/users" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.users')}</Link>
           <Link href="/settings/file-definitions" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.settings')}</Link>
           <Link href="/profile" className="block px-4 py-2 rounded hover:bg-gray-700 dark:hover:bg-gray-600">{t('nav.profile')}</Link>

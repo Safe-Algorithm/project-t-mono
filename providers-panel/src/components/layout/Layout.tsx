@@ -96,10 +96,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       {t('nav.trips')}
                     </Link>
                     <Link href="/support" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                      Support Tickets
+                      {t('nav.supportTickets')}
                     </Link>
                     <Link href="/trip-updates" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white px-3 py-2 rounded-md text-sm font-medium">
-                      Trip Updates
+                      {t('nav.tripUpdates')}
                     </Link>
                   </>
                 )}
