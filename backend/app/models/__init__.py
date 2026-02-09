@@ -18,3 +18,4 @@ from .provider_rating import ProviderRating
 from .destination import Destination, DestinationType
 from .place import Place, PlaceType
 from .trip_destination import TripDestination
+from .support_ticket import SupportTicket, TripSupportTicket, TicketMessage, TicketCategory, TicketPriority, TicketStatus, SenderType
