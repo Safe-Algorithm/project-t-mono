@@ -24,6 +24,20 @@ interface TripPackage {
   required_fields_details?: TripPackageRequiredFieldDetail[];
 }
 
+interface TripUpdateInfo {
+  id: string;
+  trip_id: string;
+  provider_id: string;
+  registration_id: string | null;
+  title: string;
+  message: string;
+  attachments: any[] | null;
+  is_important: boolean;
+  created_at: string;
+  total_recipients: number;
+  read_count: number;
+}
+
 interface TripDestinationInfo {
   id: string;
   destination_id: string;
@@ -84,6 +98,7 @@ const TripDetailPage = () => {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [fieldMetadata, setFieldMetadata] = useState<FieldMetadata>({});
   const [tripDestinations, setTripDestinations] = useState<TripDestinationInfo[]>([]);
+  const [tripUpdates, setTripUpdates] = useState<TripUpdateInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
@@ -157,6 +172,22 @@ const TripDetailPage = () => {
           }
         } catch (destErr) {
           console.error('Failed to fetch trip destinations:', destErr);
+        }
+
+        // Fetch trip updates
+        try {
+          const updatesResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/trips/${id}/updates`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-Source': 'admin_panel',
+            },
+          });
+          if (updatesResponse.ok) {
+            const updatesData = await updatesResponse.json();
+            setTripUpdates(updatesData);
+          }
+        } catch (updErr) {
+          console.error('Failed to fetch trip updates:', updErr);
         }
         
       } catch (err) {
@@ -332,6 +363,35 @@ const TripDetailPage = () => {
                     )}
                   </>
                 )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trip Updates */}
+      {tripUpdates.length > 0 && (
+        <div className="bg-white shadow-md rounded-lg p-6 mb-6">
+          <h2 className="text-2xl font-semibold mb-4">Trip Updates ({tripUpdates.length})</h2>
+          <div className="space-y-3">
+            {tripUpdates.map((u) => (
+              <div key={u.id} className="border border-gray-200 rounded-lg p-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-semibold">{u.title}</h4>
+                    {u.is_important && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Important</span>
+                    )}
+                    {u.registration_id && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">Targeted</span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-400">{new Date(u.created_at).toLocaleString()}</span>
+                </div>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap mb-2">{u.message}</p>
+                <div className="text-xs text-gray-500">
+                  Read: {u.read_count} / {u.total_recipients} recipients
+                </div>
               </div>
             ))}
           </div>

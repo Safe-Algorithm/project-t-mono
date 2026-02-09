@@ -1468,7 +1468,7 @@ GET /api/v1/provider/trips/{trip_id}/checkin-status      # View all check-ins
 ---
 
 #### **21. Trip Updates/Notifications**
-**Status**: ❌ Not implemented  
+**Status**: ✅ Implemented  
 **Priority**: High  
 **Estimated Time**: 2-3 days
 
