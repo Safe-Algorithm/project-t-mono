@@ -8,21 +8,21 @@ from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app.core.redis import redis_client
 from app.models.source import RequestSource
 
 
 def test_send_otp_authenticated(
     client: TestClient,
     user_authentication_headers: dict,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test sending OTP to authenticated user"""
     phone = "+966501234567"
     
     # Clear any existing rate limit for this phone
-    redis_client.delete(f"otp_rate_limit:{phone}")
-    redis_client.delete(f"phone_otp:{phone}")
+    mock_redis.delete(f"otp_rate_limit:{phone}")
+    mock_redis.delete(f"phone_otp:{phone}")
     
     with patch('app.services.sms.sms_service.send_otp', new_callable=AsyncMock) as mock_send:
         mock_send.return_value = {"message_sid": "test_sid", "status": "queued"}
@@ -40,21 +40,22 @@ def test_send_otp_authenticated(
         
         # Verify OTP was stored in Redis
         otp_key = f"phone_otp:{phone}"
-        otp_data = redis_client.get(otp_key)
+        otp_data = mock_redis.get(otp_key)
         assert otp_data is not None
 
 
 def test_send_otp_rate_limiting(
     client: TestClient,
     user_authentication_headers: dict,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test OTP rate limiting (max 3 per hour)"""
     phone = "+966501234568"
     
     # Clear any existing rate limit for this phone
-    redis_client.delete(f"otp_rate_limit:{phone}")
-    redis_client.delete(f"phone_otp:{phone}")
+    mock_redis.delete(f"otp_rate_limit:{phone}")
+    mock_redis.delete(f"phone_otp:{phone}")
     
     with patch('app.services.sms.sms_service.send_otp', new_callable=AsyncMock) as mock_send:
         mock_send.return_value = {"message_sid": "test_sid", "status": "queued"}
@@ -97,7 +98,8 @@ def test_send_otp_invalid_format(
 def test_verify_otp_success(
     client: TestClient,
     session: Session,
-    normal_user
+    normal_user,
+    mock_redis
 ):
     """Test successful OTP verification"""
     from app.tests.utils.user import user_authentication_headers as create_auth
@@ -117,7 +119,7 @@ def test_verify_otp_success(
         "user_id": str(user.id),
         "created_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(otp_key, 300, json.dumps(otp_data))
+    mock_redis.setex(otp_key, 300, json.dumps(otp_data))
     
     response = client.post(
         "/api/v1/otp/verify-otp",
@@ -132,14 +134,15 @@ def test_verify_otp_success(
     assert data["is_phone_verified"] is True
     
     # Verify OTP was deleted from Redis
-    assert redis_client.get(otp_key) is None
+    assert mock_redis.get(otp_key) is None
 
 
 def test_verify_otp_invalid_code(
     client: TestClient,
     user_authentication_headers: dict,
     session: Session,
-    normal_user
+    normal_user,
+    mock_redis
 ):
     """Test OTP verification with wrong code"""
     phone = "+966501234570"
@@ -153,7 +156,7 @@ def test_verify_otp_invalid_code(
         "user_id": str(normal_user.id),
         "created_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(otp_key, 300, json.dumps(otp_data))
+    mock_redis.setex(otp_key, 300, json.dumps(otp_data))
     
     response = client.post(
         "/api/v1/otp/verify-otp",
@@ -186,7 +189,8 @@ def test_verify_otp_expired(
 
 def test_send_otp_registration(
     client: TestClient,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test sending OTP for registration (no auth required)"""
     phone = "+966501234572"
@@ -206,13 +210,14 @@ def test_send_otp_registration(
         
         # Verify OTP was stored in Redis
         otp_key = f"phone_otp_registration:{phone}"
-        otp_data = redis_client.get(otp_key)
+        otp_data = mock_redis.get(otp_key)
         assert otp_data is not None
 
 
 def test_verify_otp_registration_success(
     client: TestClient,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test successful OTP verification for registration"""
     phone = "+966501234573"
@@ -224,7 +229,7 @@ def test_verify_otp_registration_success(
         "otp": otp,
         "created_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(otp_key, 300, json.dumps(otp_data))
+    mock_redis.setex(otp_key, 300, json.dumps(otp_data))
     
     response = client.post(
         "/api/v1/otp/verify-otp-registration",
@@ -239,17 +244,18 @@ def test_verify_otp_registration_success(
     assert data["expires_in"] == 600
     
     # Verify OTP was deleted from Redis
-    assert redis_client.get(otp_key) is None
+    assert mock_redis.get(otp_key) is None
     
     # Verify verification token was created
     verification_key = f"phone_verified:{data['verification_token']}"
-    verification_data = redis_client.get(verification_key)
+    verification_data = mock_redis.get(verification_key)
     assert verification_data is not None
 
 
 def test_verify_otp_registration_invalid_code(
     client: TestClient,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test OTP verification for registration with wrong code"""
     phone = "+966501234574"
@@ -262,7 +268,7 @@ def test_verify_otp_registration_invalid_code(
         "otp": correct_otp,
         "created_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(otp_key, 300, json.dumps(otp_data))
+    mock_redis.setex(otp_key, 300, json.dumps(otp_data))
     
     response = client.post(
         "/api/v1/otp/verify-otp-registration",
@@ -275,7 +281,8 @@ def test_verify_otp_registration_invalid_code(
 
 def test_register_with_phone_verification_token(
     client: TestClient,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test registration with phone verification token"""
     phone = "+966501234575"
@@ -287,7 +294,7 @@ def test_register_with_phone_verification_token(
         "phone": phone,
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Register with verification token (phone only for mobile users)
     response = client.post(
@@ -307,7 +314,7 @@ def test_register_with_phone_verification_token(
     assert data["is_phone_verified"] is True
     
     # Verify token was deleted
-    assert redis_client.get(verification_key) is None
+    assert mock_redis.get(verification_key) is None
 
 
 def test_register_with_invalid_verification_token(
@@ -332,7 +339,8 @@ def test_register_with_invalid_verification_token(
 
 def test_register_with_mismatched_phone(
     client: TestClient,
-    session: Session
+    session: Session,
+    mock_redis
 ):
     """Test registration with phone that doesn't match verification token"""
     phone1 = "+966501234577"
@@ -345,7 +353,7 @@ def test_register_with_mismatched_phone(
         "phone": phone1,
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Try to register with phone2
     response = client.post(

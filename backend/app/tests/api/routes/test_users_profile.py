@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from app.core.config import settings
-from app.core.redis import redis_client
 from app.tests.utils.user import create_random_user
 
 
@@ -79,7 +78,8 @@ def test_update_email_with_valid_token(
     client: TestClient,
     session: Session,
     normal_user,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test updating email with valid verification token."""
     new_email = "verified@example.com"
@@ -91,7 +91,7 @@ def test_update_email_with_valid_token(
         "email": new_email,
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Update email with token
     response = client.patch(
@@ -107,14 +107,15 @@ def test_update_email_with_valid_token(
     assert data["is_email_verified"] is True
     
     # Verify token was deleted
-    assert redis_client.get(verification_key) is None
+    assert mock_redis.get(verification_key) is None
 
 
 def test_update_phone_with_valid_token(
     client: TestClient,
     session: Session,
     normal_user,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test updating phone with valid verification token."""
     new_phone = "+966501234567"
@@ -126,7 +127,7 @@ def test_update_phone_with_valid_token(
         "phone": new_phone,
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Update phone with token
     response = client.patch(
@@ -142,7 +143,7 @@ def test_update_phone_with_valid_token(
     assert data["is_phone_verified"] is True
     
     # Verify token was deleted
-    assert redis_client.get(verification_key) is None
+    assert mock_redis.get(verification_key) is None
 
 
 def test_update_email_with_expired_token(
@@ -165,7 +166,8 @@ def test_update_email_with_expired_token(
 def test_update_email_with_mismatched_token(
     client: TestClient,
     session: Session,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test that token for different email fails."""
     verification_token = "test_token_mismatch"
@@ -176,7 +178,7 @@ def test_update_email_with_mismatched_token(
         "email": "different@example.com",
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Try to update with different email
     response = client.patch(
@@ -190,13 +192,14 @@ def test_update_email_with_mismatched_token(
     assert "does not match" in response.json()["detail"].lower()
     
     # Cleanup
-    redis_client.delete(verification_key)
+    mock_redis.delete(verification_key)
 
 
 def test_update_phone_with_mismatched_token(
     client: TestClient,
     session: Session,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test that token for different phone fails."""
     verification_token = "test_token_mismatch_phone"
@@ -207,7 +210,7 @@ def test_update_phone_with_mismatched_token(
         "phone": "+966501111111",
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Try to update with different phone
     response = client.patch(
@@ -221,14 +224,15 @@ def test_update_phone_with_mismatched_token(
     assert "does not match" in response.json()["detail"].lower()
     
     # Cleanup
-    redis_client.delete(verification_key)
+    mock_redis.delete(verification_key)
 
 
 def test_update_email_already_exists(
     client: TestClient,
     session: Session,
     normal_user,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test that updating to existing email fails."""
     # Create another user with email
@@ -240,7 +244,7 @@ def test_update_email_already_exists(
         "email": other_user.email,
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Try to update to existing email
     response = client.patch(
@@ -254,14 +258,15 @@ def test_update_email_already_exists(
     assert "already registered" in response.json()["detail"].lower()
     
     # Cleanup
-    redis_client.delete(verification_key)
+    mock_redis.delete(verification_key)
 
 
 def test_update_phone_already_exists(
     client: TestClient,
     session: Session,
     normal_user,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test that updating to existing phone fails."""
     # Create another user with phone
@@ -273,7 +278,7 @@ def test_update_phone_already_exists(
         "phone": other_user.phone,
         "verified_at": "2024-01-01T00:00:00"
     }
-    redis_client.setex(verification_key, 600, json.dumps(verification_data))
+    mock_redis.setex(verification_key, 600, json.dumps(verification_data))
     
     # Try to update to existing phone
     response = client.patch(
@@ -287,14 +292,15 @@ def test_update_phone_already_exists(
     assert "already registered" in response.json()["detail"].lower()
     
     # Cleanup
-    redis_client.delete(verification_key)
+    mock_redis.delete(verification_key)
 
 
 def test_update_multiple_fields(
     client: TestClient,
     session: Session,
     normal_user,
-    user_authentication_headers: dict
+    user_authentication_headers: dict,
+    mock_redis
 ) -> None:
     """Test updating multiple fields at once."""
     new_email = "multiemail@example.com"
@@ -304,13 +310,13 @@ def test_update_multiple_fields(
     email_token = "test_multi_email"
     email_key = f"email_verified:{email_token}"
     email_data = {"email": new_email, "verified_at": "2024-01-01T00:00:00"}
-    redis_client.setex(email_key, 600, json.dumps(email_data))
+    mock_redis.setex(email_key, 600, json.dumps(email_data))
     
     # Create phone verification token
     phone_token = "test_multi_phone"
     phone_key = f"phone_verified:{phone_token}"
     phone_data = {"phone": new_phone, "verified_at": "2024-01-01T00:00:00"}
-    redis_client.setex(phone_key, 600, json.dumps(phone_data))
+    mock_redis.setex(phone_key, 600, json.dumps(phone_data))
     
     # Update both email and phone
     response = client.patch(
@@ -336,5 +342,5 @@ def test_update_multiple_fields(
     assert data["is_phone_verified"] is True
     
     # Verify tokens were deleted
-    assert redis_client.get(email_key) is None
-    assert redis_client.get(phone_key) is None
+    assert mock_redis.get(email_key) is None
+    assert mock_redis.get(phone_key) is None

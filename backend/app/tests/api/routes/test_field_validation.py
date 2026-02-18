@@ -493,7 +493,11 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
     from app.models.trip_package_field import TripPackageRequiredField
     
     # Create provider and trip
-    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    from app.tests.utils.provider import create_random_provider
+    from app.models.source import RequestSource as RS
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RS.PROVIDERS_PANEL)
+    session.refresh(provider_user)
+    provider = crud.provider.get_provider_by_id(session, id=provider_user.provider_id)
     trip_in = TripCreate(
         name_en="Test Trip with Validation",
         description_en="A trip to test validation integration",
@@ -501,7 +505,7 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
         max_participants=10
     )
-    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider)
     
     # Create package with validation config
     package = TripPackageModel(
@@ -541,50 +545,53 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
     session.commit()
     
     # Create mobile user for registration
-    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    from app.models.source import RequestSource
+    from unittest.mock import patch, AsyncMock
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL, source=RequestSource.MOBILE_APP)
     
-    # Test successful registration with valid data
-    valid_registration = {
-        "total_participants": 1,
-        "total_amount": 150.0,
-        "status": "pending",
-        "participants": [
-            {
-                "package_id": str(package.id),
-                "name": "John Doe",  # Valid length
-                "date_of_birth": "2000-01-01",  # Over 18
-                "phone": "+966501234567"  # Valid Saudi number
-            }
-        ]
-    }
-    response = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/register",
-        headers=mobile_headers,
-        json=valid_registration
-    )
-    assert response.status_code == 200
-    
-    # Test failed registration with validation errors
-    invalid_registration = {
-        "total_participants": 1,
-        "total_amount": 150.0,
-        "status": "pending",
-        "participants": [
-            {
-                "package_id": str(package.id),
-                "name": "Jo",  # Too short (min 3 chars)
-                "date_of_birth": "2010-01-01",  # Under 18
-                "phone": "+971501234567"  # Wrong country code
-            }
-        ]
-    }
-    response = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/register",
-        headers=mobile_headers,
-        json=invalid_registration
-    )
-    assert response.status_code == 400
-    assert "Validation failed" in response.json()["detail"]
+    with patch('app.services.email.email_service.send_booking_confirmation_email', new_callable=AsyncMock):
+        # Test successful registration with valid data
+        valid_registration = {
+            "total_participants": 1,
+            "total_amount": 150.0,
+            "status": "pending",
+            "participants": [
+                {
+                    "package_id": str(package.id),
+                    "name": "John Doe",  # Valid length
+                    "date_of_birth": "2000-01-01",  # Over 18
+                    "phone": "+966501234567"  # Valid Saudi number
+                }
+            ]
+        }
+        response = client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/register",
+            headers=mobile_headers,
+            json=valid_registration
+        )
+        assert response.status_code == 200
+        
+        # Test failed registration with validation errors
+        invalid_registration = {
+            "total_participants": 1,
+            "total_amount": 150.0,
+            "status": "pending",
+            "participants": [
+                {
+                    "package_id": str(package.id),
+                    "name": "Jo",  # Too short (min 3 chars)
+                    "date_of_birth": "2010-01-01",  # Under 18
+                    "phone": "+971501234567"  # Wrong country code
+                }
+            ]
+        }
+        response = client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/register",
+            headers=mobile_headers,
+            json=invalid_registration
+        )
+        assert response.status_code == 400
+        assert "Validation failed" in response.json()["detail"]
 
 
 def test_package_creation_with_validation_config(client: TestClient, session: Session):
