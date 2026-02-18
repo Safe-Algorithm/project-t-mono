@@ -29,9 +29,11 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = await AsyncStorage.getItem('refresh_token');
         if (!refreshToken) throw new Error('No refresh token');
-        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {}, {
-          headers: { 'X-Source': 'mobile_app', Authorization: `Bearer ${refreshToken}` },
-        });
+        const { data } = await axios.post(
+          `${BASE_URL}/refresh`,
+          { refresh_token: refreshToken },
+          { headers: { 'Content-Type': 'application/json', 'X-Source': 'mobile_app' } }
+        );
         await AsyncStorage.setItem('access_token', data.access_token);
         if (data.refresh_token) await AsyncStorage.setItem('refresh_token', data.refresh_token);
         original.headers.Authorization = `Bearer ${data.access_token}`;

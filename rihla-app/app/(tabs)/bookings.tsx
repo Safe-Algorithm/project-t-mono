@@ -21,7 +21,6 @@ const STATUS_BADGE: Record<string, { label: string; variant: 'success' | 'warnin
 function BookingCard({ reg }: { reg: TripRegistration }) {
   const status = STATUS_BADGE[reg.status] ?? { label: reg.status, variant: 'neutral' as const };
   const tripName = reg.trip?.name_en ?? reg.trip?.name_ar ?? 'Trip';
-  const pkgName = reg.package?.name_en ?? reg.package?.name_ar ?? 'Package';
   const startDate = reg.trip?.start_date
     ? new Date(reg.trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
@@ -35,7 +34,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
       <View style={styles.cardHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.tripName} numberOfLines={1}>{tripName}</Text>
-          <Text style={styles.pkgName}>{pkgName}</Text>
+          <Text style={styles.pkgName}>{reg.trip?.provider?.company_name ?? ''}</Text>
         </View>
         <Badge label={status.label} variant={status.variant} size="sm" />
       </View>
@@ -49,7 +48,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
         )}
         <View style={styles.metaItem}>
           <Ionicons name="people-outline" size={13} color={Colors.primary} />
-          <Text style={styles.metaText}>{reg.participants?.length ?? 1} participant{(reg.participants?.length ?? 1) > 1 ? 's' : ''}</Text>
+          <Text style={styles.metaText}>{reg.total_participants} participant{reg.total_participants > 1 ? 's' : ''}</Text>
         </View>
         <View style={styles.metaItem}>
           <Ionicons name="receipt-outline" size={13} color={Colors.textTertiary} />

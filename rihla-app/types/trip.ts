@@ -14,9 +14,9 @@ export interface TripPackage {
   description_en: string | null;
   description_ar: string | null;
   price: string | number;
+  currency: string;
   is_active: boolean;
   required_fields: string[];
-  required_fields_details: TripPackageRequiredField[];
 }
 
 export interface TripExtraFee {
@@ -77,23 +77,43 @@ export interface Review {
   created_at: string;
 }
 
+export interface RegistrationParticipant {
+  id: string;
+  registration_id: string;
+  registration_user_id: string;
+  package_id: string | null;
+  is_registration_user: boolean;
+  name: string | null;
+  passport_number: string | null;
+  national_id: string | null;
+  date_of_birth: string | null;
+  gender: string | null;
+  phone: string | null;
+  email: string | null;
+  medical_conditions: string | null;
+  [key: string]: any;
+}
+
+export interface RegistrationTripInfo {
+  id: string;
+  name_en: string | null;
+  name_ar: string | null;
+  start_date: string;
+  end_date: string;
+  provider_id: string;
+  provider: { id: string; company_name: string };
+}
+
 export interface TripRegistration {
   id: string;
   trip_id: string;
   user_id: string;
-  package_id: string;
   status: string;
   registration_date: string;
+  total_participants: number;
+  total_amount: string | number;
   participants: RegistrationParticipant[];
-  trip?: Trip;
-  package?: TripPackage;
-}
-
-export interface RegistrationParticipant {
-  id: string;
-  registration_id: string;
-  field_type: string;
-  value: string;
+  trip: RegistrationTripInfo;
 }
 
 export interface ProviderProfile {

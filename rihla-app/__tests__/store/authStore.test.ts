@@ -49,8 +49,9 @@ describe('authStore — initial state', () => {
 describe('authStore — login', () => {
   it('sets user and isAuthenticated on success', async () => {
     (apiClient.post as jest.Mock).mockResolvedValueOnce({
-      data: { access_token: 'tok', refresh_token: 'ref', user: FULL_USER },
+      data: { access_token: 'tok', refresh_token: 'ref' },
     });
+    (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: FULL_USER });
 
     await act(async () => {
       await useAuthStore.getState().login('ali@test.com', 'pass123');
@@ -63,8 +64,9 @@ describe('authStore — login', () => {
 
   it('persists access_token to AsyncStorage', async () => {
     (apiClient.post as jest.Mock).mockResolvedValueOnce({
-      data: { access_token: 'tok123', refresh_token: 'ref456', user: FULL_USER },
+      data: { access_token: 'tok123', refresh_token: 'ref456' },
     });
+    (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: FULL_USER });
 
     await act(async () => {
       await useAuthStore.getState().login('ali@test.com', 'pass123');

@@ -45,7 +45,9 @@ export default function RegisterScreen() {
       setErrors({});
       setStep('otp');
     } catch (err: any) {
-      setErrors({ contact: err?.response?.data?.detail ?? 'Failed to send OTP' });
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? (detail[0]?.msg ?? 'Failed to send OTP') : (typeof detail === 'string' ? detail : 'Failed to send OTP');
+      setErrors({ contact: msg });
     } finally {
       setLoading(false);
     }
@@ -62,19 +64,23 @@ export default function RegisterScreen() {
       if (contactType === 'email') {
         res = await apiClient.post('/otp/verify-email-otp-registration', {
           email: contact.trim(),
-          otp_code: otp.trim(),
+          otp: otp.trim(),
         });
       } else {
         res = await apiClient.post('/otp/verify-otp-registration', {
           phone: contact.trim(),
-          otp_code: otp.trim(),
+          otp: otp.trim(),
         });
       }
       setVerificationToken(res.data.verification_token);
       setErrors({});
       setStep('details');
     } catch (err: any) {
-      setErrors({ otp: err?.response?.data?.detail ?? 'Invalid OTP code' });
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? (detail[0]?.msg ?? 'Invalid OTP code')
+        : (typeof detail === 'string' ? detail : 'Invalid OTP code');
+      setErrors({ otp: msg });
     } finally {
       setLoading(false);
     }
@@ -90,26 +96,23 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const payload: any = { name: name.trim(), password };
+      const registerPayload: any = { name: name.trim(), password };
       if (contactType === 'email') {
-        payload.email = contact.trim();
-        payload.email_verification_token = verificationToken;
+        registerPayload.email = contact.trim();
+        registerPayload.email_verification_token = verificationToken;
       } else {
-        payload.phone = contact.trim();
-        payload.phone_verification_token = verificationToken;
+        registerPayload.phone = contact.trim();
+        registerPayload.phone_verification_token = verificationToken;
       }
-      const { data } = await apiClient.post('/auth/register', payload);
-      const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;
-      await AsyncStorage.multiSet([
-        ['access_token', data.access_token],
-        ['refresh_token', data.refresh_token ?? ''],
-        ['user', JSON.stringify(data.user)],
-      ]);
       const { useAuthStore } = await import('../../store/authStore');
-      useAuthStore.getState().updateUser(data.user);
+      await useAuthStore.getState().register(registerPayload);
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('Registration Failed', err?.response?.data?.detail ?? 'Something went wrong');
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? (detail[0]?.msg ?? 'Something went wrong')
+        : (typeof detail === 'string' ? detail : 'Something went wrong');
+      Alert.alert('Registration Failed', msg);
     } finally {
       setLoading(false);
     }

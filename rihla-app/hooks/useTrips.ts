@@ -23,7 +23,7 @@ export function usePublicTrips(filters: TripFilters = {}) {
       Object.entries(filters).forEach(([k, v]) => {
         if (v !== undefined && v !== '') params.append(k, String(v));
       });
-      const { data } = await apiClient.get<Trip[]>(`/trips/all?${params}`);
+      const { data } = await apiClient.get<Trip[]>(`/public-trips?${params}`);
       return data;
     },
     staleTime: 1000 * 60 * 2,
@@ -34,7 +34,7 @@ export function useTrip(tripId: string) {
   return useQuery({
     queryKey: ['trips', tripId],
     queryFn: async () => {
-      const { data } = await apiClient.get<Trip>(`/trips/all/${tripId}`);
+      const { data } = await apiClient.get<Trip>(`/public-trips/${tripId}`);
       return data;
     },
     enabled: !!tripId,
@@ -77,8 +77,8 @@ export function useFavorites() {
   return useQuery({
     queryKey: ['favorites'],
     queryFn: async () => {
-      const { data } = await apiClient.get<{ trip: Trip }[]>('/favorites');
-      return data.map((f) => f.trip);
+      const { data } = await apiClient.get<Trip[]>('/favorites');
+      return data;
     },
   });
 }

@@ -39,7 +39,8 @@ export default function LoginScreen() {
       await login(email.trim().toLowerCase(), password);
       router.replace('/(tabs)');
     } catch (err: any) {
-      const msg = err?.response?.data?.detail ?? 'Invalid email or password';
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail) ? (detail[0]?.msg ?? 'Invalid email or password') : (typeof detail === 'string' ? detail : 'Invalid email or password');
       Alert.alert('Login Failed', msg);
     } finally {
       setLoading(false);

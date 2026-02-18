@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  KeyboardAvoidingView, Platform, Alert,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,20 +10,69 @@ import Input from '../../components/ui/Input';
 import { Colors, FontSize } from '../../constants/Theme';
 import apiClient from '../../lib/api';
 
-export default function ForgotPasswordScreen() {
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+type Step = 'email' | 'otp' | 'success';
 
-  const handleSend = async () => {
-    if (!email.trim()) { setError('Email is required'); return; }
+function extractError(err: any, fallback: string): string {
+  const detail = err?.response?.data?.detail;
+  return Array.isArray(detail)
+    ? (detail[0]?.msg ?? fallback)
+    : (typeof detail === 'string' ? detail : fallback);
+}
+
+export default function ForgotPasswordScreen() {
+  const [step, setStep] = useState<Step>('email');
+  const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleSendOtp = async () => {
+    if (!email.trim()) { setErrors({ email: 'Email is required' }); return; }
     setLoading(true);
     try {
-      await apiClient.post(`/forgot-password?email=${encodeURIComponent(email.trim())}`);
-      setSent(true);
+      await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
+      setErrors({});
+      setStep('otp');
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? 'Something went wrong');
+      setErrors({ email: extractError(err, 'Failed to send OTP') });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    setLoading(true);
+    try {
+      await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
+      setErrors({ otp: '' });
+    } catch (err: any) {
+      setErrors({ otp: extractError(err, 'Failed to resend OTP') });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    const e: Record<string, string> = {};
+    if (!otp.trim() || otp.length < 6) e.otp = 'Enter the 6-digit code';
+    if (!newPassword) e.newPassword = 'Password is required';
+    else if (newPassword.length < 8) e.newPassword = 'At least 8 characters';
+    if (newPassword !== confirmPassword) e.confirmPassword = 'Passwords do not match';
+    if (Object.keys(e).length > 0) { setErrors(e); return; }
+
+    setLoading(true);
+    try {
+      await apiClient.post('/otp/reset-password', {
+        email: email.trim(),
+        otp: otp.trim(),
+        new_password: newPassword,
+      });
+      setErrors({});
+      setStep('success');
+    } catch (err: any) {
+      setErrors({ otp: extractError(err, 'Failed to reset password') });
     } finally {
       setLoading(false);
     }
@@ -41,32 +90,75 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <Text style={styles.title}>Reset Password</Text>
-        <Text style={styles.subtitle}>
-          Enter your email and we'll send you a link to reset your password.
-        </Text>
 
-        {sent ? (
+        {step === 'email' && (
+          <>
+            <Text style={styles.subtitle}>Enter your email and we'll send you a verification code.</Text>
+            <View style={styles.form}>
+              <Input
+                label="Email Address"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={(v) => { setEmail(v); setErrors({}); }}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                leftIcon="mail-outline"
+                error={errors.email}
+              />
+              <Button title="Send Code" onPress={handleSendOtp} loading={loading} fullWidth size="lg" />
+            </View>
+          </>
+        )}
+
+        {step === 'otp' && (
+          <>
+            <Text style={styles.subtitle}>Enter the 6-digit code sent to {email}, then choose a new password.</Text>
+            <View style={styles.form}>
+              <Input
+                label="Verification Code"
+                placeholder="000000"
+                value={otp}
+                onChangeText={(v) => { setOtp(v.replace(/\D/g, '')); setErrors({}); }}
+                keyboardType="number-pad"
+                maxLength={6}
+                leftIcon="key-outline"
+                error={errors.otp}
+              />
+              <Input
+                label="New Password"
+                placeholder="At least 8 characters"
+                value={newPassword}
+                onChangeText={(v) => { setNewPassword(v); setErrors({}); }}
+                isPassword
+                leftIcon="lock-closed-outline"
+                error={errors.newPassword}
+              />
+              <Input
+                label="Confirm Password"
+                placeholder="Repeat new password"
+                value={confirmPassword}
+                onChangeText={(v) => { setConfirmPassword(v); setErrors({}); }}
+                isPassword
+                leftIcon="lock-closed-outline"
+                error={errors.confirmPassword}
+              />
+              <Button title="Reset Password" onPress={handleResetPassword} loading={loading} fullWidth size="lg" />
+              <TouchableOpacity onPress={handleResendOtp} disabled={loading} style={styles.resendBtn}>
+                <Text style={styles.resendText}>Resend code</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { setStep('email'); setOtp(''); setErrors({}); }} style={styles.resendBtn}>
+                <Text style={styles.resendText}>Change email</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+
+        {step === 'success' && (
           <View style={styles.successBox}>
-            <Ionicons name="checkmark-circle" size={32} color={Colors.success} />
-            <Text style={styles.successTitle}>Email Sent!</Text>
-            <Text style={styles.successText}>
-              Check your inbox for a password reset link. It expires in 1 hour.
-            </Text>
-            <Button title="Back to Login" onPress={() => router.replace('/(auth)/login')} fullWidth style={{ marginTop: 16 }} />
-          </View>
-        ) : (
-          <View style={styles.form}>
-            <Input
-              label="Email Address"
-              placeholder="you@example.com"
-              value={email}
-              onChangeText={(v) => { setEmail(v); setError(''); }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon="mail-outline"
-              error={error}
-            />
-            <Button title="Send Reset Link" onPress={handleSend} loading={loading} fullWidth size="lg" />
+            <Ionicons name="checkmark-circle" size={56} color={Colors.success} />
+            <Text style={styles.successTitle}>Password Reset!</Text>
+            <Text style={styles.successText}>Your password has been updated. You can now sign in.</Text>
+            <Button title="Back to Login" onPress={() => router.replace('/(auth)/login')} fullWidth style={{ marginTop: 8 }} />
           </View>
         )}
       </ScrollView>
@@ -87,6 +179,8 @@ const styles = StyleSheet.create({
   title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 },
   subtitle: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
   form: { gap: 16 },
+  resendBtn: { alignSelf: 'center', paddingVertical: 4 },
+  resendText: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
   successBox: { alignItems: 'center', gap: 12, marginTop: 16 },
   successTitle: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.textPrimary },
   successText: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },

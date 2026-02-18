@@ -51,23 +51,42 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   login: async (email, password) => {
-    const { data } = await apiClient.post('/auth/login', { email, password });
+    const formData = new FormData();
+    formData.append('username', email);
+    formData.append('password', password);
+    const { data } = await apiClient.post('/login/access-token', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const meRes = await apiClient.get('/users/me', {
+      headers: { Authorization: `Bearer ${data.access_token}` },
+    });
     await AsyncStorage.multiSet([
       ['access_token', data.access_token],
       ['refresh_token', data.refresh_token ?? ''],
-      ['user', JSON.stringify(data.user)],
+      ['user', JSON.stringify(meRes.data)],
     ]);
-    set({ user: data.user, accessToken: data.access_token, isAuthenticated: true });
+    set({ user: meRes.data, accessToken: data.access_token, isAuthenticated: true });
   },
 
   register: async (registerData) => {
-    const { data } = await apiClient.post('/auth/register', registerData);
+    const { email_verification_token, phone_verification_token, ...body } = registerData;
+    const token = email_verification_token ?? phone_verification_token ?? '';
+    await apiClient.post(`/register?verification_token=${encodeURIComponent(token)}`, body);
+    const formData = new FormData();
+    formData.append('username', (body.email ?? body.phone) as string);
+    formData.append('password', body.password);
+    const { data } = await apiClient.post('/login/access-token', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const meRes = await apiClient.get('/users/me', {
+      headers: { Authorization: `Bearer ${data.access_token}` },
+    });
     await AsyncStorage.multiSet([
       ['access_token', data.access_token],
       ['refresh_token', data.refresh_token ?? ''],
-      ['user', JSON.stringify(data.user)],
+      ['user', JSON.stringify(meRes.data)],
     ]);
-    set({ user: data.user, accessToken: data.access_token, isAuthenticated: true });
+    set({ user: meRes.data, accessToken: data.access_token, isAuthenticated: true });
   },
 
   logout: async () => {

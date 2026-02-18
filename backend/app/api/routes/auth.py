@@ -190,63 +190,73 @@ def register(
     return user
 
 
+class RefreshTokenBody(BaseModel):
+    refresh_token: str | None = None
+
+
 @router.post("/refresh", response_model=Token)
 def refresh_access_token(
     request: Request,
     response: Response,
+    body: RefreshTokenBody = RefreshTokenBody(),
     session: Session = Depends(deps.get_session),
     source: RequestSource = Depends(deps.get_request_source),
 ) -> Token:
     """
-    Refresh access token using refresh token from cookie.
+    Refresh access token.
+    - Web panels: refresh token read from HttpOnly cookie (sent automatically).
+    - Mobile app: refresh token accepted in request body as {"refresh_token": "..."}.
     """
     try:
-        # Get refresh token from cookie
         cookie_name = f"refresh_token_{source.value}"
-        refresh_token = request.cookies.get(cookie_name)
-        
+        refresh_token = request.cookies.get(cookie_name) or body.refresh_token
+
         if not refresh_token:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Refresh token not found",
             )
-        
+
         payload = security.verify_refresh_token(refresh_token)
-        email = payload.get("sub")
-        if not email:
+        subject = payload.get("sub")
+        if not subject:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid refresh token",
             )
-        
-        user = crud.user.get_user_by_email_and_source(session, email=email, source=source)
+
+        # subject may be email or phone (mobile phone-registered users)
+        user = crud.user.get_user_by_email_and_source(session, email=subject, source=source)
+        if not user:
+            user = crud.user.get_user_by_phone_and_source(session, phone=subject, source=source)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
             )
-        
-        # Create new tokens
+
+        token_subject = user.email if user.email else user.phone
+
         access_token = security.create_access_token(
-            data={"sub": user.email, "source": source.value}
+            data={"sub": token_subject, "source": source.value}
         )
         new_refresh_token = security.create_refresh_token(
-            data={"sub": user.email, "source": source.value}
+            data={"sub": token_subject, "source": source.value}
         )
-        
-        # Update refresh token cookie
+
+        # Always update cookie for web panels
         response.set_cookie(
             key=cookie_name,
             value=new_refresh_token,
             max_age=security.settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
             httponly=True,
-            secure=False,  # Set to False for development (localhost)
-            samesite="lax"  # Changed to lax for better compatibility
+            secure=False,
+            samesite="lax",
         )
-        
+
         return Token(access_token=access_token, refresh_token=new_refresh_token, token_type="bearer")
-        
-    except ValueError as e:
+
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",

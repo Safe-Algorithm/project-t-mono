@@ -13,22 +13,19 @@ import Input from '../../components/ui/Input';
 import apiClient from '../../lib/api';
 
 const FIELD_LABELS: Record<string, string> = {
-  full_name: 'Full Name',
+  name: 'Full Name',
   date_of_birth: 'Date of Birth (YYYY-MM-DD)',
-  nationality: 'Nationality',
   passport_number: 'Passport Number',
-  national_id: 'National ID',
-  iqama_number: 'Iqama Number',
+  id_iqama_number: 'ID / Iqama Number',
   gender: 'Gender',
-  phone_number: 'Phone Number',
+  phone: 'Phone Number',
   email: 'Email Address',
-  emergency_contact_name: 'Emergency Contact Name',
-  emergency_contact_phone: 'Emergency Contact Phone',
-  dietary_requirements: 'Dietary Requirements',
+  address: 'Address',
+  city: 'City',
+  country: 'Country',
   medical_conditions: 'Medical Conditions',
-  room_preference: 'Room Preference',
-  seat_preference: 'Seat Preference',
-  special_requests: 'Special Requests',
+  allergies: 'Allergies',
+  disability: 'Disability',
 };
 
 interface Participant {
@@ -44,7 +41,10 @@ export default function BookingScreen() {
   const [step, setStep] = useState<'participants' | 'confirm'>('participants');
 
   const selectedPackage = trip?.packages?.find((p) => p.id === packageId);
-  const requiredFields = selectedPackage?.required_fields_details ?? [];
+  const requiredFields = (selectedPackage?.required_fields ?? []).map((ft) => ({
+    field_type: ft,
+    is_required: true,
+  }));
   const totalPrice = selectedPackage ? Number(selectedPackage.price) * participantCount : 0;
 
   const updateParticipant = (index: number, field: string, value: string) => {
@@ -85,16 +85,24 @@ export default function BookingScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
+      const pricePerPerson = selectedPackage ? Number(selectedPackage.price) : 0;
       const payload = {
-        package_id: packageId,
-        participants: participants.slice(0, participantCount).map((p) =>
-          Object.entries(p).map(([field_type, value]) => ({ field_type, value }))
-        ),
+        total_participants: participantCount,
+        total_amount: (pricePerPerson * participantCount).toFixed(2),
+        participants: participants.slice(0, participantCount).map((p, i) => ({
+          package_id: packageId,
+          is_registration_user: i === 0,
+          ...p,
+        })),
       };
       const { data } = await apiClient.post(`/trips/${tripId}/register`, payload);
       router.replace(`/booking/success?registrationId=${data.id}`);
     } catch (err: any) {
-      Alert.alert('Booking Failed', err?.response?.data?.detail ?? 'Something went wrong. Please try again.');
+      const detail = err?.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? (detail[0]?.msg ?? 'Something went wrong. Please try again.')
+        : (typeof detail === 'string' ? detail : 'Something went wrong. Please try again.');
+      Alert.alert('Booking Failed', msg);
     } finally {
       setLoading(false);
     }
