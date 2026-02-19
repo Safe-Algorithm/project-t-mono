@@ -5,25 +5,28 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useMyRegistrations } from '../../hooks/useTrips';
 import { Colors, FontSize, Radius, Shadow } from '../../constants/Theme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
 import Badge from '../../components/ui/Badge';
 import { TripRegistration } from '../../types/trip';
 
-const STATUS_BADGE: Record<string, { label: string; variant: 'success' | 'warning' | 'error' | 'neutral' | 'primary' }> = {
-  confirmed: { label: 'Confirmed', variant: 'success' },
-  pending: { label: 'Pending', variant: 'warning' },
-  cancelled: { label: 'Cancelled', variant: 'error' },
-  completed: { label: 'Completed', variant: 'neutral' },
-  payment_pending: { label: 'Payment Pending', variant: 'warning' },
+const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'error' | 'neutral' | 'primary'> = {
+  confirmed: 'success',
+  pending: 'warning',
+  cancelled: 'error',
+  completed: 'neutral',
+  payment_pending: 'warning',
 };
 
 function BookingCard({ reg }: { reg: TripRegistration }) {
-  const status = STATUS_BADGE[reg.status] ?? { label: reg.status, variant: 'neutral' as const };
-  const tripName = reg.trip?.name_en ?? reg.trip?.name_ar ?? 'Trip';
+  const { t, i18n } = useTranslation();
+  const statusVariant = STATUS_VARIANTS[reg.status] ?? 'neutral';
+  const statusLabel = t(`bookings.status.${reg.status}` as any, { defaultValue: reg.status });
+  const tripName = (i18n.language === 'ar' ? reg.trip?.name_ar : reg.trip?.name_en) ?? reg.trip?.name_en ?? reg.trip?.name_ar ?? 'Trip';
   const startDate = reg.trip?.start_date
-    ? new Date(reg.trip.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? new Date(reg.trip.start_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
 
   return (
@@ -37,7 +40,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
           <Text style={styles.tripName} numberOfLines={1}>{tripName}</Text>
           <Text style={styles.pkgName}>{reg.trip?.provider?.company_name ?? ''}</Text>
         </View>
-        <Badge label={status.label} variant={status.variant} size="sm" />
+        <Badge label={statusLabel} variant={statusVariant} size="sm" />
       </View>
 
       <View style={styles.cardMeta}>
@@ -49,7 +52,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
         )}
         <View style={styles.metaItem}>
           <Ionicons name="people-outline" size={13} color={Colors.primary} />
-          <Text style={styles.metaText}>{reg.total_participants} participant{reg.total_participants > 1 ? 's' : ''}</Text>
+          <Text style={styles.metaText}>{t('bookings.participants', { count: reg.total_participants })}</Text>
         </View>
         <View style={styles.metaItem}>
           <Ionicons name="receipt-outline" size={13} color={Colors.textTertiary} />
@@ -59,7 +62,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
 
       <View style={styles.cardFooter}>
         <Text style={styles.dateBooked}>
-          Booked {new Date(reg.registration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {t('bookings.booked', { date: new Date(reg.registration_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' }) })}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
       </View>
@@ -68,12 +71,13 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
 }
 
 export default function BookingsScreen() {
+  const { t } = useTranslation();
   const { data: registrations, isLoading } = useMyRegistrations();
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Trips</Text>
+        <Text style={styles.title}>{t('bookings.title')}</Text>
         {registrations && registrations.length > 0 && (
           <Text style={styles.count}>{registrations.length}</Text>
         )}
@@ -99,10 +103,8 @@ export default function BookingsScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="calendar-outline" size={64} color={Colors.gray300} />
-              <Text style={styles.emptyTitle}>No trips booked yet</Text>
-              <Text style={styles.emptyText}>
-                Explore and book your first adventure!
-              </Text>
+              <Text style={styles.emptyTitle}>{t('bookings.noBookingsTitle')}</Text>
+              <Text style={styles.emptyText}>{t('bookings.noBookingsText')}</Text>
             </View>
           }
         />

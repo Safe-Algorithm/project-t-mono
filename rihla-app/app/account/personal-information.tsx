@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import apiClient from '../../lib/api';
 import Input from '../../components/ui/Input';
@@ -12,6 +13,7 @@ import Button from '../../components/ui/Button';
 import { Colors, FontSize, Radius, Shadow } from '../../constants/Theme';
 
 export default function PersonalInformationScreen() {
+  const { t } = useTranslation();
   const { user, updateUser } = useAuthStore();
   const [name, setName] = useState(user?.name ?? '');
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export default function PersonalInformationScreen() {
 
   const handleSave = async () => {
     const errs: Record<string, string> = {};
-    if (!name.trim()) errs.name = 'Name is required';
+    if (!name.trim()) errs.name = t('personalInfo.name') + ' is required';
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
@@ -33,9 +35,9 @@ export default function PersonalInformationScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
-        ? (detail[0]?.msg ?? 'Failed to update')
-        : (typeof detail === 'string' ? detail : 'Failed to update');
-      Alert.alert('Error', msg);
+        ? (detail[0]?.msg ?? t('personalInfo.updateFailed'))
+        : (typeof detail === 'string' ? detail : t('personalInfo.updateFailed'));
+      Alert.alert(t('common.error'), msg);
     } finally {
       setLoading(false);
     }
@@ -47,16 +49,16 @@ export default function PersonalInformationScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Personal Information</Text>
+        <Text style={styles.headerTitle}>{t('personalInfo.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Input
-          label="Full Name"
+          label={t('personalInfo.name')}
           value={name}
-          onChangeText={(t) => { setName(t); setSaved(false); }}
-          placeholder="Your full name"
+          onChangeText={(v) => { setName(v); setSaved(false); }}
+          placeholder={t('personalInfo.name')}
           error={errors.name}
         />
 
@@ -64,7 +66,7 @@ export default function PersonalInformationScreen() {
           <View style={styles.readonlyRow}>
             <Ionicons name="mail-outline" size={18} color={Colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.readonlyLabel}>Email</Text>
+              <Text style={styles.readonlyLabel}>{t('personalInfo.email')}</Text>
               <Text style={styles.readonlyValue}>{user?.email ?? '—'}</Text>
             </View>
             {user?.is_email_verified && (
@@ -80,7 +82,7 @@ export default function PersonalInformationScreen() {
           <View style={styles.readonlyRow}>
             <Ionicons name="call-outline" size={18} color={Colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.readonlyLabel}>Phone</Text>
+              <Text style={styles.readonlyLabel}>{t('personalInfo.phone')}</Text>
               <Text style={styles.readonlyValue}>{user?.phone ?? '—'}</Text>
             </View>
             {user?.is_phone_verified && (
@@ -92,12 +94,10 @@ export default function PersonalInformationScreen() {
           </View>
         </View>
 
-        <Text style={styles.note}>
-          To change your email or phone number, please contact support.
-        </Text>
+        <Text style={styles.note}>{t('profile.helpMessage')}</Text>
 
         <Button
-          title={saved ? 'Saved!' : 'Save Changes'}
+          title={saved ? t('common.done') : t('personalInfo.saveChanges')}
           onPress={handleSave}
           loading={loading}
           style={{ marginTop: 8 }}

@@ -4,6 +4,11 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+jest.mock('../../lib/i18n', () => ({
+  __esModule: true,
+  default: { language: 'en', t: (k: string) => k },
+}));
+
 jest.mock('axios', () => {
   const mockAxios: any = {
     create: jest.fn(() => mockInstance),

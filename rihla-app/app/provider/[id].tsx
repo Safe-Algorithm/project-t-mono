@@ -5,6 +5,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useProviderProfile, usePublicTrips } from '../../hooks/useTrips';
 import { Colors, FontSize, Radius, Shadow } from '../../constants/Theme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -12,6 +13,7 @@ import StarRating from '../../components/ui/StarRating';
 import TripCard from '../../components/trips/TripCard';
 
 export default function ProviderProfileScreen() {
+  const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: provider, isLoading } = useProviderProfile(id);
   const { data: trips } = usePublicTrips({ limit: 10 });
@@ -43,16 +45,16 @@ export default function ProviderProfileScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={56} color={Colors.gray300} />
-          <Text style={styles.errorText}>Provider not found</Text>
+          <Text style={styles.errorText}>{t('provider.title')}</Text>
           <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backLink}>Go back</Text>
+            <Text style={styles.backLink}>{t('common.back')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const bio = provider.bio_en ?? provider.bio_ar;
+  const bio = (i18n.language === 'ar' ? provider.bio_ar : provider.bio_en) ?? provider.bio_en ?? provider.bio_ar;
 
   return (
     <View style={styles.container}>
@@ -62,7 +64,7 @@ export default function ProviderProfileScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Provider Profile</Text>
+          <Text style={styles.headerTitle}>{t('provider.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
       </SafeAreaView>
@@ -93,11 +95,11 @@ export default function ProviderProfileScreen() {
 
           {/* Stats */}
           <View style={styles.statsRow}>
-            <StatItem icon="map-outline" value={String(provider.total_trips)} label="Total Trips" />
+            <StatItem icon="map-outline" value={String(provider.total_trips)} label={t('provider.totalTrips')} />
             <View style={styles.statDivider} />
-            <StatItem icon="compass-outline" value={String(provider.active_trips)} label="Active" />
+            <StatItem icon="compass-outline" value={String(provider.active_trips)} label={t('provider.activeTrips')} />
             <View style={styles.statDivider} />
-            <StatItem icon="star-outline" value={provider.average_rating > 0 ? provider.average_rating.toFixed(1) : '—'} label="Rating" />
+            <StatItem icon="star-outline" value={provider.average_rating > 0 ? provider.average_rating.toFixed(1) : '—'} label={t('provider.avgRating')} />
           </View>
         </View>
 
@@ -105,7 +107,7 @@ export default function ProviderProfileScreen() {
           {/* Contact info */}
           {(provider.company_email || provider.company_phone) && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Contact</Text>
+              <Text style={styles.sectionTitle}>{t('personalInfo.phone')}</Text>
               <View style={styles.contactCard}>
                 {provider.company_email && (
                   <View style={styles.contactRow}>
@@ -126,7 +128,7 @@ export default function ProviderProfileScreen() {
           {/* Bio */}
           {bio && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>About</Text>
+              <Text style={styles.sectionTitle}>{t('trip.aboutTrip')}</Text>
               <Text style={styles.bio}>{bio}</Text>
             </View>
           )}
@@ -134,7 +136,7 @@ export default function ProviderProfileScreen() {
           {/* Trips */}
           {providerTrips.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Available Trips</Text>
+              <Text style={styles.sectionTitle}>{t('provider.tripsBy', { name: provider.company_name })}</Text>
               {providerTrips.map((trip) => (
                 <TripCard
                   key={trip.id}

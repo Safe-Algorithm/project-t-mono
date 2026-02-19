@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Colors, FontSize, Spacing } from '../../constants/Theme';
@@ -19,6 +20,7 @@ import apiClient from '../../lib/api';
 type Step = 'contact' | 'otp' | 'details';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('contact');
   const [contactType, setContactType] = useState<'email' | 'phone'>('email');
   const [contact, setContact] = useState('');

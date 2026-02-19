@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import apiClient from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
@@ -21,6 +22,7 @@ function extractError(err: any, fallback: string): string {
 }
 
 export default function ChangePasswordScreen() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const email = user?.email ?? '';
 
@@ -34,7 +36,7 @@ export default function ChangePasswordScreen() {
 
   const sendOtp = async () => {
     if (!email) {
-      Alert.alert('Error', 'No email associated with your account.');
+      Alert.alert(t('common.error'), t('changePassword.noEmail'));
       return;
     }
     setLoading(true);
@@ -43,7 +45,7 @@ export default function ChangePasswordScreen() {
       setOtpSent(true);
       setErrors({});
     } catch (err: any) {
-      setErrors({ otp: extractError(err, 'Failed to send OTP') });
+      setErrors({ otp: extractError(err, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }
@@ -51,9 +53,9 @@ export default function ChangePasswordScreen() {
 
   const handleReset = async () => {
     const errs: Record<string, string> = {};
-    if (!otp.trim() || otp.trim().length !== 6) errs.otp = 'Enter the 6-digit OTP';
-    if (!newPassword || newPassword.length < 8) errs.newPassword = 'Password must be at least 8 characters';
-    if (newPassword !== confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    if (!otp.trim() || otp.trim().length !== 6) errs.otp = t('auth.otpLabel');
+    if (!newPassword || newPassword.length < 8) errs.newPassword = t('changePassword.new');
+    if (newPassword !== confirmPassword) errs.confirmPassword = t('changePassword.mismatch');
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
     setLoading(true);
@@ -66,7 +68,7 @@ export default function ChangePasswordScreen() {
       setErrors({});
       setStep('success');
     } catch (err: any) {
-      setErrors({ otp: extractError(err, 'Failed to reset password') });
+      setErrors({ otp: extractError(err, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }
@@ -78,7 +80,7 @@ export default function ChangePasswordScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Change Password</Text>
+        <Text style={styles.headerTitle}>{t('changePassword.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -88,69 +90,67 @@ export default function ChangePasswordScreen() {
             <View style={styles.successIcon}>
               <Ionicons name="checkmark-circle" size={64} color={Colors.success} />
             </View>
-            <Text style={styles.successTitle}>Password Changed!</Text>
-            <Text style={styles.successText}>Your password has been updated successfully.</Text>
-            <Button title="Done" onPress={() => router.back()} style={{ marginTop: 24 }} />
+            <Text style={styles.successTitle}>{t('changePassword.success')}</Text>
+            <Text style={styles.successText}>{t('changePassword.success')}</Text>
+            <Button title={t('common.done')} onPress={() => router.back()} style={{ marginTop: 24 }} />
           </View>
         ) : (
           <>
             <Text style={styles.subtitle}>
               {email
-                ? `We'll send a verification code to ${email}`
-                : 'A verification code will be sent to your email'}
+                ? t('changePassword.sendCodeTo', { email })
+                : t('changePassword.sendCodeNoEmail')}
             </Text>
 
             {!otpSent ? (
               <Button
-                title="Send Verification Code"
+                title={t('auth.verify')}
                 onPress={sendOtp}
                 loading={loading}
                 style={{ marginTop: 24 }}
               />
             ) : (
               <View style={styles.form}>
-                <Text style={styles.sentNote}>
-                  Code sent to {email}. Check your inbox.
-                </Text>
+                <Text style={styles.sentNote}>{t('auth.otpSent')}</Text>
 
                 <Input
-                  label="Verification Code"
+                  label={t('auth.otpLabel')}
                   value={otp}
                   onChangeText={setOtp}
-                  placeholder="6-digit code"
+                  placeholder={t('auth.otpLabel')}
                   keyboardType="number-pad"
                   maxLength={6}
                   error={errors.otp}
                 />
 
                 <Input
-                  label="New Password"
+                  label={t('changePassword.new')}
                   value={newPassword}
                   onChangeText={setNewPassword}
-                  placeholder="At least 8 characters"
+                  placeholder={t('changePassword.new')}
                   secureTextEntry
                   error={errors.newPassword}
                 />
 
                 <Input
-                  label="Confirm New Password"
+                  label={t('changePassword.confirm')}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  placeholder="Repeat new password"
+                  placeholder={t('changePassword.confirm')}
                   secureTextEntry
                   error={errors.confirmPassword}
                 />
 
                 <Button
-                  title="Change Password"
+                  title={t('changePassword.submit')}
                   onPress={handleReset}
                   loading={loading}
                   style={{ marginTop: 8 }}
                 />
 
                 <TouchableOpacity style={styles.resendRow} onPress={sendOtp} disabled={loading}>
-                  <Text style={styles.resendText}>Didn't receive the code? </Text>
-                  <Text style={styles.resendLink}>Resend</Text>
+                  <Text style={styles.resendText}>{t('auth.otpSent')} </Text>
+                  <Text style={styles.resendLink}>{t('auth.resend')}</Text>
                 </TouchableOpacity>
               </View>
             )}

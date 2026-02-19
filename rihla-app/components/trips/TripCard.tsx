@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useTranslation } from 'react-i18next';
 import { Trip } from '../../types/trip';
 import { Colors, Radius, FontSize, Shadow, Spacing } from '../../constants/Theme';
 import StarRating from '../ui/StarRating';
@@ -27,8 +28,8 @@ interface TripCardProps {
   testID?: string;
 }
 
-function getLocalizedName(trip: Trip): string {
-  return trip.name_en ?? trip.name_ar ?? 'Unnamed Trip';
+function getLocalizedName(trip: Trip, lang: string): string {
+  return (lang === 'ar' ? trip.name_ar : trip.name_en) ?? trip.name_en ?? trip.name_ar ?? 'Unnamed Trip';
 }
 
 function formatDate(dateStr: string): string {
@@ -42,12 +43,13 @@ function getMinPrice(trip: Trip): number | null {
 }
 
 export default function TripCard({ trip, onPress, isFavorite = false, onFavoriteToggle, compact = false, testID }: TripCardProps) {
+  const { t, i18n } = useTranslation();
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const coverImage = trip.images?.[0];
   const minPrice = getMinPrice(trip);
-  const name = getLocalizedName(trip);
+  const name = getLocalizedName(trip, i18n.language);
 
   if (compact) {
     return (
@@ -134,7 +136,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           <View style={styles.metaDivider} />
           <View style={styles.metaItem}>
             <Ionicons name="people-outline" size={13} color={Colors.primary} />
-            <Text style={styles.metaText}>Max {trip.max_participants}</Text>
+            <Text style={styles.metaText}>{t('trip.maxPeople')} {trip.max_participants}</Text>
           </View>
           {trip.average_rating !== undefined && trip.average_rating > 0 && (
             <>

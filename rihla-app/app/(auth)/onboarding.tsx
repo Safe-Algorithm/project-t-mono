@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -53,6 +54,7 @@ const SLIDES = [
 const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<typeof SLIDES[0]>);
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
@@ -99,7 +101,7 @@ export default function OnboardingScreen() {
         </View>
 
         <Button
-          title={currentIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+          title={currentIndex === SLIDES.length - 1 ? t('auth.signIn') : t('common.ok')}
           onPress={handleNext}
           fullWidth
           size="lg"
@@ -112,7 +114,7 @@ export default function OnboardingScreen() {
 
         {currentIndex < SLIDES.length - 1 && (
           <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.skip}>
-            <Text style={styles.skipText}>Skip</Text>
+            <Text style={styles.skipText}>{t('common.close')}</Text>
           </TouchableOpacity>
         )}
       </View>

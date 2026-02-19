@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { usePublicTrips, useFavorites, useToggleFavorite, TripFilters } from '../../hooks/useTrips';
 import TripCard from '../../components/trips/TripCard';
 import FilterSheet from '../../components/trips/FilterSheet';
@@ -20,6 +21,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Trip } from '../../types/trip';
 
 export default function ExploreScreen() {
+  const { t } = useTranslation();
   const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<TripFilters>({});
@@ -56,8 +58,8 @@ export default function ExploreScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Hello, {user?.name?.split(' ')[0] ?? 'Traveler'} 👋</Text>
-          <Text style={styles.headerTitle}>Find your next adventure</Text>
+          <Text style={styles.greeting}>{t('explore.greeting', { name: user?.name?.split(' ')[0] ?? 'Traveler' })}</Text>
+          <Text style={styles.headerTitle}>{t('explore.subtitle')}</Text>
         </View>
         <TouchableOpacity
           style={styles.avatarBtn}
@@ -73,7 +75,7 @@ export default function ExploreScreen() {
           <Ionicons name="search-outline" size={18} color={Colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search trips, destinations..."
+            placeholder={t('explore.searchPlaceholder')}
             placeholderTextColor={Colors.textTertiary}
             value={search}
             onChangeText={setSearch}
@@ -105,7 +107,7 @@ export default function ExploreScreen() {
       {/* Results count */}
       {!isLoading && trips && (
         <Text style={styles.resultsText}>
-          {trips.length} {trips.length === 1 ? 'trip' : 'trips'} found
+          {t('explore.tripsFound', { count: trips.length })}
         </Text>
       )}
 
@@ -135,8 +137,8 @@ export default function ExploreScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="search-outline" size={56} color={Colors.gray300} />
-              <Text style={styles.emptyTitle}>No trips found</Text>
-              <Text style={styles.emptyText}>Try adjusting your search or filters</Text>
+              <Text style={styles.emptyTitle}>{t('explore.noTripsTitle')}</Text>
+              <Text style={styles.emptyText}>{t('explore.noTripsText')}</Text>
             </View>
           }
         />

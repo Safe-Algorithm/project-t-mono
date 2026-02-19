@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Colors, FontSize } from '../../constants/Theme';
@@ -20,6 +21,7 @@ function extractError(err: any, fallback: string): string {
 }
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -29,14 +31,14 @@ export default function ForgotPasswordScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSendOtp = async () => {
-    if (!email.trim()) { setErrors({ email: 'Email is required' }); return; }
+    if (!email.trim()) { setErrors({ email: t('auth.email') }); return; }
     setLoading(true);
     try {
       await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
       setErrors({});
       setStep('otp');
     } catch (err: any) {
-      setErrors({ email: extractError(err, 'Failed to send OTP') });
+      setErrors({ email: extractError(err, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }
@@ -48,7 +50,7 @@ export default function ForgotPasswordScreen() {
       await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
       setErrors({ otp: '' });
     } catch (err: any) {
-      setErrors({ otp: extractError(err, 'Failed to resend OTP') });
+      setErrors({ otp: extractError(err, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }
@@ -56,10 +58,10 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     const e: Record<string, string> = {};
-    if (!otp.trim() || otp.length < 6) e.otp = 'Enter the 6-digit code';
-    if (!newPassword) e.newPassword = 'Password is required';
-    else if (newPassword.length < 8) e.newPassword = 'At least 8 characters';
-    if (newPassword !== confirmPassword) e.confirmPassword = 'Passwords do not match';
+    if (!otp.trim() || otp.length < 6) e.otp = t('auth.otpLabel');
+    if (!newPassword) e.newPassword = t('changePassword.new');
+    else if (newPassword.length < 8) e.newPassword = t('changePassword.new');
+    if (newPassword !== confirmPassword) e.confirmPassword = t('changePassword.mismatch');
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
     setLoading(true);
@@ -72,7 +74,7 @@ export default function ForgotPasswordScreen() {
       setErrors({});
       setStep('success');
     } catch (err: any) {
-      setErrors({ otp: extractError(err, 'Failed to reset password') });
+      setErrors({ otp: extractError(err, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }

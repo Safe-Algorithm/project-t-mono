@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '../../lib/api';
 import { Colors, FontSize, Radius, Shadow } from '../../constants/Theme';
@@ -23,6 +24,7 @@ function useMyReviews() {
 }
 
 export default function MyReviewsScreen() {
+  const { t, i18n } = useTranslation();
   const { data: reviews, isLoading } = useMyReviews();
 
   return (
@@ -31,7 +33,7 @@ export default function MyReviewsScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Reviews</Text>
+        <Text style={styles.headerTitle}>{t('myReviews.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -54,10 +56,8 @@ export default function MyReviewsScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="star-outline" size={64} color={Colors.gray300} />
-              <Text style={styles.emptyTitle}>No reviews yet</Text>
-              <Text style={styles.emptyText}>
-                After completing a trip, you can leave a review.
-              </Text>
+              <Text style={styles.emptyTitle}>{t('myReviews.noReviewsTitle')}</Text>
+              <Text style={styles.emptyText}>{t('myReviews.noReviewsText')}</Text>
             </View>
           }
           renderItem={({ item }) => (
@@ -69,7 +69,7 @@ export default function MyReviewsScreen() {
               <View style={styles.cardHeader}>
                 <StarRating rating={item.rating} size={15} />
                 <Text style={styles.date}>
-                  {new Date(item.created_at).toLocaleDateString('en-US', {
+                  {new Date(item.created_at).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
                     month: 'short', day: 'numeric', year: 'numeric',
                   })}
                 </Text>
@@ -79,7 +79,7 @@ export default function MyReviewsScreen() {
               )}
               <View style={styles.tripRow}>
                 <Ionicons name="map-outline" size={13} color={Colors.primary} />
-                <Text style={styles.tripId}>View trip</Text>
+                <Text style={styles.tripId}>{t('trip.aboutTrip')}</Text>
                 <Ionicons name="chevron-forward" size={13} color={Colors.primary} />
               </View>
             </TouchableOpacity>

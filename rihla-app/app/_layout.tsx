@@ -4,7 +4,9 @@ import * as SplashScreen from 'expo-splash-screen';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StatusBar } from 'expo-status-bar';
+import '../lib/i18n';
 import { useAuthStore } from '../store/authStore';
+import { useLanguageStore } from '../store/languageStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -25,9 +27,10 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const { loadFromStorage, isLoading } = useAuthStore();
+  const { loadFromStorage: loadLanguage, isRTL } = useLanguageStore();
 
   useEffect(() => {
-    loadFromStorage().then(() => {
+    Promise.all([loadFromStorage(), loadLanguage()]).then(() => {
       SplashScreen.hideAsync();
     });
   }, []);
@@ -36,7 +39,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
+import i18n from '../lib/i18n';
 import apiClient from '../lib/api';
 import { Trip, TripRating, Review, TripRegistration, ProviderProfile } from '../types/trip';
 
@@ -109,7 +110,7 @@ export function useToggleFavorite() {
       if (context?.previous !== undefined) {
         qc.setQueryData(['favorites'], context.previous);
       }
-      Alert.alert('Error', 'Could not update saved trips. Please try again.');
+      Alert.alert(i18n.t('common.error'), i18n.t('favorites.errorUpdate'));
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['favorites'] });

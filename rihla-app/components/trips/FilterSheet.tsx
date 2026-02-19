@@ -9,6 +9,7 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { Colors, Radius, FontSize, Spacing, Shadow } from '../../constants/Theme';
 import Button from '../ui/Button';
 import { TripFilters } from '../../hooks/useTrips';
@@ -27,6 +28,7 @@ const RATING_OPTIONS = [
 ];
 
 export default function FilterSheet({ visible, onClose, filters, onApply }: FilterSheetProps) {
+  const { t } = useTranslation();
   const [local, setLocal] = useState<TripFilters>(filters);
 
   const update = (key: keyof TripFilters, value: any) => {
@@ -54,7 +56,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Filters</Text>
+            <Text style={styles.title}>{t('filters.title')}</Text>
             <TouchableOpacity onPress={onClose}>
               <Ionicons name="close" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
@@ -62,10 +64,10 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.body}>
             {/* Price Range */}
-            <Text style={styles.sectionLabel}>Price Range (SAR)</Text>
+            <Text style={styles.sectionLabel}>{t('filters.priceRange')}</Text>
             <View style={styles.row}>
               <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>Min</Text>
+                <Text style={styles.inputLabel}>{t('filters.minPrice')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="0"
@@ -79,10 +81,10 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
                 <Text style={styles.dashText}>—</Text>
               </View>
               <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>Max</Text>
+                <Text style={styles.inputLabel}>{t('filters.maxPrice')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Any"
+                  placeholder={t('common.noResults')}
                   keyboardType="numeric"
                   value={local.max_price?.toString() ?? ''}
                   onChangeText={(v) => update('max_price', v ? Number(v) : undefined)}
@@ -92,10 +94,10 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
             </View>
 
             {/* Participants */}
-            <Text style={styles.sectionLabel}>Participants</Text>
+            <Text style={styles.sectionLabel}>{t('filters.participants')}</Text>
             <View style={styles.row}>
               <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>Min</Text>
+                <Text style={styles.inputLabel}>{t('filters.minParticipants')}</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="1"
@@ -109,10 +111,10 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
                 <Text style={styles.dashText}>—</Text>
               </View>
               <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>Max</Text>
+                <Text style={styles.inputLabel}>{t('filters.maxParticipants')}</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Any"
+                  placeholder={t('common.noResults')}
                   keyboardType="numeric"
                   value={local.max_participants?.toString() ?? ''}
                   onChangeText={(v) => update('max_participants', v ? Number(v) : undefined)}
@@ -122,7 +124,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
             </View>
 
             {/* Rating */}
-            <Text style={styles.sectionLabel}>Minimum Rating</Text>
+            <Text style={styles.sectionLabel}>{t('filters.minRating')}</Text>
             <View style={styles.ratingRow}>
               {RATING_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -148,8 +150,8 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
 
           {/* Actions */}
           <View style={styles.actions}>
-            <Button title="Reset" variant="outline" onPress={handleReset} style={styles.resetBtn} />
-            <Button title="Apply Filters" onPress={handleApply} style={styles.applyBtn} />
+            <Button title={t('filters.resetFilters')} variant="outline" onPress={handleReset} style={styles.resetBtn} />
+            <Button title={t('filters.applyFilters')} onPress={handleApply} style={styles.applyBtn} />
           </View>
         </View>
       </View>

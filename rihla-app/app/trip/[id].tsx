@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTrip, useTripRating, useTripReviews, useFavorites, useToggleFavorite } from '../../hooks/useTrips';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../../constants/Theme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -27,11 +28,13 @@ const AMENITY_ICONS: Record<string, string> = {
   visa_assistance: 'document-text-outline',
 };
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(d: string, locale = 'en-US') {
+  return new Date(d).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function TripDetailScreen() {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [selectedPackage, setSelectedPackage] = useState<TripPackage | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
@@ -67,15 +70,15 @@ export default function TripDetailScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={56} color={Colors.gray300} />
-          <Text style={styles.errorText}>Trip not found</Text>
-          <Button title="Go Back" onPress={() => router.back()} variant="outline" />
+          <Text style={styles.errorText}>{t('trip.notFound')}</Text>
+          <Button title={t('trip.goBack')} onPress={() => router.back()} variant="outline" />
         </View>
       </SafeAreaView>
     );
   }
 
-  const name = trip.name_en ?? trip.name_ar ?? 'Trip';
-  const description = trip.description_en ?? trip.description_ar ?? '';
+  const name = (i18n.language === 'ar' ? trip.name_ar : trip.name_en) ?? trip.name_en ?? trip.name_ar ?? 'Trip';
+  const description = (i18n.language === 'ar' ? trip.description_ar : trip.description_en) ?? trip.description_en ?? trip.description_ar ?? '';
   const images = trip.images ?? [];
   const activePackages = trip.packages?.filter((p) => p.is_active) ?? [];
 
@@ -149,7 +152,7 @@ export default function TripDetailScreen() {
                 <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
               </TouchableOpacity>
             </View>
-            {!trip.is_active && <Badge label="Inactive" variant="error" />}
+            {!trip.is_active && <Badge label={t('trip.inactive')} variant="error" />}
           </View>
 
           {/* Rating */}
@@ -157,20 +160,20 @@ export default function TripDetailScreen() {
             <View style={styles.ratingRow}>
               <StarRating rating={rating.average_rating} size={16} />
               <Text style={styles.ratingText}>
-                {rating.average_rating.toFixed(1)} ({rating.total_reviews} reviews)
+                {t('trip.rating', { rating: rating.average_rating.toFixed(1), count: rating.total_reviews })}
               </Text>
             </View>
           )}
 
           {/* Key info */}
           <View style={styles.infoGrid}>
-            <InfoChip icon="calendar-outline" label="Start" value={formatDate(trip.start_date)} />
-            <InfoChip icon="calendar" label="End" value={formatDate(trip.end_date)} />
-            <InfoChip icon="people-outline" label="Max" value={`${trip.max_participants} people`} />
+            <InfoChip icon="calendar-outline" label={t('trip.start')} value={formatDate(trip.start_date, locale)} />
+            <InfoChip icon="calendar" label={t('trip.end')} value={formatDate(trip.end_date, locale)} />
+            <InfoChip icon="people-outline" label={t('trip.maxPeople')} value={t('trip.people', { count: trip.max_participants })} />
             <InfoChip
               icon="refresh-outline"
-              label="Refund"
-              value={trip.is_refundable ? 'Refundable' : 'Non-refundable'}
+              label={t('booking.package')}
+              value={trip.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
             />
           </View>
 
@@ -179,11 +182,11 @@ export default function TripDetailScreen() {
             <View style={styles.meetingBox}>
               <Ionicons name="location-outline" size={18} color={Colors.primary} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.meetingLabel}>Meeting Point</Text>
+                <Text style={styles.meetingLabel}>{t('trip.meetingPoint')}</Text>
                 <Text style={styles.meetingValue}>{trip.meeting_location}</Text>
                 {trip.meeting_time && (
                   <Text style={styles.meetingTime}>
-                    {new Date(trip.meeting_time).toLocaleString('en-US', {
+                    {new Date(trip.meeting_time).toLocaleString(locale, {
                       month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
                     })}
                   </Text>
@@ -195,7 +198,7 @@ export default function TripDetailScreen() {
           {/* Description */}
           {description.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>About this trip</Text>
+              <Text style={styles.sectionTitle}>{t('trip.aboutTrip')}</Text>
               <Text style={styles.description}>{description}</Text>
             </View>
           )}
@@ -203,7 +206,7 @@ export default function TripDetailScreen() {
           {/* Amenities */}
           {trip.amenities && trip.amenities.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>What's included</Text>
+              <Text style={styles.sectionTitle}>{t('trip.whatsIncluded')}</Text>
               <View style={styles.amenitiesGrid}>
                 {trip.amenities.map((a) => (
                   <View key={a} style={styles.amenityItem}>
@@ -215,7 +218,7 @@ export default function TripDetailScreen() {
                       />
                     </View>
                     <Text style={styles.amenityLabel}>
-                      {a.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                      {t(`amenities.${a}` as any, { defaultValue: a.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) })}
                     </Text>
                   </View>
                 ))}
@@ -226,13 +229,13 @@ export default function TripDetailScreen() {
           {/* Extra fees */}
           {trip.extra_fees && trip.extra_fees.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Additional Fees</Text>
+              <Text style={styles.sectionTitle}>{t('trip.additionalFees')}</Text>
               {trip.extra_fees.map((fee) => (
                 <View key={fee.id} style={styles.feeRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.feeName}>{fee.name_en ?? fee.name_ar}</Text>
-                    {(fee.description_en ?? fee.description_ar) && (
-                      <Text style={styles.feeDesc}>{fee.description_en ?? fee.description_ar}</Text>
+                    <Text style={styles.feeName}>{(i18n.language === 'ar' ? fee.name_ar : fee.name_en) ?? fee.name_en ?? fee.name_ar}</Text>
+                    {((i18n.language === 'ar' ? fee.description_ar : fee.description_en) ?? fee.description_en ?? fee.description_ar) && (
+                      <Text style={styles.feeDesc}>{(i18n.language === 'ar' ? fee.description_ar : fee.description_en) ?? fee.description_en ?? fee.description_ar}</Text>
                     )}
                   </View>
                   <Text style={styles.feeAmount}>SAR {Number(fee.amount).toLocaleString()}</Text>
@@ -243,14 +246,14 @@ export default function TripDetailScreen() {
 
           {/* Packages */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Choose a Package</Text>
+            <Text style={styles.sectionTitle}>{t('trip.choosePackage')}</Text>
             {activePackages.length === 0 ? (
-              <Text style={styles.noPackages}>No packages available</Text>
+              <Text style={styles.noPackages}>{t('trip.noPackages')}</Text>
             ) : (
               <View style={styles.packages}>
                 {activePackages.map((pkg) => {
-                  const pkgName = pkg.name_en ?? pkg.name_ar ?? 'Package';
-                  const pkgDesc = pkg.description_en ?? pkg.description_ar;
+                  const pkgName = (i18n.language === 'ar' ? pkg.name_ar : pkg.name_en) ?? pkg.name_en ?? pkg.name_ar ?? 'Package';
+                  const pkgDesc = (i18n.language === 'ar' ? pkg.description_ar : pkg.description_en) ?? pkg.description_en ?? pkg.description_ar;
                   const isSelected = selectedPackage?.id === pkg.id;
                   return (
                     <TouchableOpacity
@@ -273,7 +276,7 @@ export default function TripDetailScreen() {
                         <View style={styles.fieldsRow}>
                           <Ionicons name="document-text-outline" size={12} color={Colors.textTertiary} />
                           <Text style={styles.fieldsText}>
-                            {pkg.required_fields.length} required field{pkg.required_fields.length > 1 ? 's' : ''} per participant
+                            {t('trip.requiredFields', { count: pkg.required_fields.length })}
                           </Text>
                         </View>
                       )}
@@ -292,7 +295,7 @@ export default function TripDetailScreen() {
           {/* Reviews */}
           {reviews && reviews.length > 0 && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Reviews</Text>
+              <Text style={styles.sectionTitle}>{t('trip.reviews')}</Text>
               {reviews.slice(0, 3).map((r) => (
                 <View key={r.id} style={styles.reviewCard}>
                   <View style={styles.reviewHeader}>
@@ -304,7 +307,7 @@ export default function TripDetailScreen() {
                       <StarRating rating={r.rating} size={13} />
                     </View>
                     <Text style={styles.reviewDate}>
-                      {new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                      {new Date(r.created_at).toLocaleDateString(locale, { month: 'short', year: 'numeric' })}
                     </Text>
                   </View>
                   {r.comment && <Text style={styles.reviewComment}>{r.comment}</Text>}
@@ -322,20 +325,20 @@ export default function TripDetailScreen() {
         {selectedPackage ? (
           <View style={styles.bottomContent}>
             <View>
-              <Text style={styles.bottomLabel}>Selected package</Text>
+              <Text style={styles.bottomLabel}>{t('trip.selectedPackage')}</Text>
               <Text style={styles.bottomPrice}>
                 SAR {Number(selectedPackage.price).toLocaleString()}
               </Text>
             </View>
             <Button
-              title="Book Now"
+              title={t('trip.bookNow')}
               onPress={() => router.push(`/booking/${id}?packageId=${selectedPackage.id}`)}
               style={styles.bookBtn}
               size="lg"
             />
           </View>
         ) : (
-          <Text style={styles.selectHint}>Select a package to book</Text>
+          <Text style={styles.selectHint}>{t('trip.selectHint')}</Text>
         )}
       </View>
     </View>

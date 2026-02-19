@@ -4,10 +4,12 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Colors, FontSize, Radius, Shadow } from '../../constants/Theme';
 import Button from '../../components/ui/Button';
 
 export default function BookingSuccessScreen() {
+  const { t } = useTranslation();
   const { registrationId } = useLocalSearchParams<{ registrationId: string }>();
   const scale = useSharedValue(0);
   const opacity = useSharedValue(0);
@@ -32,25 +34,23 @@ export default function BookingSuccessScreen() {
       </Animated.View>
 
       <Animated.View style={[styles.content, contentStyle]}>
-        <Text style={styles.title}>Booking Confirmed!</Text>
-        <Text style={styles.subtitle}>
-          Your trip has been booked successfully. Check your email for confirmation details.
-        </Text>
+        <Text style={styles.title}>{t('booking.successTitle')}</Text>
+        <Text style={styles.subtitle}>{t('booking.successMessage')}</Text>
 
         <View style={styles.refCard}>
-          <Text style={styles.refLabel}>Booking Reference</Text>
+          <Text style={styles.refLabel}>{t('booking.package')}</Text>
           <Text style={styles.refValue}>{registrationId?.slice(0, 8).toUpperCase()}</Text>
         </View>
 
         <View style={styles.actions}>
           <Button
-            title="View My Trips"
+            title={t('booking.viewBookings')}
             onPress={() => router.replace('/(tabs)/bookings')}
             fullWidth
             size="lg"
           />
           <Button
-            title="Explore More Trips"
+            title={t('explore.subtitle')}
             onPress={() => router.replace('/(tabs)')}
             variant="outline"
             fullWidth

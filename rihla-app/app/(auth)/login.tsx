@@ -11,12 +11,16 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { useLanguageStore } from '../../store/languageStore';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import { Colors, FontSize, Spacing, Radius } from '../../constants/Theme';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguageStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,9 +29,9 @@ export default function LoginScreen() {
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!email.trim()) e.email = 'Email is required';
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
-    if (!password) e.password = 'Password is required';
+    if (!email.trim()) e.email = t('auth.email');
+    else if (!/\S+@\S+\.\S+/.test(email)) e.email = t('auth.email');
+    if (!password) e.password = t('auth.password');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -40,8 +44,8 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const msg = Array.isArray(detail) ? (detail[0]?.msg ?? 'Invalid email or password') : (typeof detail === 'string' ? detail : 'Invalid email or password');
-      Alert.alert('Login Failed', msg);
+      const msg = Array.isArray(detail) ? (detail[0]?.msg ?? t('auth.loginFailed')) : (typeof detail === 'string' ? detail : t('auth.loginFailed'));
+      Alert.alert(t('auth.login'), msg);
     } finally {
       setLoading(false);
     }
@@ -59,22 +63,28 @@ export default function LoginScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.langToggle}
+            onPress={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+          >
+            <Text style={styles.langToggleText}>{language === 'en' ? 'العربية' : 'English'}</Text>
+          </TouchableOpacity>
           <View style={styles.logoContainer}>
             <Ionicons name="compass" size={40} color={Colors.white} />
           </View>
           <Text style={styles.appName}>Rihla</Text>
-          <Text style={styles.tagline}>Your journey starts here</Text>
+          <Text style={styles.tagline}>{t('auth.loginSubtitle')}</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your adventures</Text>
+          <Text style={styles.title}>{t('auth.loginTitle')}</Text>
+          <Text style={styles.subtitle}>{t('auth.loginSubtitle')}</Text>
 
           <View style={styles.fields}>
             <Input
-              label="Email"
-              placeholder="you@example.com"
+              label={t('auth.email')}
+              placeholder={t('auth.email')}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -84,8 +94,8 @@ export default function LoginScreen() {
               error={errors.email}
             />
             <Input
-              label="Password"
-              placeholder="Your password"
+              label={t('auth.password')}
+              placeholder={t('auth.password')}
               value={password}
               onChangeText={setPassword}
               isPassword
@@ -98,11 +108,11 @@ export default function LoginScreen() {
             onPress={() => router.push('/(auth)/forgot-password')}
             style={styles.forgotRow}
           >
-            <Text style={styles.forgotText}>Forgot password?</Text>
+            <Text style={styles.forgotText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
           <Button
-            title="Sign In"
+            title={t('auth.login')}
             onPress={handleLogin}
             loading={loading}
             fullWidth
@@ -117,9 +127,9 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Don't have an account? </Text>
+            <Text style={styles.registerText}>{t('auth.noAccount')} </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.registerLink}>Sign up</Text>
+              <Text style={styles.registerLink}>{t('auth.signUp')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -156,6 +166,16 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   tagline: { fontSize: FontSize.md, color: 'rgba(255,255,255,0.8)' },
+  langToggle: {
+    position: 'absolute',
+    top: 48,
+    right: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  langToggleText: { fontSize: FontSize.sm, color: Colors.white, fontWeight: '700' },
   form: {
     flex: 1,
     paddingHorizontal: 24,

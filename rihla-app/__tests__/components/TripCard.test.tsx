@@ -9,6 +9,12 @@ jest.mock('react-native-reanimated', () =>
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: 'en' },
+  }),
+}));
 
 const mockTrip: Trip = {
   id: 'trip-1',
@@ -36,9 +42,9 @@ const mockTrip: Trip = {
       description_en: 'Standard package',
       description_ar: null,
       price: '1500',
+      currency: 'SAR',
       is_active: true,
       required_fields: [],
-      required_fields_details: [],
     },
   ],
   extra_fees: [],

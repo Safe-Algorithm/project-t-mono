@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useTrip } from '../../hooks/useTrips';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '../../constants/Theme';
 import Button from '../../components/ui/Button';
@@ -33,6 +34,7 @@ interface Participant {
 }
 
 export default function BookingScreen() {
+  const { t, i18n } = useTranslation();
   const { tripId, packageId } = useLocalSearchParams<{ tripId: string; packageId: string }>();
   const { data: trip } = useTrip(tripId);
   const [participantCount, setParticipantCount] = useState(1);
@@ -71,8 +73,8 @@ export default function BookingScreen() {
       for (const field of requiredFields) {
         if (field.is_required && !participants[i]?.[field.field_type]?.trim()) {
           Alert.alert(
-            'Missing Information',
-            `Please fill in "${FIELD_LABELS[field.field_type] ?? field.field_type}" for participant ${i + 1}`
+            t('common.error'),
+            `${t(`fields.${field.field_type}` as any, { defaultValue: FIELD_LABELS[field.field_type] ?? field.field_type })} - ${t('booking.participant', { number: i + 1 })}`
           );
           return false;
         }
@@ -100,9 +102,9 @@ export default function BookingScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
-        ? (detail[0]?.msg ?? 'Something went wrong. Please try again.')
-        : (typeof detail === 'string' ? detail : 'Something went wrong. Please try again.');
-      Alert.alert('Booking Failed', msg);
+        ? (detail[0]?.msg ?? t('common.error'))
+        : (typeof detail === 'string' ? detail : t('common.error'));
+      Alert.alert(t('booking.title'), msg);
     } finally {
       setLoading(false);
     }
@@ -113,15 +115,15 @@ export default function BookingScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.gray300} />
-          <Text style={styles.errorText}>Package not found</Text>
-          <Button title="Go Back" onPress={() => router.back()} variant="outline" />
+          <Text style={styles.errorText}>{t('trip.noPackages')}</Text>
+          <Button title={t('trip.goBack')} onPress={() => router.back()} variant="outline" />
         </View>
       </SafeAreaView>
     );
   }
 
-  const tripName = trip.name_en ?? trip.name_ar ?? 'Trip';
-  const pkgName = selectedPackage.name_en ?? selectedPackage.name_ar ?? 'Package';
+  const tripName = (i18n.language === 'ar' ? trip.name_ar : trip.name_en) ?? trip.name_en ?? trip.name_ar ?? 'Trip';
+  const pkgName = (i18n.language === 'ar' ? selectedPackage.name_ar : selectedPackage.name_en) ?? selectedPackage.name_en ?? selectedPackage.name_ar ?? 'Package';
 
   return (
     <KeyboardAvoidingView
@@ -134,7 +136,7 @@ export default function BookingScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Book Trip</Text>
+          <Text style={styles.headerTitle}>{t('booking.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -160,7 +162,7 @@ export default function BookingScreen() {
           <Text style={styles.summaryTrip} numberOfLines={1}>{tripName}</Text>
           <Text style={styles.summaryPkg}>{pkgName}</Text>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Price per person</Text>
+            <Text style={styles.summaryLabel}>{t('booking.perPerson')}</Text>
             <Text style={styles.summaryPrice}>SAR {Number(selectedPackage.price).toLocaleString()}</Text>
           </View>
         </View>
@@ -169,7 +171,7 @@ export default function BookingScreen() {
           <>
             {/* Participant count */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Number of Participants</Text>
+              <Text style={styles.sectionTitle}>{t('booking.participants')}</Text>
               <View style={styles.counterRow}>
                 <TouchableOpacity
                   style={[styles.counterBtn, participantCount <= 1 && styles.counterBtnDisabled]}
@@ -193,17 +195,17 @@ export default function BookingScreen() {
             {Array.from({ length: participantCount }, (_, i) => (
               <View key={i} style={styles.section}>
                 <Text style={styles.sectionTitle}>
-                  Participant {i + 1} {i === 0 ? '(You)' : ''}
+                  {t('booking.participant', { number: i + 1 })}
                 </Text>
                 {requiredFields.length === 0 ? (
-                  <Text style={styles.noFields}>No additional information required</Text>
+                  <Text style={styles.noFields}>{t('booking.package')}</Text>
                 ) : (
                   <View style={styles.fields}>
                     {requiredFields.map((field) => (
                       <Input
                         key={field.field_type}
-                        label={FIELD_LABELS[field.field_type] ?? field.field_type}
-                        placeholder={`Enter ${FIELD_LABELS[field.field_type] ?? field.field_type}`}
+                        label={t(`fields.${field.field_type}` as any, { defaultValue: FIELD_LABELS[field.field_type] ?? field.field_type })}
+                        placeholder={t(`fields.${field.field_type}` as any, { defaultValue: FIELD_LABELS[field.field_type] ?? field.field_type })}
                         value={participants[i]?.[field.field_type] ?? ''}
                         onChangeText={(v) => updateParticipant(i, field.field_type, v)}
                         keyboardType={
@@ -219,7 +221,7 @@ export default function BookingScreen() {
             ))}
 
             <Button
-              title="Continue to Review"
+              title={t('common.confirm')}
               onPress={() => {
                 if (validate()) setStep('confirm');
               }}
@@ -233,14 +235,14 @@ export default function BookingScreen() {
         {step === 'confirm' && (
           <>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Booking Summary</Text>
+              <Text style={styles.sectionTitle}>{t('booking.confirmBooking')}</Text>
               <View style={styles.confirmCard}>
-                <ConfirmRow label="Trip" value={tripName} />
-                <ConfirmRow label="Package" value={pkgName} />
-                <ConfirmRow label="Participants" value={String(participantCount)} />
-                <ConfirmRow label="Price per person" value={`SAR ${Number(selectedPackage.price).toLocaleString()}`} />
+                <ConfirmRow label={t('explore.subtitle')} value={tripName} />
+                <ConfirmRow label={t('booking.package')} value={pkgName} />
+                <ConfirmRow label={t('booking.participants')} value={String(participantCount)} />
+                <ConfirmRow label={t('booking.perPerson')} value={`SAR ${Number(selectedPackage.price).toLocaleString()}`} />
                 <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total</Text>
+                  <Text style={styles.totalLabel}>{t('booking.totalAmount')}</Text>
                   <Text style={styles.totalValue}>SAR {totalPrice.toLocaleString()}</Text>
                 </View>
               </View>
@@ -257,13 +259,13 @@ export default function BookingScreen() {
 
             <View style={styles.actionRow}>
               <Button
-                title="Back"
+                title={t('common.back')}
                 variant="outline"
                 onPress={() => setStep('participants')}
                 style={styles.backActionBtn}
               />
               <Button
-                title="Confirm & Pay"
+                title={t('booking.confirmBooking')}
                 onPress={handleBook}
                 loading={loading}
                 style={styles.payBtn}

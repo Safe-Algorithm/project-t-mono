@@ -7,7 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { useLanguageStore } from '../../store/languageStore';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '../../constants/Theme';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
@@ -38,7 +40,9 @@ function MenuItem({ icon, label, onPress, danger = false, value }: MenuItemProps
 }
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const { user, logout, updateUser } = useAuthStore();
+  const { language, setLanguage } = useLanguageStore();
   const [name, setName] = useState(user?.name ?? '');
   const [loading, setLoading] = useState(false);
   const nameChanged = name.trim() !== (user?.name ?? '').trim();
@@ -47,7 +51,7 @@ export default function ProfileScreen() {
   const handleAvatarUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      Alert.alert(t('profile.permissionRequired'), t('profile.permissionMessage'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -71,7 +75,7 @@ export default function ProfileScreen() {
       });
       updateUser(data);
     } catch (err: any) {
-      Alert.alert('Upload Failed', err?.response?.data?.detail ?? 'Could not upload photo.');
+      Alert.alert(t('profile.uploadFailed'), err?.response?.data?.detail ?? 'Could not upload photo.');
     } finally {
       setAvatarLoading(false);
     }
@@ -84,17 +88,17 @@ export default function ProfileScreen() {
       const { data } = await apiClient.patch('/users/me', { name: name.trim() });
       updateUser(data);
     } catch (err: any) {
-      Alert.alert('Error', err?.response?.data?.detail ?? 'Failed to update profile');
+      Alert.alert(t('common.error'), err?.response?.data?.detail ?? t('profile.updateFailed'));
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.signOutConfirmTitle'), t('profile.signOutConfirmMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign Out',
+        text: t('profile.signOut'),
         style: 'destructive',
         onPress: async () => {
           await logout();
@@ -102,6 +106,10 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const handleLanguageToggle = () => {
+    setLanguage(language === 'en' ? 'ar' : 'en');
   };
 
   const initials = user?.name
@@ -116,7 +124,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
+          <Text style={styles.headerTitle}>{t('profile.title')}</Text>
         </View>
 
         {/* Avatar & name */}
@@ -140,7 +148,7 @@ export default function ProfileScreen() {
             <Input
               value={name}
               onChangeText={setName}
-              placeholder="Your name"
+              placeholder={t('profile.yourName')}
               style={styles.nameInput}
               containerStyle={styles.nameInputContainer}
             />
@@ -151,7 +159,7 @@ export default function ProfileScreen() {
                   onPress={() => setName(user?.name ?? '')}
                   disabled={loading}
                 >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                  <Text style={styles.cancelBtnText}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.saveBtnPrimary, loading && styles.saveBtnDisabled]}
@@ -160,7 +168,7 @@ export default function ProfileScreen() {
                 >
                   {loading
                     ? <ActivityIndicator size={14} color={Colors.white} />
-                    : <Text style={styles.saveBtnText}>Save</Text>}
+                    : <Text style={styles.saveBtnText}>{t('common.save')}</Text>}
                 </TouchableOpacity>
               </View>
             )}
@@ -173,71 +181,78 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard icon="calendar-outline" label="Trips" value="—" />
-          <StatCard icon="heart-outline" label="Saved" value="—" />
-          <StatCard icon="star-outline" label="Reviews" value="—" />
+          <StatCard icon="calendar-outline" label={t('profile.trips')} value="—" />
+          <StatCard icon="heart-outline" label={t('profile.saved')} value="—" />
+          <StatCard icon="star-outline" label={t('profile.reviews')} value="—" />
         </View>
 
         {/* Menu sections */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Account</Text>
+          <Text style={styles.sectionLabel}>{t('profile.account')}</Text>
           <View style={styles.menuCard}>
             <MenuItem
               icon="person-outline"
-              label="Personal Information"
+              label={t('profile.personalInfo')}
               onPress={() => router.push('/account/personal-information')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="lock-closed-outline"
-              label="Change Password"
+              label={t('profile.changePassword')}
               onPress={() => router.push('/account/change-password')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="notifications-outline"
-              label="Notifications"
-              onPress={() => Alert.alert('Coming Soon', 'Notification settings will be available soon.')}
+              label={t('profile.notifications')}
+              onPress={() => Alert.alert(t('common.comingSoon'), t('profile.notificationsComingSoon'))}
+            />
+            <View style={styles.menuDivider} />
+            <MenuItem
+              icon="language-outline"
+              label={t('profile.language')}
+              value={language === 'ar' ? 'العربية' : 'English'}
+              onPress={handleLanguageToggle}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Activity</Text>
+          <Text style={styles.sectionLabel}>{t('profile.activity')}</Text>
           <View style={styles.menuCard}>
             <MenuItem
               icon="calendar-outline"
-              label="My Bookings"
+              label={t('profile.myBookings')}
               onPress={() => router.push('/(tabs)/bookings')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="heart-outline"
-              label="Saved Trips"
+              label={t('profile.savedTrips')}
               onPress={() => router.push('/(tabs)/favorites')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="star-outline"
-              label="My Reviews"
+              label={t('profile.myReviews')}
               onPress={() => router.push('/account/my-reviews')}
             />
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Support</Text>
+          <Text style={styles.sectionLabel}>{t('profile.support')}</Text>
           <View style={styles.menuCard}>
             <MenuItem
               icon="help-circle-outline"
-              label="Help & Support"
-              onPress={() => Alert.alert('Help & Support', 'For support, contact us at support@rihla.app')}
+              label={t('profile.helpSupport')}
+              onPress={() => Alert.alert(t('profile.helpSupport'), t('profile.helpMessage'))}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="document-text-outline"
-              label="Terms & Privacy"
-              onPress={() => Alert.alert('Terms & Privacy', 'Visit rihla.app/terms for our terms and privacy policy.')}
+              label={t('profile.termsPrivacy')}
+              onPress={() => Alert.alert(t('profile.termsPrivacy'), t('profile.termsMessage'))}
             />
           </View>
         </View>
@@ -246,14 +261,14 @@ export default function ProfileScreen() {
           <View style={styles.menuCard}>
             <MenuItem
               icon="log-out-outline"
-              label="Sign Out"
+              label={t('profile.signOut')}
               onPress={handleLogout}
               danger
             />
           </View>
         </View>
 
-        <Text style={styles.version}>Rihla v1.0.0</Text>
+        <Text style={styles.version}>{t('common.version')}</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>

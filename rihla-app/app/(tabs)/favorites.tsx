@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useFavorites, useToggleFavorite } from '../../hooks/useTrips';
 import TripCard from '../../components/trips/TripCard';
 import { TripCardSkeleton } from '../../components/ui/SkeletonLoader';
@@ -12,6 +13,7 @@ import { Colors, FontSize } from '../../constants/Theme';
 import { Trip } from '../../types/trip';
 
 export default function FavoritesScreen() {
+  const { t } = useTranslation();
   const { data: favorites, isLoading } = useFavorites();
   const toggleFav = useToggleFavorite();
 
@@ -27,7 +29,7 @@ export default function FavoritesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Saved Trips</Text>
+        <Text style={styles.title}>{t('favorites.title')}</Text>
         {favorites && favorites.length > 0 && (
           <Text style={styles.count}>{favorites.length}</Text>
         )}
@@ -51,10 +53,8 @@ export default function FavoritesScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="heart-outline" size={64} color={Colors.gray300} />
-              <Text style={styles.emptyTitle}>No saved trips yet</Text>
-              <Text style={styles.emptyText}>
-                Tap the heart icon on any trip to save it here
-              </Text>
+              <Text style={styles.emptyTitle}>{t('favorites.noFavoritesTitle')}</Text>
+              <Text style={styles.emptyText}>{t('favorites.noFavoritesText')}</Text>
             </View>
           }
         />
