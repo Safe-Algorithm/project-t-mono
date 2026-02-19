@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, SafeAreaView,
-  TouchableOpacity, Alert, Image,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Alert, Image, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuthStore } from '../../store/authStore';
 import { Colors, FontSize, Radius, Shadow, Spacing } from '../../constants/Theme';
 import Button from '../../components/ui/Button';
@@ -37,9 +39,43 @@ function MenuItem({ icon, label, onPress, danger = false, value }: MenuItemProps
 
 export default function ProfileScreen() {
   const { user, logout, updateUser } = useAuthStore();
-  const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name ?? '');
   const [loading, setLoading] = useState(false);
+  const nameChanged = name.trim() !== (user?.name ?? '').trim();
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
+  const handleAvatarUpload = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission required', 'Please allow access to your photo library.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    const asset = result.assets[0];
+    setAvatarLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', {
+        uri: asset.uri,
+        name: asset.fileName ?? 'avatar.jpg',
+        type: asset.mimeType ?? 'image/jpeg',
+      } as any);
+      const { data } = await apiClient.post('/users/me/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      updateUser(data);
+    } catch (err: any) {
+      Alert.alert('Upload Failed', err?.response?.data?.detail ?? 'Could not upload photo.');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) return;
@@ -47,7 +83,6 @@ export default function ProfileScreen() {
     try {
       const { data } = await apiClient.patch('/users/me', { name: name.trim() });
       updateUser(data);
-      setEditing(false);
     } catch (err: any) {
       Alert.alert('Error', err?.response?.data?.detail ?? 'Failed to update profile');
     } finally {
@@ -86,40 +121,50 @@ export default function ProfileScreen() {
 
         {/* Avatar & name */}
         <View style={styles.avatarSection}>
-          {user?.avatar_url ? (
-            <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
+          <TouchableOpacity onPress={handleAvatarUpload} disabled={avatarLoading} style={styles.avatarWrapper}>
+            {user?.avatar_url ? (
+              <Image source={{ uri: user.avatar_url }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitials}>{initials}</Text>
+              </View>
+            )}
+            <View style={styles.avatarEditBadge}>
+              {avatarLoading
+                ? <ActivityIndicator size={12} color={Colors.white} />
+                : <Ionicons name="camera" size={12} color={Colors.white} />}
             </View>
-          )}
+          </TouchableOpacity>
 
-          {editing ? (
-            <View style={styles.editRow}>
-              <Input
-                value={name}
-                onChangeText={setName}
-                placeholder="Your name"
-                style={styles.nameInput}
-                containerStyle={{ flex: 1 }}
-              />
-              <TouchableOpacity onPress={handleSave} disabled={loading} style={styles.saveBtn}>
-                {loading ? (
-                  <Ionicons name="hourglass-outline" size={20} color={Colors.primary} />
-                ) : (
-                  <Ionicons name="checkmark-circle" size={24} color={Colors.success} />
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setEditing(false); setName(user?.name ?? ''); }}>
-                <Ionicons name="close-circle" size={24} color={Colors.error} />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.nameRow} onPress={() => setEditing(true)}>
-              <Text style={styles.userName}>{user?.name}</Text>
-              <Ionicons name="pencil-outline" size={16} color={Colors.textTertiary} />
-            </TouchableOpacity>
-          )}
+          <View style={styles.nameEditBlock}>
+            <Input
+              value={name}
+              onChangeText={setName}
+              placeholder="Your name"
+              style={styles.nameInput}
+              containerStyle={styles.nameInputContainer}
+            />
+            {nameChanged && (
+              <View style={styles.saveRow}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => setName(user?.name ?? '')}
+                  disabled={loading}
+                >
+                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.saveBtnPrimary, loading && styles.saveBtnDisabled]}
+                  onPress={handleSave}
+                  disabled={loading}
+                >
+                  {loading
+                    ? <ActivityIndicator size={14} color={Colors.white} />
+                    : <Text style={styles.saveBtnText}>Save</Text>}
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
 
           <Text style={styles.userContact}>
             {user?.email ?? user?.phone ?? ''}
@@ -140,19 +185,19 @@ export default function ProfileScreen() {
             <MenuItem
               icon="person-outline"
               label="Personal Information"
-              onPress={() => {}}
+              onPress={() => router.push('/account/personal-information')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="lock-closed-outline"
               label="Change Password"
-              onPress={() => router.push('/(auth)/forgot-password')}
+              onPress={() => router.push('/account/change-password')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="notifications-outline"
               label="Notifications"
-              onPress={() => {}}
+              onPress={() => Alert.alert('Coming Soon', 'Notification settings will be available soon.')}
             />
           </View>
         </View>
@@ -175,7 +220,7 @@ export default function ProfileScreen() {
             <MenuItem
               icon="star-outline"
               label="My Reviews"
-              onPress={() => {}}
+              onPress={() => router.push('/account/my-reviews')}
             />
           </View>
         </View>
@@ -186,13 +231,13 @@ export default function ProfileScreen() {
             <MenuItem
               icon="help-circle-outline"
               label="Help & Support"
-              onPress={() => {}}
+              onPress={() => Alert.alert('Help & Support', 'For support, contact us at support@rihla.app')}
             />
             <View style={styles.menuDivider} />
             <MenuItem
               icon="document-text-outline"
               label="Terms & Privacy"
-              onPress={() => {}}
+              onPress={() => Alert.alert('Terms & Privacy', 'Visit rihla.app/terms for our terms and privacy policy.')}
             />
           </View>
         </View>
@@ -240,21 +285,43 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 8,
   },
-  avatar: { width: 88, height: 88, borderRadius: 44, marginBottom: 4 },
+  avatarWrapper: { position: 'relative', marginBottom: 4 },
+  avatar: { width: 88, height: 88, borderRadius: 44 },
   avatarPlaceholder: {
     width: 88, height: 88, borderRadius: 44,
     backgroundColor: Colors.primarySurface,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 3, borderColor: Colors.primaryLight,
-    marginBottom: 4,
+  },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: Colors.white,
   },
   avatarInitials: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.primary },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   userName: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.textPrimary },
   userContact: { fontSize: FontSize.md, color: Colors.textTertiary },
-  editRow: { flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' },
-  nameInput: { fontSize: FontSize.lg },
-  saveBtn: { padding: 4 },
+  nameEditBlock: { width: '100%', gap: 8 },
+  nameInputContainer: { marginBottom: 0 },
+  nameInput: { fontSize: FontSize.lg, textAlign: 'center' },
+  saveRow: { flexDirection: 'row', gap: 8, justifyContent: 'center' },
+  cancelBtn: {
+    paddingHorizontal: 20, paddingVertical: 8,
+    borderRadius: Radius.full,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  cancelBtnText: { fontSize: FontSize.sm, color: Colors.textSecondary, fontWeight: '600' },
+  saveBtnPrimary: {
+    paddingHorizontal: 24, paddingVertical: 8,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.primary,
+    minWidth: 80, alignItems: 'center',
+  },
+  saveBtnDisabled: { opacity: 0.6 },
+  saveBtnText: { fontSize: FontSize.sm, color: Colors.white, fontWeight: '700' },
 
   statsRow: {
     flexDirection: 'row',

@@ -1,15 +1,25 @@
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { LogBox } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Theme';
 import { useAuthStore } from '../../store/authStore';
 
+LogBox.ignoreLogs([
+  'SafeAreaView has been deprecated',
+  'ImagePicker.MediaTypeOptions',
+]);
+
 export default function TabLayout() {
   const { isAuthenticated } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   if (!isAuthenticated) {
     return <Redirect href="/(auth)/login" />;
   }
+
+  const tabBarHeight = 52 + insets.bottom;
 
   return (
     <Tabs
@@ -21,8 +31,8 @@ export default function TabLayout() {
           backgroundColor: Colors.white,
           borderTopColor: Colors.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
+          height: tabBarHeight,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
           paddingTop: 6,
         },
         tabBarLabelStyle: {

@@ -114,9 +114,16 @@ def list_public_trips(
             start_date=trip.start_date,
             end_date=trip.end_date,
             max_participants=trip.max_participants,
+            images=trip.images,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
-            packages=packages_with_fields
+            is_refundable=trip.is_refundable,
+            amenities=trip.amenities,
+            has_meeting_place=trip.has_meeting_place,
+            meeting_location=trip.meeting_location,
+            meeting_time=trip.meeting_time,
+            packages=packages_with_fields,
+            extra_fees=trip.extra_fees if hasattr(trip, 'extra_fees') and trip.extra_fees else [],
         ))
     
     return trips_with_packages
@@ -187,7 +194,14 @@ def get_public_trip(
         start_date=trip.start_date,
         end_date=trip.end_date,
         max_participants=trip.max_participants,
+        images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
-        packages=packages_with_fields
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        packages=packages_with_fields,
+        extra_fees=trip.extra_fees if hasattr(trip, 'extra_fees') and trip.extra_fees else [],
     )

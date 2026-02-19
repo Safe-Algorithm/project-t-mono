@@ -63,6 +63,18 @@ export default function RootLayout() {
               presentation: 'modal',
             }}
           />
+          <Stack.Screen
+            name="account/change-password"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="account/personal-information"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="account/my-reviews"
+            options={{ headerShown: false, animation: 'slide_from_right' }}
+          />
         </Stack>
       </GestureHandlerRootView>
     </QueryClientProvider>
