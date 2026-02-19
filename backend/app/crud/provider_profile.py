@@ -68,9 +68,14 @@ def get_provider_profile_public(
     return {
         "id": provider.id,
         "company_name": provider.company_name,
+        "company_email": provider.company_email,
+        "company_phone": provider.company_phone,
+        "company_avatar_url": provider.company_avatar_url,
+        "bio_en": provider.bio_en,
+        "bio_ar": provider.bio_ar,
         "company_metadata": provider.company_metadata or {},
         "total_trips": total_trips,
         "active_trips": active_trips,
         "average_rating": average_rating,
-        "total_reviews": total_reviews
+        "total_reviews": total_reviews,
     }

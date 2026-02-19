@@ -4,6 +4,7 @@ from datetime import timedelta
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, BackgroundTasks
+from pydantic import BaseModel
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session
 
