@@ -56,7 +56,16 @@ class TripPackageRequiredFieldDetail(BaseModel):
     is_required: bool
     validation_config: Optional[Dict[str, Any]] = None
 
-class TripPackageWithRequiredFields(TripPackage):
+class TripPackageWithRequiredFields(BaseModel):
     """Trip package response with required fields populated"""
+    id: uuid.UUID
+    trip_id: uuid.UUID
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    price: Decimal
+    currency: Currency = Currency.SAR
+    is_active: bool = True
     required_fields: List[TripFieldType] = []
     required_fields_details: Optional[List[TripPackageRequiredFieldDetail]] = []

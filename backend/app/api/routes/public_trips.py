@@ -23,6 +23,63 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+def build_trip_read(trip, session: Session) -> TripRead:
+    """Convert a Trip ORM object to a TripRead schema with properly built packages."""
+    packages = session.query(TripPackageModel).filter(
+        TripPackageModel.trip_id == trip.id,
+        TripPackageModel.is_active == True
+    ).all()
+
+    packages_with_fields = []
+    for package in packages:
+        required_fields = session.query(TripPackageRequiredField).filter(
+            TripPackageRequiredField.package_id == package.id
+        ).all()
+        required_field_types = [rf.field_type.value for rf in required_fields]
+        packages_with_fields.append(TripPackageWithRequiredFields(
+            id=package.id,
+            trip_id=package.trip_id,
+            name_en=package.name_en,
+            name_ar=package.name_ar,
+            description_en=package.description_en,
+            description_ar=package.description_ar,
+            price=package.price,
+            currency=package.currency,
+            is_active=package.is_active,
+            required_fields=required_field_types,
+        ))
+
+    from app.crud import provider as provider_crud
+    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
+    provider_info = {
+        "id": provider.id,
+        "company_name": provider.company_name,
+    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
+
+    return TripRead(
+        id=trip.id,
+        provider_id=trip.provider_id,
+        provider=provider_info,
+        name_en=trip.name_en,
+        name_ar=trip.name_ar,
+        description_en=trip.description_en,
+        description_ar=trip.description_ar,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        max_participants=trip.max_participants,
+        images=trip.images,
+        trip_metadata=trip.trip_metadata,
+        is_active=trip.is_active,
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        packages=packages_with_fields,
+        extra_fees=[],
+    )
+
+
 @router.get("", response_model=List[TripRead])
 def list_public_trips(
     session: Session = Depends(get_session),
@@ -69,64 +126,7 @@ def list_public_trips(
         limit=limit
     )
     
-    trips_with_packages = []
-    for trip in trips:
-        packages = session.query(TripPackageModel).filter(
-            TripPackageModel.trip_id == trip.id,
-            TripPackageModel.is_active == True
-        ).all()
-        
-        packages_with_fields = []
-        for package in packages:
-            required_fields = session.query(TripPackageRequiredField).filter(
-                TripPackageRequiredField.package_id == package.id
-            ).all()
-            required_field_types = [rf.field_type.value for rf in required_fields]
-            
-            packages_with_fields.append(TripPackageWithRequiredFields(
-                id=package.id,
-                trip_id=package.trip_id,
-                name_en=package.name_en,
-                name_ar=package.name_ar,
-                description_en=package.description_en,
-                description_ar=package.description_ar,
-                price=package.price,
-                currency=package.currency,
-                is_active=package.is_active,
-                required_fields=required_field_types
-            ))
-        
-        from app.crud import provider as provider_crud
-        provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-        provider_info = {
-            "id": provider.id,
-            "company_name": provider.company_name
-        } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-        
-        trips_with_packages.append(TripRead(
-            id=trip.id,
-            provider_id=trip.provider_id,
-            provider=provider_info,
-            name_en=trip.name_en,
-            name_ar=trip.name_ar,
-            description_en=trip.description_en,
-            description_ar=trip.description_ar,
-            start_date=trip.start_date,
-            end_date=trip.end_date,
-            max_participants=trip.max_participants,
-            images=trip.images,
-            trip_metadata=trip.trip_metadata,
-            is_active=trip.is_active,
-            is_refundable=trip.is_refundable,
-            amenities=trip.amenities,
-            has_meeting_place=trip.has_meeting_place,
-            meeting_location=trip.meeting_location,
-            meeting_time=trip.meeting_time,
-            packages=packages_with_fields,
-            extra_fees=trip.extra_fees if hasattr(trip, 'extra_fees') and trip.extra_fees else [],
-        ))
-    
-    return trips_with_packages
+    return [build_trip_read(trip, session) for trip in trips]
 
 
 @router.get("/{trip_id}", response_model=TripRead)
@@ -150,58 +150,5 @@ def get_public_trip(
     trip = crud.trip.get_trip(session=session, trip_id=trip_uuid)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    
-    # Get packages with required fields
-    packages = session.query(TripPackageModel).filter(
-        TripPackageModel.trip_id == trip_uuid,
-        TripPackageModel.is_active == True
-    ).all()
-    
-    packages_with_fields = []
-    for package in packages:
-        required_fields = session.query(TripPackageRequiredField).filter(
-            TripPackageRequiredField.package_id == package.id
-        ).all()
-        required_field_types = [rf.field_type.value for rf in required_fields]
-        
-        packages_with_fields.append(TripPackageWithRequiredFields(
-            id=package.id,
-            trip_id=package.trip_id,
-            name=get_name(package),
-            description=get_description(package),
-            price=package.price,
-            currency=package.currency,
-            is_active=package.is_active,
-            required_fields=required_field_types
-        ))
-    
-    # Get provider info
-    from app.crud import provider as provider_crud
-    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-    provider_info = {
-        "id": provider.id,
-        "company_name": provider.company_name
-    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-    
-    return TripRead(
-        id=trip.id,
-        provider_id=trip.provider_id,
-        provider=provider_info,
-        name_en=trip.name_en,
-        name_ar=trip.name_ar,
-        description_en=trip.description_en,
-        description_ar=trip.description_ar,
-        start_date=trip.start_date,
-        end_date=trip.end_date,
-        max_participants=trip.max_participants,
-        images=trip.images,
-        trip_metadata=trip.trip_metadata,
-        is_active=trip.is_active,
-        is_refundable=trip.is_refundable,
-        amenities=trip.amenities,
-        has_meeting_place=trip.has_meeting_place,
-        meeting_location=trip.meeting_location,
-        meeting_time=trip.meeting_time,
-        packages=packages_with_fields,
-        extra_fees=trip.extra_fees if hasattr(trip, 'extra_fees') and trip.extra_fees else [],
-    )
+
+    return build_trip_read(trip, session)

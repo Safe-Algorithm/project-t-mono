@@ -12,6 +12,7 @@ from app.models.trip_favorite import TripFavorite
 from app.models.trip_like import TripLike
 from app.models.trip_bookmark import TripBookmark
 from app.schemas.trip import TripRead
+from app.api.routes.public_trips import build_trip_read
 
 router = APIRouter()
 
@@ -92,7 +93,7 @@ def get_user_favorites(
     )
     
     trips = session.exec(statement).all()
-    return trips
+    return [build_trip_read(trip, session) for trip in trips]
 
 
 # ==================== LIKES ====================
@@ -171,7 +172,7 @@ def get_user_likes(
     )
     
     trips = session.exec(statement).all()
-    return trips
+    return [build_trip_read(trip, session) for trip in trips]
 
 
 # ==================== BOOKMARKS ====================
@@ -250,4 +251,4 @@ def get_user_bookmarks(
     )
     
     trips = session.exec(statement).all()
-    return trips
+    return [build_trip_read(trip, session) for trip in trips]

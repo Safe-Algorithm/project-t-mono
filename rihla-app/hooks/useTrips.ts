@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Alert } from 'react-native';
 import apiClient from '../lib/api';
 import { Trip, TripRating, Review, TripRegistration, ProviderProfile } from '../types/trip';
 
@@ -80,6 +81,7 @@ export function useFavorites() {
       const { data } = await apiClient.get<Trip[]>('/favorites');
       return data;
     },
+    retry: 1,
   });
 }
 
@@ -93,7 +95,23 @@ export function useToggleFavorite() {
         await apiClient.post(`/trips/${tripId}/favorite`, {});
       }
     },
-    onSuccess: () => {
+    onMutate: async ({ tripId, isFav }) => {
+      await qc.cancelQueries({ queryKey: ['favorites'] });
+      const previous = qc.getQueryData<Trip[]>(['favorites']);
+      qc.setQueryData<Trip[]>(['favorites'], (old) => {
+        if (!old) return old;
+        if (isFav) return old.filter((t) => t.id !== tripId);
+        return old;
+      });
+      return { previous };
+    },
+    onError: (_err, _vars, context: any) => {
+      if (context?.previous !== undefined) {
+        qc.setQueryData(['favorites'], context.previous);
+      }
+      Alert.alert('Error', 'Could not update saved trips. Please try again.');
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ['favorites'] });
     },
   });
