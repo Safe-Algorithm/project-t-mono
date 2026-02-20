@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import PhoneInput, { COUNTRIES, Country } from '../../components/ui/PhoneInput';
 import { FontSize, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api';
@@ -27,6 +28,8 @@ export default function RegisterScreen() {
   const [step, setStep] = useState<Step>('contact');
   const [contactType, setContactType] = useState<'email' | 'phone'>('email');
   const [contact, setContact] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
+  const [localNumber, setLocalNumber] = useState('');
   const [otp, setOtp] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [name, setName] = useState('');
@@ -35,9 +38,15 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const fullPhone = `${selectedCountry.dialCode}${localNumber.trim()}`;
+
   const sendOtp = async () => {
-    if (!contact.trim()) {
-      setErrors({ contact: `${contactType === 'email' ? 'Email' : 'Phone'} is required` });
+    if (contactType === 'email' && !contact.trim()) {
+      setErrors({ contact: 'Email is required' });
+      return;
+    }
+    if (contactType === 'phone' && !localNumber.trim()) {
+      setErrors({ contact: 'Phone number is required' });
       return;
     }
     setLoading(true);
@@ -45,7 +54,7 @@ export default function RegisterScreen() {
       if (contactType === 'email') {
         await apiClient.post('/otp/send-email-otp-registration', { email: contact.trim() });
       } else {
-        await apiClient.post('/otp/send-otp-registration', { phone: contact.trim() });
+        await apiClient.post('/otp/send-otp-registration', { phone: fullPhone });
       }
       setErrors({});
       setStep('otp');
@@ -73,7 +82,7 @@ export default function RegisterScreen() {
         });
       } else {
         res = await apiClient.post('/otp/verify-otp-registration', {
-          phone: contact.trim(),
+          phone: fullPhone,
           otp: otp.trim(),
         });
       }
@@ -106,7 +115,7 @@ export default function RegisterScreen() {
         registerPayload.email = contact.trim();
         registerPayload.email_verification_token = verificationToken;
       } else {
-        registerPayload.phone = contact.trim();
+        registerPayload.phone = fullPhone;
         registerPayload.phone_verification_token = verificationToken;
       }
       const { useAuthStore } = await import('../../store/authStore');
@@ -160,17 +169,26 @@ export default function RegisterScreen() {
                   <Text style={[s.toggleText, contactType === 'email' && s.toggleTextActive]}>Email</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.toggleBtn, contactType === 'phone' && s.toggleBtnActive]}
-                  onPress={() => { setContactType('phone'); setContact(''); setErrors({}); }}>
+                  onPress={() => { setContactType('phone'); setContact(''); setLocalNumber(''); setErrors({}); }}>
                   <Ionicons name="call-outline" size={16} color={contactType === 'phone' ? colors.primary : colors.textTertiary} />
                   <Text style={[s.toggleText, contactType === 'phone' && s.toggleTextActive]}>Phone</Text>
                 </TouchableOpacity>
               </View>
-              <Input label={contactType === 'email' ? 'Email Address' : 'Phone Number'}
-                placeholder={contactType === 'email' ? 'you@example.com' : '+966 5X XXX XXXX'}
-                value={contact} onChangeText={setContact}
-                keyboardType={contactType === 'email' ? 'email-address' : 'phone-pad'}
-                autoCapitalize="none" leftIcon={contactType === 'email' ? 'mail-outline' : 'call-outline'}
-                error={errors.contact} />
+              {contactType === 'email' ? (
+                <Input label="Email Address" placeholder="you@example.com"
+                  value={contact} onChangeText={setContact}
+                  keyboardType="email-address" autoCapitalize="none"
+                  leftIcon="mail-outline" error={errors.contact} />
+              ) : (
+                <PhoneInput
+                  label="Phone Number"
+                  value={localNumber}
+                  onChangeText={setLocalNumber}
+                  selectedCountry={selectedCountry}
+                  onSelectCountry={(c) => { setSelectedCountry(c); setLocalNumber(''); }}
+                  error={errors.contact}
+                />
+              )}
               <Button title="Send Verification Code" onPress={sendOtp} loading={loading} fullWidth size="lg" style={s.btn} />
             </>
           )}
