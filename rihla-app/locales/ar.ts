@@ -81,6 +81,8 @@ export default {
     requiredFields_other: '{{count}} حقول مطلوبة لكل مشارك',
     inactive: 'غير نشط',
     rating: '{{rating}} ({{count}} تقييم)',
+    fromPrice: 'تبدأ من {{price}} ﷼',
+    priceOnly: '{{price}} ﷼',
   },
 
   booking: {
@@ -96,6 +98,7 @@ export default {
     viewBookings: 'عرض حجوزاتي',
     backToTrip: 'العودة للرحلة',
     perPerson: 'للشخص',
+    priceFormat: '{{price}} ﷼',
     package: 'الباقة',
     requiredField: 'مطلوب',
   },

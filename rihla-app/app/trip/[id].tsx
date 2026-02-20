@@ -56,7 +56,7 @@ export default function TripDetailScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.loadingHeader}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+            <Ionicons name={i18n.language === 'ar' ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
@@ -81,8 +81,8 @@ export default function TripDetailScreen() {
     );
   }
 
-  const name = (i18n.language === 'ar' ? trip.name_ar : trip.name_en) ?? trip.name_en ?? trip.name_ar ?? 'Trip';
-  const description = (i18n.language === 'ar' ? trip.description_ar : trip.description_en) ?? trip.description_en ?? trip.description_ar ?? '';
+  const name = (i18n.language === 'ar' ? (trip.name_ar ?? trip.name_en) : (trip.name_en ?? trip.name_ar)) ?? 'Trip';
+  const description = (i18n.language === 'ar' ? (trip.description_ar ?? trip.description_en) : (trip.description_en ?? trip.description_ar)) ?? '';
   const images = trip.images ?? [];
   const activePackages = trip.packages?.filter((p) => p.is_active) ?? [];
 
@@ -127,7 +127,7 @@ export default function TripDetailScreen() {
           {/* Overlay buttons */}
           <SafeAreaView style={s.imageOverlay} edges={['top']}>
             <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={22} color={colors.white} />
+              <Ionicons name={i18n.language === 'ar' ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.white} />
             </TouchableOpacity>
             <TouchableOpacity
               style={s.favBtn}
@@ -238,12 +238,12 @@ export default function TripDetailScreen() {
               {trip.extra_fees.map((fee) => (
                 <View key={fee.id} style={s.feeRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.feeName}>{(i18n.language === 'ar' ? fee.name_ar : fee.name_en) ?? fee.name_en ?? fee.name_ar}</Text>
-                    {((i18n.language === 'ar' ? fee.description_ar : fee.description_en) ?? fee.description_en ?? fee.description_ar) && (
-                      <Text style={s.feeDesc}>{(i18n.language === 'ar' ? fee.description_ar : fee.description_en) ?? fee.description_en ?? fee.description_ar}</Text>
+                    <Text style={s.feeName}>{i18n.language === 'ar' ? (fee.name_ar ?? fee.name_en) : (fee.name_en ?? fee.name_ar)}</Text>
+                    {(i18n.language === 'ar' ? (fee.description_ar ?? fee.description_en) : (fee.description_en ?? fee.description_ar)) && (
+                      <Text style={s.feeDesc}>{i18n.language === 'ar' ? (fee.description_ar ?? fee.description_en) : (fee.description_en ?? fee.description_ar)}</Text>
                     )}
                   </View>
-                  <Text style={s.feeAmount}>SAR {Number(fee.amount).toLocaleString()}</Text>
+                  <Text style={s.feeAmount}>{t('booking.priceFormat', { price: Number(fee.amount).toLocaleString() })}</Text>
                 </View>
               ))}
             </View>
@@ -257,8 +257,8 @@ export default function TripDetailScreen() {
             ) : (
               <View style={s.packages}>
                 {activePackages.map((pkg) => {
-                  const pkgName = (i18n.language === 'ar' ? pkg.name_ar : pkg.name_en) ?? pkg.name_en ?? pkg.name_ar ?? 'Package';
-                  const pkgDesc = (i18n.language === 'ar' ? pkg.description_ar : pkg.description_en) ?? pkg.description_en ?? pkg.description_ar;
+                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar ?? pkg.name_en) : (pkg.name_en ?? pkg.name_ar)) ?? 'Package';
+                  const pkgDesc = i18n.language === 'ar' ? (pkg.description_ar ?? pkg.description_en) : (pkg.description_en ?? pkg.description_ar);
                   const isSelected = selectedPackage?.id === pkg.id;
                   return (
                     <TouchableOpacity
@@ -271,7 +271,7 @@ export default function TripDetailScreen() {
                           {pkgName}
                         </Text>
                         <Text style={[s.packagePrice, isSelected && s.packagePriceSelected]}>
-                          SAR {Number(pkg.price).toLocaleString()}
+                          {t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}
                         </Text>
                       </View>
                       {pkgDesc && (
@@ -332,7 +332,7 @@ export default function TripDetailScreen() {
             <View>
               <Text style={s.bottomLabel}>{t('trip.selectedPackage')}</Text>
               <Text style={s.bottomPrice}>
-                SAR {Number(selectedPackage.price).toLocaleString()}
+                {t('booking.priceFormat', { price: Number(selectedPackage.price).toLocaleString() })}
               </Text>
             </View>
             <Button

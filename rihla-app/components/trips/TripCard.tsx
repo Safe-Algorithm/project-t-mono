@@ -30,12 +30,13 @@ interface TripCardProps {
 }
 
 function getLocalizedName(trip: Trip, lang: string): string {
-  return (lang === 'ar' ? trip.name_ar : trip.name_en) ?? trip.name_en ?? trip.name_ar ?? 'Unnamed Trip';
+  if (lang === 'ar') return trip.name_ar ?? trip.name_en ?? 'Unnamed Trip';
+  return trip.name_en ?? trip.name_ar ?? 'Unnamed Trip';
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(dateStr: string, lang: string): string {
+  const locale = lang === 'ar' ? 'ar-SA' : 'en-US';
+  return new Date(dateStr).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function getMinPrice(trip: Trip): number | null {
@@ -53,6 +54,8 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
   const coverImage = trip.images?.[0];
   const minPrice = getMinPrice(trip);
   const name = getLocalizedName(trip, i18n.language);
+  const packageCount = trip.packages?.length ?? 0;
+  const priceKey = packageCount === 1 ? 'trip.priceOnly' : 'trip.fromPrice';
 
   if (compact) {
     return (
@@ -74,7 +77,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           <Text style={s.compactName} numberOfLines={1}>{name}</Text>
           <Text style={s.compactProvider} numberOfLines={1}>{trip.provider?.company_name}</Text>
           {minPrice !== null && (
-            <Text style={s.price}>SAR {minPrice.toLocaleString()}</Text>
+            <Text style={s.price}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
           )}
         </View>
       </AnimatedTouchable>
@@ -110,7 +113,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
         )}
         {minPrice !== null && (
           <View style={s.priceBadge}>
-            <Text style={s.priceBadgeText}>From SAR {minPrice.toLocaleString()}</Text>
+            <Text style={s.priceBadgeText}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
           </View>
         )}
       </View>
@@ -124,7 +127,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
         <View style={s.metaRow}>
           <View style={s.metaItem}>
             <Ionicons name="calendar-outline" size={13} color={colors.primary} />
-            <Text style={s.metaText}>{formatDate(trip.start_date)}</Text>
+            <Text style={s.metaText}>{formatDate(trip.start_date, i18n.language)}</Text>
           </View>
           <View style={s.metaDivider} />
           <View style={s.metaItem}>
@@ -145,7 +148,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           <View style={s.amenitiesRow}>
             {trip.amenities.slice(0, 3).map((a) => (
               <View key={a} style={s.amenityChip}>
-                <Text style={s.amenityText}>{a.replace(/_/g, ' ')}</Text>
+                <Text style={s.amenityText}>{t(`amenities.${a}` as any, { defaultValue: a.replace(/_/g, ' ') })}</Text>
               </View>
             ))}
             {trip.amenities.length > 3 && (

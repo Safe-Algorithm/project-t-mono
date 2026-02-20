@@ -10,6 +10,7 @@ import { useLanguageStore } from '../store/languageStore';
 import { useThemeStore } from '../store/themeStore';
 import { useTheme } from '../hooks/useTheme';
 
+
 export { ErrorBoundary } from 'expo-router';
 
 export const unstable_settings = {
@@ -29,9 +30,10 @@ const queryClient = new QueryClient({
 
 export default function RootLayout() {
   const { loadFromStorage, isLoading } = useAuthStore();
-  const { loadFromStorage: loadLanguage, isRTL } = useLanguageStore();
+  const { loadFromStorage: loadLanguage, isRTL, language } = useLanguageStore();
   const { loadFromStorage: loadTheme } = useThemeStore();
   const { isDark } = useTheme();
+  const slideIn = language === 'ar' ? 'slide_from_left' : 'slide_from_right';
 
   useEffect(() => {
     Promise.all([loadFromStorage(), loadLanguage(), loadTheme()]).then(() => {
@@ -52,14 +54,14 @@ export default function RootLayout() {
             name="trip/[id]"
             options={{
               headerShown: false,
-              animation: 'slide_from_right',
+              animation: slideIn,
             }}
           />
           <Stack.Screen
             name="provider/[id]"
             options={{
               headerShown: false,
-              animation: 'slide_from_right',
+              animation: slideIn,
             }}
           />
           <Stack.Screen
@@ -72,15 +74,15 @@ export default function RootLayout() {
           />
           <Stack.Screen
             name="account/change-password"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
+            options={{ headerShown: false, animation: slideIn }}
           />
           <Stack.Screen
             name="account/personal-information"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
+            options={{ headerShown: false, animation: slideIn }}
           />
           <Stack.Screen
             name="account/my-reviews"
-            options={{ headerShown: false, animation: 'slide_from_right' }}
+            options={{ headerShown: false, animation: slideIn }}
           />
         </Stack>
       </GestureHandlerRootView>

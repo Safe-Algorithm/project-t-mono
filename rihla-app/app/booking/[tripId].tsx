@@ -125,15 +125,15 @@ export default function BookingScreen() {
     );
   }
 
-  const tripName = (i18n.language === 'ar' ? trip.name_ar : trip.name_en) ?? trip.name_en ?? trip.name_ar ?? 'Trip';
-  const pkgName = (i18n.language === 'ar' ? selectedPackage.name_ar : selectedPackage.name_en) ?? selectedPackage.name_en ?? selectedPackage.name_ar ?? 'Package';
+  const tripName = (i18n.language === 'ar' ? (trip.name_ar ?? trip.name_en) : (trip.name_en ?? trip.name_ar)) ?? 'Trip';
+  const pkgName = (i18n.language === 'ar' ? (selectedPackage.name_ar ?? selectedPackage.name_en) : (selectedPackage.name_en ?? selectedPackage.name_ar)) ?? 'Package';
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <SafeAreaView style={s.safeArea} edges={['top']}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+            <Ionicons name={i18n.language === 'ar' ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={s.headerTitle}>{t('booking.title')}</Text>
           <View style={{ width: 40 }} />
@@ -155,7 +155,7 @@ export default function BookingScreen() {
           <Text style={s.summaryPkg}>{pkgName}</Text>
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>{t('booking.perPerson')}</Text>
-            <Text style={s.summaryPrice}>SAR {Number(selectedPackage.price).toLocaleString()}</Text>
+            <Text style={s.summaryPrice}>{t('booking.priceFormat', { price: Number(selectedPackage.price).toLocaleString() })}</Text>
           </View>
         </View>
 
@@ -210,10 +210,10 @@ export default function BookingScreen() {
                 <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
                 <ConfirmRow label={t('booking.package')} value={pkgName} s={s} />
                 <ConfirmRow label={t('booking.participants')} value={String(participantCount)} s={s} />
-                <ConfirmRow label={t('booking.perPerson')} value={`SAR ${Number(selectedPackage.price).toLocaleString()}`} s={s} />
+                <ConfirmRow label={t('booking.perPerson')} value={t('booking.priceFormat', { price: Number(selectedPackage.price).toLocaleString() })} s={s} />
                 <View style={s.totalRow}>
                   <Text style={s.totalLabel}>{t('booking.totalAmount')}</Text>
-                  <Text style={s.totalValue}>SAR {totalPrice.toLocaleString()}</Text>
+                  <Text style={s.totalValue}>{t('booking.priceFormat', { price: totalPrice.toLocaleString() })}</Text>
                 </View>
               </View>
             </View>

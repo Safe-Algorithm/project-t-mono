@@ -81,6 +81,8 @@ export default {
     requiredFields_other: '{{count}} required fields per participant',
     inactive: 'Inactive',
     rating: '{{rating}} ({{count}} reviews)',
+    fromPrice: 'Starts from {{price}} SAR',
+    priceOnly: '{{price}} SAR',
   },
 
   booking: {
@@ -96,6 +98,7 @@ export default {
     viewBookings: 'View My Bookings',
     backToTrip: 'Back to Trip',
     perPerson: 'per person',
+    priceFormat: '{{price}} SAR',
     package: 'Package',
     requiredField: 'Required',
   },
