@@ -11,7 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useTranslation } from 'react-i18next';
 import { Trip } from '../../types/trip';
-import { Colors, Radius, FontSize, Shadow, Spacing } from '../../constants/Theme';
+import { Radius, FontSize, Shadow, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 import StarRating from '../ui/StarRating';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -44,6 +45,8 @@ function getMinPrice(trip: Trip): number | null {
 
 export default function TripCard({ trip, onPress, isFavorite = false, onFavoriteToggle, compact = false, testID }: TripCardProps) {
   const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -54,24 +57,24 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
   if (compact) {
     return (
       <AnimatedTouchable
-        style={[styles.compactCard, animStyle]}
+        style={[s.compactCard, animStyle]}
         onPress={onPress}
         onPressIn={() => { scale.value = withSpring(0.97, { damping: 15 }); }}
         onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
         activeOpacity={1}
       >
         {coverImage ? (
-          <Image source={{ uri: coverImage }} style={styles.compactImage} />
+          <Image source={{ uri: coverImage }} style={s.compactImage} />
         ) : (
-          <View style={[styles.compactImage, styles.imagePlaceholder]}>
-            <Ionicons name="image-outline" size={28} color={Colors.gray300} />
+          <View style={[s.compactImage, s.imagePlaceholder]}>
+            <Ionicons name="image-outline" size={28} color={colors.gray300} />
           </View>
         )}
-        <View style={styles.compactContent}>
-          <Text style={styles.compactName} numberOfLines={1}>{name}</Text>
-          <Text style={styles.compactProvider} numberOfLines={1}>{trip.provider?.company_name}</Text>
+        <View style={s.compactContent}>
+          <Text style={s.compactName} numberOfLines={1}>{name}</Text>
+          <Text style={s.compactProvider} numberOfLines={1}>{trip.provider?.company_name}</Text>
           {minPrice !== null && (
-            <Text style={styles.price}>SAR {minPrice.toLocaleString()}</Text>
+            <Text style={s.price}>SAR {minPrice.toLocaleString()}</Text>
           )}
         </View>
       </AnimatedTouchable>
@@ -80,85 +83,74 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
 
   return (
     <AnimatedTouchable
-      style={[styles.card, animStyle]}
+      style={[s.card, animStyle]}
       onPress={onPress}
       onPressIn={() => { scale.value = withSpring(0.98, { damping: 15 }); }}
       onPressOut={() => { scale.value = withSpring(1, { damping: 15 }); }}
       activeOpacity={1}
       testID={testID}
     >
-      {/* Image */}
-      <View style={styles.imageContainer}>
+      <View style={s.imageContainer}>
         {coverImage ? (
-          <Image source={{ uri: coverImage }} style={styles.image} />
+          <Image source={{ uri: coverImage }} style={s.image} />
         ) : (
-          <View style={[styles.image, styles.imagePlaceholder]}>
-            <Ionicons name="image-outline" size={48} color={Colors.gray300} />
+          <View style={[s.image, s.imagePlaceholder]}>
+            <Ionicons name="image-outline" size={48} color={colors.gray300} />
           </View>
         )}
-
-        {/* Gradient overlay */}
-        <View style={styles.imageOverlay} />
-
-        {/* Favorite button */}
+        <View style={s.imageOverlay} />
         {onFavoriteToggle && (
-          <TouchableOpacity style={styles.favoriteBtn} onPress={onFavoriteToggle} testID="fav-btn">
+          <TouchableOpacity style={s.favoriteBtn} onPress={onFavoriteToggle} testID="fav-btn">
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
               size={22}
-              color={isFavorite ? Colors.error : Colors.white}
+              color={isFavorite ? colors.error : colors.white}
             />
           </TouchableOpacity>
         )}
-
-        {/* Price badge */}
         {minPrice !== null && (
-          <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>From SAR {minPrice.toLocaleString()}</Text>
+          <View style={s.priceBadge}>
+            <Text style={s.priceBadgeText}>From SAR {minPrice.toLocaleString()}</Text>
           </View>
         )}
       </View>
 
-      {/* Content */}
-      <View style={styles.content}>
-        <Text style={styles.name} numberOfLines={2}>{name}</Text>
-
-        <View style={styles.providerRow}>
-          <Ionicons name="business-outline" size={13} color={Colors.textTertiary} />
-          <Text style={styles.provider} numberOfLines={1}>{trip.provider?.company_name}</Text>
+      <View style={s.content}>
+        <Text style={s.name} numberOfLines={2}>{name}</Text>
+        <View style={s.providerRow}>
+          <Ionicons name="business-outline" size={13} color={colors.textTertiary} />
+          <Text style={s.provider} numberOfLines={1}>{trip.provider?.company_name}</Text>
         </View>
-
-        <View style={styles.metaRow}>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={13} color={Colors.primary} />
-            <Text style={styles.metaText}>{formatDate(trip.start_date)}</Text>
+        <View style={s.metaRow}>
+          <View style={s.metaItem}>
+            <Ionicons name="calendar-outline" size={13} color={colors.primary} />
+            <Text style={s.metaText}>{formatDate(trip.start_date)}</Text>
           </View>
-          <View style={styles.metaDivider} />
-          <View style={styles.metaItem}>
-            <Ionicons name="people-outline" size={13} color={Colors.primary} />
-            <Text style={styles.metaText}>{t('trip.maxPeople')} {trip.max_participants}</Text>
+          <View style={s.metaDivider} />
+          <View style={s.metaItem}>
+            <Ionicons name="people-outline" size={13} color={colors.primary} />
+            <Text style={s.metaText}>{t('trip.maxPeople')} {trip.max_participants}</Text>
           </View>
           {trip.average_rating !== undefined && trip.average_rating > 0 && (
             <>
-              <View style={styles.metaDivider} />
-              <View style={styles.metaItem}>
+              <View style={s.metaDivider} />
+              <View style={s.metaItem}>
                 <StarRating rating={trip.average_rating} size={12} />
-                <Text style={styles.metaText}>{trip.average_rating.toFixed(1)}</Text>
+                <Text style={s.metaText}>{trip.average_rating.toFixed(1)}</Text>
               </View>
             </>
           )}
         </View>
-
         {trip.amenities && trip.amenities.length > 0 && (
-          <View style={styles.amenitiesRow}>
+          <View style={s.amenitiesRow}>
             {trip.amenities.slice(0, 3).map((a) => (
-              <View key={a} style={styles.amenityChip}>
-                <Text style={styles.amenityText}>{a.replace(/_/g, ' ')}</Text>
+              <View key={a} style={s.amenityChip}>
+                <Text style={s.amenityText}>{a.replace(/_/g, ' ')}</Text>
               </View>
             ))}
             {trip.amenities.length > 3 && (
-              <View style={styles.amenityChip}>
-                <Text style={styles.amenityText}>+{trip.amenities.length - 3}</Text>
+              <View style={s.amenityChip}>
+                <Text style={s.amenityText}>+{trip.amenities.length - 3}</Text>
               </View>
             )}
           </View>
@@ -168,79 +160,32 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    width: CARD_WIDTH,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xxl,
-    overflow: 'hidden',
-    marginBottom: 16,
-    ...Shadow.md,
-  },
-  imageContainer: { position: 'relative' },
-  image: { width: '100%', height: 200 },
-  imagePlaceholder: {
-    backgroundColor: Colors.gray100,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: 'transparent',
-  },
-  favoriteBtn: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  priceBadge: {
-    position: 'absolute',
-    bottom: 12,
-    left: 12,
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-  },
-  priceBadgeText: { color: Colors.white, fontSize: FontSize.sm, fontWeight: '700' },
-  content: { padding: 14, gap: 8 },
-  name: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary, lineHeight: 22 },
-  providerRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  provider: { fontSize: FontSize.sm, color: Colors.textTertiary, flex: 1 },
-  metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontWeight: '500' },
-  metaDivider: { width: 1, height: 12, backgroundColor: Colors.border },
-  amenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  amenityChip: {
-    backgroundColor: Colors.primarySurface,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  amenityText: { fontSize: FontSize.xs, color: Colors.primaryDark, fontWeight: '500', textTransform: 'capitalize' },
-  price: { fontSize: FontSize.md, fontWeight: '700', color: Colors.primary },
-
-  // Compact
-  compactCard: {
-    width: 180,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    ...Shadow.sm,
-  },
-  compactImage: { width: '100%', height: 110 },
-  compactContent: { padding: 10, gap: 4 },
-  compactName: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.textPrimary },
-  compactProvider: { fontSize: FontSize.xs, color: Colors.textTertiary },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    card: { width: CARD_WIDTH, backgroundColor: c.surface, borderRadius: Radius.xxl, overflow: 'hidden', marginBottom: 16, ...Shadow.md },
+    imageContainer: { position: 'relative' },
+    image: { width: '100%', height: 200 },
+    imagePlaceholder: { backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
+    imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'transparent' },
+    favoriteBtn: { position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
+    priceBadge: { position: 'absolute', bottom: 12, left: 12, backgroundColor: c.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
+    priceBadgeText: { color: c.white, fontSize: FontSize.sm, fontWeight: '700' },
+    content: { padding: 14, gap: 8 },
+    name: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, lineHeight: 22 },
+    providerRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    provider: { fontSize: FontSize.sm, color: c.textTertiary, flex: 1 },
+    metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    metaText: { fontSize: FontSize.xs, color: c.textSecondary, fontWeight: '500' },
+    metaDivider: { width: 1, height: 12, backgroundColor: c.border },
+    amenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    amenityChip: { backgroundColor: c.primarySurface, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
+    amenityText: { fontSize: FontSize.xs, color: c.primaryDark, fontWeight: '500', textTransform: 'capitalize' },
+    price: { fontSize: FontSize.md, fontWeight: '700', color: c.primary },
+    compactCard: { width: 180, backgroundColor: c.surface, borderRadius: Radius.xl, overflow: 'hidden', ...Shadow.sm },
+    compactImage: { width: '100%', height: 110 },
+    compactContent: { padding: 10, gap: 4 },
+    compactName: { fontSize: FontSize.sm, fontWeight: '700', color: c.textPrimary },
+    compactProvider: { fontSize: FontSize.xs, color: c.textTertiary },
+  });
+}

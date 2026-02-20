@@ -19,7 +19,8 @@ import Animated, {
   SharedValue,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, FontSize, Spacing, Radius } from '../../constants/Theme';
+import { FontSize, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
 
 const { width: W, height: H } = Dimensions.get('window');
@@ -55,6 +56,7 @@ const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<typeof SLIDES
 
 export default function OnboardingScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
@@ -73,7 +75,7 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AnimatedFlatList
         ref={flatListRef as any}
         data={SLIDES}
@@ -91,10 +93,8 @@ export default function OnboardingScreen() {
         )}
       />
 
-      {/* Bottom controls */}
-      <View style={styles.bottom}>
-        {/* Dots */}
-        <View style={styles.dots}>
+      <View style={{ paddingHorizontal: 24, paddingBottom: 48, gap: 16, alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
           {SLIDES.map((_, i) => (
             <DotIndicator key={i} index={i} scrollX={scrollX} />
           ))}
@@ -107,14 +107,14 @@ export default function OnboardingScreen() {
           size="lg"
           rightIcon={
             currentIndex < SLIDES.length - 1 ? (
-              <Ionicons name="arrow-forward" size={18} color={Colors.white} />
+              <Ionicons name="arrow-forward" size={18} color={colors.white} />
             ) : undefined
           }
         />
 
         {currentIndex < SLIDES.length - 1 && (
-          <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={styles.skip}>
-            <Text style={styles.skipText}>{t('common.close')}</Text>
+          <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={{ paddingVertical: 8 }}>
+            <Text style={{ fontSize: FontSize.md, color: colors.textTertiary, fontWeight: '500' }}>{t('common.close')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -131,6 +131,7 @@ function SlideItem({
   index: number;
   scrollX: SharedValue<number>;
 }) {
+  const { colors } = useTheme();
   const animStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * W, index * W, (index + 1) * W];
     const opacity = interpolate(scrollX.value, inputRange, [0, 1, 0]);
@@ -139,13 +140,13 @@ function SlideItem({
   });
 
   return (
-    <View style={[styles.slide, { width: W }]}>
-      <View style={[styles.iconContainer, { backgroundColor: item.bg }]}>
+    <View style={{ width: W, flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingTop: 80 }}>
+      <View style={{ width: 200, height: 200, borderRadius: 100, backgroundColor: item.bg, alignItems: 'center', justifyContent: 'center', marginBottom: 48 }}>
         <Ionicons name={item.icon} size={100} color={item.iconColor} />
       </View>
-      <Animated.View style={[styles.textContainer, animStyle]}>
-        <Text style={styles.slideTitle}>{item.title}</Text>
-        <Text style={styles.slideSubtitle}>{item.subtitle}</Text>
+      <Animated.View style={[{ alignItems: 'center', gap: 16 }, animStyle]}>
+        <Text style={{ fontSize: FontSize.xxxl, fontWeight: '800', color: colors.textPrimary, textAlign: 'center', lineHeight: 36 }}>{item.title}</Text>
+        <Text style={{ fontSize: FontSize.lg, color: colors.textSecondary, textAlign: 'center', lineHeight: 26 }}>{item.subtitle}</Text>
       </Animated.View>
     </View>
   );
@@ -158,6 +159,7 @@ function DotIndicator({
   index: number;
   scrollX: SharedValue<number>;
 }) {
+  const { colors } = useTheme();
   const animStyle = useAnimatedStyle(() => {
     const inputRange = [(index - 1) * W, index * W, (index + 1) * W];
     const width = interpolate(scrollX.value, inputRange, [8, 24, 8]);
@@ -166,55 +168,6 @@ function DotIndicator({
   });
 
   return (
-    <Animated.View
-      style={[
-        styles.dot,
-        animStyle,
-        { backgroundColor: Colors.primary },
-      ]}
-    />
+    <Animated.View style={[{ height: 8, borderRadius: 4 }, animStyle, { backgroundColor: colors.primary }]} />
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
-  slide: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 80,
-  },
-  iconContainer: {
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 48,
-  },
-  textContainer: { alignItems: 'center', gap: 16 },
-  slideTitle: {
-    fontSize: FontSize.xxxl,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    textAlign: 'center',
-    lineHeight: 36,
-  },
-  slideSubtitle: {
-    fontSize: FontSize.lg,
-    color: Colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 26,
-  },
-  bottom: {
-    paddingHorizontal: 24,
-    paddingBottom: 48,
-    gap: 16,
-    alignItems: 'center',
-  },
-  dots: { flexDirection: 'row', gap: 6, marginBottom: 8 },
-  dot: { height: 8, borderRadius: 4 },
-  skip: { paddingVertical: 8 },
-  skipText: { fontSize: FontSize.md, color: Colors.textTertiary, fontWeight: '500' },
-});

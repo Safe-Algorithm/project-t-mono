@@ -7,6 +7,8 @@ import { StatusBar } from 'expo-status-bar';
 import '../lib/i18n';
 import { useAuthStore } from '../store/authStore';
 import { useLanguageStore } from '../store/languageStore';
+import { useThemeStore } from '../store/themeStore';
+import { useTheme } from '../hooks/useTheme';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -28,9 +30,11 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const { loadFromStorage, isLoading } = useAuthStore();
   const { loadFromStorage: loadLanguage, isRTL } = useLanguageStore();
+  const { loadFromStorage: loadTheme } = useThemeStore();
+  const { isDark } = useTheme();
 
   useEffect(() => {
-    Promise.all([loadFromStorage(), loadLanguage()]).then(() => {
+    Promise.all([loadFromStorage(), loadLanguage(), loadTheme()]).then(() => {
       SplashScreen.hideAsync();
     });
   }, []);
@@ -40,7 +44,7 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
-        <StatusBar style="dark" />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

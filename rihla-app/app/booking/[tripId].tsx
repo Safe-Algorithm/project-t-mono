@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTrip } from '../../hooks/useTrips';
-import { Colors, FontSize, Radius, Shadow, Spacing } from '../../constants/Theme';
+import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import apiClient from '../../lib/api';
@@ -35,6 +36,8 @@ interface Participant {
 
 export default function BookingScreen() {
   const { t, i18n } = useTranslation();
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   const { tripId, packageId } = useLocalSearchParams<{ tripId: string; packageId: string }>();
   const { data: trip } = useTrip(tripId);
   const [participantCount, setParticipantCount] = useState(1);
@@ -112,10 +115,10 @@ export default function BookingScreen() {
 
   if (!trip || !selectedPackage) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={48} color={Colors.gray300} />
-          <Text style={styles.errorText}>{t('trip.noPackages')}</Text>
+      <SafeAreaView style={s.container}>
+        <View style={s.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.gray300} />
+          <Text style={s.errorText}>{t('trip.noPackages')}</Text>
           <Button title={t('trip.goBack')} onPress={() => router.back()} variant="outline" />
         </View>
       </SafeAreaView>
@@ -126,81 +129,57 @@ export default function BookingScreen() {
   const pkgName = (i18n.language === 'ar' ? selectedPackage.name_ar : selectedPackage.name_en) ?? selectedPackage.name_en ?? selectedPackage.name_ar ?? 'Package';
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <SafeAreaView style={s.safeArea} edges={['top']}>
+        <View style={s.header}>
+          <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('booking.title')}</Text>
+          <Text style={s.headerTitle}>{t('booking.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
-
-        {/* Progress */}
-        <View style={styles.progress}>
-          <View style={[styles.progressStep, styles.progressStepActive]}>
-            <Text style={styles.progressStepText}>1</Text>
+        <View style={s.progress}>
+          <View style={[s.progressStep, s.progressStepActive]}>
+            <Text style={s.progressStepText}>1</Text>
           </View>
-          <View style={[styles.progressLine, step === 'confirm' && styles.progressLineActive]} />
-          <View style={[styles.progressStep, step === 'confirm' && styles.progressStepActive]}>
-            <Text style={[styles.progressStepText, step !== 'confirm' && styles.progressStepTextInactive]}>2</Text>
+          <View style={[s.progressLine, step === 'confirm' && s.progressLineActive]} />
+          <View style={[s.progressStep, step === 'confirm' && s.progressStepActive]}>
+            <Text style={[s.progressStepText, step !== 'confirm' && s.progressStepTextInactive]}>2</Text>
           </View>
         </View>
       </SafeAreaView>
 
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Trip summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryTrip} numberOfLines={1}>{tripName}</Text>
-          <Text style={styles.summaryPkg}>{pkgName}</Text>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>{t('booking.perPerson')}</Text>
-            <Text style={styles.summaryPrice}>SAR {Number(selectedPackage.price).toLocaleString()}</Text>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={s.summaryCard}>
+          <Text style={s.summaryTrip} numberOfLines={1}>{tripName}</Text>
+          <Text style={s.summaryPkg}>{pkgName}</Text>
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>{t('booking.perPerson')}</Text>
+            <Text style={s.summaryPrice}>SAR {Number(selectedPackage.price).toLocaleString()}</Text>
           </View>
         </View>
 
         {step === 'participants' && (
           <>
-            {/* Participant count */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('booking.participants')}</Text>
-              <View style={styles.counterRow}>
-                <TouchableOpacity
-                  style={[styles.counterBtn, participantCount <= 1 && styles.counterBtnDisabled]}
-                  onPress={() => changeCount(-1)}
-                  disabled={participantCount <= 1}
-                >
-                  <Ionicons name="remove" size={20} color={participantCount <= 1 ? Colors.gray300 : Colors.textPrimary} />
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('booking.participants')}</Text>
+              <View style={s.counterRow}>
+                <TouchableOpacity style={[s.counterBtn, participantCount <= 1 && s.counterBtnDisabled]} onPress={() => changeCount(-1)} disabled={participantCount <= 1}>
+                  <Ionicons name="remove" size={20} color={participantCount <= 1 ? colors.gray300 : colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.counterValue}>{participantCount}</Text>
-                <TouchableOpacity
-                  style={[styles.counterBtn, participantCount >= 10 && styles.counterBtnDisabled]}
-                  onPress={() => changeCount(1)}
-                  disabled={participantCount >= 10}
-                >
-                  <Ionicons name="add" size={20} color={participantCount >= 10 ? Colors.gray300 : Colors.textPrimary} />
+                <Text style={s.counterValue}>{participantCount}</Text>
+                <TouchableOpacity style={[s.counterBtn, participantCount >= 10 && s.counterBtnDisabled]} onPress={() => changeCount(1)} disabled={participantCount >= 10}>
+                  <Ionicons name="add" size={20} color={participantCount >= 10 ? colors.gray300 : colors.textPrimary} />
                 </TouchableOpacity>
               </View>
             </View>
-
-            {/* Participant forms */}
             {Array.from({ length: participantCount }, (_, i) => (
-              <View key={i} style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {t('booking.participant', { number: i + 1 })}
-                </Text>
+              <View key={i} style={s.section}>
+                <Text style={s.sectionTitle}>{t('booking.participant', { number: i + 1 })}</Text>
                 {requiredFields.length === 0 ? (
-                  <Text style={styles.noFields}>{t('booking.package')}</Text>
+                  <Text style={s.noFields}>{t('booking.package')}</Text>
                 ) : (
-                  <View style={styles.fields}>
+                  <View style={s.fields}>
                     {requiredFields.map((field) => (
                       <Input
                         key={field.field_type}
@@ -219,58 +198,36 @@ export default function BookingScreen() {
                 )}
               </View>
             ))}
-
-            <Button
-              title={t('common.confirm')}
-              onPress={() => {
-                if (validate()) setStep('confirm');
-              }}
-              fullWidth
-              size="lg"
-              style={styles.continueBtn}
-            />
+            <Button title={t('common.confirm')} onPress={() => { if (validate()) setStep('confirm'); }} fullWidth size="lg" style={s.continueBtn} />
           </>
         )}
 
         {step === 'confirm' && (
           <>
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('booking.confirmBooking')}</Text>
-              <View style={styles.confirmCard}>
-                <ConfirmRow label={t('explore.subtitle')} value={tripName} />
-                <ConfirmRow label={t('booking.package')} value={pkgName} />
-                <ConfirmRow label={t('booking.participants')} value={String(participantCount)} />
-                <ConfirmRow label={t('booking.perPerson')} value={`SAR ${Number(selectedPackage.price).toLocaleString()}`} />
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>{t('booking.totalAmount')}</Text>
-                  <Text style={styles.totalValue}>SAR {totalPrice.toLocaleString()}</Text>
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('booking.confirmBooking')}</Text>
+              <View style={s.confirmCard}>
+                <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
+                <ConfirmRow label={t('booking.package')} value={pkgName} s={s} />
+                <ConfirmRow label={t('booking.participants')} value={String(participantCount)} s={s} />
+                <ConfirmRow label={t('booking.perPerson')} value={`SAR ${Number(selectedPackage.price).toLocaleString()}`} s={s} />
+                <View style={s.totalRow}>
+                  <Text style={s.totalLabel}>{t('booking.totalAmount')}</Text>
+                  <Text style={s.totalValue}>SAR {totalPrice.toLocaleString()}</Text>
                 </View>
               </View>
             </View>
-
-            <View style={styles.section}>
-              <View style={styles.infoBox}>
-                <Ionicons name="information-circle-outline" size={18} color={Colors.info} />
-                <Text style={styles.infoText}>
+            <View style={s.section}>
+              <View style={s.infoBox}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.info} />
+                <Text style={s.infoText}>
                   After booking, you'll be redirected to complete payment via Moyasar. Your spot is reserved for 15 minutes.
                 </Text>
               </View>
             </View>
-
-            <View style={styles.actionRow}>
-              <Button
-                title={t('common.back')}
-                variant="outline"
-                onPress={() => setStep('participants')}
-                style={styles.backActionBtn}
-              />
-              <Button
-                title={t('booking.confirmBooking')}
-                onPress={handleBook}
-                loading={loading}
-                style={styles.payBtn}
-                size="lg"
-              />
+            <View style={s.actionRow}>
+              <Button title={t('common.back')} variant="outline" onPress={() => setStep('participants')} style={s.backActionBtn} />
+              <Button title={t('booking.confirmBooking')} onPress={handleBook} loading={loading} style={s.payBtn} size="lg" />
             </View>
           </>
         )}
@@ -281,95 +238,58 @@ export default function BookingScreen() {
   );
 }
 
-function ConfirmRow({ label, value }: { label: string; value: string }) {
+function ConfirmRow({ label, value, s }: { label: string; value: string; s: any }) {
   return (
-    <View style={styles.confirmRow}>
-      <Text style={styles.confirmLabel}>{label}</Text>
-      <Text style={styles.confirmValue}>{value}</Text>
+    <View style={s.confirmRow}>
+      <Text style={s.confirmLabel}>{label}</Text>
+      <Text style={s.confirmValue}>{value}</Text>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  safeArea: { backgroundColor: Colors.white },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
-  errorText: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.textPrimary },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary },
-  progress: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 32, paddingVertical: 14,
-    backgroundColor: Colors.white,
-  },
-  progressStep: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: Colors.gray200,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  progressStepActive: { backgroundColor: Colors.primary },
-  progressStepText: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.white },
-  progressStepTextInactive: { color: Colors.textTertiary },
-  progressLine: { flex: 1, height: 2, backgroundColor: Colors.gray200, marginHorizontal: 8 },
-  progressLineActive: { backgroundColor: Colors.primary },
-
-  scroll: { padding: 16, gap: 0 },
-  summaryCard: {
-    backgroundColor: Colors.primarySurface,
-    borderRadius: Radius.xl, padding: 16,
-    borderLeftWidth: 4, borderLeftColor: Colors.primary,
-    marginBottom: 20,
-  },
-  summaryTrip: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.textPrimary },
-  summaryPkg: { fontSize: FontSize.md, color: Colors.primary, fontWeight: '600', marginBottom: 8 },
-  summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  summaryLabel: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  summaryPrice: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.accent },
-
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: FontSize.lg, fontWeight: '800', color: Colors.textPrimary, marginBottom: 12 },
-  counterRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  counterBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center',
-    ...Shadow.sm,
-  },
-  counterBtnDisabled: { opacity: 0.4 },
-  counterValue: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary, minWidth: 32, textAlign: 'center' },
-  fields: { gap: 14 },
-  noFields: { fontSize: FontSize.md, color: Colors.textTertiary, fontStyle: 'italic' },
-  continueBtn: { marginTop: 8 },
-
-  confirmCard: {
-    backgroundColor: Colors.white, borderRadius: Radius.xl,
-    padding: 16, gap: 12, ...Shadow.sm,
-  },
-  confirmRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  confirmLabel: { fontSize: FontSize.md, color: Colors.textSecondary },
-  confirmValue: { fontSize: FontSize.md, color: Colors.textPrimary, fontWeight: '600', flex: 1, textAlign: 'right' },
-  totalRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingTop: 12, borderTopWidth: 1, borderTopColor: Colors.border,
-  },
-  totalLabel: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary },
-  totalValue: { fontSize: FontSize.xl, fontWeight: '800', color: Colors.primary },
-
-  infoBox: {
-    flexDirection: 'row', gap: 10, alignItems: 'flex-start',
-    backgroundColor: Colors.infoLight ?? '#DBEAFE',
-    borderRadius: Radius.lg, padding: 14,
-  },
-  infoText: { flex: 1, fontSize: FontSize.sm, color: Colors.info, lineHeight: 20 },
-
-  actionRow: { flexDirection: 'row', gap: 12 },
-  backActionBtn: { flex: 1 },
-  payBtn: { flex: 2 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    safeArea: { backgroundColor: c.surface },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
+    errorText: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+    backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary },
+    progress: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 32, paddingVertical: 14, backgroundColor: c.surface },
+    progressStep: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.gray200, alignItems: 'center', justifyContent: 'center' },
+    progressStepActive: { backgroundColor: c.primary },
+    progressStepText: { fontSize: FontSize.sm, fontWeight: '700', color: c.white },
+    progressStepTextInactive: { color: c.textTertiary },
+    progressLine: { flex: 1, height: 2, backgroundColor: c.gray200, marginHorizontal: 8 },
+    progressLineActive: { backgroundColor: c.primary },
+    scroll: { padding: 16, gap: 0 },
+    summaryCard: { backgroundColor: c.primarySurface, borderRadius: Radius.xl, padding: 16, borderLeftWidth: 4, borderLeftColor: c.primary, marginBottom: 20 },
+    summaryTrip: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary },
+    summaryPkg: { fontSize: FontSize.md, color: c.primary, fontWeight: '600', marginBottom: 8 },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    summaryLabel: { fontSize: FontSize.sm, color: c.textSecondary },
+    summaryPrice: { fontSize: FontSize.xl, fontWeight: '800', color: c.accent },
+    section: { marginBottom: 20 },
+    sectionTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary, marginBottom: 12 },
+    counterRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+    counterBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center', ...Shadow.sm },
+    counterBtnDisabled: { opacity: 0.4 },
+    counterValue: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, minWidth: 32, textAlign: 'center' },
+    fields: { gap: 14 },
+    noFields: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
+    continueBtn: { marginTop: 8 },
+    confirmCard: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 16, gap: 12, ...Shadow.sm },
+    confirmRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    confirmLabel: { fontSize: FontSize.md, color: c.textSecondary },
+    confirmValue: { fontSize: FontSize.md, color: c.textPrimary, fontWeight: '600', flex: 1, textAlign: 'right' },
+    totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, borderTopWidth: 1, borderTopColor: c.border },
+    totalLabel: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary },
+    totalValue: { fontSize: FontSize.xl, fontWeight: '800', color: c.primary },
+    infoBox: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: c.infoLight ?? '#DBEAFE', borderRadius: Radius.lg, padding: 14 },
+    infoText: { flex: 1, fontSize: FontSize.sm, color: c.info, lineHeight: 20 },
+    actionRow: { flexDirection: 'row', gap: 12 },
+    backActionBtn: { flex: 1 },
+    payBtn: { flex: 2 },
+  });
+}

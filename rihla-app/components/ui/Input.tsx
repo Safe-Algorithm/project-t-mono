@@ -9,7 +9,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, FontSize, Spacing } from '../../constants/Theme';
+import { Radius, FontSize, Spacing, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -34,30 +35,32 @@ export default function Input({
   style,
   ...rest
 }: InputProps) {
+  const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const s = makeStyles(colors);
 
   const borderColor = error
-    ? Colors.error
+    ? colors.error
     : focused
-    ? Colors.borderFocus
-    : Colors.border;
+    ? colors.borderFocus
+    : colors.border;
 
   return (
-    <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputWrapper, { borderColor }]}>
+    <View style={[s.container, containerStyle]}>
+      {label && <Text style={s.label}>{label}</Text>}
+      <View style={[s.inputWrapper, { borderColor }]}>
         {leftIcon && (
           <Ionicons
             name={leftIcon}
             size={18}
-            color={focused ? Colors.primary : Colors.textTertiary}
-            style={styles.leftIcon}
+            color={focused ? colors.primary : colors.textTertiary}
+            style={s.leftIcon}
           />
         )}
         <TextInput
-          style={[styles.input, leftIcon && styles.inputWithLeft, style]}
-          placeholderTextColor={Colors.textTertiary}
+          style={[s.input, leftIcon && s.inputWithLeft, style]}
+          placeholderTextColor={colors.textTertiary}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           secureTextEntry={isPassword && !showPassword}
@@ -66,52 +69,39 @@ export default function Input({
         {isPassword ? (
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
-            style={styles.rightIcon}
+            style={s.rightIcon}
           >
             <Ionicons
               name={showPassword ? 'eye-off-outline' : 'eye-outline'}
               size={18}
-              color={Colors.textTertiary}
+              color={colors.textTertiary}
             />
           </TouchableOpacity>
         ) : rightIcon ? (
-          <TouchableOpacity onPress={onRightIconPress} style={styles.rightIcon}>
-            <Ionicons name={rightIcon} size={18} color={Colors.textTertiary} />
+          <TouchableOpacity onPress={onRightIconPress} style={s.rightIcon}>
+            <Ionicons name={rightIcon} size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         ) : null}
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
-      {hint && !error && <Text style={styles.hint}>{hint}</Text>}
+      {error && <Text style={s.error}>{error}</Text>}
+      {hint && !error && <Text style={s.hint}>{hint}</Text>}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { gap: 6 },
-  label: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-    letterSpacing: 0.1,
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderWidth: 1.5,
-    borderRadius: Radius.md,
-    minHeight: 50,
-  },
-  input: {
-    flex: 1,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-  },
-  inputWithLeft: { paddingLeft: 0 },
-  leftIcon: { paddingLeft: Spacing.lg },
-  rightIcon: { paddingRight: Spacing.lg },
-  error: { fontSize: FontSize.xs, color: Colors.error, fontWeight: '500' },
-  hint: { fontSize: FontSize.xs, color: Colors.textTertiary },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { gap: 6 },
+    label: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary, letterSpacing: 0.1 },
+    inputWrapper: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: c.surface, borderWidth: 1.5, borderRadius: Radius.md, minHeight: 50,
+    },
+    input: { flex: 1, fontSize: FontSize.md, color: c.textPrimary, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+    inputWithLeft: { paddingLeft: 0 },
+    leftIcon: { paddingLeft: Spacing.lg },
+    rightIcon: { paddingRight: Spacing.lg },
+    error: { fontSize: FontSize.xs, color: c.error, fontWeight: '500' },
+    hint: { fontSize: FontSize.xs, color: c.textTertiary },
+  });
+}

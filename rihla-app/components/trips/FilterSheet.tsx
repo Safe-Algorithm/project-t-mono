@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { Colors, Radius, FontSize, Spacing, Shadow } from '../../constants/Theme';
+import { Radius, FontSize, Shadow, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 import Button from '../ui/Button';
 import { TripFilters } from '../../hooks/useTrips';
 
@@ -29,6 +30,8 @@ const RATING_OPTIONS = [
 
 export default function FilterSheet({ visible, onClose, filters, onApply }: FilterSheetProps) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   const [local, setLocal] = useState<TripFilters>(filters);
 
   const update = (key: keyof TripFilters, value: any) => {
@@ -48,110 +51,69 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <TouchableOpacity style={styles.backdropTouch} onPress={onClose} />
-        <View style={styles.sheet}>
-          {/* Handle */}
-          <View style={styles.handle} />
-
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>{t('filters.title')}</Text>
+      <View style={s.backdrop}>
+        <TouchableOpacity style={s.backdropTouch} onPress={onClose} />
+        <View style={s.sheet}>
+          <View style={s.handle} />
+          <View style={s.header}>
+            <Text style={s.title}>{t('filters.title')}</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
-
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.body}>
-            {/* Price Range */}
-            <Text style={styles.sectionLabel}>{t('filters.priceRange')}</Text>
-            <View style={styles.row}>
-              <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>{t('filters.minPrice')}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  keyboardType="numeric"
+          <ScrollView showsVerticalScrollIndicator={false} style={s.body}>
+            <Text style={s.sectionLabel}>{t('filters.priceRange')}</Text>
+            <View style={s.row}>
+              <View style={s.priceInput}>
+                <Text style={s.inputLabel}>{t('filters.minPrice')}</Text>
+                <TextInput style={s.input} placeholder="0" keyboardType="numeric"
                   value={local.min_price?.toString() ?? ''}
                   onChangeText={(v) => update('min_price', v ? Number(v) : undefined)}
-                  placeholderTextColor={Colors.textTertiary}
-                />
+                  placeholderTextColor={colors.textTertiary} />
               </View>
-              <View style={styles.priceDash}>
-                <Text style={styles.dashText}>—</Text>
-              </View>
-              <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>{t('filters.maxPrice')}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('common.noResults')}
-                  keyboardType="numeric"
+              <View style={s.priceDash}><Text style={s.dashText}>—</Text></View>
+              <View style={s.priceInput}>
+                <Text style={s.inputLabel}>{t('filters.maxPrice')}</Text>
+                <TextInput style={s.input} placeholder={t('common.noResults')} keyboardType="numeric"
                   value={local.max_price?.toString() ?? ''}
                   onChangeText={(v) => update('max_price', v ? Number(v) : undefined)}
-                  placeholderTextColor={Colors.textTertiary}
-                />
+                  placeholderTextColor={colors.textTertiary} />
               </View>
             </View>
-
-            {/* Participants */}
-            <Text style={styles.sectionLabel}>{t('filters.participants')}</Text>
-            <View style={styles.row}>
-              <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>{t('filters.minParticipants')}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="1"
-                  keyboardType="numeric"
+            <Text style={s.sectionLabel}>{t('filters.participants')}</Text>
+            <View style={s.row}>
+              <View style={s.priceInput}>
+                <Text style={s.inputLabel}>{t('filters.minParticipants')}</Text>
+                <TextInput style={s.input} placeholder="1" keyboardType="numeric"
                   value={local.min_participants?.toString() ?? ''}
                   onChangeText={(v) => update('min_participants', v ? Number(v) : undefined)}
-                  placeholderTextColor={Colors.textTertiary}
-                />
+                  placeholderTextColor={colors.textTertiary} />
               </View>
-              <View style={styles.priceDash}>
-                <Text style={styles.dashText}>—</Text>
-              </View>
-              <View style={styles.priceInput}>
-                <Text style={styles.inputLabel}>{t('filters.maxParticipants')}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t('common.noResults')}
-                  keyboardType="numeric"
+              <View style={s.priceDash}><Text style={s.dashText}>—</Text></View>
+              <View style={s.priceInput}>
+                <Text style={s.inputLabel}>{t('filters.maxParticipants')}</Text>
+                <TextInput style={s.input} placeholder={t('common.noResults')} keyboardType="numeric"
                   value={local.max_participants?.toString() ?? ''}
                   onChangeText={(v) => update('max_participants', v ? Number(v) : undefined)}
-                  placeholderTextColor={Colors.textTertiary}
-                />
+                  placeholderTextColor={colors.textTertiary} />
               </View>
             </View>
-
-            {/* Rating */}
-            <Text style={styles.sectionLabel}>{t('filters.minRating')}</Text>
-            <View style={styles.ratingRow}>
+            <Text style={s.sectionLabel}>{t('filters.minRating')}</Text>
+            <View style={s.ratingRow}>
               {RATING_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={String(opt.value)}
-                  style={[
-                    styles.ratingChip,
-                    local.min_rating === opt.value && styles.ratingChipActive,
-                  ]}
-                  onPress={() => update('min_rating', opt.value)}
-                >
-                  <Text
-                    style={[
-                      styles.ratingChipText,
-                      local.min_rating === opt.value && styles.ratingChipTextActive,
-                    ]}
-                  >
+                <TouchableOpacity key={String(opt.value)}
+                  style={[s.ratingChip, local.min_rating === opt.value && s.ratingChipActive]}
+                  onPress={() => update('min_rating', opt.value)}>
+                  <Text style={[s.ratingChipText, local.min_rating === opt.value && s.ratingChipTextActive]}>
                     {opt.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
           </ScrollView>
-
-          {/* Actions */}
-          <View style={styles.actions}>
-            <Button title={t('filters.resetFilters')} variant="outline" onPress={handleReset} style={styles.resetBtn} />
-            <Button title={t('filters.applyFilters')} onPress={handleApply} style={styles.applyBtn} />
+          <View style={s.actions}>
+            <Button title={t('filters.resetFilters')} variant="outline" onPress={handleReset} style={s.resetBtn} />
+            <Button title={t('filters.applyFilters')} onPress={handleApply} style={s.applyBtn} />
           </View>
         </View>
       </View>
@@ -159,79 +121,29 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
   );
 }
 
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end' },
-  backdropTouch: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-  sheet: {
-    backgroundColor: Colors.white,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingBottom: 32,
-    maxHeight: '85%',
-    ...Shadow.lg,
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: Colors.gray200,
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  title: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.textPrimary },
-  body: { paddingHorizontal: 20, paddingTop: 16 },
-  sectionLabel: {
-    fontSize: FontSize.sm,
-    fontWeight: '700',
-    color: Colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 10,
-    marginTop: 16,
-  },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  priceInput: { flex: 1 },
-  inputLabel: { fontSize: FontSize.xs, color: Colors.textTertiary, marginBottom: 4 },
-  input: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.gray50,
-  },
-  priceDash: { paddingTop: 18 },
-  dashText: { color: Colors.textTertiary, fontSize: FontSize.lg },
-  ratingRow: { flexDirection: 'row', gap: 10 },
-  ratingChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
-  ratingChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primarySurface },
-  ratingChipText: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.textSecondary },
-  ratingChipTextActive: { color: Colors.primary },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  resetBtn: { flex: 1 },
-  applyBtn: { flex: 2 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    backdrop: { flex: 1, justifyContent: 'flex-end' },
+    backdropTouch: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+    sheet: { backgroundColor: c.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingBottom: 32, maxHeight: '85%', ...Shadow.lg },
+    handle: { width: 40, height: 4, backgroundColor: c.gray200, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+    title: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
+    body: { paddingHorizontal: 20, paddingTop: 16 },
+    sectionLabel: { fontSize: FontSize.sm, fontWeight: '700', color: c.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 16 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    priceInput: { flex: 1 },
+    inputLabel: { fontSize: FontSize.xs, color: c.textTertiary, marginBottom: 4 },
+    input: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.gray50 },
+    priceDash: { paddingTop: 18 },
+    dashText: { color: c.textTertiary, fontSize: FontSize.lg },
+    ratingRow: { flexDirection: 'row', gap: 10 },
+    ratingChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
+    ratingChipActive: { borderColor: c.primary, backgroundColor: c.primarySurface },
+    ratingChipText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary },
+    ratingChipTextActive: { color: c.primary },
+    actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16 },
+    resetBtn: { flex: 1 },
+    applyBtn: { flex: 2 },
+  });
+}

@@ -8,7 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-import { Colors, FontSize } from '../../constants/Theme';
+import { FontSize, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api';
 
 type Step = 'email' | 'otp' | 'success';
@@ -22,6 +23,8 @@ function extractError(err: any, fallback: string): string {
 
 export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -81,85 +84,54 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-
-        <View style={styles.iconWrap}>
-          <Ionicons name="lock-open-outline" size={56} color={Colors.primary} />
+        <View style={s.iconWrap}>
+          <Ionicons name="lock-open-outline" size={56} color={colors.primary} />
         </View>
-
-        <Text style={styles.title}>Reset Password</Text>
-
+        <Text style={s.title}>Reset Password</Text>
         {step === 'email' && (
           <>
-            <Text style={styles.subtitle}>Enter your email and we'll send you a verification code.</Text>
-            <View style={styles.form}>
-              <Input
-                label="Email Address"
-                placeholder="you@example.com"
-                value={email}
+            <Text style={s.subtitle}>Enter your email and we'll send you a verification code.</Text>
+            <View style={s.form}>
+              <Input label="Email Address" placeholder="you@example.com" value={email}
                 onChangeText={(v) => { setEmail(v); setErrors({}); }}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                leftIcon="mail-outline"
-                error={errors.email}
-              />
+                keyboardType="email-address" autoCapitalize="none" leftIcon="mail-outline" error={errors.email} />
               <Button title="Send Code" onPress={handleSendOtp} loading={loading} fullWidth size="lg" />
             </View>
           </>
         )}
-
         {step === 'otp' && (
           <>
-            <Text style={styles.subtitle}>Enter the 6-digit code sent to {email}, then choose a new password.</Text>
-            <View style={styles.form}>
-              <Input
-                label="Verification Code"
-                placeholder="000000"
-                value={otp}
+            <Text style={s.subtitle}>Enter the 6-digit code sent to {email}, then choose a new password.</Text>
+            <View style={s.form}>
+              <Input label="Verification Code" placeholder="000000" value={otp}
                 onChangeText={(v) => { setOtp(v.replace(/\D/g, '')); setErrors({}); }}
-                keyboardType="number-pad"
-                maxLength={6}
-                leftIcon="key-outline"
-                error={errors.otp}
-              />
-              <Input
-                label="New Password"
-                placeholder="At least 8 characters"
-                value={newPassword}
+                keyboardType="number-pad" maxLength={6} leftIcon="key-outline" error={errors.otp} />
+              <Input label="New Password" placeholder="At least 8 characters" value={newPassword}
                 onChangeText={(v) => { setNewPassword(v); setErrors({}); }}
-                isPassword
-                leftIcon="lock-closed-outline"
-                error={errors.newPassword}
-              />
-              <Input
-                label="Confirm Password"
-                placeholder="Repeat new password"
-                value={confirmPassword}
+                isPassword leftIcon="lock-closed-outline" error={errors.newPassword} />
+              <Input label="Confirm Password" placeholder="Repeat new password" value={confirmPassword}
                 onChangeText={(v) => { setConfirmPassword(v); setErrors({}); }}
-                isPassword
-                leftIcon="lock-closed-outline"
-                error={errors.confirmPassword}
-              />
+                isPassword leftIcon="lock-closed-outline" error={errors.confirmPassword} />
               <Button title="Reset Password" onPress={handleResetPassword} loading={loading} fullWidth size="lg" />
-              <TouchableOpacity onPress={handleResendOtp} disabled={loading} style={styles.resendBtn}>
-                <Text style={styles.resendText}>Resend code</Text>
+              <TouchableOpacity onPress={handleResendOtp} disabled={loading} style={s.resendBtn}>
+                <Text style={s.resendText}>Resend code</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setStep('email'); setOtp(''); setErrors({}); }} style={styles.resendBtn}>
-                <Text style={styles.resendText}>Change email</Text>
+              <TouchableOpacity onPress={() => { setStep('email'); setOtp(''); setErrors({}); }} style={s.resendBtn}>
+                <Text style={s.resendText}>Change email</Text>
               </TouchableOpacity>
             </View>
           </>
         )}
-
         {step === 'success' && (
-          <View style={styles.successBox}>
-            <Ionicons name="checkmark-circle" size={56} color={Colors.success} />
-            <Text style={styles.successTitle}>Password Reset!</Text>
-            <Text style={styles.successText}>Your password has been updated. You can now sign in.</Text>
+          <View style={s.successBox}>
+            <Ionicons name="checkmark-circle" size={56} color={colors.success} />
+            <Text style={s.successTitle}>Password Reset!</Text>
+            <Text style={s.successText}>Your password has been updated. You can now sign in.</Text>
             <Button title="Back to Login" onPress={() => router.replace('/(auth)/login')} fullWidth style={{ marginTop: 8 }} />
           </View>
         )}
@@ -168,22 +140,19 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
-  backBtn: { marginTop: 56, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  iconWrap: {
-    width: 96, height: 96, borderRadius: 48,
-    backgroundColor: Colors.primarySurface,
-    alignItems: 'center', justifyContent: 'center',
-    alignSelf: 'center', marginTop: 32, marginBottom: 24,
-  },
-  title: { fontSize: FontSize.xxl, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
-  form: { gap: 16 },
-  resendBtn: { alignSelf: 'center', paddingVertical: 4 },
-  resendText: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: '600' },
-  successBox: { alignItems: 'center', gap: 12, marginTop: 16 },
-  successTitle: { fontSize: FontSize.xl, fontWeight: '700', color: Colors.textPrimary },
-  successText: { fontSize: FontSize.md, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
+    backBtn: { marginTop: 56, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    iconWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 32, marginBottom: 24 },
+    title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, textAlign: 'center', marginBottom: 8 },
+    subtitle: { fontSize: FontSize.md, color: c.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
+    form: { gap: 16 },
+    resendBtn: { alignSelf: 'center', paddingVertical: 4 },
+    resendText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600' },
+    successBox: { alignItems: 'center', gap: 12, marginTop: 16 },
+    successTitle: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
+    successText: { fontSize: FontSize.md, color: c.textSecondary, textAlign: 'center', lineHeight: 22 },
+  });
+}

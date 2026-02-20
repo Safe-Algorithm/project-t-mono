@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 
 interface StarRatingProps {
   rating: number;
@@ -18,6 +18,7 @@ export default function StarRating({
   interactive = false,
   onRate,
 }: StarRatingProps) {
+  const { colors } = useTheme();
   return (
     <View style={styles.row}>
       {Array.from({ length: maxStars }, (_, i) => {
@@ -27,11 +28,11 @@ export default function StarRating({
         if (interactive) {
           return (
             <TouchableOpacity key={i} onPress={() => onRate?.(i + 1)}>
-              <Ionicons name={icon} size={size} color={Colors.warning} />
+              <Ionicons name={icon} size={size} color={colors.warning} />
             </TouchableOpacity>
           );
         }
-        return <Ionicons key={i} name={icon} size={size} color={Colors.warning} />;
+        return <Ionicons key={i} name={icon} size={size} color={colors.warning} />;
       })}
     </View>
   );

@@ -10,10 +10,13 @@ import { useAuthStore } from '../../store/authStore';
 import apiClient from '../../lib/api';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
-import { Colors, FontSize, Radius, Shadow } from '../../constants/Theme';
+import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function PersonalInformationScreen() {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const s = makeStyles(colors);
   const { user, updateUser } = useAuthStore();
   const [name, setName] = useState(user?.name ?? '');
   const [loading, setLoading] = useState(false);
@@ -44,103 +47,68 @@ export default function PersonalInformationScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+    <SafeAreaView style={s.container}>
+      <View style={s.header}>
+        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('personalInfo.title')}</Text>
+        <Text style={s.headerTitle}>{t('personalInfo.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
-
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Input
-          label={t('personalInfo.name')}
-          value={name}
+      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+        <Input label={t('personalInfo.name')} value={name}
           onChangeText={(v) => { setName(v); setSaved(false); }}
-          placeholder={t('personalInfo.name')}
-          error={errors.name}
-        />
-
-        <View style={styles.readonlyCard}>
-          <View style={styles.readonlyRow}>
-            <Ionicons name="mail-outline" size={18} color={Colors.primary} />
+          placeholder={t('personalInfo.name')} error={errors.name} />
+        <View style={s.readonlyCard}>
+          <View style={s.readonlyRow}>
+            <Ionicons name="mail-outline" size={18} color={colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.readonlyLabel}>{t('personalInfo.email')}</Text>
-              <Text style={styles.readonlyValue}>{user?.email ?? '—'}</Text>
+              <Text style={s.readonlyLabel}>{t('personalInfo.email')}</Text>
+              <Text style={s.readonlyValue}>{user?.email ?? '—'}</Text>
             </View>
             {user?.is_email_verified && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
-                <Text style={styles.verifiedText}>Verified</Text>
+              <View style={s.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={s.verifiedText}>Verified</Text>
               </View>
             )}
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.readonlyRow}>
-            <Ionicons name="call-outline" size={18} color={Colors.primary} />
+          <View style={s.divider} />
+          <View style={s.readonlyRow}>
+            <Ionicons name="call-outline" size={18} color={colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.readonlyLabel}>{t('personalInfo.phone')}</Text>
-              <Text style={styles.readonlyValue}>{user?.phone ?? '—'}</Text>
+              <Text style={s.readonlyLabel}>{t('personalInfo.phone')}</Text>
+              <Text style={s.readonlyValue}>{user?.phone ?? '—'}</Text>
             </View>
             {user?.is_phone_verified && (
-              <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
-                <Text style={styles.verifiedText}>Verified</Text>
+              <View style={s.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+                <Text style={s.verifiedText}>Verified</Text>
               </View>
             )}
           </View>
         </View>
-
-        <Text style={styles.note}>{t('profile.helpMessage')}</Text>
-
-        <Button
-          title={saved ? t('common.done') : t('personalInfo.saveChanges')}
-          onPress={handleSave}
-          loading={loading}
-          style={{ marginTop: 8 }}
-        />
+        <Text style={s.note}>{t('profile.helpMessage')}</Text>
+        <Button title={saved ? t('common.done') : t('personalInfo.saveChanges')} onPress={handleSave} loading={loading} style={{ marginTop: 8 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
-  backBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.textPrimary },
-  content: { padding: 20, gap: 16 },
-  readonlyCard: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    ...Shadow.sm,
-  },
-  readonlyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-  },
-  readonlyLabel: { fontSize: FontSize.xs, color: Colors.textTertiary, fontWeight: '500' },
-  readonlyValue: { fontSize: FontSize.md, color: Colors.textPrimary, fontWeight: '600', marginTop: 2 },
-  verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  verifiedText: { fontSize: FontSize.xs, color: Colors.success, fontWeight: '600' },
-  divider: { height: 1, backgroundColor: Colors.border, marginLeft: 46 },
-  note: { fontSize: FontSize.sm, color: Colors.textTertiary, lineHeight: 20 },
-});
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border, backgroundColor: c.surface },
+    backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary },
+    content: { padding: 20, gap: 16 },
+    readonlyCard: { backgroundColor: c.surface, borderRadius: Radius.xl, overflow: 'hidden', ...Shadow.sm },
+    readonlyRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
+    readonlyLabel: { fontSize: FontSize.xs, color: c.textTertiary, fontWeight: '500' },
+    readonlyValue: { fontSize: FontSize.md, color: c.textPrimary, fontWeight: '600', marginTop: 2 },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    verifiedText: { fontSize: FontSize.xs, color: c.success, fontWeight: '600' },
+    divider: { height: 1, backgroundColor: c.border, marginLeft: 46 },
+    note: { fontSize: FontSize.sm, color: c.textTertiary, lineHeight: 20 },
+  });
+}

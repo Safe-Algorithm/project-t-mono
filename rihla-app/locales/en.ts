@@ -151,6 +151,10 @@ export default {
     helpMessage: 'For support, contact us at support@rihla.app',
     termsMessage: 'Visit rihla.app/terms for our terms and privacy policy.',
     language: 'Language',
+    theme: 'Appearance',
+    themeDark: 'Dark',
+    themeLight: 'Light',
+    themeSystem: 'System',
   },
 
   personalInfo: {

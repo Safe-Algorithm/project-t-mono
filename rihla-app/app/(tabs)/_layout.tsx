@@ -4,8 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LogBox } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Colors } from '../../constants/Theme';
 import { useAuthStore } from '../../store/authStore';
+import { useTheme } from '../../hooks/useTheme';
 
 LogBox.ignoreLogs([
   'SafeAreaView has been deprecated',
@@ -15,6 +15,7 @@ LogBox.ignoreLogs([
 export default function TabLayout() {
   const { t } = useTranslation();
   const { isAuthenticated } = useAuthStore();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   if (!isAuthenticated) {
@@ -27,11 +28,11 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.tabActive,
-        tabBarInactiveTintColor: Colors.tabInactive,
+        tabBarActiveTintColor: colors.tabActive,
+        tabBarInactiveTintColor: colors.tabInactive,
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.border,
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
           height: tabBarHeight,
           paddingBottom: insets.bottom > 0 ? insets.bottom : 8,

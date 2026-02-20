@@ -7,7 +7,8 @@ import Animated, {
   withTiming,
   interpolateColor,
 } from 'react-native-reanimated';
-import { Colors, Radius } from '../../constants/Theme';
+import { Radius, ThemeColors } from '../../constants/Theme';
+import { useTheme } from '../../hooks/useTheme';
 
 interface SkeletonProps {
   width?: number | string;
@@ -17,6 +18,7 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width = '100%', height = 16, borderRadius = Radius.sm, style }: SkeletonProps) {
+  const { colors } = useTheme();
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = Radius.sm
     backgroundColor: interpolateColor(
       progress.value,
       [0, 1],
-      [Colors.gray100, Colors.gray200]
+      [colors.gray100, colors.gray200]
     ),
   }));
 
@@ -39,13 +41,14 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = Radius.sm
 }
 
 export function TripCardSkeleton() {
+  const { colors } = useTheme();
   return (
-    <View style={styles.card}>
+    <View style={{ backgroundColor: colors.surface, borderRadius: Radius.xl, overflow: 'hidden', marginBottom: 16 }}>
       <Skeleton height={180} borderRadius={Radius.xl} />
-      <View style={styles.content}>
+      <View style={{ padding: 16, gap: 10 }}>
         <Skeleton height={20} width="70%" />
         <Skeleton height={14} width="50%" />
-        <View style={styles.row}>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
           <Skeleton height={14} width={80} />
           <Skeleton height={14} width={60} />
         </View>
@@ -53,14 +56,3 @@ export function TripCardSkeleton() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.xl,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  content: { padding: 16, gap: 10 },
-  row: { flexDirection: 'row', gap: 12 },
-});
