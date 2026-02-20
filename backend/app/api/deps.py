@@ -45,15 +45,19 @@ def get_current_user(
             detail="Could not validate credentials",
         )
     
-    # Get user by email and source if available in token
+    # Get user by email or phone (sub may be either for mobile phone-registered users)
     source = payload.get("source")
     if source:
         user = crud.user.get_user_by_email_and_source(
             session, email=token_data.sub, source=RequestSource(source)
         )
+        if not user:
+            user = crud.user.get_user_by_phone_and_source(
+                session, phone=token_data.sub, source=RequestSource(source)
+            )
     else:
         user = crud.user.get_user_by_email(session, email=token_data.sub)
-    
+
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     if not user.is_active:

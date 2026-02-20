@@ -16,6 +16,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useLanguageStore } from '../../store/languageStore';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
+import PhoneInput, { COUNTRIES, Country } from '../../components/ui/PhoneInput';
 import { FontSize, Radius, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 
@@ -24,16 +25,25 @@ export default function LoginScreen() {
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const { language, setLanguage } = useLanguageStore();
+  const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
+  const [localNumber, setLocalNumber] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ contact?: string; password?: string }>({});
   const { login } = useAuthStore();
+
+  const fullPhone = `${selectedCountry.dialCode}${localNumber.trim()}`;
 
   const validate = () => {
     const e: typeof errors = {};
-    if (!email.trim()) e.email = t('auth.email');
-    else if (!/\S+@\S+\.\S+/.test(email)) e.email = t('auth.email');
+    if (loginType === 'email') {
+      if (!email.trim()) e.contact = t('auth.email');
+      else if (!/\S+@\S+\.\S+/.test(email)) e.contact = t('auth.email');
+    } else {
+      if (!localNumber.trim()) e.contact = 'Phone number is required';
+    }
     if (!password) e.password = t('auth.password');
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -43,7 +53,8 @@ export default function LoginScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      await login(email.trim().toLowerCase(), password);
+      const username = loginType === 'email' ? email.trim().toLowerCase() : fullPhone;
+      await login(username, password);
       router.replace('/(tabs)');
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -71,9 +82,32 @@ export default function LoginScreen() {
           <Text style={s.title}>{t('auth.loginTitle')}</Text>
           <Text style={s.subtitle}>{t('auth.loginSubtitle')}</Text>
           <View style={s.fields}>
-            <Input label={t('auth.email')} placeholder={t('auth.email')} value={email} onChangeText={setEmail}
-              keyboardType="email-address" autoCapitalize="none" autoComplete="email"
-              leftIcon="mail-outline" error={errors.email} />
+            <View style={s.toggle}>
+              <TouchableOpacity style={[s.toggleBtn, loginType === 'email' && s.toggleBtnActive]}
+                onPress={() => { setLoginType('email'); setErrors({}); }}>
+                <Ionicons name="mail-outline" size={16} color={loginType === 'email' ? colors.primary : colors.textTertiary} />
+                <Text style={[s.toggleText, loginType === 'email' && s.toggleTextActive]}>Email</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[s.toggleBtn, loginType === 'phone' && s.toggleBtnActive]}
+                onPress={() => { setLoginType('phone'); setErrors({}); }}>
+                <Ionicons name="call-outline" size={16} color={loginType === 'phone' ? colors.primary : colors.textTertiary} />
+                <Text style={[s.toggleText, loginType === 'phone' && s.toggleTextActive]}>Phone</Text>
+              </TouchableOpacity>
+            </View>
+            {loginType === 'email' ? (
+              <Input label={t('auth.email')} placeholder={t('auth.email')} value={email} onChangeText={setEmail}
+                keyboardType="email-address" autoCapitalize="none" autoComplete="email"
+                leftIcon="mail-outline" error={errors.contact} />
+            ) : (
+              <PhoneInput
+                label="Phone Number"
+                value={localNumber}
+                onChangeText={setLocalNumber}
+                selectedCountry={selectedCountry}
+                onSelectCountry={(c) => { setSelectedCountry(c); setLocalNumber(''); }}
+                error={errors.contact}
+              />
+            )}
             <Input label={t('auth.password')} placeholder={t('auth.password')} value={password}
               onChangeText={setPassword} isPassword leftIcon="lock-closed-outline" error={errors.password} />
           </View>
@@ -121,5 +155,10 @@ function makeStyles(c: ThemeColors) {
     registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
     registerText: { fontSize: FontSize.md, color: c.textSecondary },
     registerLink: { fontSize: FontSize.md, color: c.primary, fontWeight: '700' },
+    toggle: { flexDirection: 'row', backgroundColor: c.gray100, borderRadius: 12, padding: 4, gap: 4 },
+    toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 10 },
+    toggleBtnActive: { backgroundColor: c.surface, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
+    toggleText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textTertiary },
+    toggleTextActive: { color: c.primary },
   });
 }

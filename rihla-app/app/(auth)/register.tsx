@@ -145,7 +145,7 @@ export default function RegisterScreen() {
           </Text>
           <Text style={s.subtitle}>
             {step === 'contact' ? 'Join Rihla to start booking amazing trips'
-              : step === 'otp' ? `We sent a 6-digit code to ${contact}`
+              : step === 'otp' ? `We sent a 6-digit code to ${contactType === 'phone' ? fullPhone : contact}`
               : 'Set up your profile to finish'}
           </Text>
         </View>

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Localization from 'expo-localization';
 import i18n from '../lib/i18n';
 
 export type Language = 'en' | 'ar';
@@ -11,6 +12,11 @@ interface LanguageState {
   loadFromStorage: () => Promise<void>;
 }
 
+function getSystemLanguage(): Language {
+  const locale = Localization.getLocales?.()?.[0]?.languageCode ?? '';
+  return locale === 'ar' ? 'ar' : 'en';
+}
+
 export const useLanguageStore = create<LanguageState>((set) => ({
   language: 'en',
   isRTL: false,
@@ -18,7 +24,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
   loadFromStorage: async () => {
     try {
       const stored = await AsyncStorage.getItem('app_language');
-      const lang: Language = stored === 'ar' ? 'ar' : 'en';
+      const lang: Language = stored === 'ar' ? 'ar' : stored === 'en' ? 'en' : getSystemLanguage();
       const isRTL = lang === 'ar';
       await i18n.changeLanguage(lang);
       set({ language: lang, isRTL });
