@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTrip, useTripRating, useTripReviews, useFavorites, useToggleFavorite } from '../../hooks/useTrips';
 import { Colors, FontSize, Spacing, Radius, Shadow } from '../../constants/Theme';
@@ -34,6 +34,7 @@ function formatDate(d: string, locale = 'en-US') {
 
 export default function TripDetailScreen() {
   const { t, i18n } = useTranslation();
+  const insets = useSafeAreaInsets();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [selectedPackage, setSelectedPackage] = useState<TripPackage | null>(null);
@@ -321,7 +322,7 @@ export default function TripDetailScreen() {
       </ScrollView>
 
       {/* Bottom CTA */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
         {selectedPackage ? (
           <View style={styles.bottomContent}>
             <View>
@@ -478,7 +479,7 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: Colors.white,
     borderTopWidth: 1, borderTopColor: Colors.border,
-    paddingHorizontal: 20, paddingVertical: 14, paddingBottom: 28,
+    paddingHorizontal: 20, paddingTop: 14,
     ...Shadow.lg,
   },
   bottomContent: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
