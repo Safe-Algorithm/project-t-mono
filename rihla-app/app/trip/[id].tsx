@@ -408,7 +408,7 @@ function makeStyles(c: ThemeColors) {
   infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
   infoChip: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: c.white, borderRadius: Radius.lg,
+    backgroundColor: c.surface, borderRadius: Radius.lg,
     paddingHorizontal: 12, paddingVertical: 10,
     flex: 1, minWidth: '45%',
     ...Shadow.sm,
@@ -451,7 +451,7 @@ function makeStyles(c: ThemeColors) {
   packageCard: {
     borderWidth: 1.5, borderColor: c.border,
     borderRadius: Radius.xl, padding: 16,
-    backgroundColor: c.white, ...Shadow.sm,
+    backgroundColor: c.surface, ...Shadow.sm,
   },
   packageCardSelected: { borderColor: c.primary, backgroundColor: c.primarySurface },
   packageHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
@@ -466,7 +466,7 @@ function makeStyles(c: ThemeColors) {
   noPackages: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
 
   reviewCard: {
-    backgroundColor: c.white, borderRadius: Radius.xl,
+    backgroundColor: c.surface, borderRadius: Radius.xl,
     padding: 14, marginBottom: 10, ...Shadow.sm,
   },
   reviewHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
@@ -482,7 +482,7 @@ function makeStyles(c: ThemeColors) {
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: c.white,
+    backgroundColor: c.surface,
     borderTopWidth: 1, borderTopColor: c.border,
     paddingHorizontal: 20, paddingTop: 14,
     ...Shadow.lg,
