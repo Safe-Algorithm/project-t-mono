@@ -62,7 +62,8 @@ describe('TripCard', () => {
     const { getByText } = render(
       <TripCard trip={mockTrip} onPress={() => {}} />
     );
-    expect(getByText(/1,500|1500/)).toBeTruthy();
+    // t() is mocked to return the key; single package uses trip.priceOnly key
+    expect(getByText(/trip\.priceOnly|trip\.fromPrice|1,500|1500/)).toBeTruthy();
   });
 
   it('calls onPress when card is tapped', () => {

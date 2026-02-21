@@ -4,6 +4,35 @@ import i18n from '../lib/i18n';
 import apiClient from '../lib/api';
 import { Trip, TripRating, Review, TripRegistration, ProviderProfile } from '../types/trip';
 
+export interface FieldOption {
+  value: string;
+  label: string;
+  label_ar?: string;
+}
+
+export interface FieldMetadata {
+  field_name: string;
+  display_name: string;
+  display_name_ar?: string;
+  ui_type: string;
+  placeholder?: string;
+  placeholder_ar?: string;
+  required: boolean;
+  options?: FieldOption[];
+  available_validations?: string[];
+}
+
+export function useFieldMetadata() {
+  return useQuery<Record<string, FieldMetadata>>({
+    queryKey: ['field-metadata', i18n.language],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ fields: FieldMetadata[] }>('/public-trips/field-metadata');
+      return Object.fromEntries(data.fields.map((f) => [f.field_name, f]));
+    },
+    staleTime: 1000 * 60 * 60,
+  });
+}
+
 export interface TripFilters {
   search?: string;
   start_date_from?: string;

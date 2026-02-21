@@ -81,8 +81,8 @@ export default function TripDetailScreen() {
     );
   }
 
-  const name = (i18n.language === 'ar' ? (trip.name_ar ?? trip.name_en) : (trip.name_en ?? trip.name_ar)) ?? 'Trip';
-  const description = (i18n.language === 'ar' ? (trip.description_ar ?? trip.description_en) : (trip.description_en ?? trip.description_ar)) ?? '';
+  const name = (i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip';
+  const description = (i18n.language === 'ar' ? (trip.description_ar || trip.description_en) : (trip.description_en || trip.description_ar)) || '';
   const images = trip.images ?? [];
   const activePackages = trip.packages?.filter((p) => p.is_active) ?? [];
 
@@ -257,8 +257,8 @@ export default function TripDetailScreen() {
             ) : (
               <View style={s.packages}>
                 {activePackages.map((pkg) => {
-                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar ?? pkg.name_en) : (pkg.name_en ?? pkg.name_ar)) ?? 'Package';
-                  const pkgDesc = i18n.language === 'ar' ? (pkg.description_ar ?? pkg.description_en) : (pkg.description_en ?? pkg.description_ar);
+                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
+                  const pkgDesc = i18n.language === 'ar' ? (pkg.description_ar || pkg.description_en) : (pkg.description_en || pkg.description_ar);
                   const isSelected = selectedPackage?.id === pkg.id;
                   return (
                     <TouchableOpacity

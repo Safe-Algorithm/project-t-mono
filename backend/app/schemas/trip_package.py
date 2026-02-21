@@ -1,10 +1,17 @@
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, field_validator
 from decimal import Decimal
 import uuid
 
 from app.models.trip_field import TripFieldType
 from app.models.trip_package import Currency
+
+
+def _empty_to_none(v: Optional[str]) -> Optional[str]:
+    """Coerce empty/whitespace-only strings to None for bilingual fields."""
+    if v is not None and v.strip() == '':
+        return None
+    return v
 
 
 class TripPackageBase(BaseModel):
@@ -15,6 +22,11 @@ class TripPackageBase(BaseModel):
     price: Decimal
     currency: Currency = Currency.SAR
     is_active: bool = True
+
+    @field_validator('name_en', 'name_ar', 'description_en', 'description_ar', mode='before')
+    @classmethod
+    def coerce_empty_to_none(cls, v: Optional[str]) -> Optional[str]:
+        return _empty_to_none(v)
 
 
 class TripPackageCreate(TripPackageBase):
@@ -38,6 +50,11 @@ class TripPackageUpdate(BaseModel):
     currency: Optional[Currency] = None
     is_active: Optional[bool] = None
     required_fields: Optional[List[TripFieldType]] = None
+
+    @field_validator('name_en', 'name_ar', 'description_en', 'description_ar', mode='before')
+    @classmethod
+    def coerce_empty_to_none(cls, v: Optional[str]) -> Optional[str]:
+        return _empty_to_none(v)
 
 
 class TripPackage(TripPackageBase):

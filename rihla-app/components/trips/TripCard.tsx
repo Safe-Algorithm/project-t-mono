@@ -30,8 +30,8 @@ interface TripCardProps {
 }
 
 function getLocalizedName(trip: Trip, lang: string): string {
-  if (lang === 'ar') return trip.name_ar ?? trip.name_en ?? 'Unnamed Trip';
-  return trip.name_en ?? trip.name_ar ?? 'Unnamed Trip';
+  if (lang === 'ar') return trip.name_ar || trip.name_en || 'Unnamed Trip';
+  return trip.name_en || trip.name_ar || 'Unnamed Trip';
 }
 
 function formatDate(dateStr: string, lang: string): string {

@@ -170,15 +170,17 @@ def get_available_package_fields(
         options = None
         if "options" in metadata:
             options = [
-                FieldOption(value=opt["value"], label=opt["label"]) 
+                FieldOption(value=opt["value"], label=opt["label"], label_ar=opt.get("label_ar"))
                 for opt in metadata["options"]
             ]
         
         field_metadata = FieldMetadata(
             field_name=field_type,
             display_name=metadata.get("display_name", field_type.value.replace("_", " ").title()),
+            display_name_ar=metadata.get("display_name_ar"),
             ui_type=metadata.get("ui_type", "text"),
             placeholder=metadata.get("placeholder"),
+            placeholder_ar=metadata.get("placeholder_ar"),
             required=metadata.get("required", True),
             options=options,
             available_validations=metadata.get("available_validations", [])

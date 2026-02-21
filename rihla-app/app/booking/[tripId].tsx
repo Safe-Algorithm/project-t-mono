@@ -1,34 +1,18 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip } from '../../hooks/useTrips';
+import { useTrip, useFieldMetadata } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import ParticipantField, { FieldType } from '../../components/booking/ParticipantField';
 import apiClient from '../../lib/api';
-
-const FIELD_LABELS: Record<string, string> = {
-  name: 'Full Name',
-  date_of_birth: 'Date of Birth (YYYY-MM-DD)',
-  passport_number: 'Passport Number',
-  id_iqama_number: 'ID / Iqama Number',
-  gender: 'Gender',
-  phone: 'Phone Number',
-  email: 'Email Address',
-  address: 'Address',
-  city: 'City',
-  country: 'Country',
-  medical_conditions: 'Medical Conditions',
-  allergies: 'Allergies',
-  disability: 'Disability',
-};
 
 interface Participant {
   [fieldType: string]: string;
@@ -40,6 +24,7 @@ export default function BookingScreen() {
   const s = makeStyles(colors);
   const { tripId, packageId } = useLocalSearchParams<{ tripId: string; packageId: string }>();
   const { data: trip } = useTrip(tripId);
+  const { data: fieldMetadata } = useFieldMetadata();
   const [participantCount, setParticipantCount] = useState(1);
   const [participants, setParticipants] = useState<Participant[]>([{}]);
   const [loading, setLoading] = useState(false);
@@ -47,8 +32,9 @@ export default function BookingScreen() {
 
   const selectedPackage = trip?.packages?.find((p) => p.id === packageId);
   const requiredFields = (selectedPackage?.required_fields ?? []).map((ft) => ({
-    field_type: ft,
+    field_type: ft as FieldType,
     is_required: true,
+    validation_config: (selectedPackage as any)?.required_fields_details?.find((d: any) => d.field_type === ft)?.validation_config ?? null,
   }));
   const totalPrice = selectedPackage ? Number(selectedPackage.price) * participantCount : 0;
 
@@ -77,7 +63,7 @@ export default function BookingScreen() {
         if (field.is_required && !participants[i]?.[field.field_type]?.trim()) {
           Alert.alert(
             t('common.error'),
-            `${t(`fields.${field.field_type}` as any, { defaultValue: FIELD_LABELS[field.field_type] ?? field.field_type })} - ${t('booking.participant', { number: i + 1 })}`
+            `${t(`fields.${field.field_type}` as any, { defaultValue: field.field_type.replace(/_/g, ' ') })} - ${t('booking.participant', { number: i + 1 })}`
           );
           return false;
         }
@@ -181,17 +167,14 @@ export default function BookingScreen() {
                 ) : (
                   <View style={s.fields}>
                     {requiredFields.map((field) => (
-                      <Input
+                      <ParticipantField
                         key={field.field_type}
-                        label={t(`fields.${field.field_type}` as any, { defaultValue: FIELD_LABELS[field.field_type] ?? field.field_type })}
-                        placeholder={t(`fields.${field.field_type}` as any, { defaultValue: FIELD_LABELS[field.field_type] ?? field.field_type })}
+                        fieldType={field.field_type}
                         value={participants[i]?.[field.field_type] ?? ''}
-                        onChangeText={(v) => updateParticipant(i, field.field_type, v)}
-                        keyboardType={
-                          field.field_type === 'email' ? 'email-address' :
-                          field.field_type === 'phone_number' || field.field_type === 'emergency_contact_phone' ? 'phone-pad' :
-                          'default'
-                        }
+                        onChange={(v) => updateParticipant(i, field.field_type, v)}
+                        isRequired={field.is_required}
+                        metadata={fieldMetadata?.[field.field_type]}
+                        allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
                       />
                     ))}
                   </View>

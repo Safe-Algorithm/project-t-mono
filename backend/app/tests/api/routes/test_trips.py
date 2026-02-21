@@ -760,7 +760,7 @@ def test_get_trip_registrations(mock_email, client: TestClient, session: Session
 
 
 def test_get_available_package_fields(client: TestClient, session: Session):
-    """Test getting available field types with metadata for package creation."""
+    """Test getting available field types with metadata for package creation (provider endpoint)."""
     # Create a provider user for authentication
     provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     
@@ -819,6 +819,114 @@ def test_get_available_package_fields(client: TestClient, session: Session):
             assert len(field["options"]) == 3  # male, female, prefer_not_to_say
         elif field["field_name"] == "medical_conditions":
             assert field["ui_type"] == "textarea"
+
+
+def test_get_available_package_fields_includes_arabic(client: TestClient, session: Session):
+    """Test that provider available-fields endpoint returns Arabic translations."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    
+    response = client.get(f"{settings.API_V1_STR}/trips/available-fields", headers=provider_headers)
+    assert response.status_code == 200
+    
+    fields_by_name = {f["field_name"]: f for f in response.json()["fields"]}
+    
+    # display_name_ar should be present
+    assert fields_by_name["name"]["display_name_ar"] == "الاسم الكامل"
+    assert fields_by_name["gender"]["display_name_ar"] == "الجنس"
+    assert fields_by_name["date_of_birth"]["display_name_ar"] == "تاريخ الميلاد"
+    
+    # gender options should have label_ar
+    gender_options = {o["value"]: o for o in fields_by_name["gender"]["options"]}
+    assert gender_options["male"]["label_ar"] == "ذكر"
+    assert gender_options["female"]["label_ar"] == "أنثى"
+    assert gender_options["prefer_not_to_say"]["label_ar"] == "أفضل عدم الإفصاح"
+    
+    # disability options should have label_ar
+    disability_options = {o["value"]: o for o in fields_by_name["disability"]["options"]}
+    assert disability_options["none"]["label_ar"] == "لا يوجد"
+    assert disability_options["mobility"]["label_ar"] == "إعاقة حركية"
+
+
+def test_public_field_metadata_english(client: TestClient, session: Session):
+    """Test public field-metadata endpoint returns English labels by default."""
+    response = client.get(
+        f"{settings.API_V1_STR}/public-trips/field-metadata",
+        headers={"Accept-Language": "en"},
+    )
+    assert response.status_code == 200
+    
+    data = response.json()
+    assert "fields" in data
+    fields_by_name = {f["field_name"]: f for f in data["fields"]}
+    
+    # All 13 field types present
+    assert len(fields_by_name) == 13
+    
+    # English display names
+    assert fields_by_name["name"]["display_name"] == "Full Name"
+    assert fields_by_name["gender"]["display_name"] == "Gender"
+    assert fields_by_name["date_of_birth"]["display_name"] == "Date of Birth"
+    assert fields_by_name["disability"]["display_name"] == "Disability"
+    
+    # Gender options in English
+    gender_options = {o["value"]: o for o in fields_by_name["gender"]["options"]}
+    assert gender_options["male"]["label"] == "Male"
+    assert gender_options["female"]["label"] == "Female"
+    assert gender_options["prefer_not_to_say"]["label"] == "Prefer not to say"
+    
+    # ui_type correctness
+    assert fields_by_name["date_of_birth"]["ui_type"] == "date"
+    assert fields_by_name["gender"]["ui_type"] == "select"
+    assert fields_by_name["address"]["ui_type"] == "textarea"
+    assert fields_by_name["email"]["ui_type"] == "email"
+    assert fields_by_name["phone"]["ui_type"] == "phone"
+
+
+def test_public_field_metadata_arabic(client: TestClient, session: Session):
+    """Test public field-metadata endpoint returns Arabic labels when Accept-Language: ar."""
+    response = client.get(
+        f"{settings.API_V1_STR}/public-trips/field-metadata",
+        headers={"Accept-Language": "ar"},
+    )
+    assert response.status_code == 200
+    
+    fields_by_name = {f["field_name"]: f for f in response.json()["fields"]}
+    
+    # Arabic display names returned as display_name
+    assert fields_by_name["name"]["display_name"] == "الاسم الكامل"
+    assert fields_by_name["gender"]["display_name"] == "الجنس"
+    assert fields_by_name["date_of_birth"]["display_name"] == "تاريخ الميلاد"
+    assert fields_by_name["disability"]["display_name"] == "الإعاقة"
+    assert fields_by_name["phone"]["display_name"] == "رقم الهاتف"
+    
+    # Gender option labels in Arabic
+    gender_options = {o["value"]: o for o in fields_by_name["gender"]["options"]}
+    assert gender_options["male"]["label"] == "ذكر"
+    assert gender_options["female"]["label"] == "أنثى"
+    assert gender_options["prefer_not_to_say"]["label"] == "أفضل عدم الإفصاح"
+    
+    # Disability option labels in Arabic
+    disability_options = {o["value"]: o for o in fields_by_name["disability"]["options"]}
+    assert disability_options["none"]["label"] == "لا يوجد"
+    assert disability_options["mobility"]["label"] == "إعاقة حركية"
+    
+    # Raw Arabic fields still present for reference
+    assert fields_by_name["name"]["display_name_ar"] == "الاسم الكامل"
+
+
+def test_public_field_metadata_no_auth_required(client: TestClient, session: Session):
+    """Test that public field-metadata endpoint requires no authentication."""
+    response = client.get(f"{settings.API_V1_STR}/public-trips/field-metadata")
+    assert response.status_code == 200
+    assert "fields" in response.json()
+
+
+def test_public_field_metadata_defaults_to_english(client: TestClient, session: Session):
+    """Test that public field-metadata defaults to English when no Accept-Language header."""
+    response = client.get(f"{settings.API_V1_STR}/public-trips/field-metadata")
+    fields_by_name = {f["field_name"]: f for f in response.json()["fields"]}
+    assert fields_by_name["name"]["display_name"] == "Full Name"
+    assert fields_by_name["gender"]["options"][0]["label"] == "Male"
 
 
 # Tests for registration user tracking features

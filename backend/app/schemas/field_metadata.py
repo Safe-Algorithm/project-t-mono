@@ -8,14 +8,17 @@ class FieldOption(BaseModel):
     """Option for select field types"""
     value: str
     label: str
+    label_ar: Optional[str] = None
 
 
 class FieldMetadata(BaseModel):
     """Metadata for a field type including UI display information"""
     field_name: TripFieldType
     display_name: str
+    display_name_ar: Optional[str] = None
     ui_type: UIFieldType
     placeholder: Optional[str] = None
+    placeholder_ar: Optional[str] = None
     required: bool = True
     options: Optional[List[FieldOption]] = None
     available_validations: Optional[List[str]] = None

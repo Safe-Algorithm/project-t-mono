@@ -238,19 +238,4 @@ export default {
     visa_assistance: 'Visa Assistance',
   },
 
-  fields: {
-    id_iqama_number: 'ID / Iqama Number',
-    passport_number: 'Passport Number',
-    name: 'Full Name',
-    phone: 'Phone Number',
-    email: 'Email',
-    address: 'Address',
-    city: 'City',
-    country: 'Country',
-    date_of_birth: 'Date of Birth',
-    gender: 'Gender',
-    disability: 'Disability',
-    medical_conditions: 'Medical Conditions',
-    allergies: 'Allergies',
-  },
 } as const;

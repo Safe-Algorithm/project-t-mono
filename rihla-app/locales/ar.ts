@@ -238,19 +238,4 @@ export default {
     visa_assistance: 'مساعدة في التأشيرة',
   },
 
-  fields: {
-    id_iqama_number: 'رقم الهوية / الإقامة',
-    passport_number: 'رقم جواز السفر',
-    name: 'الاسم الكامل',
-    phone: 'رقم الهاتف',
-    email: 'البريد الإلكتروني',
-    address: 'العنوان',
-    city: 'المدينة',
-    country: 'الدولة',
-    date_of_birth: 'تاريخ الميلاد',
-    gender: 'الجنس',
-    disability: 'الإعاقة',
-    medical_conditions: 'الحالات الطبية',
-    allergies: 'الحساسية',
-  },
 } as const;

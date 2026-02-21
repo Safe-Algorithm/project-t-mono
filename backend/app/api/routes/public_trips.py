@@ -7,13 +7,15 @@ from typing import List, Optional
 from datetime import datetime
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from sqlmodel import Session, select
 from typing import List, Optional
 import uuid
 from app.utils.localization import get_name, get_description
 from app.api.deps import get_session
 from app.schemas.trip import TripRead
+from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
+from app.models.trip_field import TripFieldType, FIELD_METADATA
 import app.crud as crud
 from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.models.trip_package import TripPackage as TripPackageModel
@@ -21,6 +23,55 @@ from app.models.trip_package_field import TripPackageRequiredField
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.get("/field-metadata", response_model=AvailableFieldsResponse)
+def get_public_field_metadata(
+    accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
+):
+    """
+    Get all field type metadata with localized labels (public, no auth required).
+    Returns display names and select options in the requested language.
+    """
+    lang = "ar" if (accept_language or "en").startswith("ar") else "en"
+    fields = []
+
+    for field_type in TripFieldType:
+        metadata = FIELD_METADATA.get(field_type, {})
+
+        options = None
+        if "options" in metadata:
+            options = [
+                FieldOption(
+                    value=opt["value"],
+                    label=opt["label_ar"] if lang == "ar" and opt.get("label_ar") else opt["label"],
+                    label_ar=opt.get("label_ar"),
+                )
+                for opt in metadata["options"]
+            ]
+
+        display_name = (
+            metadata.get("display_name_ar") if lang == "ar" and metadata.get("display_name_ar")
+            else metadata.get("display_name", field_type.value.replace("_", " ").title())
+        )
+        placeholder = (
+            metadata.get("placeholder_ar") if lang == "ar" and metadata.get("placeholder_ar")
+            else metadata.get("placeholder")
+        )
+
+        fields.append(FieldMetadata(
+            field_name=field_type,
+            display_name=display_name,
+            display_name_ar=metadata.get("display_name_ar"),
+            ui_type=metadata.get("ui_type", "text"),
+            placeholder=placeholder,
+            placeholder_ar=metadata.get("placeholder_ar"),
+            required=metadata.get("required", False),
+            options=options,
+            available_validations=metadata.get("available_validations", []),
+        ))
+
+    return AvailableFieldsResponse(fields=fields)
 
 
 def build_trip_read(trip, session: Session) -> TripRead:
