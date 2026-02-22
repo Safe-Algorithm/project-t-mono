@@ -30,7 +30,9 @@ export default function BookingSuccessScreen() {
   useEffect(() => {
     if (!registration?.spot_reserved_until) return;
     const update = () => {
-      const diff = Math.max(0, Math.floor((new Date(registration.spot_reserved_until!).getTime() - Date.now()) / 1000));
+      const raw = registration.spot_reserved_until!;
+      const utcStr = raw.endsWith('Z') || raw.includes('+') ? raw : raw + 'Z';
+      const diff = Math.max(0, Math.floor((new Date(utcStr).getTime() - Date.now()) / 1000));
       setSecondsLeft(diff);
     };
     update();
@@ -40,7 +42,7 @@ export default function BookingSuccessScreen() {
 
   const bookingRef = registration?.booking_reference ?? `BOOK-${registrationId?.slice(0, 8).toUpperCase()}`;
   const isConfirmed = registration?.status === 'confirmed';
-  const isExpired = secondsLeft === 0 && registration?.status !== 'confirmed';
+  const isExpired = secondsLeft !== null && secondsLeft === 0 && registration?.status === 'pending_payment';
 
   const handleCopy = useCallback(() => {
     Clipboard.setString(bookingRef);
@@ -107,11 +109,20 @@ export default function BookingSuccessScreen() {
         )}
 
         <View style={s.actions}>
+          {!isConfirmed && registrationId && (
+            <Button
+              title={t('booking.payNow')}
+              onPress={() => router.push({ pathname: '/booking/[registrationId]', params: { registrationId } })}
+              fullWidth
+              size="lg"
+            />
+          )}
           <Button
             title={t('booking.viewBookings')}
             onPress={() => router.replace('/(tabs)/bookings')}
             fullWidth
             size="lg"
+            variant={isConfirmed ? undefined : 'outline'}
           />
           <Button
             title={t('explore.subtitle')}

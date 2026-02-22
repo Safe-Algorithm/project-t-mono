@@ -44,6 +44,7 @@ class UserUpdate(UserBase):
     name: str | None = None
     phone: str | None = None
     is_superuser: bool | None = None
+    preferred_language: str | None = None
 
 
 class UserPublic(UserBase):
@@ -53,6 +54,7 @@ class UserPublic(UserBase):
     provider_id: uuid.UUID | None = None
     is_phone_verified: bool = False
     is_email_verified: bool = False
+    preferred_language: str = "en"
 
 
 class UserPublicWithProvider(UserPublic):

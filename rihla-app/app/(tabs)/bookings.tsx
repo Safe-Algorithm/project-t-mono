@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMyRegistrations, useAllMyTripUpdates } from '../../hooks/useTrips';
@@ -18,7 +18,7 @@ const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'error' | 'neutral
   pending: 'warning',
   cancelled: 'error',
   completed: 'neutral',
-  payment_pending: 'warning',
+  pending_payment: 'warning',
 };
 
 function BookingCard({ reg }: { reg: TripRegistration }) {
@@ -27,7 +27,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
   const s = makeStyles(colors);
   const statusVariant = STATUS_VARIANTS[reg.status] ?? 'neutral';
   const statusLabel = t(`bookings.status.${reg.status}` as any, { defaultValue: reg.status });
-  const tripName = (i18n.language === 'ar' ? reg.trip?.name_ar : reg.trip?.name_en) ?? reg.trip?.name_en ?? reg.trip?.name_ar ?? 'Trip';
+  const tripName = (i18n.language === 'ar' ? (reg.trip?.name_ar || reg.trip?.name_en) : (reg.trip?.name_en || reg.trip?.name_ar)) || 'Trip';
   const startDate = reg.trip?.start_date
     ? new Date(reg.trip.start_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '';
@@ -54,7 +54,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
         </View>
         <View style={s.metaItem}>
           <Ionicons name="receipt-outline" size={13} color={colors.textTertiary} />
-          <Text style={s.refText}>{reg.id.slice(0, 8).toUpperCase()}</Text>
+          <Text style={s.refText}>{reg.booking_reference ?? reg.id.slice(0, 8).toUpperCase()}</Text>
         </View>
       </View>
       <View style={s.cardFooter}>
@@ -71,9 +71,16 @@ export default function BookingsScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
-  const { data: registrations, isLoading } = useMyRegistrations();
+  const { data: registrations, isLoading, refetch, isRefetching } = useMyRegistrations();
   const { data: allUpdates } = useAllMyTripUpdates();
   const unreadCount = allUpdates?.filter((u) => !u.read).length ?? 0;
+
+  // Refetch every time this tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
 
   return (
     <SafeAreaView style={s.container}>
@@ -108,6 +115,14 @@ export default function BookingsScreen() {
           data={registrations ?? []} keyExtractor={(r) => r.id}
           renderItem={({ item }) => <BookingCard reg={item} />}
           contentContainerStyle={s.list} showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={s.empty}>
               <Ionicons name="calendar-outline" size={64} color={colors.gray300} />

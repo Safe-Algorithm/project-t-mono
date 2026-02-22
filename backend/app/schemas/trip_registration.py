@@ -39,6 +39,22 @@ class TripRegistrationParticipant(TripParticipantBase):
         from_attributes = True
 
 
+class RegistrationTripInfo(BaseModel):
+    id: uuid.UUID
+    name_en: Optional[str] = None
+    name_ar: Optional[str] = None
+    description_en: Optional[str] = None
+    description_ar: Optional[str] = None
+    start_date: datetime
+    end_date: datetime
+    provider_id: uuid.UUID
+    trip_reference: Optional[str] = None
+    provider: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+
 class TripRegistrationBase(BaseModel):
     total_participants: int = 1
     total_amount: Decimal
@@ -62,6 +78,7 @@ class TripRegistration(TripRegistrationBase):
     spot_reserved_until: Optional[datetime] = None
     booking_reference: str
     participants: List[TripRegistrationParticipant] = []
+    trip: Optional[RegistrationTripInfo] = None
 
     class Config:
         from_attributes = True

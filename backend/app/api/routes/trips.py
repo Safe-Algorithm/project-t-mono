@@ -145,6 +145,15 @@ def read_trips(
             "company_name": provider.company_name
         } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
         
+        from app.models.trip_registration import TripRegistration as TripRegistrationModel
+        from sqlmodel import select as sql_select
+        active_regs = session.exec(
+            sql_select(TripRegistrationModel).where(
+                TripRegistrationModel.trip_id == trip.id,
+                TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+            )
+        ).all()
+        booked = sum(r.total_participants for r in active_regs)
         trips_with_packages.append(TripRead(
             id=trip.id,
             provider_id=trip.provider_id,
@@ -164,7 +173,8 @@ def read_trips(
             starting_city_id=trip.starting_city_id,
             starting_city=_get_starting_city_info(session, trip),
             is_international=trip.is_international,
-            packages=packages_with_fields
+            packages=packages_with_fields,
+            available_spots=max(0, trip.max_participants - booked),
         ))
     
     return trips_with_packages
@@ -205,233 +215,55 @@ def get_available_package_fields(
     return AvailableFieldsResponse(fields=fields)
 
 
-@router.get("/{trip_id}", response_model=TripRead)
-def read_trip(
-    *, 
-    session: Session = Depends(get_session), 
-    trip_id: uuid.UUID, 
-    current_user: User = Depends(get_current_active_provider)
-):
-    """Retrieve a specific trip by ID."""
-    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    if trip.provider_id != current_user.provider_id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Get packages with required fields
-    from app.models.trip_package import TripPackage as TripPackageModel
-    from app.models.trip_package_field import TripPackageRequiredField
-    
-    packages = session.query(TripPackageModel).filter(
-        TripPackageModel.trip_id == trip_id,
-        TripPackageModel.is_active == True
-    ).all()
-    
-    # Create packages with required fields
-    packages_with_fields = []
-    for package in packages:
-        required_fields = session.query(TripPackageRequiredField).filter(
-            TripPackageRequiredField.package_id == package.id
-        ).all()
-        required_field_types = [rf.field_type.value for rf in required_fields]
-        
-        # Include detailed required fields with validation configs
-        required_fields_details = []
-        for rf in required_fields:
-            required_fields_details.append({
-                "id": str(rf.id),
-                "package_id": str(rf.package_id),
-                "field_type": rf.field_type.value,
-                "is_required": rf.is_required,
-                "validation_config": rf.validation_config
-            })
-        
-        packages_with_fields.append(TripPackageWithRequiredFields(
-            id=package.id,
-            trip_id=package.trip_id,
-            name_en=package.name_en,
-            name_ar=package.name_ar,
-            description_en=package.description_en,
-            description_ar=package.description_ar,
-            price=package.price,
-            is_active=package.is_active,
-            required_fields=required_field_types,
-            required_fields_details=required_fields_details
-        ))
-    
-    # Ensure trip has at least one package
-    if not packages_with_fields:
-        raise HTTPException(
-            status_code=400, 
-            detail="Trip must have at least one package. Please add a package to this trip."
-        )
-    
-    # Get provider info
-    from app.crud import provider as provider_crud
-    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-    provider_info = {
-        "id": provider.id,
-        "company_name": provider.company_name
-    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-    
-    # Get extra fees
-    from app.models.trip_amenity import TripExtraFee
-    extra_fees = session.query(TripExtraFee).filter(
-        TripExtraFee.trip_id == trip_id
-    ).all()
-    
-    # Create response with packages including required fields
-    return TripRead(
-        id=trip.id,
-        provider_id=trip.provider_id,
-        provider=provider_info,
-        name_en=trip.name_en,
-        name_ar=trip.name_ar,
-        description_en=trip.description_en,
-        description_ar=trip.description_ar,
-        start_date=trip.start_date,
-        end_date=trip.end_date,
-        max_participants=trip.max_participants,
-        images=trip.images,
-        trip_metadata=trip.trip_metadata,
-        is_active=trip.is_active,
-        is_refundable=trip.is_refundable,
-        amenities=trip.amenities,
-        has_meeting_place=trip.has_meeting_place,
-        meeting_location=trip.meeting_location,
-        meeting_time=trip.meeting_time,
-        trip_reference=trip.trip_reference,
-        registration_deadline=trip.registration_deadline,
-        starting_city_id=trip.starting_city_id,
-        starting_city=_get_starting_city_info(session, trip),
-        is_international=trip.is_international,
-        packages=packages_with_fields,
-        extra_fees=extra_fees
-    )
-
-
-@router.put("/{trip_id}", response_model=TripRead)
-def update_trip(
-    *, 
-    session: Session = Depends(get_session), 
-    trip_id: uuid.UUID, 
-    trip_in: TripUpdate,
-    current_user: User = Depends(get_current_active_provider),
-):
-    """Update a trip."""
-    db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
-    if not db_trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
-    if db_trip.provider_id != current_user.provider_id:
-        raise HTTPException(status_code=403, detail="Not enough permissions")
-    
-    # Update the trip
-    trip = crud.trip.update_trip(session=session, db_trip=db_trip, trip_in=trip_in)
-    
-    # Get packages with properly serialized required fields
-    from app.models.trip_package import TripPackage as TripPackageModel
-    from app.models.trip_package_field import TripPackageRequiredField
-    
-    packages = session.query(TripPackageModel).filter(
-        TripPackageModel.trip_id == trip_id,
-        TripPackageModel.is_active == True
-    ).all()
-    
-    packages_with_fields = []
-    for package in packages:
-        required_fields = session.query(TripPackageRequiredField).filter(
-            TripPackageRequiredField.package_id == package.id
-        ).all()
-        required_field_types = [rf.field_type.value for rf in required_fields]
-        
-        # Include detailed required fields with validation configs
-        required_fields_details = []
-        for rf in required_fields:
-            required_fields_details.append({
-                "id": str(rf.id),
-                "package_id": str(rf.package_id),
-                "field_type": rf.field_type.value,
-                "is_required": rf.is_required,
-                "validation_config": rf.validation_config
-            })
-        
-        packages_with_fields.append(TripPackageWithRequiredFields(
-            id=package.id,
-            trip_id=package.trip_id,
-            name_en=package.name_en,
-            name_ar=package.name_ar,
-            description_en=package.description_en,
-            description_ar=package.description_ar,
-            price=package.price,
-            currency=package.currency,
-            is_active=package.is_active,
-            required_fields=required_field_types,
-            required_fields_details=required_fields_details
-        ))
-    
-    # Get provider info
-    from app.crud import provider as provider_crud
-    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-    provider_info = {
-        "id": provider.id,
-        "company_name": provider.company_name
-    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-    
-    # Get extra fees
-    from app.models.trip_amenity import TripExtraFee
-    extra_fees = session.query(TripExtraFee).filter(
-        TripExtraFee.trip_id == trip_id
-    ).all()
-    
-    return TripRead(
-        id=trip.id,
-        provider_id=trip.provider_id,
-        provider=provider_info,
-        name_en=trip.name_en,
-        name_ar=trip.name_ar,
-        description_en=trip.description_en,
-        description_ar=trip.description_ar,
-        start_date=trip.start_date,
-        end_date=trip.end_date,
-        max_participants=trip.max_participants,
-        images=trip.images,
-        trip_metadata=trip.trip_metadata,
-        is_active=trip.is_active,
-        is_refundable=trip.is_refundable,
-        amenities=trip.amenities,
-        has_meeting_place=trip.has_meeting_place,
-        meeting_location=trip.meeting_location,
-        meeting_time=trip.meeting_time,
-        trip_reference=trip.trip_reference,
-        registration_deadline=trip.registration_deadline,
-        starting_city_id=trip.starting_city_id,
-        starting_city=_get_starting_city_info(session, trip),
-        is_international=trip.is_international,
-        packages=packages_with_fields,
-        extra_fees=extra_fees
-    )
-
-
-@router.delete("/{trip_id}")
-def delete_trip(
+@router.get("/registrations/{registration_id}", response_model=TripRegistration)
+def get_my_registration(
     *,
     session: Session = Depends(get_session),
-    trip_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_provider),
+    registration_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Delete a trip."""
-    try:
-        db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
-        if not db_trip:
-            raise HTTPException(status_code=404, detail="Trip not found")
-        if db_trip.provider_id != current_user.provider_id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
-        crud.trip.delete_trip(session=session, db_trip=db_trip)
-        return {"ok": True}
-    except Exception as e:
-        logger.error(f"Error deleting trip: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    """Get a specific registration by ID (must belong to current user)."""
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.trip import Trip as TripModel
+    from app.models.provider import Provider as ProviderModel
+    from app.schemas.trip_registration import RegistrationTripInfo
+
+    registration = session.get(TripRegistrationModel, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    if registration.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    trip = registration.trip or session.get(TripModel, registration.trip_id)
+    provider = (trip.provider if trip else None) or (session.get(ProviderModel, trip.provider_id) if trip else None)
+
+    trip_info = RegistrationTripInfo(
+        id=trip.id,
+        name_en=trip.name_en,
+        name_ar=trip.name_ar,
+        description_en=trip.description_en,
+        description_ar=trip.description_ar,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        provider_id=trip.provider_id,
+        trip_reference=trip.trip_reference,
+        provider={"id": str(provider.id), "company_name": provider.company_name} if provider else None,
+    ) if trip else None
+
+    from app.schemas.trip_registration import TripRegistration as TripRegistrationSchema
+    return TripRegistrationSchema(
+        id=registration.id,
+        trip_id=registration.trip_id,
+        user_id=registration.user_id,
+        total_participants=registration.total_participants,
+        total_amount=registration.total_amount,
+        status=registration.status,
+        registration_date=registration.registration_date,
+        spot_reserved_until=registration.spot_reserved_until,
+        booking_reference=registration.booking_reference,
+        participants=list(registration.participants or []),
+        trip=trip_info,
+    )
 
 
 @router.get("/all", response_model=List[TripRead])
@@ -522,6 +354,15 @@ def list_all_trips(
             "company_name": provider.company_name
         } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
         
+        from app.models.trip_registration import TripRegistration as TripRegistrationModel
+        from sqlmodel import select as sql_select
+        active_regs2 = session.exec(
+            sql_select(TripRegistrationModel).where(
+                TripRegistrationModel.trip_id == trip.id,
+                TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+            )
+        ).all()
+        booked2 = sum(r.total_participants for r in active_regs2)
         trips_with_packages.append(TripRead(
             id=trip.id,
             provider_id=trip.provider_id,
@@ -541,10 +382,270 @@ def list_all_trips(
             starting_city_id=trip.starting_city_id,
             starting_city=_get_starting_city_info(session, trip),
             is_international=trip.is_international,
-            packages=packages_with_fields
+            packages=packages_with_fields,
+            available_spots=max(0, trip.max_participants - booked2),
         ))
     
     return trips_with_packages
+
+
+@router.get("/{trip_id}", response_model=TripRead)
+def read_trip(
+    *, 
+    session: Session = Depends(get_session), 
+    trip_id: uuid.UUID, 
+    current_user: User = Depends(get_current_active_provider)
+):
+    """Retrieve a specific trip by ID."""
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Get packages with required fields
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from app.models.trip_package_field import TripPackageRequiredField
+    
+    packages = session.query(TripPackageModel).filter(
+        TripPackageModel.trip_id == trip_id,
+        TripPackageModel.is_active == True
+    ).all()
+    
+    # Create packages with required fields
+    packages_with_fields = []
+    for package in packages:
+        required_fields = session.query(TripPackageRequiredField).filter(
+            TripPackageRequiredField.package_id == package.id
+        ).all()
+        required_field_types = [rf.field_type.value for rf in required_fields]
+        
+        # Include detailed required fields with validation configs
+        required_fields_details = []
+        for rf in required_fields:
+            required_fields_details.append({
+                "id": str(rf.id),
+                "package_id": str(rf.package_id),
+                "field_type": rf.field_type.value,
+                "is_required": rf.is_required,
+                "validation_config": rf.validation_config
+            })
+        
+        packages_with_fields.append(TripPackageWithRequiredFields(
+            id=package.id,
+            trip_id=package.trip_id,
+            name_en=package.name_en,
+            name_ar=package.name_ar,
+            description_en=package.description_en,
+            description_ar=package.description_ar,
+            price=package.price,
+            is_active=package.is_active,
+            required_fields=required_field_types,
+            required_fields_details=required_fields_details
+        ))
+    
+    # Ensure trip has at least one package
+    if not packages_with_fields:
+        raise HTTPException(
+            status_code=400, 
+            detail="Trip must have at least one package. Please add a package to this trip."
+        )
+    
+    # Get provider info
+    from app.crud import provider as provider_crud
+    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
+    provider_info = {
+        "id": provider.id,
+        "company_name": provider.company_name
+    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
+    
+    # Get extra fees
+    from app.models.trip_amenity import TripExtraFee
+    extra_fees = session.query(TripExtraFee).filter(
+        TripExtraFee.trip_id == trip_id
+    ).all()
+    
+    # Compute available spots
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from sqlmodel import select as sql_select
+    active_regs_rt = session.exec(
+        sql_select(TripRegistrationModel).where(
+            TripRegistrationModel.trip_id == trip.id,
+            TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+        )
+    ).all()
+    booked_rt = sum(r.total_participants for r in active_regs_rt)
+
+    # Create response with packages including required fields
+    return TripRead(
+        id=trip.id,
+        provider_id=trip.provider_id,
+        provider=provider_info,
+        name_en=trip.name_en,
+        name_ar=trip.name_ar,
+        description_en=trip.description_en,
+        description_ar=trip.description_ar,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        max_participants=trip.max_participants,
+        images=trip.images,
+        trip_metadata=trip.trip_metadata,
+        is_active=trip.is_active,
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        trip_reference=trip.trip_reference,
+        registration_deadline=trip.registration_deadline,
+        starting_city_id=trip.starting_city_id,
+        starting_city=_get_starting_city_info(session, trip),
+        is_international=trip.is_international,
+        packages=packages_with_fields,
+        extra_fees=extra_fees,
+        available_spots=max(0, trip.max_participants - booked_rt),
+    )
+
+
+@router.put("/{trip_id}", response_model=TripRead)
+def update_trip(
+    *, 
+    session: Session = Depends(get_session), 
+    trip_id: uuid.UUID, 
+    trip_in: TripUpdate,
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Update a trip."""
+    db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if db_trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    
+    # Update the trip
+    trip = crud.trip.update_trip(session=session, db_trip=db_trip, trip_in=trip_in)
+
+    # Validate that at least one name and one description remain after patch
+    if not trip.name_en and not trip.name_ar:
+        raise HTTPException(status_code=400, detail="At least one of name_en or name_ar must be provided")
+    if not trip.description_en and not trip.description_ar:
+        raise HTTPException(status_code=400, detail="At least one of description_en or description_ar must be provided")
+
+    # Get packages with properly serialized required fields
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from app.models.trip_package_field import TripPackageRequiredField
+    
+    packages = session.query(TripPackageModel).filter(
+        TripPackageModel.trip_id == trip_id,
+        TripPackageModel.is_active == True
+    ).all()
+    
+    packages_with_fields = []
+    for package in packages:
+        required_fields = session.query(TripPackageRequiredField).filter(
+            TripPackageRequiredField.package_id == package.id
+        ).all()
+        required_field_types = [rf.field_type.value for rf in required_fields]
+        
+        # Include detailed required fields with validation configs
+        required_fields_details = []
+        for rf in required_fields:
+            required_fields_details.append({
+                "id": str(rf.id),
+                "package_id": str(rf.package_id),
+                "field_type": rf.field_type.value,
+                "is_required": rf.is_required,
+                "validation_config": rf.validation_config
+            })
+        
+        packages_with_fields.append(TripPackageWithRequiredFields(
+            id=package.id,
+            trip_id=package.trip_id,
+            name_en=package.name_en,
+            name_ar=package.name_ar,
+            description_en=package.description_en,
+            description_ar=package.description_ar,
+            price=package.price,
+            currency=package.currency,
+            is_active=package.is_active,
+            required_fields=required_field_types,
+            required_fields_details=required_fields_details
+        ))
+    
+    # Get provider info
+    from app.crud import provider as provider_crud
+    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
+    provider_info = {
+        "id": provider.id,
+        "company_name": provider.company_name
+    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
+    
+    # Get extra fees
+    from app.models.trip_amenity import TripExtraFee
+    extra_fees = session.query(TripExtraFee).filter(
+        TripExtraFee.trip_id == trip_id
+    ).all()
+    
+    # Compute available spots for update response
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from sqlmodel import select as sql_select
+    active_regs_upd = session.exec(
+        sql_select(TripRegistrationModel).where(
+            TripRegistrationModel.trip_id == trip.id,
+            TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+        )
+    ).all()
+    booked_upd = sum(r.total_participants for r in active_regs_upd)
+
+    return TripRead(
+        id=trip.id,
+        provider_id=trip.provider_id,
+        provider=provider_info,
+        name_en=trip.name_en,
+        name_ar=trip.name_ar,
+        description_en=trip.description_en,
+        description_ar=trip.description_ar,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        max_participants=trip.max_participants,
+        images=trip.images,
+        trip_metadata=trip.trip_metadata,
+        is_active=trip.is_active,
+        is_refundable=trip.is_refundable,
+        amenities=trip.amenities,
+        has_meeting_place=trip.has_meeting_place,
+        meeting_location=trip.meeting_location,
+        meeting_time=trip.meeting_time,
+        trip_reference=trip.trip_reference,
+        registration_deadline=trip.registration_deadline,
+        starting_city_id=trip.starting_city_id,
+        starting_city=_get_starting_city_info(session, trip),
+        is_international=trip.is_international,
+        packages=packages_with_fields,
+        extra_fees=extra_fees,
+        available_spots=max(0, trip.max_participants - booked_upd),
+    )
+
+
+@router.delete("/{trip_id}")
+def delete_trip(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Delete a trip."""
+    try:
+        db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+        if not db_trip:
+            raise HTTPException(status_code=404, detail="Trip not found")
+        if db_trip.provider_id != current_user.provider_id:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        crud.trip.delete_trip(session=session, db_trip=db_trip)
+        return {"ok": True}
+    except Exception as e:
+        logger.error(f"Error deleting trip: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{trip_id}/join", response_model=TripRead)
@@ -744,6 +845,12 @@ def update_trip_package(
     update_data = package_in.model_dump(exclude_unset=True, exclude={"required_fields"})
     for field, value in update_data.items():
         setattr(package, field, value)
+
+    # Validate that at least one name and one description remain after patch
+    if not package.name_en and not package.name_ar:
+        raise HTTPException(status_code=400, detail="At least one of name_en or name_ar must be provided")
+    if not package.description_en and not package.description_ar:
+        raise HTTPException(status_code=400, detail="At least one of description_en or description_ar must be provided")
     
     # Update required fields if provided
     if package_in.required_fields is not None:
@@ -975,9 +1082,22 @@ async def register_for_trip(
     if trip.start_date <= datetime.utcnow():
         raise HTTPException(status_code=400, detail="This trip has already started or passed")
 
-    # Guard: trip must not be full (count confirmed + pending_payment registrations)
+    # Guard: user must not already have an active registration for this trip
     from app.models.trip_registration import TripRegistration as TripRegistrationModel
     from sqlmodel import select as sql_select
+    existing_user_reg_stmt = sql_select(TripRegistrationModel).where(
+        TripRegistrationModel.trip_id == trip_id,
+        TripRegistrationModel.user_id == current_user.id,
+        TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+    )
+    existing_user_reg = session.exec(existing_user_reg_stmt).first()
+    if existing_user_reg:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have an active registration for this trip. Check your bookings."
+        )
+
+    # Guard: trip must not be full (count confirmed + pending_payment registrations)
     confirmed_count_stmt = sql_select(TripRegistrationModel).where(
         TripRegistrationModel.trip_id == trip_id,
         TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
@@ -1070,37 +1190,38 @@ async def register_for_trip(
     
     session.commit()
     session.refresh(registration)
-    
-    # Send booking confirmation email in background
-    from app.services.email import email_service
-    background_tasks.add_task(
-        email_service.send_booking_confirmation_email,
-        to_email=current_user.email,
-        to_name=current_user.name,
-        trip_name=get_name(trip),
-        booking_reference=registration.booking_reference,
-        start_date=trip.start_date.strftime("%Y-%m-%d"),
-        total_amount=f"{registration.total_amount} SAR"
+
+    # Build enriched response (provider must be serialized as dict, not SQLModel)
+    from app.models.provider import Provider as ProviderModel
+    from app.schemas.trip_registration import RegistrationTripInfo, TripRegistration as TripRegistrationSchema
+    provider = trip.provider or session.get(ProviderModel, trip.provider_id)
+    trip_info = RegistrationTripInfo(
+        id=trip.id,
+        name_en=trip.name_en,
+        name_ar=trip.name_ar,
+        description_en=trip.description_en,
+        description_ar=trip.description_ar,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        provider_id=trip.provider_id,
+        trip_reference=trip.trip_reference,
+        provider={"id": str(provider.id), "company_name": provider.company_name} if provider else None,
     )
-    
-    return registration
+    return TripRegistrationSchema(
+        id=registration.id,
+        trip_id=registration.trip_id,
+        user_id=registration.user_id,
+        total_participants=registration.total_participants,
+        total_amount=registration.total_amount,
+        status=registration.status,
+        registration_date=registration.registration_date,
+        spot_reserved_until=registration.spot_reserved_until,
+        booking_reference=registration.booking_reference,
+        participants=list(registration.participants or []),
+        trip=trip_info,
+    )
 
 
-@router.get("/registrations/{registration_id}", response_model=TripRegistration)
-def get_my_registration(
-    *,
-    session: Session = Depends(get_session),
-    registration_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_user),
-):
-    """Get a specific registration by ID (must belong to current user)."""
-    from app.models.trip_registration import TripRegistration as TripRegistrationModel
-    registration = session.get(TripRegistrationModel, registration_id)
-    if not registration:
-        raise HTTPException(status_code=404, detail="Registration not found")
-    if registration.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    return registration
 
 
 @router.get("/{trip_id}/registrations", response_model=List[TripRegistration])
@@ -1116,24 +1237,59 @@ def get_trip_registrations(
         raise HTTPException(status_code=404, detail="Trip not found")
     if trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    
+
+    from sqlmodel import select as sql_select
     from app.models.trip_registration import TripRegistration as TripRegistrationModel
-    registrations = session.query(TripRegistrationModel).filter(
-        TripRegistrationModel.trip_id == trip_id
+    from app.models.provider import Provider as ProviderModel
+    from app.schemas.trip_registration import RegistrationTripInfo, TripRegistration as TripRegistrationSchema
+
+    registrations = session.exec(
+        sql_select(TripRegistrationModel).where(TripRegistrationModel.trip_id == trip_id)
     ).all()
-    
-    return registrations
+
+    provider = trip.provider or session.get(ProviderModel, trip.provider_id)
+    trip_info = RegistrationTripInfo(
+        id=trip.id,
+        name_en=trip.name_en,
+        name_ar=trip.name_ar,
+        description_en=trip.description_en,
+        description_ar=trip.description_ar,
+        start_date=trip.start_date,
+        end_date=trip.end_date,
+        provider_id=trip.provider_id,
+        trip_reference=getattr(trip, 'trip_reference', None),
+        provider={"id": str(provider.id), "company_name": provider.company_name} if provider else None,
+    )
+
+    return [
+        TripRegistrationSchema(
+            id=reg.id,
+            trip_id=reg.trip_id,
+            user_id=reg.user_id,
+            total_participants=reg.total_participants,
+            total_amount=reg.total_amount,
+            status=reg.status,
+            registration_date=reg.registration_date,
+            spot_reserved_until=reg.spot_reserved_until,
+            booking_reference=reg.booking_reference,
+            participants=list(reg.participants or []),
+            trip=trip_info,
+        )
+        for reg in registrations
+    ]
 
 
 # Field Validation Endpoints
+
+
 @router.get("/validation/available/{field_type}")
 def get_available_validations(
     field_type: TripFieldType,
     current_user: User = Depends(get_current_active_provider),
 ):
     """Get available validation types for a specific field type."""
-    validations = get_available_validations_for_field(field_type)
-    return {"field_type": field_type, "available_validations": validations}
+    available = get_available_validations_for_field(field_type)
+    return {"field_type": field_type, "available_validations": available}
 
 
 @router.get("/validation/metadata")

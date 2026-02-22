@@ -163,6 +163,9 @@ def update_user_me(
     if user_in.password is not None:
         from app.core.security import get_password_hash
         current_user.hashed_password = get_password_hash(user_in.password)
+
+    if user_in.preferred_language is not None and user_in.preferred_language in ("en", "ar"):
+        current_user.preferred_language = user_in.preferred_language
     
     session.add(current_user)
     session.commit()

@@ -2,10 +2,9 @@
 Taskiq worker for scheduled tasks.
 
 This module defines all scheduled tasks for the application including:
-- Trip reminders (before trip starts)
-- Review reminders (after trip ends)
-- Payment reminders
-- Booking confirmations
+- Trip reminders (24 h before trip starts)
+- Review reminders (1 day after trip ends)
+- Spot reservation expiry (every minute)
 """
 
 import logging
@@ -182,9 +181,17 @@ async def cancel_expired_spot_reservations():
     """
     Cancel registrations whose 15-minute spot reservation window has expired
     without payment being completed.
+
+    For each expired registration we also attempt to void any INITIATED payment
+    via Moyasar so the user cannot complete the transaction on Moyasar's side
+    after the spot has been released.  Void failures are logged but do not
+    prevent the registration from being cancelled.
     """
     logger.info("Checking for expired spot reservations")
     try:
+        from app.models.payment import Payment, PaymentStatus
+        from app.services.moyasar import payment_service
+
         with Session(engine) as session:
             now = datetime.utcnow()
             statement = select(TripRegistration).where(
@@ -194,84 +201,45 @@ async def cancel_expired_spot_reservations():
             )
             expired = session.exec(statement).all()
             logger.info(f"Found {len(expired)} expired spot reservations")
+
             for reg in expired:
+                # Void any INITIATED payment so Moyasar also blocks completion
+                initiated_payments = session.exec(
+                    select(Payment).where(
+                        Payment.registration_id == reg.id,
+                        Payment.status == PaymentStatus.INITIATED,
+                        Payment.moyasar_payment_id != None,
+                    )
+                ).all()
+
+                for payment in initiated_payments:
+                    try:
+                        await payment_service.void_payment(payment.moyasar_payment_id)
+                        payment.status = PaymentStatus.FAILED
+                        payment.updated_at = now
+                        session.add(payment)
+                        logger.info(
+                            f"Voided Moyasar payment {payment.moyasar_payment_id} "
+                            f"for expired registration {reg.id}"
+                        )
+                    except Exception as void_err:
+                        # Void may fail if the payment was never authorised on Moyasar's
+                        # side (e.g. user never reached 3DS).  Mark it failed locally.
+                        payment.status = PaymentStatus.FAILED
+                        payment.updated_at = now
+                        session.add(payment)
+                        logger.warning(
+                            f"Could not void Moyasar payment {payment.moyasar_payment_id}: "
+                            f"{void_err} — marked FAILED locally"
+                        )
+
                 reg.status = "cancelled"
                 reg.updated_at = now
                 session.add(reg)
+
             session.commit()
     except Exception as e:
         logger.error(f"cancel_expired_spot_reservations failed: {e}")
         raise
 
 
-@broker.task(schedule=[{"cron": settings.TASKIQ_PAYMENT_REMINDER_CRON}])
-async def send_payment_reminders():
-    """
-    Send payment reminders for pending registrations.
-    Schedule configurable via TASKIQ_PAYMENT_REMINDER_CRON environment variable.
-    """
-    logger.info("Starting payment reminder task")
-    
-    try:
-        with Session(engine) as session:
-            # Get registrations with pending payment older than 1 hour
-            one_hour_ago = datetime.utcnow() - timedelta(hours=1)
-            
-            statement = select(TripRegistration).where(
-                TripRegistration.status == "pending",
-                TripRegistration.created_at <= one_hour_ago
-            )
-            pending_registrations = session.exec(statement).all()
-            
-            logger.info(f"Found {len(pending_registrations)} registrations with pending payment")
-            
-            for registration in pending_registrations:
-                try:
-                    # Send payment reminder
-                    trip_name = get_name(registration.trip)
-                    message = (
-                        f"Hi {registration.user.name}! You have a pending registration for '{trip_name}'. "
-                        f"Please complete your payment to confirm your reservation. "
-                        f"Amount: {registration.total_amount} SAR"
-                    )
-                    
-                    # Send SMS if phone verified
-                    if registration.user.is_phone_verified and registration.user.phone:
-                        from app.services.sms import sms_service
-                        await sms_service.send_sms(
-                            to_phone=registration.user.phone,
-                            message=message
-                        )
-                        logger.info(f"Sent SMS payment reminder to {registration.user.phone}")
-                    
-                    # Send Email if email verified
-                    if registration.user.is_email_verified and registration.user.email:
-                        from app.services.email import email_service
-                        await email_service.send_email(
-                            to_email=registration.user.email,
-                            subject=f"Complete your payment - {trip_name}",
-                            html_content=f"""
-                            <html>
-                                <body>
-                                    <h2>Complete Your Payment</h2>
-                                    <p>Hi {registration.user.name}!</p>
-                                    <p>You have a pending registration for <strong>{trip_name}</strong>.</p>
-                                    <p><strong>Amount:</strong> {registration.total_amount} SAR</p>
-                                    <p>Please complete your payment to confirm your reservation.</p>
-                                    <p>Thank you,<br>Safe Algo Tourism Team</p>
-                                </body>
-                            </html>
-                            """
-                        )
-                        logger.info(f"Sent email payment reminder to {registration.user.email}")
-                    
-                    logger.info(f"Sent payment reminder to user {registration.user_id} for registration {registration.id}")
-                
-                except Exception as e:
-                    logger.error(f"Failed to send payment reminder to user {registration.user_id}: {e}")
-            
-            logger.info("Payment reminder task completed")
-    
-    except Exception as e:
-        logger.error(f"Payment reminder task failed: {e}")
-        raise

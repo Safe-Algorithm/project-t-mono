@@ -1,19 +1,20 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Clipboard, Linking,
+  Clipboard, Linking, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useRegistration, useTripUpdates, useMarkUpdateRead } from '../../hooks/useTrips';
+import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, CardDetails } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { TripUpdate } from '../../types/trip';
+import { useQueryClient } from '@tanstack/react-query';
 
 const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'error' | 'neutral' | 'primary'> = {
   confirmed: 'success',
@@ -70,23 +71,136 @@ export default function BookingDetailScreen() {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
-  const { registrationId } = useLocalSearchParams<{ registrationId: string }>();
+  const { registrationId, autoPayment } = useLocalSearchParams<{ registrationId: string; autoPayment?: string }>();
   const { data: registration, isLoading } = useRegistration(registrationId ?? null);
   const { data: updates } = useTripUpdates(registration?.trip_id ?? null);
   const markRead = useMarkUpdateRead();
+  const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
+  const [payLoading, setPayLoading] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [card, setCard] = useState<CardDetails>({ name: '', number: '', month: 0, year: 0, cvc: '' });
+  const preparePayment = usePreparePayment();
+  const confirmPayment = useConfirmPayment();
+  const autoPaymentTriggered = useRef(false);
+  const [spotSecondsLeft, setSpotSecondsLeft] = useState<number | null>(null);
+
+  // Auto-open card modal when arriving from the booking flow (one-tap pay)
+  useEffect(() => {
+    if (
+      autoPayment === 'true' &&
+      !autoPaymentTriggered.current &&
+      registration?.status === 'pending_payment'
+    ) {
+      autoPaymentTriggered.current = true;
+      setShowCardModal(true);
+    }
+  }, [autoPayment, registration?.status]);
+
+  // Live countdown for spot reservation
+  useEffect(() => {
+    if (registration?.status !== 'pending_payment' || !registration.spot_reserved_until) {
+      setSpotSecondsLeft(null);
+      return;
+    }
+    const expiry = new Date(
+      registration.spot_reserved_until.endsWith('Z')
+        ? registration.spot_reserved_until
+        : registration.spot_reserved_until + 'Z'
+    ).valueOf();
+    const tick = () => setSpotSecondsLeft(Math.max(0, Math.floor((expiry - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [registration?.status, registration?.spot_reserved_until]);
 
   const bookingRef = registration?.booking_reference ?? `BOOK-${registrationId?.slice(0, 8).toUpperCase()}`;
+
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
 
   const handleCopy = useCallback(() => {
     Clipboard.setString(bookingRef);
     setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
   }, [bookingRef]);
 
   const handleMarkRead = useCallback((updateId: string) => {
     markRead.mutate(updateId);
   }, [markRead]);
+
+  const handlePayNow = useCallback(async () => {
+    if (!registrationId) return;
+    if (!card.name || !card.number || !card.month || !card.year || !card.cvc) {
+      Alert.alert(t('booking.title'), t('booking.cardRequired'));
+      return;
+    }
+    setShowCardModal(false);
+    setPayLoading(true);
+    try {
+      // Step 1: Get payment details from our backend.
+      // We pass our deep link so the backend callback can redirect back here
+      // without hardcoding the scheme — the app owns its own URL scheme.
+      const prep = await preparePayment.mutateAsync({
+        registrationId,
+        paymentMethod: 'creditcard',
+        redirectUrl: 'rihlaapp://payment-callback',
+      });
+
+      // Step 2: Call Moyasar directly from the app with the publishable key
+      // Card data never touches our backend (Moyasar policy)
+      const publishableKey = process.env.EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY ?? '';
+      const moyasarRes = await fetch('https://api.moyasar.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + btoa(publishableKey + ':'),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: prep.amount_halalas,
+          currency: prep.currency,
+          description: prep.description,
+          callback_url: prep.callback_url,
+          source: {
+            type: 'creditcard',
+            name: card.name,
+            number: card.number,
+            month: card.month,
+            year: card.year,
+            cvc: card.cvc,
+          },
+          metadata: { payment_db_id: prep.payment_db_id },
+        }),
+      });
+      const moyasarData = await moyasarRes.json();
+      if (!moyasarRes.ok) {
+        const msg = moyasarData?.message || t('common.error');
+        Alert.alert(t('booking.title'), msg);
+        return;
+      }
+
+      // Step 3: Tell our backend the Moyasar payment ID
+      await confirmPayment.mutateAsync({
+        paymentDbId: prep.payment_db_id,
+        moyasarPaymentId: moyasarData.id,
+      });
+
+      // Step 4: If 3DS required, open transaction_url; otherwise mark confirmed locally
+      const transactionUrl = moyasarData?.source?.transaction_url;
+      if (transactionUrl) {
+        await Linking.openURL(transactionUrl);
+      } else if (moyasarData.status === 'paid') {
+        qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
+        qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
+      }
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      Alert.alert(t('booking.title'), typeof detail === 'string' ? detail : t('common.error'));
+    } finally {
+      setPayLoading(false);
+    }
+  }, [registrationId, card, preparePayment, confirmPayment, qc, t]);
 
   if (isLoading) {
     return (
@@ -119,9 +233,12 @@ export default function BookingDetailScreen() {
   }
 
   const trip = registration.trip;
-  const tripName = (i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip';
-  const startDate = new Date(trip.start_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  const endDate = new Date(trip.end_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
+  const tripName = trip
+    ? ((i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip')
+    : 'Trip';
+  const startDate = trip ? new Date(trip.start_date).toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const endDate = trip ? new Date(trip.end_date).toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' }) : '';
   const statusVariant = STATUS_VARIANTS[registration.status] ?? 'neutral';
   const statusLabel = t(`bookings.status.${registration.status}` as any, { defaultValue: registration.status });
   const unreadCount = updates?.filter((u) => !u.read).length ?? 0;
@@ -147,13 +264,129 @@ export default function BookingDetailScreen() {
             </TouchableOpacity>
           </View>
           <Text style={s.tripName}>{tripName}</Text>
-          <Text style={s.providerName}>{trip.provider?.company_name}</Text>
+          <Text style={s.providerName}>{trip?.provider?.company_name}</Text>
         </View>
+
+        {/* Success banner for confirmed bookings */}
+        {registration.status === 'confirmed' && (
+          <View style={s.successCard}>
+            <View style={s.successIconRow}>
+              <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+              <Text style={s.successTitle}>{t('booking.confirmed')}</Text>
+            </View>
+            <Text style={s.successSubtitle}>{t('booking.successMessage')}</Text>
+          </View>
+        )}
+
+        {/* Spot reserved + Pay card — shown when payment is still pending (retry after failure / return from 3DS) */}
+        {registration.status === 'pending_payment' && (
+          <View style={s.payNowCard}>
+            <View style={s.spotReservedRow}>
+              <Ionicons name="time-outline" size={18} color={colors.warning ?? '#F59E0B'} />
+              <Text style={s.spotReservedText}>
+                {spotSecondsLeft !== null && spotSecondsLeft > 0
+                  ? t('booking.spotExpiresIn', {
+                      minutes: Math.floor(spotSecondsLeft / 60),
+                      seconds: spotSecondsLeft % 60,
+                    })
+                  : spotSecondsLeft === 0
+                    ? t('booking.spotExpired')
+                    : t('booking.pendingPayment')}
+              </Text>
+            </View>
+            <Button
+              title={t('booking.payNow')}
+              onPress={() => setShowCardModal(true)}
+              loading={payLoading}
+              fullWidth
+              size="lg"
+            />
+          </View>
+        )}
+
+        {/* Card Input Modal */}
+        <Modal visible={showCardModal} transparent animationType="slide">
+          <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+            <Pressable style={s.modalOverlay} onPress={() => setShowCardModal(false)}>
+              <Pressable style={s.cardModal} onPress={(e) => e.stopPropagation()}>
+                <View style={s.cardModalHandle} />
+                <Text style={s.cardModalTitle}>{t('booking.cardDetails')}</Text>
+                <View style={s.cardFields}>
+                  <Text style={s.cardLabel}>{t('booking.cardName')}</Text>
+                  <TextInput
+                    style={s.cardInput}
+                    value={card.name}
+                    onChangeText={(v) => setCard((c) => ({ ...c, name: v }))}
+                    placeholder="John Doe"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="words"
+                  />
+                  <Text style={s.cardLabel}>{t('booking.cardNumber')}</Text>
+                  <TextInput
+                    style={s.cardInput}
+                    value={card.number}
+                    onChangeText={(v) => setCard((c) => ({ ...c, number: v.replace(/\s/g, '') }))}
+                    placeholder="1234 5678 9012 3456"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="number-pad"
+                    maxLength={19}
+                  />
+                  <View style={s.cardRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardLabel}>{t('booking.cardMonth')}</Text>
+                      <TextInput
+                        style={s.cardInput}
+                        value={card.month ? String(card.month) : ''}
+                        onChangeText={(v) => setCard((c) => ({ ...c, month: parseInt(v) || 0 }))}
+                        placeholder="MM"
+                        placeholderTextColor={colors.textTertiary}
+                        keyboardType="number-pad"
+                        maxLength={2}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardLabel}>{t('booking.cardYear')}</Text>
+                      <TextInput
+                        style={s.cardInput}
+                        value={card.year ? String(card.year) : ''}
+                        onChangeText={(v) => setCard((c) => ({ ...c, year: parseInt(v) || 0 }))}
+                        placeholder="YYYY"
+                        placeholderTextColor={colors.textTertiary}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardLabel}>{t('booking.cardCvc')}</Text>
+                      <TextInput
+                        style={s.cardInput}
+                        value={card.cvc}
+                        onChangeText={(v) => setCard((c) => ({ ...c, cvc: v }))}
+                        placeholder="CVV"
+                        placeholderTextColor={colors.textTertiary}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        secureTextEntry
+                      />
+                    </View>
+                  </View>
+                </View>
+                <Button title={t('booking.payNow')} onPress={handlePayNow} loading={payLoading} fullWidth size="lg" />
+              </Pressable>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Modal>
 
         {/* Trip Details */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>{t('trip.details') ?? 'Trip Details'}</Text>
           <View style={s.infoCard}>
+            {registration.trip?.trip_reference && (
+              <>
+                <InfoRow label={t('trip.tripReference')} value={registration.trip.trip_reference} />
+                <View style={s.divider} />
+              </>
+            )}
             <InfoRow label={t('bookings.booked', { date: '' }).replace(' ', '')} value={new Date(registration.registration_date).toLocaleDateString()} />
             <View style={s.divider} />
             <InfoRow label={t('trip.startDate') ?? 'Start Date'} value={startDate} />
@@ -173,13 +406,13 @@ export default function BookingDetailScreen() {
             {registration.participants.map((p, i) => (
               <View key={p.id} style={s.participantCard}>
                 <Text style={s.participantTitle}>{t('booking.participant', { number: i + 1 })}</Text>
-                {p.name && <InfoRow label={t('common.name') ?? 'Name'} value={p.name} />}
+                {p.name && <InfoRow label={t('common.name')} value={p.name} />}
                 {p.email && <InfoRow label="Email" value={p.email} />}
-                {p.phone && <InfoRow label={t('common.phone') ?? 'Phone'} value={p.phone} />}
-                {p.date_of_birth && <InfoRow label={t('common.dob') ?? 'Date of Birth'} value={p.date_of_birth} />}
-                {p.gender && <InfoRow label={t('common.gender') ?? 'Gender'} value={p.gender} />}
-                {p.passport_number && <InfoRow label="Passport" value={p.passport_number} />}
-                {p.national_id && <InfoRow label="National ID" value={p.national_id} />}
+                {p.phone && <InfoRow label={t('common.phone')} value={p.phone} />}
+                {p.date_of_birth && <InfoRow label={t('common.dob')} value={p.date_of_birth} />}
+                {p.gender && <InfoRow label={t('common.gender')} value={p.gender} />}
+                {p.passport_number && <InfoRow label={t('common.passport')} value={p.passport_number} />}
+                {p.id_iqama_number && <InfoRow label={t('common.nationalId')} value={p.id_iqama_number} />}
               </View>
             ))}
           </View>
@@ -255,5 +488,22 @@ function makeStyles(c: ThemeColors) {
     unreadBadgeText: { color: c.white, fontSize: FontSize.xs, fontWeight: '700' },
     emptyUpdates: { alignItems: 'center', paddingVertical: 32, gap: 8 },
     emptyUpdatesText: { fontSize: FontSize.sm, color: c.textTertiary },
+    payNowCard: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 16, marginBottom: 20, gap: 12, ...Shadow.sm, borderLeftWidth: 4, borderLeftColor: c.warning ?? '#F59E0B' },
+    payNowInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    payNowText: { fontSize: FontSize.md, fontWeight: '600', color: c.warning ?? '#F59E0B' },
+    spotReservedRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    spotReservedText: { fontSize: FontSize.sm, fontWeight: '600', color: c.warning ?? '#F59E0B', flex: 1 },
+    successCard: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 16, marginBottom: 20, gap: 8, ...Shadow.sm, borderLeftWidth: 4, borderLeftColor: c.success },
+    successIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    successTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.success },
+    successSubtitle: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+    cardModal: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 24, paddingBottom: 40, gap: 16, ...Shadow.lg },
+    cardModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.gray200, alignSelf: 'center', marginBottom: 8 },
+    cardModalTitle: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
+    cardFields: { gap: 12 },
+    cardLabel: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary, marginBottom: 4 },
+    cardInput: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 12, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.background },
+    cardRow: { flexDirection: 'row', gap: 10 },
   });
 }

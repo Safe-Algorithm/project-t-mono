@@ -1,18 +1,19 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, KeyboardAvoidingView, Platform, Linking,
+  Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip, useFieldMetadata, useCreatePayment } from '../../hooks/useTrips';
+import { useTrip, useFieldMetadata, useMyRegistrations } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
 import ParticipantField, { FieldType } from '../../components/booking/ParticipantField';
 import apiClient from '../../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Participant {
   [fieldType: string]: string;
@@ -23,12 +24,13 @@ export default function BookingScreen() {
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const { tripId, packageId } = useLocalSearchParams<{ tripId: string; packageId: string }>();
-  const { data: trip } = useTrip(tripId);
+  const { data: trip, isLoading: tripLoading } = useTrip(tripId);
   const { data: fieldMetadata } = useFieldMetadata();
-  const createPayment = useCreatePayment();
+  const qc = useQueryClient();
   const [participantCount, setParticipantCount] = useState(1);
   const [participants, setParticipants] = useState<Participant[]>([{}]);
   const [loading, setLoading] = useState(false);
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [step, setStep] = useState<'participants' | 'confirm'>('participants');
 
   const selectedPackage = trip?.packages?.find((p) => p.id === packageId);
@@ -89,31 +91,49 @@ export default function BookingScreen() {
       };
       const { data: registration } = await apiClient.post(`/trips/${tripId}/register`, payload);
 
-      // Initiate Moyasar payment
-      const paymentData = await createPayment.mutateAsync({
-        registrationId: registration.id,
-        paymentMethod: 'creditcard',
-        callback_url: `rihla://payment-callback?registrationId=${registration.id}`,
-      } as any);
+      // Invalidate list so My Trips tab shows the new booking immediately
+      qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
 
-      // Open Moyasar payment URL
-      const paymentUrl = paymentData.source?.transaction_url;
-      if (paymentUrl) {
-        await Linking.openURL(paymentUrl);
-      }
-
-      // Navigate to success screen to show booking reference and payment pending state
-      router.replace(`/booking/success?registrationId=${registration.id}`);
+      // Go straight to booking detail with autoPayment=true — card modal opens immediately
+      router.replace(`/booking/${registration.id}?autoPayment=true`);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
         ? (detail[0]?.msg ?? t('common.error'))
         : (typeof detail === 'string' ? detail : t('common.error'));
-      Alert.alert(t('booking.title'), msg);
+      if (detail === 'You already have an active registration for this trip. Check your bookings.') {
+        setAlreadyRegistered(true);
+      } else {
+        Alert.alert(t('booking.title'), msg);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  if (tripLoading) {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={s.center}>
+          <Ionicons name="time-outline" size={48} color={colors.gray300} />
+          <Text style={s.errorText}>{t('booking.loading')}</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (alreadyRegistered) {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={s.center}>
+          <Ionicons name="checkmark-circle-outline" size={48} color={colors.success} />
+          <Text style={s.errorText}>{t('booking.alreadyRegistered')}</Text>
+          <Button title={t('booking.viewBookings')} onPress={() => router.replace('/(tabs)/bookings')} />
+          <Button title={t('trip.goBack')} onPress={() => router.back()} variant="outline" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!trip || !selectedPackage) {
     return (
@@ -131,7 +151,8 @@ export default function BookingScreen() {
   const pkgName = (i18n.language === 'ar' ? (selectedPackage.name_ar || selectedPackage.name_en) : (selectedPackage.name_en || selectedPackage.name_ar)) || 'Package';
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <View style={s.container}>
+    <KeyboardAvoidingView style={s.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <SafeAreaView style={s.safeArea} edges={['top']}>
         <View style={s.header}>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
@@ -151,7 +172,7 @@ export default function BookingScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <View style={s.summaryCard}>
           <Text style={s.summaryTrip} numberOfLines={1}>{tripName}</Text>
           <Text style={s.summaryPkg}>{pkgName}</Text>
@@ -232,6 +253,7 @@ export default function BookingScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -260,6 +282,8 @@ function makeStyles(c: ThemeColors) {
     progressStepTextInactive: { color: c.textTertiary },
     progressLine: { flex: 1, height: 2, backgroundColor: c.gray200, marginHorizontal: 8 },
     progressLineActive: { backgroundColor: c.primary },
+    flex1: { flex: 1 },
+    scrollView: { flex: 1 },
     scroll: { padding: 16, gap: 0 },
     summaryCard: { backgroundColor: c.primarySurface, borderRadius: Radius.xl, padding: 16, borderLeftWidth: 4, borderLeftColor: c.primary, marginBottom: 20 },
     summaryTrip: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary },

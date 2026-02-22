@@ -571,7 +571,11 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
         )
         assert response.status_code == 200
         
-        # Test failed registration with validation errors
+        # Test failed registration with validation errors — use a different user
+        # (the first user already has an active registration for this trip)
+        mobile_user2, mobile_headers2 = user_authentication_headers(
+            client, session, role=UserRole.NORMAL, source=RequestSource.MOBILE_APP
+        )
         invalid_registration = {
             "total_participants": 1,
             "total_amount": 150.0,
@@ -587,7 +591,7 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
         }
         response = client.post(
             f"{settings.API_V1_STR}/trips/{trip.id}/register",
-            headers=mobile_headers,
+            headers=mobile_headers2,
             json=invalid_registration
         )
         assert response.status_code == 400

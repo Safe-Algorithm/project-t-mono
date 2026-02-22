@@ -12,6 +12,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import { Clipboard } from 'react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -28,8 +29,8 @@ jest.mock('@expo/vector-icons', () => ({
 }));
 
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: jest.fn(() => ({ registrationId: 'abcdef12-0000-0000-0000-000000000000' })),
-  router: { back: jest.fn(), push: jest.fn() },
+  useLocalSearchParams: jest.fn(() => ({ registrationId: 'abcdef12-0000-0000-0000-000000000000', autoPayment: undefined })),
+  router: { back: jest.fn(), push: jest.fn(), replace: jest.fn() },
 }));
 
 jest.mock('react-native-safe-area-context', () => ({
@@ -40,11 +41,15 @@ jest.mock('react-native-safe-area-context', () => ({
 const mockUseRegistration = jest.fn();
 const mockUseTripUpdates = jest.fn();
 const mockUseMarkUpdateRead = jest.fn();
+const mockUsePreparePayment = jest.fn();
+const mockUseConfirmPayment = jest.fn();
 
 jest.mock('../../hooks/useTrips', () => ({
   useRegistration: (...args: any[]) => mockUseRegistration(...args),
   useTripUpdates: (...args: any[]) => mockUseTripUpdates(...args),
   useMarkUpdateRead: () => mockUseMarkUpdateRead(),
+  usePreparePayment: () => mockUsePreparePayment(),
+  useConfirmPayment: () => mockUseConfirmPayment(),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -160,6 +165,8 @@ const mutate = jest.fn();
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseMarkUpdateRead.mockReturnValue({ mutate });
+  mockUsePreparePayment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false });
+  mockUseConfirmPayment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false });
 });
 
 function setupHooks(overrides: { registration?: any; updates?: any } = {}) {
@@ -180,7 +187,12 @@ function setupHooks(overrides: { registration?: any; updates?: any } = {}) {
 function renderScreen() {
   const BookingDetailScreen =
     require('../../app/booking/[registrationId]').default;
-  return render(<BookingDetailScreen />);
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <BookingDetailScreen />
+    </QueryClientProvider>
+  );
 }
 
 describe('BookingDetailScreen — booking reference', () => {

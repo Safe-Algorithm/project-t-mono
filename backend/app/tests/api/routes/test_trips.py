@@ -2853,3 +2853,177 @@ def test_public_feed_ordered_newest_first(client: TestClient, session: Session) 
     assert "Oldest Ordering Trip" in names
     # Newest must appear before oldest
     assert names.index("Newest Ordering Trip") < names.index("Oldest Ordering Trip")
+
+
+# ── available_spots ───────────────────────────────────────────────────────────
+
+def test_public_trip_available_spots_full_capacity(client: TestClient, session: Session) -> None:
+    """available_spots equals max_participants when no confirmed registrations exist."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Spots Full Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=3),
+            max_participants=15,
+        ),
+        provider=user.provider,
+    )
+    trip.is_active = True
+    session.add(trip)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Spots+Full+Trip")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["available_spots"] == 15
+
+
+def test_public_trip_available_spots_decreases_after_confirmed_registration(
+    client: TestClient, session: Session
+) -> None:
+    """available_spots decreases by total_participants of confirmed registrations."""
+    from app.tests.utils.user import create_random_user
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    booker = create_random_user(session)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Spots Decrease Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=3),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip.is_active = True
+    session.add(trip)
+
+    reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=booker.id,
+        total_participants=3,
+        total_amount=300,
+        status="confirmed",
+    )
+    session.add(reg)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Spots+Decrease+Trip")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["available_spots"] == 7  # 10 - 3
+
+
+def test_public_trip_available_spots_zero_when_full(
+    client: TestClient, session: Session
+) -> None:
+    """available_spots is 0 (not negative) when registrations fill or exceed capacity."""
+    from app.tests.utils.user import create_random_user
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    booker = create_random_user(session)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Spots Zero Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=3),
+            max_participants=5,
+        ),
+        provider=user.provider,
+    )
+    trip.is_active = True
+    session.add(trip)
+
+    reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=booker.id,
+        total_participants=5,
+        total_amount=500,
+        status="confirmed",
+    )
+    session.add(reg)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Spots+Zero+Trip")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["available_spots"] == 0
+
+
+def test_public_trip_available_spots_pending_payment_counts(
+    client: TestClient, session: Session
+) -> None:
+    """pending_payment registrations also reduce available_spots (spot is reserved)."""
+    from app.tests.utils.user import create_random_user
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    booker = create_random_user(session)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Spots Pending Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=3),
+            max_participants=8,
+        ),
+        provider=user.provider,
+    )
+    trip.is_active = True
+    session.add(trip)
+
+    reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=booker.id,
+        total_participants=2,
+        total_amount=200,
+        status="pending_payment",
+        spot_reserved_until=datetime.datetime.utcnow() + datetime.timedelta(minutes=15),
+    )
+    session.add(reg)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Spots+Pending+Trip")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["available_spots"] == 6  # 8 - 2
+
+
+def test_public_trip_detail_includes_available_spots(
+    client: TestClient, session: Session
+) -> None:
+    """GET /public-trips/{id} also returns available_spots."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Detail Spots Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=3),
+            max_participants=20,
+        ),
+        provider=user.provider,
+    )
+    trip.is_active = True
+    session.add(trip)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips/{trip.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert "available_spots" in data
+    assert data["available_spots"] == 20

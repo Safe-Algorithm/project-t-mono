@@ -34,11 +34,20 @@ class Settings(BaseSettings):
     SENDGRID_FROM_EMAIL: str = "noreply@safealgo.com"
     SENDGRID_FROM_NAME: str = "Safe Algo Tourism"
 
+    # Android App Links — SHA-256 fingerprint of the release keystore
+    # Get via: keytool -list -v -keystore your.keystore | grep SHA256
+    # For dev builds: run `npx expo run:android` then check the debug keystore fingerprint
+    ANDROID_APP_FINGERPRINT: str = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
+
     # Moyasar (Payment Gateway)
-    MOYASAR_API_KEY: str = ""  # Secret key - must be set via environment variable
+    MOYASAR_API_KEY: str = ""  # Secret key - backend only, never expose to client
+    MOYASAR_PUBLISHABLE_KEY: str = ""  # Publishable key - safe to send to app
     MOYASAR_API_URL: str = "https://api.moyasar.com/v1"
     MOYASAR_WEBHOOK_SECRET: str = ""  # Webhook secret for signature verification
     
+    # Backend public URL (used for Moyasar payment callbacks — must be HTTPS in production)
+    BACKEND_URL: str = "http://localhost:8000"
+
     # Frontend URLs (for email links)
     FRONTEND_URL: str = "http://localhost:3000"  # Mobile app (default)
     ADMIN_PANEL_URL: str = "http://localhost:3001"  # Admin panel
@@ -62,7 +71,6 @@ class Settings(BaseSettings):
     # Taskiq Scheduled Task Cron Schedules
     TASKIQ_TRIP_REMINDER_CRON: str = "0 9 * * *"  # Daily at 9 AM (24h before trip)
     TASKIQ_REVIEW_REMINDER_CRON: str = "0 20 * * *"  # Daily at 8 PM (after trip ends)
-    TASKIQ_PAYMENT_REMINDER_CRON: str = "0 */6 * * *"  # Every 6 hours (pending payments)
 
     class Config:
         case_sensitive = True

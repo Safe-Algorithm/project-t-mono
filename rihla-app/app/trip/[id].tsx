@@ -173,7 +173,12 @@ export default function TripDetailScreen() {
           <View style={s.infoGrid}>
             <InfoChip icon="calendar-outline" label={t('trip.start')} value={formatDate(trip.start_date, locale)} colors={colors} s={s} />
             <InfoChip icon="calendar" label={t('trip.end')} value={formatDate(trip.end_date, locale)} colors={colors} s={s} />
-            <InfoChip icon="people-outline" label={t('trip.maxPeople')} value={t('trip.people', { count: trip.max_participants })} colors={colors} s={s} />
+            <InfoChip
+              icon="people-outline"
+              label={t('trip.availableSpots')}
+              value={trip.available_spots === 0 ? t('trip.soldOut') : t('trip.spotsLeft', { count: trip.available_spots })}
+              colors={colors} s={s}
+            />
             <InfoChip
               icon="refresh-outline"
               label={t('booking.package')}
@@ -385,7 +390,7 @@ export default function TripDetailScreen() {
             </View>
             <Button
               title={t('trip.bookNow')}
-              onPress={() => router.push(`/booking/${id}?packageId=${selectedPackage.id}`)}
+              onPress={() => router.push(`/book/${id}?packageId=${selectedPackage.id}`)}
               style={s.bookBtn}
               size="lg"
             />

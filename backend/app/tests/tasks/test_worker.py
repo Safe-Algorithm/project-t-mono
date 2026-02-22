@@ -9,7 +9,7 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from freezegun import freeze_time
 from sqlmodel import Session
 
-from app.tasks.worker import send_trip_reminders, send_review_reminders, send_payment_reminders, cancel_expired_spot_reservations
+from app.tasks.worker import send_trip_reminders, send_review_reminders, cancel_expired_spot_reservations
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
 from app.models.links import TripRating
@@ -225,128 +225,16 @@ async def test_send_review_reminders_skips_existing_reviews(session: Session):
 
 
 @pytest.mark.asyncio
-async def test_send_payment_reminders_no_pending_registrations(session: Session):
-    """Test payment reminders when no pending registrations exist"""
-    with patch('app.tasks.worker.Session') as mock_session_class:
-        mock_session_class.return_value.__enter__.return_value = session
-        
-        await send_payment_reminders()
-        
-        # Should complete without errors
-        assert True
-
-
-@pytest.mark.asyncio
-async def test_send_payment_reminders_with_pending_registration(session: Session):
-    """Test sending payment reminders for pending registrations"""
-    provider = _create_provider(session)
-    
-    # Create future trip
-    future = datetime.utcnow() + timedelta(days=7)
-    trip = _create_trip(
-        session, provider,
-        name_en="Future Trip",
-        start_date=future,
-        end_date=future + timedelta(days=2),
-    )
-    
-    # Create user with verified phone
-    user = create_random_user(session)
-    user.phone = "+966501234567"
-    user.is_phone_verified = True
-    session.add(user)
-    session.commit()
-    
-    # Create pending registration (older than 1 hour)
-    two_hours_ago = datetime.utcnow() - timedelta(hours=2)
-    registration = TripRegistration(
-        trip_id=trip.id,
-        user_id=user.id,
-        status="pending",
-        total_participants=1,
-        total_amount=Decimal("1000.00"),
-        created_at=two_hours_ago,
-    )
-    session.add(registration)
-    session.commit()
-    
-    with patch('app.tasks.worker.Session') as mock_session_class, \
-         patch('app.services.sms.sms_service') as mock_sms:
-        
-        mock_session_class.return_value.__enter__.return_value = session
-        mock_sms.send_sms = AsyncMock()
-        
-        await send_payment_reminders()
-        
-        # Verify SMS was sent
-        mock_sms.send_sms.assert_called_once()
-        call_args = mock_sms.send_sms.call_args
-        assert call_args[1]['to_phone'] == user.phone
-        assert 'payment' in call_args[1]['message'].lower()
-
-
-@pytest.mark.asyncio
-async def test_send_payment_reminders_skips_recent_registrations(session: Session):
-    """Test that payment reminders skip registrations created less than 1 hour ago"""
-    provider = _create_provider(session)
-    
-    # Create future trip
-    future = datetime.utcnow() + timedelta(days=7)
-    trip = _create_trip(
-        session, provider,
-        name_en="Future Trip",
-        start_date=future,
-        end_date=future + timedelta(days=2),
-    )
-    
-    # Create user
-    user = create_random_user(session)
-    user.phone = "+966501234567"
-    user.is_phone_verified = True
-    session.add(user)
-    session.commit()
-    
-    # Create recent pending registration (less than 1 hour old)
-    registration = TripRegistration(
-        trip_id=trip.id,
-        user_id=user.id,
-        status="pending",
-        total_participants=1,
-        total_amount=Decimal("1000.00"),
-        created_at=datetime.utcnow() - timedelta(minutes=30),
-    )
-    session.add(registration)
-    session.commit()
-    
-    with patch('app.tasks.worker.Session') as mock_session_class, \
-         patch('app.services.sms.sms_service') as mock_sms:
-        
-        mock_session_class.return_value.__enter__.return_value = session
-        mock_sms.send_sms = AsyncMock()
-        
-        await send_payment_reminders()
-        
-        # Verify SMS was NOT sent (registration too recent)
-        mock_sms.send_sms.assert_not_called()
-
-
-@pytest.mark.asyncio
 async def test_worker_handles_errors_gracefully(session: Session):
     """Test that worker tasks handle errors without crashing"""
     with patch('app.tasks.worker.Session') as mock_session_class:
-        # Simulate database error
         mock_session_class.return_value.__enter__.side_effect = Exception("Database error")
         
-        # Worker tasks catch exceptions and re-raise, so they should raise
-        # but the important thing is they don't crash with unhandled errors
         with pytest.raises(Exception, match="Database error"):
             await send_trip_reminders()
         
         with pytest.raises(Exception, match="Database error"):
             await send_review_reminders()
-        
-        with pytest.raises(Exception, match="Database error"):
-            await send_payment_reminders()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -480,3 +368,100 @@ async def test_cancel_expired_spot_reservations_handles_error_gracefully(session
 
         with pytest.raises(Exception, match="DB down"):
             await cancel_expired_spot_reservations()
+
+
+@pytest.mark.asyncio
+@freeze_time("2025-01-01 12:00:00")
+async def test_cancel_expired_spot_reservations_voids_moyasar_payment(session: Session):
+    """When a spot expires, any INITIATED payment with a Moyasar ID must be voided."""
+    from app.models.payment import Payment, PaymentStatus, PaymentMethod
+
+    provider = _create_provider(session)
+    trip = _create_trip(session, provider)
+    user = create_random_user(session)
+
+    expired_reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        status="pending_payment",
+        total_participants=1,
+        total_amount=Decimal("500.00"),
+        spot_reserved_until=datetime(2025, 1, 1, 11, 59, 0),
+    )
+    session.add(expired_reg)
+    session.commit()
+    session.refresh(expired_reg)
+
+    payment = Payment(
+        registration_id=expired_reg.id,
+        amount=Decimal("500.00"),
+        currency="SAR",
+        status=PaymentStatus.INITIATED,
+        payment_method=PaymentMethod.CREDITCARD,
+        description="Test",
+        moyasar_payment_id="moy_test_void_123",
+    )
+    session.add(payment)
+    session.commit()
+    session.refresh(payment)
+
+    with patch("app.tasks.worker.Session") as mock_session_class, \
+         patch("app.services.moyasar.MoyasarPaymentService.void_payment", new_callable=AsyncMock) as mock_void:
+        mock_session_class.return_value.__enter__.return_value = session
+        mock_void.return_value = {"payment_id": "moy_test_void_123", "status": "voided"}
+
+        await cancel_expired_spot_reservations()
+
+    mock_void.assert_called_once_with("moy_test_void_123")
+    session.refresh(payment)
+    assert payment.status == PaymentStatus.FAILED
+    session.refresh(expired_reg)
+    assert expired_reg.status == "cancelled"
+
+
+@pytest.mark.asyncio
+@freeze_time("2025-01-01 12:00:00")
+async def test_cancel_expired_spot_reservations_void_failure_still_cancels(session: Session):
+    """If Moyasar void fails, the payment is marked FAILED locally and the registration is still cancelled."""
+    from app.models.payment import Payment, PaymentStatus, PaymentMethod
+
+    provider = _create_provider(session)
+    trip = _create_trip(session, provider)
+    user = create_random_user(session)
+
+    expired_reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        status="pending_payment",
+        total_participants=1,
+        total_amount=Decimal("500.00"),
+        spot_reserved_until=datetime(2025, 1, 1, 11, 59, 0),
+    )
+    session.add(expired_reg)
+    session.commit()
+    session.refresh(expired_reg)
+
+    payment = Payment(
+        registration_id=expired_reg.id,
+        amount=Decimal("500.00"),
+        currency="SAR",
+        status=PaymentStatus.INITIATED,
+        payment_method=PaymentMethod.CREDITCARD,
+        description="Test",
+        moyasar_payment_id="moy_never_authorised",
+    )
+    session.add(payment)
+    session.commit()
+    session.refresh(payment)
+
+    with patch("app.tasks.worker.Session") as mock_session_class, \
+         patch("app.services.moyasar.MoyasarPaymentService.void_payment", new_callable=AsyncMock) as mock_void:
+        mock_session_class.return_value.__enter__.return_value = session
+        mock_void.side_effect = Exception("Payment not authorised on Moyasar")
+
+        await cancel_expired_spot_reservations()
+
+    session.refresh(payment)
+    assert payment.status == PaymentStatus.FAILED
+    session.refresh(expired_reg)
+    assert expired_reg.status == "cancelled"

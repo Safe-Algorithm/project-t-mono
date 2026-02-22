@@ -104,6 +104,7 @@ class TripRead(TripBase):
     provider: ProviderInfo
     is_active: bool
     trip_reference: str
+    available_spots: int = 0
     starting_city: Optional[StartingCityInfo] = None
     destinations: List[DestinationInfo] = []
     packages: List[TripPackageWithRequiredFields] = []

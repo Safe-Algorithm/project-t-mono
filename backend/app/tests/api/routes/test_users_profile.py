@@ -295,6 +295,73 @@ def test_update_phone_already_exists(
     mock_redis.delete(verification_key)
 
 
+def test_update_preferred_language_to_arabic(
+    client: TestClient,
+    session: Session,
+    user_authentication_headers: dict,
+) -> None:
+    """Test updating preferred_language to 'ar'."""
+    response = client.patch(
+        f"{settings.API_V1_STR}/users/me",
+        json={"preferred_language": "ar"},
+        headers=user_authentication_headers,
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["preferred_language"] == "ar"
+
+
+def test_update_preferred_language_to_english(
+    client: TestClient,
+    session: Session,
+    user_authentication_headers: dict,
+) -> None:
+    """Test updating preferred_language back to 'en'."""
+    response = client.patch(
+        f"{settings.API_V1_STR}/users/me",
+        json={"preferred_language": "en"},
+        headers=user_authentication_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["preferred_language"] == "en"
+
+
+def test_update_preferred_language_invalid_value_is_ignored(
+    client: TestClient,
+    session: Session,
+    user_authentication_headers: dict,
+) -> None:
+    """Invalid preferred_language values are silently ignored (field unchanged)."""
+    # First set to 'ar'
+    client.patch(
+        f"{settings.API_V1_STR}/users/me",
+        json={"preferred_language": "ar"},
+        headers=user_authentication_headers,
+    )
+    # Now try an invalid value — should be ignored, language stays 'ar'
+    response = client.patch(
+        f"{settings.API_V1_STR}/users/me",
+        json={"preferred_language": "fr"},
+        headers=user_authentication_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["preferred_language"] == "ar"
+
+
+def test_preferred_language_default_is_english(
+    client: TestClient,
+    session: Session,
+    user_authentication_headers: dict,
+) -> None:
+    """Newly created users have preferred_language='en' by default."""
+    response = client.get(
+        f"{settings.API_V1_STR}/users/me",
+        headers=user_authentication_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["preferred_language"] == "en"
+
+
 def test_update_multiple_fields(
     client: TestClient,
     session: Session,

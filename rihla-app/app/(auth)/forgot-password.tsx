@@ -84,8 +84,9 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
+    <View style={s.container}>
+    <KeyboardAvoidingView style={s.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
@@ -137,12 +138,15 @@ export default function ForgotPasswordScreen() {
         )}
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
+    flex1: { flex: 1 },
+    scrollView: { flex: 1 },
     scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
     backBtn: { marginTop: 56, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     iconWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 32, marginBottom: 24 },

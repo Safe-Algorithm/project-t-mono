@@ -1,86 +1,110 @@
 """Payment API routes for Moyasar integration."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request, Header
-from sqlmodel import Session, select
 from typing import List, Optional
-import uuid
+
 import hmac
 import hashlib
 import json
-from app.utils.localization import get_name
-from app.api.deps import get_session
-from app.models.user import User
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Header
+from fastapi.responses import HTMLResponse
+from sqlmodel import Session, select
+
+from app.api.deps import get_current_active_user, get_session
+from app.core.config import settings
 from app.models.payment import Payment, PaymentStatus, PaymentMethod
 from app.models.trip_registration import TripRegistration
+from app.models.user import User
 from app.schemas.payment import (
     PaymentCreate,
+    PaymentPrepareResponse,
     PaymentResponse,
-    PaymentInitiateResponse,
-    PaymentWebhook,
-    RefundRequest
+    RefundRequest,
 )
-from app.api.deps import get_current_active_user
 from app.services.moyasar import payment_service
-from app.core.config import settings
+from app.utils.localization import get_name
 
 router = APIRouter()
 
+# ---------------------------------------------------------------------------
+# Prepare — app calls this first to get payment details, then calls Moyasar
+# directly using its own publishable key. Card data never touches our backend.
+# ---------------------------------------------------------------------------
 
-@router.post("/create", response_model=PaymentInitiateResponse, status_code=201)
-async def create_payment(
+@router.post("/prepare", response_model=PaymentPrepareResponse, status_code=201)
+def prepare_payment(
     *,
     session: Session = Depends(get_session),
     payment_in: PaymentCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
     """
-    Create a payment for a trip registration.
-    
-    This endpoint initiates a payment with Moyasar and returns the payment source URL
-    for the user to complete the payment (3D Secure, etc.).
+    Prepare a payment record and return the details the app needs to call
+    Moyasar directly.
+
+    Flow:
+      1. App calls POST /payments/prepare  →  gets { payment_db_id, amount_halalas,
+         currency, description, callback_url }
+      2. App calls Moyasar API directly with its EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY
+         and the card details (card data never reaches our backend — Moyasar policy).
+      3. App calls POST /payments/confirm to store the Moyasar payment ID.
+      4. Moyasar hits GET /payments/callback after 3DS; backend updates DB and
+         redirects the browser to the app deep link supplied in redirect_url.
     """
-    # Get the registration
     registration = session.get(TripRegistration, payment_in.registration_id)
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
-    
-    # Verify the registration belongs to the current user
     if registration.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to pay for this registration")
-    
-    # Check if registration is in pending_payment status
+        raise HTTPException(status_code=403, detail="Not authorized")
     if registration.status != "pending_payment":
         raise HTTPException(
             status_code=400,
-            detail=f"Registration is not pending payment. Current status: {registration.status}"
+            detail=f"Registration is not pending payment. Current status: {registration.status}",
         )
-    
-    # Check if payment already exists for this registration
-    existing_payment = session.exec(
+
+    # Guard: no double-payment
+    already_paid = session.exec(
         select(Payment).where(
             Payment.registration_id == payment_in.registration_id,
-            Payment.status.in_([PaymentStatus.PAID, PaymentStatus.INITIATED])
+            Payment.status == PaymentStatus.PAID,
         )
     ).first()
-    
-    if existing_payment:
-        raise HTTPException(
-            status_code=400,
-            detail="Payment already exists for this registration"
+    if already_paid:
+        raise HTTPException(status_code=400, detail="Payment already completed")
+
+    # Cancel any stale INITIATED payments so the user can retry cleanly
+    stale = session.exec(
+        select(Payment).where(
+            Payment.registration_id == payment_in.registration_id,
+            Payment.status == PaymentStatus.INITIATED,
         )
-    
-    # Get trip details for description
+    ).all()
+    for p in stale:
+        p.status = PaymentStatus.FAILED
+        session.add(p)
+
+    # Refresh the 15-minute spot reservation window
+    registration.spot_reserved_until = datetime.utcnow() + timedelta(minutes=15)
+    session.add(registration)
+
     trip = registration.trip
     description = f"Trip: {get_name(trip)} - Registration #{registration.id}"
-    
-    # Build callback URL
-    callback_url = payment_in.callback_url or f"{settings.FRONTEND_URL}/payments/callback"
-    
-    # Create payment in database
+
+    # The Moyasar callback must be an HTTPS URL pointing to our backend.
+    # We append ngrok-skip-browser-warning so ngrok doesn't show its warning
+    # page when Moyasar redirects the browser here after 3DS.
+    moyasar_callback_url = (
+        f"{settings.BACKEND_URL}/api/v1/payments/callback"
+        "?ngrok-skip-browser-warning=true"
+    )
+
+    # Store the app's redirect deep link so the callback handler can use it
+    # without hardcoding it in the backend.
+    app_redirect_url = payment_in.redirect_url or "rihlaapp://payment-callback"
+
     payment = Payment(
         registration_id=payment_in.registration_id,
         amount=registration.total_amount,
@@ -88,212 +112,295 @@ async def create_payment(
         status=PaymentStatus.INITIATED,
         payment_method=payment_in.payment_method,
         description=description,
-        callback_url=callback_url
+        # callback_url stores the app deep link base (used after Moyasar callback)
+        callback_url=app_redirect_url,
     )
     session.add(payment)
     session.commit()
     session.refresh(payment)
-    
-    try:
-        # Create payment with Moyasar
-        moyasar_response = await payment_service.create_payment(
-            amount=registration.total_amount,
-            currency="SAR",
-            description=description,
-            callback_url=callback_url,
-            source_type=payment_in.payment_method.value,
-            metadata={
-                "registration_id": str(registration.id),
-                "payment_id": str(payment.id),
-                "user_id": str(current_user.id),
-                "trip_id": str(trip.id)
-            }
-        )
-        
-        # Update payment with Moyasar payment ID
-        payment.moyasar_payment_id = moyasar_response["payment_id"]
-        payment.moyasar_metadata = moyasar_response.get("metadata")
-        session.add(payment)
-        session.commit()
-        session.refresh(payment)
-        
-        return PaymentInitiateResponse(
-            payment_id=payment.id,
-            moyasar_payment_id=moyasar_response["payment_id"],
-            amount=Decimal(moyasar_response["amount"]) / 100,  # Convert from halalas
-            currency=moyasar_response["currency"],
-            status=moyasar_response["status"],
-            source=moyasar_response["source"],
-            callback_url=moyasar_response.get("callback_url")
-        )
-        
-    except Exception as e:
-        # Update payment status to failed
-        payment.status = PaymentStatus.FAILED
-        payment.failed_at = datetime.utcnow()
-        payment.failure_reason = str(e)
-        session.add(payment)
-        session.commit()
-        
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create payment with Moyasar: {str(e)}"
-        )
 
+    return PaymentPrepareResponse(
+        payment_db_id=payment.id,
+        amount_halalas=int(registration.total_amount * 100),
+        currency="SAR",
+        description=description,
+        callback_url=moyasar_callback_url,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Confirm — app calls this after Moyasar returns a payment ID, so our DB
+# record can be matched when Moyasar hits the callback URL.
+# ---------------------------------------------------------------------------
+
+@router.post("/confirm", status_code=200)
+def confirm_payment(
+    *,
+    session: Session = Depends(get_session),
+    payment_db_id: uuid.UUID,
+    moyasar_payment_id: str,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Store the Moyasar payment ID on our payment record so the callback
+    endpoint can look it up when Moyasar redirects after 3DS.
+    """
+    payment = session.get(Payment, payment_db_id)
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+
+    registration = session.get(TripRegistration, payment.registration_id)
+    if not registration or registration.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    payment.moyasar_payment_id = moyasar_payment_id
+    session.add(payment)
+    session.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Callback — Moyasar redirects the browser here after 3DS completes.
+# We verify the payment with our secret key, update the DB, then serve
+# an HTML page that triggers the app deep link.
+# ---------------------------------------------------------------------------
 
 @router.get("/callback")
 async def payment_callback(
     *,
     session: Session = Depends(get_session),
-    id: str,  # Moyasar payment ID from query params
+    id: str,  # Moyasar payment ID passed as query param by Moyasar
 ):
     """
-    Handle payment callback from Moyasar after user completes payment.
-    
-    This endpoint is called by Moyasar after the user completes the payment flow.
-    It verifies the payment status and updates the registration accordingly.
+    Called by Moyasar (via browser redirect) after the user completes 3DS.
+
+    We verify the payment status using our secret key (never exposed to the
+    app), update the DB, then serve an HTML page whose JS triggers the app
+    deep link stored in payment.callback_url.
     """
     try:
-        # Get payment details from Moyasar
         moyasar_payment = await payment_service.get_payment_details(id)
-        
-        # Find payment in database
+
         payment = session.exec(
             select(Payment).where(Payment.moyasar_payment_id == id)
         ).first()
-        
         if not payment:
             raise HTTPException(status_code=404, detail="Payment not found")
-        
-        # Update payment status based on Moyasar response
+
+        registration = None
         if moyasar_payment["status"] == "paid":
             payment.status = PaymentStatus.PAID
             payment.paid_at = datetime.utcnow()
-            payment.fee = Decimal(moyasar_payment.get("fee", 0)) / 100 if moyasar_payment.get("fee") else None
-            
-            # Update registration status to confirmed
+            if moyasar_payment.get("fee"):
+                payment.fee = Decimal(moyasar_payment["fee"]) / 100
+
             registration = session.get(TripRegistration, payment.registration_id)
             if registration:
                 registration.status = "confirmed"
                 session.add(registration)
-        
+
         elif moyasar_payment["status"] == "failed":
             payment.status = PaymentStatus.FAILED
             payment.failed_at = datetime.utcnow()
             payment.failure_reason = "Payment failed"
-        
+
         payment.updated_at = datetime.utcnow()
         session.add(payment)
         session.commit()
-        
-        return {
-            "message": "Payment callback processed",
-            "status": payment.status,
-            "payment_id": str(payment.id)
-        }
-        
+
+        # Send confirmation email after successful payment
+        if registration and registration.status == "confirmed":
+            from app.models.user import User as UserModel
+            from app.services.email import email_service
+            from app.utils.localization import get_localized_field
+            import asyncio
+            user = session.get(UserModel, registration.user_id)
+            if user and user.email:
+                trip = registration.trip
+                lang = getattr(user, "preferred_language", "en") or "en"
+                trip_name = get_localized_field(trip, "name", lang) if trip else "Trip"
+                start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
+                asyncio.create_task(email_service.send_booking_confirmation_email(
+                    to_email=user.email,
+                    to_name=user.name,
+                    trip_name=trip_name,
+                    booking_reference=registration.booking_reference or str(registration.id)[:8].upper(),
+                    start_date=start_date,
+                    total_amount=f"{registration.total_amount} SAR",
+                    language=lang,
+                ))
+
+        # Build the deep link using the redirect URL the app provided at /prepare.
+        # Query params carry the result so the app can act accordingly.
+        registration_id = str(payment.registration_id)
+        status_val = payment.status.value
+        base_redirect = payment.callback_url or "rihlaapp://payment-callback"
+        deep_link = f"{base_redirect}?registrationId={registration_id}&status={status_val}"
+
+        # Serve an HTML page that triggers the deep link via JS.
+        # A plain HTTP redirect to a custom scheme (rihlaapp://) is not followed
+        # by browsers — JS navigation is required.
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Payment Complete</title>
+  <style>
+    body{{font-family:sans-serif;display:flex;align-items:center;justify-content:center;
+         min-height:100vh;margin:0;background:#f0fdf4;}}
+    .card{{background:#fff;border-radius:16px;padding:32px;text-align:center;
+           box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:360px;width:90%;}}
+    h2{{color:#16a34a;margin:0 0 8px;}}
+    p{{color:#6b7280;margin:0 0 24px;}}
+    a.btn{{display:block;background:#0ea5e9;color:#fff;text-decoration:none;
+           padding:14px 24px;border-radius:12px;font-size:16px;font-weight:600;}}
+  </style>
+  <script>
+    window.onload = function() {{
+      window.location.href = "{deep_link}";
+      setTimeout(function() {{
+        document.getElementById('btn').style.display = 'block';
+      }}, 1500);
+    }};
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h2>&#10003; Payment Complete</h2>
+    <p>Returning you to the app&hellip;</p>
+    <a id="btn" class="btn" href="{deep_link}" style="display:none;">Open Rihla App</a>
+  </div>
+</body>
+</html>"""
+        return HTMLResponse(content=html, headers={"ngrok-skip-browser-warning": "true"})
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to process payment callback: {str(e)}"
+            detail=f"Failed to process payment callback: {str(e)}",
         )
 
+
+# ---------------------------------------------------------------------------
+# Webhook — Moyasar server-to-server event (paid, failed, refunded, etc.)
+# This is a belt-and-suspenders mechanism alongside the callback.
+# ---------------------------------------------------------------------------
 
 @router.post("/webhook")
 async def payment_webhook(
     *,
     request: Request,
     session: Session = Depends(get_session),
-    x_moyasar_signature: str = Header(None)
+    x_moyasar_signature: str = Header(None),
 ):
     """
-    Handle webhook events from Moyasar.
-    
-    Moyasar sends webhooks for payment events (paid, failed, refunded, etc.).
-    This endpoint verifies the webhook signature and updates payment status.
+    Handle server-to-server webhook events from Moyasar.
+    Verifies the HMAC-SHA256 signature before processing.
     """
-    # Get raw body for signature verification
     body = await request.body()
-    payload = body.decode('utf-8')
-    
-    # Verify webhook signature
+    payload_str = body.decode("utf-8")
+
     if not x_moyasar_signature:
-        raise HTTPException(status_code=400, detail="Missing signature header")
-    
+        raise HTTPException(status_code=400, detail="Missing X-Moyasar-Signature header")
+
     try:
-        is_valid = payment_service.verify_webhook_signature(payload, x_moyasar_signature)
-        if not is_valid:
+        if not payment_service.verify_webhook_signature(payload_str, x_moyasar_signature):
             raise HTTPException(status_code=401, detail="Invalid webhook signature")
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
-    # Parse webhook payload
-    webhook_data = await request.json()
-    
-    # Find payment in database
+
+    webhook_data = json.loads(payload_str)
+    moyasar_id = webhook_data.get("id")
+
     payment = session.exec(
-        select(Payment).where(Payment.moyasar_payment_id == webhook_data["id"])
+        select(Payment).where(Payment.moyasar_payment_id == moyasar_id)
     ).first()
-    
     if not payment:
-        # Payment not found, but webhook is valid - log and return success
-        return {"message": "Payment not found, webhook acknowledged"}
-    
-    # Update payment based on webhook event
-    webhook_status = webhook_data["status"]
-    
-    if webhook_status == "paid":
+        # Valid signature but unknown payment — acknowledge and ignore
+        return {"message": "Webhook acknowledged"}
+
+    webhook_status = webhook_data.get("status")
+
+    confirmed_registration = None
+    if webhook_status == "paid" and payment.status != PaymentStatus.PAID:
         payment.status = PaymentStatus.PAID
         payment.paid_at = datetime.utcnow()
-        payment.fee = Decimal(webhook_data.get("fee", 0)) / 100 if webhook_data.get("fee") else None
-        
-        # Update registration status
+        if webhook_data.get("fee"):
+            payment.fee = Decimal(webhook_data["fee"]) / 100
+
         registration = session.get(TripRegistration, payment.registration_id)
         if registration and registration.status == "pending_payment":
             registration.status = "confirmed"
             session.add(registration)
-    
-    elif webhook_status == "failed":
+            confirmed_registration = registration
+
+    elif webhook_status == "failed" and payment.status != PaymentStatus.FAILED:
         payment.status = PaymentStatus.FAILED
         payment.failed_at = datetime.utcnow()
         payment.failure_reason = "Payment failed (webhook)"
-    
+
     elif webhook_status == "refunded":
         payment.status = PaymentStatus.REFUNDED
         payment.refunded = True
         payment.refunded_amount = Decimal(webhook_data.get("refunded", 0)) / 100
         payment.refunded_at = datetime.utcnow()
-        
-        # Update registration status
+
         registration = session.get(TripRegistration, payment.registration_id)
         if registration:
             registration.status = "cancelled"
             session.add(registration)
-    
+
     payment.updated_at = datetime.utcnow()
     session.add(payment)
     session.commit()
-    
-    return {"message": "Webhook processed successfully"}
 
+    # Send confirmation email after successful webhook payment
+    if confirmed_registration:
+        from app.models.user import User as UserModel
+        from app.services.email import email_service
+        from app.utils.localization import get_localized_field
+        import asyncio
+        user = session.get(UserModel, confirmed_registration.user_id)
+        if user and user.email:
+            trip = confirmed_registration.trip
+            lang = getattr(user, "preferred_language", "en") or "en"
+            trip_name = get_localized_field(trip, "name", lang) if trip else "Trip"
+            start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
+            asyncio.create_task(email_service.send_booking_confirmation_email(
+                to_email=user.email,
+                to_name=user.name,
+                trip_name=trip_name,
+                booking_reference=confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper(),
+                start_date=start_date,
+                total_amount=f"{confirmed_registration.total_amount} SAR",
+                language=lang,
+            ))
+
+    return {"message": "Webhook processed"}
+
+
+# ---------------------------------------------------------------------------
+# Read endpoints
+# ---------------------------------------------------------------------------
 
 @router.get("/{payment_id}", response_model=PaymentResponse)
 def get_payment(
     *,
     session: Session = Depends(get_session),
     payment_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Get payment details by ID."""
+    """Get a single payment by ID (must belong to current user)."""
     payment = session.get(Payment, payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    
-    # Verify the payment belongs to the current user
+
     registration = session.get(TripRegistration, payment.registration_id)
     if not registration or registration.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to view this payment")
-    
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     return payment
 
 
@@ -302,23 +409,23 @@ def get_payments_by_registration(
     *,
     session: Session = Depends(get_session),
     registration_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Get all payments for a registration."""
-    # Verify the registration belongs to the current user
+    """Get all payments for a registration (must belong to current user)."""
     registration = session.get(TripRegistration, registration_id)
     if not registration:
         raise HTTPException(status_code=404, detail="Registration not found")
-    
     if registration.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to view these payments")
-    
-    payments = session.exec(
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    return session.exec(
         select(Payment).where(Payment.registration_id == registration_id)
     ).all()
-    
-    return payments
 
+
+# ---------------------------------------------------------------------------
+# Refund
+# ---------------------------------------------------------------------------
 
 @router.post("/{payment_id}/refund", response_model=PaymentResponse)
 async def refund_payment(
@@ -326,57 +433,41 @@ async def refund_payment(
     session: Session = Depends(get_session),
     payment_id: uuid.UUID,
     refund_request: RefundRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
 ):
-    """
-    Refund a payment (full or partial).
-    
-    Only the user who made the payment can request a refund.
-    """
+    """Request a full or partial refund for a completed payment."""
     payment = session.get(Payment, payment_id)
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    
-    # Verify the payment belongs to the current user
+
     registration = session.get(TripRegistration, payment.registration_id)
     if not registration or registration.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Not authorized to refund this payment")
-    
-    # Check if payment is paid
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     if payment.status != PaymentStatus.PAID:
-        raise HTTPException(status_code=400, detail="Payment is not in paid status")
-    
-    # Check if already refunded
+        raise HTTPException(status_code=400, detail="Only paid payments can be refunded")
     if payment.refunded:
         raise HTTPException(status_code=400, detail="Payment already refunded")
-    
+
     try:
-        # Process refund with Moyasar
         refund_response = await payment_service.refund_payment(
             payment_id=payment.moyasar_payment_id,
             amount=refund_request.amount,
-            description=refund_request.description
+            description=refund_request.description,
         )
-        
-        # Update payment
+
         payment.status = PaymentStatus.REFUNDED
         payment.refunded = True
         payment.refunded_amount = Decimal(refund_response["amount"]) / 100
         payment.refunded_at = datetime.utcnow()
         payment.updated_at = datetime.utcnow()
-        
-        # Update registration status
+
         registration.status = "cancelled"
-        
         session.add(payment)
         session.add(registration)
         session.commit()
         session.refresh(payment)
-        
         return payment
-        
+
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process refund: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Refund failed: {str(e)}")

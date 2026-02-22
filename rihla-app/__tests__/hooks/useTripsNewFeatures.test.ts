@@ -1,7 +1,7 @@
 /**
- * Tests for new hooks added in the trip registration payment flow:
- *   useRegistration, useCreatePayment, useTripUpdates,
- *   useMarkUpdateRead, useAllMyTripUpdates
+ * Tests for hooks used in the trip registration payment flow:
+ *   useRegistration, usePreparePayment, useConfirmPayment,
+ *   useTripUpdates, useMarkUpdateRead, useAllMyTripUpdates
  */
 
 import { renderHook, waitFor, act } from '@testing-library/react-native';
@@ -122,61 +122,106 @@ describe('useRegistration', () => {
   });
 });
 
-// ── useCreatePayment ──────────────────────────────────────────────────────────
+// ── usePreparePayment ─────────────────────────────────────────────────────────
 
-describe('useCreatePayment', () => {
+describe('usePreparePayment', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('posts to /payments/create with correct payload', async () => {
+  it('posts to /payments/prepare with correct payload including redirect_url', async () => {
     const mockResponse = {
-      payment_id: 'pay-001',
-      moyasar_payment_id: 'moy-001',
-      amount: 1000,
+      payment_db_id: 'pay-db-001',
+      amount_halalas: 10000,
       currency: 'SAR',
-      status: 'initiated',
-      source: { type: 'creditcard', transaction_url: 'https://moyasar.com/pay/123' },
+      description: 'Trip: Test Trip - Registration #reg-001',
+      callback_url: 'https://backend.example.com/api/v1/payments/callback',
     };
     mockPost.mockResolvedValueOnce({ data: mockResponse });
 
     const { Wrapper } = makeWrapper();
-    const { useCreatePayment } = require('../../hooks/useTrips');
-    const { result } = renderHook(() => useCreatePayment(), { wrapper: Wrapper });
+    const { usePreparePayment } = require('../../hooks/useTrips');
+    const { result } = renderHook(() => usePreparePayment(), { wrapper: Wrapper });
 
     await act(async () => {
       await result.current.mutateAsync({
         registrationId: 'reg-001',
         paymentMethod: 'creditcard',
-        callbackUrl: 'rihla://payment-callback?registrationId=reg-001',
+        redirectUrl: 'rihlaapp://payment-callback',
       });
     });
 
-    expect(mockPost).toHaveBeenCalledWith('/payments/create', {
+    expect(mockPost).toHaveBeenCalledWith('/payments/prepare', {
       registration_id: 'reg-001',
       payment_method: 'creditcard',
-      callback_url: 'rihla://payment-callback?registrationId=reg-001',
+      redirect_url: 'rihlaapp://payment-callback',
     });
-    await waitFor(() =>
-      expect(result.current.data?.source.transaction_url).toBe(
-        'https://moyasar.com/pay/123'
-      )
-    );
+    await waitFor(() => {
+      expect(result.current.data?.payment_db_id).toBe('pay-db-001');
+      expect(result.current.data?.amount_halalas).toBe(10000);
+    });
   });
 
   it('surfaces errors from the API', async () => {
-    mockPost.mockRejectedValueOnce(new Error('Payment failed'));
+    mockPost.mockRejectedValueOnce(new Error('Registration not found'));
 
     const { Wrapper } = makeWrapper();
-    const { useCreatePayment } = require('../../hooks/useTrips');
-    const { result } = renderHook(() => useCreatePayment(), { wrapper: Wrapper });
+    const { usePreparePayment } = require('../../hooks/useTrips');
+    const { result } = renderHook(() => usePreparePayment(), { wrapper: Wrapper });
 
     await act(async () => {
       await expect(
         result.current.mutateAsync({
           registrationId: 'reg-001',
           paymentMethod: 'creditcard',
-          callbackUrl: 'rihla://payment-callback',
+          redirectUrl: 'rihlaapp://payment-callback',
         })
-      ).rejects.toThrow('Payment failed');
+      ).rejects.toThrow('Registration not found');
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
+// ── useConfirmPayment ─────────────────────────────────────────────────────────
+
+describe('useConfirmPayment', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('posts to /payments/confirm with payment_db_id and moyasar_payment_id as params', async () => {
+    mockPost.mockResolvedValueOnce({ data: { ok: true } });
+
+    const { Wrapper } = makeWrapper();
+    const { useConfirmPayment } = require('../../hooks/useTrips');
+    const { result } = renderHook(() => useConfirmPayment(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        paymentDbId: 'pay-db-001',
+        moyasarPaymentId: 'moy-abc123',
+      });
+    });
+
+    expect(mockPost).toHaveBeenCalledWith(
+      '/payments/confirm',
+      null,
+      { params: { payment_db_id: 'pay-db-001', moyasar_payment_id: 'moy-abc123' } }
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
+
+  it('surfaces errors from the API', async () => {
+    mockPost.mockRejectedValueOnce(new Error('Payment not found'));
+
+    const { Wrapper } = makeWrapper();
+    const { useConfirmPayment } = require('../../hooks/useTrips');
+    const { result } = renderHook(() => useConfirmPayment(), { wrapper: Wrapper });
+
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          paymentDbId: 'bad-id',
+          moyasarPaymentId: 'moy-x',
+        })
+      ).rejects.toThrow('Payment not found');
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

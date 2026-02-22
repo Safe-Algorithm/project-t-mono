@@ -151,8 +151,12 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           </View>
           <View style={s.metaDivider} />
           <View style={s.metaItem}>
-            <Ionicons name="people-outline" size={13} color={colors.primary} />
-            <Text style={s.metaText}>{t('trip.maxPeople')} {trip.max_participants}</Text>
+            <Ionicons name="people-outline" size={13} color={trip.available_spots === 0 ? colors.error : colors.primary} />
+            <Text style={[s.metaText, trip.available_spots === 0 && { color: colors.error }]}>
+              {trip.available_spots === 0
+                ? t('trip.soldOut')
+                : t('trip.spotsLeft', { count: trip.available_spots })}
+            </Text>
           </View>
           {trip.average_rating !== undefined && trip.average_rating > 0 && (
             <>

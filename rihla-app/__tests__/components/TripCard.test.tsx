@@ -26,6 +26,7 @@ const mockTrip: Trip = {
   end_date: '2025-06-05',
   registration_deadline: null,
   max_participants: 20,
+  available_spots: 8,
   is_active: true,
   is_refundable: true,
   is_international: false,

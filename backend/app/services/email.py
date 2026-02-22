@@ -261,96 +261,155 @@ class SendGridEmailService:
         trip_name: str,
         booking_reference: str,
         start_date: str,
-        total_amount: str
+        total_amount: str,
+        language: str = "en",
     ) -> dict:
         """
-        Send booking confirmation email.
-        
-        Args:
-            to_email: Recipient email address
-            to_name: Recipient name
-            trip_name: Name of the trip
-            booking_reference: Booking reference number
-            start_date: Trip start date
-            total_amount: Total booking amount
-            
-        Returns:
-            dict with message ID and status
+        Send booking confirmation email in the user's preferred language (en or ar).
         """
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
-                .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
-                .header {{ background-color: #10B981; color: white; padding: 20px; text-align: center; }}
-                .content {{ padding: 30px; background-color: #f9fafb; }}
-                .booking-details {{ background-color: white; padding: 20px; border-radius: 5px; margin: 20px 0; }}
-                .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }}
-                .footer {{ text-align: center; padding: 20px; color: #666; font-size: 12px; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>✓ Booking Confirmed!</h1>
+        is_ar = language == "ar"
+
+        if is_ar:
+            subject = f"تم تأكيد الحجز - {trip_name}"
+            html_content = f"""
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="utf-8"/>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Arial, sans-serif; line-height: 1.8; color: #333; direction: rtl; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #10B981; color: white; padding: 24px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ padding: 30px; background-color: #f9fafb; }}
+        .booking-details {{ background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb; }}
+        .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }}
+        .detail-row:last-child {{ border-bottom: none; }}
+        .footer {{ text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✓ تم تأكيد الحجز!</h1>
+        </div>
+        <div class="content">
+            <p>مرحباً {to_name}،</p>
+            <p>تم تأكيد حجزك بنجاح! يسعدنا انضمامك إلينا في هذه الرحلة.</p>
+            <div class="booking-details">
+                <h2>تفاصيل الحجز</h2>
+                <div class="detail-row">
+                    <strong>الرحلة:</strong>
+                    <span>{trip_name}</span>
                 </div>
-                <div class="content">
-                    <p>Hello {to_name},</p>
-                    <p>Your booking has been confirmed! We're excited to have you join us.</p>
-                    <div class="booking-details">
-                        <h2>Booking Details</h2>
-                        <div class="detail-row">
-                            <strong>Trip:</strong>
-                            <span>{trip_name}</span>
-                        </div>
-                        <div class="detail-row">
-                            <strong>Reference:</strong>
-                            <span>{booking_reference}</span>
-                        </div>
-                        <div class="detail-row">
-                            <strong>Start Date:</strong>
-                            <span>{start_date}</span>
-                        </div>
-                        <div class="detail-row">
-                            <strong>Total Amount:</strong>
-                            <span>{total_amount}</span>
-                        </div>
-                    </div>
-                    <p>You will receive additional details about your trip closer to the departure date.</p>
-                    <p>Safe travels!</p>
+                <div class="detail-row">
+                    <strong>رقم الحجز:</strong>
+                    <span style="font-family: monospace;">{booking_reference}</span>
                 </div>
-                <div class="footer">
-                    <p>&copy; 2026 Safe Algo Tourism. All rights reserved.</p>
+                <div class="detail-row">
+                    <strong>تاريخ البدء:</strong>
+                    <span>{start_date}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>المبلغ الإجمالي:</strong>
+                    <span>{total_amount}</span>
                 </div>
             </div>
-        </body>
-        </html>
-        """
-        
-        text_content = f"""
-        Hello {to_name},
-        
-        Your booking has been confirmed! We're excited to have you join us.
-        
-        BOOKING DETAILS
-        ---------------
-        Trip: {trip_name}
-        Reference: {booking_reference}
-        Start Date: {start_date}
-        Total Amount: {total_amount}
-        
-        You will receive additional details about your trip closer to the departure date.
-        
-        Safe travels!
-        
-        © 2026 Safe Algo Tourism. All rights reserved.
-        """
-        
+            <p>ستتلقى تفاصيل إضافية عن رحلتك قريباً من تاريخ المغادرة.</p>
+            <p>رحلة سعيدة! 🌟</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 رحلة. جميع الحقوق محفوظة.</p>
+        </div>
+    </div>
+</body>
+</html>"""
+            text_content = f"""مرحباً {to_name}،
+
+تم تأكيد حجزك بنجاح!
+
+تفاصيل الحجز:
+الرحلة: {trip_name}
+رقم الحجز: {booking_reference}
+تاريخ البدء: {start_date}
+المبلغ الإجمالي: {total_amount}
+
+ستتلقى تفاصيل إضافية عن رحلتك قريباً.
+
+رحلة سعيدة!
+© 2026 رحلة. جميع الحقوق محفوظة."""
+        else:
+            subject = f"Booking Confirmed - {trip_name}"
+            html_content = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <style>
+        body {{ font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #10B981; color: white; padding: 24px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ padding: 30px; background-color: #f9fafb; }}
+        .booking-details {{ background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e5e7eb; }}
+        .detail-row {{ display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }}
+        .detail-row:last-child {{ border-bottom: none; }}
+        .footer {{ text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✓ Booking Confirmed!</h1>
+        </div>
+        <div class="content">
+            <p>Hello {to_name},</p>
+            <p>Your booking has been confirmed! We're excited to have you join us.</p>
+            <div class="booking-details">
+                <h2>Booking Details</h2>
+                <div class="detail-row">
+                    <strong>Trip:</strong>
+                    <span>{trip_name}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Reference:</strong>
+                    <span style="font-family: monospace;">{booking_reference}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Start Date:</strong>
+                    <span>{start_date}</span>
+                </div>
+                <div class="detail-row">
+                    <strong>Total Amount:</strong>
+                    <span>{total_amount}</span>
+                </div>
+            </div>
+            <p>You will receive additional details about your trip closer to the departure date.</p>
+            <p>Safe travels! 🌟</p>
+        </div>
+        <div class="footer">
+            <p>&copy; 2026 Rihla. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>"""
+            text_content = f"""Hello {to_name},
+
+Your booking has been confirmed! We're excited to have you join us.
+
+BOOKING DETAILS
+---------------
+Trip: {trip_name}
+Reference: {booking_reference}
+Start Date: {start_date}
+Total Amount: {total_amount}
+
+You will receive additional details about your trip closer to the departure date.
+
+Safe travels!
+© 2026 Rihla. All rights reserved."""
+
         return await self.send_email(
             to_email=to_email,
-            subject=f"Booking Confirmed - {trip_name}",
+            subject=subject,
             html_content=html_content,
             text_content=text_content,
             to_name=to_name

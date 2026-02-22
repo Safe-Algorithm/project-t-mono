@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Localization from 'expo-localization';
 import i18n from '../lib/i18n';
+import apiClient from '../lib/api';
 
 export type Language = 'en' | 'ar';
 
@@ -38,5 +39,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
     await AsyncStorage.setItem('app_language', lang);
     await i18n.changeLanguage(lang);
     set({ language: lang, isRTL });
+    // Sync to backend so confirmation emails use the correct language
+    apiClient.patch('/users/me', { preferred_language: lang }).catch(() => {});
   },
 }));

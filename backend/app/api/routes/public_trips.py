@@ -139,6 +139,17 @@ def build_trip_read(trip, session: Session) -> TripRead:
                 "type": dest.type.value if hasattr(dest.type, 'value') else str(dest.type),
             })
 
+    # Compute available spots: max minus confirmed/pending_payment participants
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    active_regs = session.exec(
+        sql_select(TripRegistrationModel).where(
+            TripRegistrationModel.trip_id == trip.id,
+            TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+        )
+    ).all()
+    booked = sum(r.total_participants for r in active_regs)
+    available_spots = max(0, trip.max_participants - booked)
+
     return TripRead(
         id=trip.id,
         provider_id=trip.provider_id,
@@ -166,6 +177,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         destinations=destinations_info,
         packages=packages_with_fields,
         extra_fees=[],
+        available_spots=available_spots,
     )
 
 

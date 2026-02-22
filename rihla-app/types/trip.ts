@@ -62,6 +62,7 @@ export interface Trip {
   end_date: string;
   registration_deadline: string | null;
   max_participants: number;
+  available_spots: number;
   is_active: boolean;
   is_refundable: boolean;
   is_international: boolean;

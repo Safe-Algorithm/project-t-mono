@@ -66,8 +66,9 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <View style={s.container}>
+    <KeyboardAvoidingView style={s.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <View style={s.header}>
           <TouchableOpacity style={s.langToggle} onPress={() => setLanguage(language === 'en' ? 'ar' : 'en')}>
             <Text style={s.langToggleText}>{language === 'en' ? 'العربية' : 'English'}</Text>
@@ -129,12 +130,15 @@ export default function LoginScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
+    flex1: { flex: 1 },
+    scrollView: { flex: 1 },
     scroll: { flexGrow: 1 },
     header: { backgroundColor: c.primary, paddingTop: 80, paddingBottom: 48, alignItems: 'center', gap: 8, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
     logoContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },

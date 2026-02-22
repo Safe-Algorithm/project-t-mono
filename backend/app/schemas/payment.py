@@ -9,10 +9,10 @@ from app.models.payment import PaymentStatus, PaymentMethod
 
 
 class PaymentCreate(BaseModel):
-    """Schema for creating a payment."""
+    """Schema for initiating a payment preparation."""
     registration_id: uuid.UUID
     payment_method: PaymentMethod = PaymentMethod.CREDITCARD
-    callback_url: Optional[str] = None
+    redirect_url: Optional[str] = None  # App deep link to open after payment (e.g. rihlaapp://payment-callback)
 
 
 class PaymentResponse(BaseModel):
@@ -40,15 +40,17 @@ class PaymentResponse(BaseModel):
         from_attributes = True
 
 
-class PaymentInitiateResponse(BaseModel):
-    """Schema for payment initiation response (includes Moyasar source URL)."""
-    payment_id: uuid.UUID
-    moyasar_payment_id: str
-    amount: Decimal
+class PaymentPrepareResponse(BaseModel):
+    """
+    Returned to the app before it calls Moyasar directly.
+    The app uses its own EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY env var.
+    Card data must NEVER be sent to our backend.
+    """
+    payment_db_id: uuid.UUID       # Our internal payment record ID
+    amount_halalas: int            # Amount in smallest unit (halalas) for Moyasar
     currency: str
-    status: str
-    source: dict  # Contains payment source details from Moyasar
-    callback_url: Optional[str]
+    description: str
+    callback_url: str              # HTTPS backend URL Moyasar will redirect to
 
 
 class PaymentWebhook(BaseModel):

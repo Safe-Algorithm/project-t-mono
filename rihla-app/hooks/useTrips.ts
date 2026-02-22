@@ -130,6 +130,8 @@ export function useMyRegistrations() {
       const { data } = await apiClient.get<TripRegistration[]>('/users/me/registrations');
       return data;
     },
+    refetchOnMount: 'always',
+    staleTime: 0,
   });
 }
 
@@ -216,33 +218,59 @@ export function useRegistration(registrationId: string | null) {
   });
 }
 
-export interface PaymentInitiateResponse {
-  payment_id: string;
-  moyasar_payment_id: string;
-  amount: number;
-  currency: string;
-  status: string;
-  source: { type: string; transaction_url?: string; [key: string]: any };
-  callback_url?: string;
+export interface CardDetails {
+  name: string;
+  number: string;
+  month: number;
+  year: number;
+  cvc: string;
 }
 
-export function useCreatePayment() {
+export interface PaymentPrepareResponse {
+  payment_db_id: string;
+  amount_halalas: number;
+  currency: string;
+  description: string;
+  callback_url: string;
+}
+
+export function usePreparePayment() {
   return useMutation({
     mutationFn: async ({
       registrationId,
       paymentMethod,
-      callbackUrl,
+      redirectUrl,
     }: {
       registrationId: string;
       paymentMethod: string;
-      callbackUrl: string;
-    }): Promise<PaymentInitiateResponse> => {
-      const { data } = await apiClient.post<PaymentInitiateResponse>('/payments/create', {
+      redirectUrl: string;
+    }): Promise<PaymentPrepareResponse> => {
+      const { data } = await apiClient.post<PaymentPrepareResponse>('/payments/prepare', {
         registration_id: registrationId,
         payment_method: paymentMethod,
-        callback_url: callbackUrl,
+        redirect_url: redirectUrl,
       });
       return data;
+    },
+  });
+}
+
+export function useConfirmPayment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      paymentDbId,
+      moyasarPaymentId,
+    }: {
+      paymentDbId: string;
+      moyasarPaymentId: string;
+    }): Promise<void> => {
+      await apiClient.post('/payments/confirm', null, {
+        params: { payment_db_id: paymentDbId, moyasar_payment_id: moyasarPaymentId },
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
     },
   });
 }

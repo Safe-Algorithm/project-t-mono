@@ -45,6 +45,7 @@ class User(SQLModel, table=True):
     is_email_verified: bool = Field(default=False)
     role: UserRole = Field(default=UserRole.NORMAL)
     source: RequestSource = Field(sa_column=Column(SQLEnum(RequestSource, name='requestsource', values_callable=lambda obj: [e.value for e in obj])))
+    preferred_language: str = Field(default="en", max_length=5)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

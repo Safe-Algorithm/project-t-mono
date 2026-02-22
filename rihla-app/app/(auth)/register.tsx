@@ -133,8 +133,9 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <View style={s.container}>
+    <KeyboardAvoidingView style={s.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
         <TouchableOpacity style={s.backBtn}
           onPress={() => (step === 'contact' ? router.back() : setStep(step === 'otp' ? 'contact' : 'otp'))}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
@@ -222,12 +223,15 @@ export default function RegisterScreen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
+    flex1: { flex: 1 },
+    scrollView: { flex: 1 },
     scroll: { flexGrow: 1, paddingBottom: 40 },
     backBtn: { marginTop: 56, marginLeft: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerArea: { paddingHorizontal: 24, marginTop: 16, gap: 6 },
