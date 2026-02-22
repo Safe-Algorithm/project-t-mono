@@ -107,6 +107,38 @@ def build_trip_read(trip, session: Session) -> TripRead:
         "company_name": provider.company_name,
     } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
 
+    # Build starting_city info
+    starting_city_info = None
+    if trip.starting_city_id:
+        from app.models.destination import Destination
+        sc = session.get(Destination, trip.starting_city_id)
+        if sc:
+            starting_city_info = {
+                "id": sc.id,
+                "name_en": sc.name_en,
+                "name_ar": sc.name_ar,
+                "country_code": sc.country_code,
+            }
+
+    # Build destinations list
+    from app.models.trip_destination import TripDestination
+    from app.models.destination import Destination
+    from sqlmodel import select as sql_select
+    trip_dest_links = session.exec(
+        sql_select(TripDestination).where(TripDestination.trip_id == trip.id)
+    ).all()
+    destinations_info = []
+    for link in trip_dest_links:
+        dest = session.get(Destination, link.destination_id)
+        if dest:
+            destinations_info.append({
+                "id": dest.id,
+                "name_en": dest.name_en,
+                "name_ar": dest.name_ar,
+                "country_code": dest.country_code,
+                "type": dest.type.value if hasattr(dest.type, 'value') else str(dest.type),
+            })
+
     return TripRead(
         id=trip.id,
         provider_id=trip.provider_id,
@@ -126,6 +158,12 @@ def build_trip_read(trip, session: Session) -> TripRead:
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
         meeting_time=trip.meeting_time,
+        trip_reference=trip.trip_reference,
+        registration_deadline=trip.registration_deadline,
+        starting_city_id=trip.starting_city_id,
+        starting_city=starting_city_info,
+        is_international=trip.is_international,
+        destinations=destinations_info,
         packages=packages_with_fields,
         extra_fees=[],
     )
@@ -148,16 +186,23 @@ def list_public_trips(
     max_participants: Optional[int] = None,
     min_rating: Optional[float] = None,
     is_active: Optional[bool] = True,
+    starting_city_id: Optional[uuid.UUID] = None,
+    is_international: Optional[bool] = None,
+    destination_ids: Optional[List[uuid.UUID]] = Query(default=None),
+    single_destination: Optional[bool] = None,
 ):
-    """Retrieve and filter all trips (public endpoint for mobile app)."""
+    """Retrieve and filter all trips (public endpoint for mobile app).
+    
+    Always returns only active, future trips with open registration, ordered newest first.
+    """
     start_date_from_dt = datetime.fromisoformat(start_date_from) if start_date_from else None
     start_date_to_dt = datetime.fromisoformat(start_date_to) if start_date_to else None
     end_date_from_dt = datetime.fromisoformat(end_date_from) if end_date_from else None
     end_date_to_dt = datetime.fromisoformat(end_date_to) if end_date_to else None
-    
+
     min_price_decimal = Decimal(str(min_price)) if min_price is not None else None
     max_price_decimal = Decimal(str(max_price)) if max_price is not None else None
-    
+
     trips = crud.trip.search_and_filter_trips(
         session=session,
         provider_id=None,
@@ -173,10 +218,16 @@ def list_public_trips(
         max_participants=max_participants,
         min_rating=min_rating,
         is_active=is_active,
+        starting_city_id=starting_city_id,
+        is_international=is_international,
+        destination_ids=destination_ids,
+        single_destination=single_destination,
+        only_future=True,
+        only_open_registration=True,
         skip=skip,
-        limit=limit
+        limit=limit,
     )
-    
+
     return [build_trip_read(trip, session) for trip in trips]
 
 

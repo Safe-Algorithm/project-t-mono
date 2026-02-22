@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip, useFieldMetadata } from '../../hooks/useTrips';
+import { useTrip, useFieldMetadata, useCreatePayment } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
@@ -25,6 +25,7 @@ export default function BookingScreen() {
   const { tripId, packageId } = useLocalSearchParams<{ tripId: string; packageId: string }>();
   const { data: trip } = useTrip(tripId);
   const { data: fieldMetadata } = useFieldMetadata();
+  const createPayment = useCreatePayment();
   const [participantCount, setParticipantCount] = useState(1);
   const [participants, setParticipants] = useState<Participant[]>([{}]);
   const [loading, setLoading] = useState(false);
@@ -86,8 +87,23 @@ export default function BookingScreen() {
           ...p,
         })),
       };
-      const { data } = await apiClient.post(`/trips/${tripId}/register`, payload);
-      router.replace(`/booking/success?registrationId=${data.id}`);
+      const { data: registration } = await apiClient.post(`/trips/${tripId}/register`, payload);
+
+      // Initiate Moyasar payment
+      const paymentData = await createPayment.mutateAsync({
+        registrationId: registration.id,
+        paymentMethod: 'creditcard',
+        callback_url: `rihla://payment-callback?registrationId=${registration.id}`,
+      } as any);
+
+      // Open Moyasar payment URL
+      const paymentUrl = paymentData.source?.transaction_url;
+      if (paymentUrl) {
+        await Linking.openURL(paymentUrl);
+      }
+
+      // Navigate to success screen to show booking reference and payment pending state
+      router.replace(`/booking/success?registrationId=${registration.id}`);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
@@ -111,8 +127,8 @@ export default function BookingScreen() {
     );
   }
 
-  const tripName = (i18n.language === 'ar' ? (trip.name_ar ?? trip.name_en) : (trip.name_en ?? trip.name_ar)) ?? 'Trip';
-  const pkgName = (i18n.language === 'ar' ? (selectedPackage.name_ar ?? selectedPackage.name_en) : (selectedPackage.name_en ?? selectedPackage.name_ar)) ?? 'Package';
+  const tripName = (i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip';
+  const pkgName = (i18n.language === 'ar' ? (selectedPackage.name_ar || selectedPackage.name_en) : (selectedPackage.name_en || selectedPackage.name_ar)) || 'Package';
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -203,9 +219,7 @@ export default function BookingScreen() {
             <View style={s.section}>
               <View style={s.infoBox}>
                 <Ionicons name="information-circle-outline" size={18} color={colors.info} />
-                <Text style={s.infoText}>
-                  After booking, you'll be redirected to complete payment via Moyasar. Your spot is reserved for 15 minutes.
-                </Text>
+                <Text style={s.infoText}>{t('booking.paymentRedirectInfo')}</Text>
               </View>
             </View>
             <View style={s.actionRow}>

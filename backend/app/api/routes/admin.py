@@ -26,8 +26,20 @@ from app.schemas.file_definition import (
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
 from app.core.redis import redis_client
+
+
 from app.core.config import settings
 from app.services.email import email_service
+
+
+def _get_starting_city_info(session, trip):
+    if not trip.starting_city_id:
+        return None
+    from app.models.destination import Destination
+    sc = session.get(Destination, trip.starting_city_id)
+    if not sc:
+        return None
+    return {"id": sc.id, "name_en": sc.name_en, "name_ar": sc.name_ar, "country_code": sc.country_code}
 
 router = APIRouter()
 
@@ -439,6 +451,11 @@ def list_all_trips(
             max_participants=trip.max_participants,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
+            trip_reference=trip.trip_reference,
+            registration_deadline=trip.registration_deadline,
+            starting_city_id=trip.starting_city_id,
+            starting_city=_get_starting_city_info(session, trip),
+            is_international=trip.is_international,
             packages=packages_with_fields
         ))
     
@@ -524,6 +541,11 @@ def get_trip_details(
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
         meeting_time=trip.meeting_time,
+        trip_reference=trip.trip_reference,
+        registration_deadline=trip.registration_deadline,
+        starting_city_id=trip.starting_city_id,
+        starting_city=_get_starting_city_info(session, trip),
+        is_international=trip.is_international,
         packages=packages_with_fields,
         extra_fees=extra_fees
     )
@@ -667,6 +689,11 @@ def get_provider_trips(
             max_participants=trip.max_participants,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
+            trip_reference=trip.trip_reference,
+            registration_deadline=trip.registration_deadline,
+            starting_city_id=trip.starting_city_id,
+            starting_city=_get_starting_city_info(session, trip),
+            is_international=trip.is_international,
             packages=packages_with_fields
         ))
     

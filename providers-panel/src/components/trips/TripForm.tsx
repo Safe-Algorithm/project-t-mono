@@ -3,6 +3,7 @@ import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig, TripAmenity }
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
 import ValidationConfigComponent from './ValidationConfig';
 import DestinationSelector, { DestinationSelection } from './DestinationSelector';
+import { destinationService, Destination } from '../../services/destinationService';
 import { useTranslation } from 'react-i18next';
 
 interface TripFormProps {
@@ -27,6 +28,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     description_ar: '',
     start_date: '',
     end_date: '',
+    registration_deadline: '',
     max_participants: '',
     is_active: true,
     is_refundable: true,
@@ -34,6 +36,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     meeting_location: '',
     meeting_time: '',
   });
+
+  const [startingCityId, setStartingCityId] = useState<string>('');
+  const [countries, setCountries] = useState<Destination[]>([]);
+  const [cities, setCities] = useState<Destination[]>([]);
+  const [selectedCountryId, setSelectedCountryId] = useState<string>('');
 
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
 
@@ -59,6 +66,24 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
   // Destination selections (form-state mode for new trips)
   const [destinationSelections, setDestinationSelections] = useState<DestinationSelection[]>([]);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      try {
+        const all = await destinationService.getActiveDestinations();
+        setCountries(all.filter(d => d.type === 'country'));
+      } catch (err) {
+        console.error('Failed to load countries:', err);
+      }
+    };
+    loadCountries();
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCountryId) { setCities([]); return; }
+    const country = countries.find(c => c.id === selectedCountryId);
+    setCities(country?.children?.filter(c => c.type === 'city') ?? []);
+  }, [selectedCountryId, countries]);
 
   useEffect(() => {
     // Load available fields on component mount
@@ -99,6 +124,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         description_ar: trip.description_ar,
         start_date: new Date(trip.start_date).toISOString().substring(0, 16),
         end_date: new Date(trip.end_date).toISOString().substring(0, 16),
+        registration_deadline: trip.registration_deadline ? new Date(trip.registration_deadline).toISOString().substring(0, 16) : '',
         max_participants: trip.max_participants.toString(),
         is_active: trip.is_active,
         is_refundable: trip.is_refundable ?? true,
@@ -106,6 +132,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         meeting_location: trip.meeting_location ?? '',
         meeting_time: trip.meeting_time ? new Date(trip.meeting_time).toISOString().substring(0, 16) : '',
       });
+      if (trip.starting_city_id) {
+        setStartingCityId(trip.starting_city_id);
+      }
 
       // Populate amenities
       if (trip.amenities && trip.amenities.length > 0) {
@@ -163,8 +192,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     const checked = (e.target as HTMLInputElement).checked;
     
     // For datetime inputs, ensure seconds are always set to 00
-    if ((name === 'start_date' || name === 'end_date' || name === 'meeting_time') && value) {
-      const dateValue = value + ':00'; // Append :00 for seconds
+    if ((name === 'start_date' || name === 'end_date' || name === 'meeting_time' || name === 'registration_deadline') && value) {
+      const dateValue = value + ':00';
       setFormData((prev) => ({ ...prev, [name]: dateValue }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
@@ -331,6 +360,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         max_participants: parseInt(formData.max_participants, 10),
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
+        registration_deadline: formData.registration_deadline
+          ? new Date(formData.registration_deadline).toISOString()
+          : undefined,
+        starting_city_id: startingCityId || undefined,
         amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
         meeting_time: formData.has_meeting_place && formData.meeting_time 
           ? new Date(formData.meeting_time).toISOString() 
@@ -380,7 +413,54 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       </div>
       <input type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange} required />
       <input type="datetime-local" name="end_date" value={formData.end_date} onChange={handleChange} required />
+      <div>
+        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>
+          Registration Deadline <span style={{ fontSize: '0.85rem', color: '#666' }}>(must be on or before start date)</span>
+        </label>
+        <input type="datetime-local" name="registration_deadline" value={formData.registration_deadline} onChange={handleChange} style={{ width: '100%' }} />
+      </div>
       <input type="number" name="max_participants" value={formData.max_participants} onChange={handleChange} placeholder={t('trip.maxParticipants')} required />
+
+      <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
+        <h3 style={{ marginTop: 0 }}>Starting City <span style={{ color: 'red' }}>*</span></h3>
+        <p style={{ fontSize: '0.85rem', color: '#666', marginBottom: '1rem' }}>
+          The city from which this trip departs. Used to match travelers from the same city.
+        </p>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: '180px' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>Country</label>
+            <select
+              value={selectedCountryId}
+              onChange={e => { setSelectedCountryId(e.target.value); setStartingCityId(''); }}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            >
+              <option value="">Select country...</option>
+              {countries.map(c => (
+                <option key={c.id} value={c.id}>{c.name_en}</option>
+              ))}
+            </select>
+          </div>
+          <div style={{ flex: 1, minWidth: '180px' }}>
+            <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.25rem' }}>City</label>
+            <select
+              value={startingCityId}
+              onChange={e => setStartingCityId(e.target.value)}
+              disabled={!selectedCountryId}
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+            >
+              <option value="">Select city...</option>
+              {cities.map(c => (
+                <option key={c.id} value={c.id}>{c.name_en}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {startingCityId && (
+          <p style={{ fontSize: '0.85rem', color: '#28a745', marginTop: '0.5rem' }}>
+            ✓ Starting city selected
+          </p>
+        )}
+      </div>
       <label>
         <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} />
         {t('status.active')}

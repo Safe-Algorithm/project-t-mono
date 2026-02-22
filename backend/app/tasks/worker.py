@@ -177,6 +177,33 @@ async def send_review_reminders():
         raise
 
 
+@broker.task(schedule=[{"cron": "* * * * *"}])  # Every minute
+async def cancel_expired_spot_reservations():
+    """
+    Cancel registrations whose 15-minute spot reservation window has expired
+    without payment being completed.
+    """
+    logger.info("Checking for expired spot reservations")
+    try:
+        with Session(engine) as session:
+            now = datetime.utcnow()
+            statement = select(TripRegistration).where(
+                TripRegistration.status == "pending_payment",
+                TripRegistration.spot_reserved_until != None,
+                TripRegistration.spot_reserved_until <= now,
+            )
+            expired = session.exec(statement).all()
+            logger.info(f"Found {len(expired)} expired spot reservations")
+            for reg in expired:
+                reg.status = "cancelled"
+                reg.updated_at = now
+                session.add(reg)
+            session.commit()
+    except Exception as e:
+        logger.error(f"cancel_expired_spot_reservations failed: {e}")
+        raise
+
+
 @broker.task(schedule=[{"cron": settings.TASKIQ_PAYMENT_REMINDER_CRON}])
 async def send_payment_reminders():
     """

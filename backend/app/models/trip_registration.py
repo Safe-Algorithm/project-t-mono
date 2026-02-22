@@ -5,6 +5,10 @@ from decimal import Decimal
 
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+
+def _generate_booking_ref() -> str:
+    return f"BOOK-{uuid.uuid4().hex[:8].upper()}"
+
 from .trip_field import GenderType, DisabilityType
 
 if TYPE_CHECKING:
@@ -26,7 +30,9 @@ class TripRegistration(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     total_amount: Decimal = Field(decimal_places=2, max_digits=10)
-    status: str = Field(default="pending")  # pending, confirmed, cancelled
+    status: str = Field(default="pending_payment")  # pending_payment, confirmed, cancelled
+    spot_reserved_until: Optional[datetime] = Field(default=None)  # 15-min payment window
+    booking_reference: str = Field(default_factory=_generate_booking_ref, max_length=20, index=True)
     
     # Relationships
     trip: "Trip" = Relationship()

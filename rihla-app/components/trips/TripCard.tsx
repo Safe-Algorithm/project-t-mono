@@ -34,6 +34,19 @@ function getLocalizedName(trip: Trip, lang: string): string {
   return trip.name_en || trip.name_ar || 'Unnamed Trip';
 }
 
+function getDestLabel(trip: Trip, lang: string): string | null {
+  const dests = trip.destinations ?? [];
+  if (!trip.starting_city && dests.length === 0) return null;
+  const getName = (obj: { name_en: string; name_ar: string }) =>
+    lang === 'ar' ? obj.name_ar || obj.name_en : obj.name_en || obj.name_ar;
+  const from = trip.starting_city ? getName(trip.starting_city) : null;
+  const to = dests.map(getName).join(', ') || null;
+  const arrow = lang === 'ar' ? ' ← ' : ' → ';
+  if (from && to) return `${from}${arrow}${to}`;
+  if (from) return from;
+  return to;
+}
+
 function formatDate(dateStr: string, lang: string): string {
   const locale = lang === 'ar' ? 'ar-SA' : 'en-US';
   return new Date(dateStr).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -56,6 +69,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
   const name = getLocalizedName(trip, i18n.language);
   const packageCount = trip.packages?.length ?? 0;
   const priceKey = packageCount === 1 ? 'trip.priceOnly' : 'trip.fromPrice';
+  const routeLabel = getDestLabel(trip, i18n.language);
 
   if (compact) {
     return (
@@ -124,6 +138,12 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           <Ionicons name="business-outline" size={13} color={colors.textTertiary} />
           <Text style={s.provider} numberOfLines={1}>{trip.provider?.company_name}</Text>
         </View>
+        {routeLabel && (
+          <View style={s.routeRow}>
+            <Ionicons name="navigate-outline" size={13} color={colors.primary} />
+            <Text style={s.routeText} numberOfLines={1}>{routeLabel}</Text>
+          </View>
+        )}
         <View style={s.metaRow}>
           <View style={s.metaItem}>
             <Ionicons name="calendar-outline" size={13} color={colors.primary} />
@@ -177,6 +197,8 @@ function makeStyles(c: ThemeColors) {
     name: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, lineHeight: 22 },
     providerRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     provider: { fontSize: FontSize.sm, color: c.textTertiary, flex: 1 },
+    routeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    routeText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '600', flex: 1 },
     metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
     metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     metaText: { fontSize: FontSize.xs, color: c.textSecondary, fontWeight: '500' },

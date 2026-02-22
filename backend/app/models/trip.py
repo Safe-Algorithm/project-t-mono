@@ -5,6 +5,10 @@ from typing import TYPE_CHECKING, Optional, List
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 from sqlalchemy.ext.mutable import MutableList
 
+
+def _generate_trip_ref() -> str:
+    return f"TRIP-{uuid.uuid4().hex[:8].upper()}"
+
 from .links import TripParticipant, TripRating
 from .trip_amenity import TripAmenity
 
@@ -17,6 +21,7 @@ if TYPE_CHECKING:
     from .trip_bookmark import TripBookmark
     from .trip_amenity import TripExtraFee
     from .trip_destination import TripDestination
+    from .destination import Destination
 
 
 
@@ -34,7 +39,17 @@ class Trip(SQLModel, table=True):
     end_date: datetime
     max_participants: int
     is_active: bool = Field(default=True)
+    trip_reference: str = Field(default_factory=_generate_trip_ref, max_length=20, index=True)
     images: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
+
+    # Registration deadline — must be <= start_date
+    registration_deadline: Optional[datetime] = Field(default=None, index=True)
+
+    # Starting city (single Destination of type=city, required for new trips)
+    starting_city_id: Optional[uuid.UUID] = Field(default=None, foreign_key="destinations.id", index=True)
+
+    # True when from-city country != any destination country
+    is_international: bool = Field(default=False, index=True)
 
     # Using JSONB for flexible metadata like itinerary, inclusions, exclusions
     trip_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
@@ -55,6 +70,7 @@ class Trip(SQLModel, table=True):
 
     provider_id: uuid.UUID = Field(foreign_key="provider.id")
     provider: "Provider" = Relationship(back_populates="trips")
+    starting_city: Optional["Destination"] = Relationship()
 
     participants: List["User"] = Relationship(back_populates="trips", link_model=TripParticipant, sa_relationship_kwargs={"cascade": "all, delete"})
     ratings: List[TripRating] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

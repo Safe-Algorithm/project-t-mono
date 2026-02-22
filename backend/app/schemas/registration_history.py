@@ -23,6 +23,7 @@ class RegistrationHistoryTripInfo(BaseModel):
     end_date: datetime
     provider_id: uuid.UUID
     provider: RegistrationHistoryProviderInfo
+    trip_reference: str
 
 
 class RegistrationHistoryItem(BaseModel):
@@ -33,6 +34,8 @@ class RegistrationHistoryItem(BaseModel):
     total_participants: int
     total_amount: Decimal
     status: str
+    spot_reserved_until: Optional[datetime] = None
+    booking_reference: str
     participants: List[TripRegistrationParticipant] = []
     trip: RegistrationHistoryTripInfo
 

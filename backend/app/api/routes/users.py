@@ -290,6 +290,7 @@ def get_my_registration_history(
             "start_date": trip.start_date,
             "end_date": trip.end_date,
             "provider_id": trip.provider_id,
+            "trip_reference": trip.trip_reference,
             "provider": provider_payload,
         }
 
@@ -303,6 +304,8 @@ def get_my_registration_history(
                     "total_participants": registration.total_participants,
                     "total_amount": registration.total_amount,
                     "status": registration.status,
+                    "spot_reserved_until": registration.spot_reserved_until,
+                    "booking_reference": registration.booking_reference,
                     "participants": list(registration.participants or []),
                     "trip": trip_payload,
                 }

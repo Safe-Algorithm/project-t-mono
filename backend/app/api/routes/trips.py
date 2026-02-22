@@ -25,6 +25,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _get_starting_city_info(session: Session, trip) -> Optional[dict]:
+    if not trip.starting_city_id:
+        return None
+    from app.models.destination import Destination
+    sc = session.get(Destination, trip.starting_city_id)
+    if not sc:
+        return None
+    return {"id": sc.id, "name_en": sc.name_en, "name_ar": sc.name_ar, "country_code": sc.country_code}
+
+
 @router.post("", response_model=TripRead)
 def create_trip(
     *,
@@ -149,6 +159,11 @@ def read_trips(
             images=trip.images,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
+            trip_reference=trip.trip_reference,
+            registration_deadline=trip.registration_deadline,
+            starting_city_id=trip.starting_city_id,
+            starting_city=_get_starting_city_info(session, trip),
+            is_international=trip.is_international,
             packages=packages_with_fields
         ))
     
@@ -286,6 +301,11 @@ def read_trip(
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
         meeting_time=trip.meeting_time,
+        trip_reference=trip.trip_reference,
+        registration_deadline=trip.registration_deadline,
+        starting_city_id=trip.starting_city_id,
+        starting_city=_get_starting_city_info(session, trip),
+        is_international=trip.is_international,
         packages=packages_with_fields,
         extra_fees=extra_fees
     )
@@ -383,6 +403,11 @@ def update_trip(
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
         meeting_time=trip.meeting_time,
+        trip_reference=trip.trip_reference,
+        registration_deadline=trip.registration_deadline,
+        starting_city_id=trip.starting_city_id,
+        starting_city=_get_starting_city_info(session, trip),
+        is_international=trip.is_international,
         packages=packages_with_fields,
         extra_fees=extra_fees
     )
@@ -511,6 +536,11 @@ def list_all_trips(
             images=trip.images,
             trip_metadata=trip.trip_metadata,
             is_active=trip.is_active,
+            trip_reference=trip.trip_reference,
+            registration_deadline=trip.registration_deadline,
+            starting_city_id=trip.starting_city_id,
+            starting_city=_get_starting_city_info(session, trip),
+            is_international=trip.is_international,
             packages=packages_with_fields
         ))
     
@@ -932,10 +962,35 @@ async def register_for_trip(
     current_user: User = Depends(get_current_active_user),
 ):
     """Register for a trip with multiple participants."""
+    from datetime import datetime, timedelta
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    
+
+    # Guard: trip must be active
+    if not trip.is_active:
+        raise HTTPException(status_code=400, detail="This trip is no longer available for booking")
+
+    # Guard: trip must not have started yet
+    if trip.start_date <= datetime.utcnow():
+        raise HTTPException(status_code=400, detail="This trip has already started or passed")
+
+    # Guard: trip must not be full (count confirmed + pending_payment registrations)
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from sqlmodel import select as sql_select
+    confirmed_count_stmt = sql_select(TripRegistrationModel).where(
+        TripRegistrationModel.trip_id == trip_id,
+        TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+    )
+    existing_regs = session.exec(confirmed_count_stmt).all()
+    booked_participants = sum(r.total_participants for r in existing_regs)
+    if booked_participants + registration_in.total_participants > trip.max_participants:
+        available = trip.max_participants - booked_participants
+        raise HTTPException(
+            status_code=400,
+            detail=f"Not enough spots available. Only {available} spot(s) left."
+        )
+
     # Validate is_registration_user field - only one participant can have it set to True
     registration_user_count = sum(1 for p in registration_in.participants if p.is_registration_user)
     if registration_user_count > 1:
@@ -986,14 +1041,16 @@ async def register_for_trip(
                             detail=f"Validation failed for field '{field_type.value}' in package '{get_name(package)}': {', '.join(validation_errors)}"
                         )
     
-    # Create registration
+    # Create registration with pending_payment status and 15-min spot reservation
     from app.models.trip_registration import TripRegistration as TripRegistrationModel, TripRegistrationParticipant as TripParticipantModel
+    spot_reserved_until = datetime.utcnow() + timedelta(minutes=15)
     registration = TripRegistrationModel(
         trip_id=trip_id,
         user_id=current_user.id,
         total_participants=registration_in.total_participants,
         total_amount=registration_in.total_amount,
-        status=registration_in.status
+        status="pending_payment",
+        spot_reserved_until=spot_reserved_until,
     )
     session.add(registration)
     session.commit()
@@ -1016,17 +1073,33 @@ async def register_for_trip(
     
     # Send booking confirmation email in background
     from app.services.email import email_service
-    booking_reference = f"BOOK-{registration.id}"
     background_tasks.add_task(
         email_service.send_booking_confirmation_email,
         to_email=current_user.email,
         to_name=current_user.name,
         trip_name=get_name(trip),
-        booking_reference=booking_reference,
+        booking_reference=registration.booking_reference,
         start_date=trip.start_date.strftime("%Y-%m-%d"),
         total_amount=f"{registration.total_amount} SAR"
     )
     
+    return registration
+
+
+@router.get("/registrations/{registration_id}", response_model=TripRegistration)
+def get_my_registration(
+    *,
+    session: Session = Depends(get_session),
+    registration_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get a specific registration by ID (must belong to current user)."""
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    registration = session.get(TripRegistrationModel, registration_id)
+    if not registration:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    if registration.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
     return registration
 
 

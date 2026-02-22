@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlmodel import Session, select, or_, and_, func
@@ -12,6 +12,27 @@ from app.models.provider import Provider
 from app.models.user import User
 from app.models.trip_package import TripPackage
 from app.models.links import TripRating as TripRatingModel
+from app.models.trip_destination import TripDestination
+
+
+def _compute_is_international(session: Session, trip: Trip) -> bool:
+    """Return True if starting city country != any destination country."""
+    if not trip.starting_city_id:
+        return False
+    from app.models.destination import Destination
+    from app.models.trip_destination import TripDestination
+    starting_city = session.get(Destination, trip.starting_city_id)
+    if not starting_city:
+        return False
+    from_country = starting_city.country_code
+    dest_links = session.exec(
+        select(TripDestination).where(TripDestination.trip_id == trip.id)
+    ).all()
+    for link in dest_links:
+        dest = session.get(Destination, link.destination_id)
+        if dest and dest.country_code != from_country:
+            return True
+    return False
 
 
 def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) -> Trip:
@@ -52,113 +73,126 @@ def search_and_filter_trips(
     max_participants: Optional[int] = None,
     min_rating: Optional[float] = None,
     is_active: Optional[bool] = None,
+    # New filters
+    starting_city_id: Optional[uuid.UUID] = None,
+    is_international: Optional[bool] = None,
+    destination_ids: Optional[List[uuid.UUID]] = None,
+    single_destination: Optional[bool] = None,
+    only_future: bool = False,
+    only_open_registration: bool = False,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
 ) -> List[Trip]:
     """
-    Search and filter trips with multiple criteria including related fields.
-    
-    Args:
-        session: Database session
-        provider_id: Filter by provider ID (optional)
-        provider_name: Search by provider company name (optional)
-        search_query: Search in trip name and description
-        start_date_from: Filter trips starting from this date
-        start_date_to: Filter trips starting before this date
-        end_date_from: Filter trips ending from this date
-        end_date_to: Filter trips ending before this date
-        min_price: Minimum package price
-        max_price: Maximum package price
-        min_participants: Minimum max_participants
-        max_participants: Maximum max_participants
-        min_rating: Minimum average rating
-        is_active: Filter by active status
-        skip: Pagination offset
-        limit: Pagination limit
-    
-    Returns:
-        List of filtered trips
+    Search and filter trips. By default returns all matching trips ordered by
+    newest (created_at desc). Public feed uses only_future=True and
+    only_open_registration=True to exclude past/closed trips.
     """
-    # Start with base query
+    now = datetime.utcnow()
+
     statement = select(Trip)
-    
-    # Track if we need to join with provider or packages
+
     needs_provider_join = provider_name is not None
     needs_package_join = min_price is not None or max_price is not None
     needs_rating_join = min_rating is not None
-    
-    # Join with Provider if needed for provider name search
+
     if needs_provider_join:
         statement = statement.join(Provider, Trip.provider_id == Provider.id)
-    
-    # Apply filters
+
     conditions = []
-    
-    # Provider filter by ID
+
     if provider_id is not None:
         conditions.append(Trip.provider_id == provider_id)
-    
-    # Provider filter by name (search in company_name)
+
     if provider_name:
-        provider_pattern = f"%{provider_name}%"
-        conditions.append(Provider.company_name.ilike(provider_pattern))
-    
-    # Active status filter
+        conditions.append(Provider.company_name.ilike(f"%{provider_name}%"))
+
     if is_active is not None:
         conditions.append(Trip.is_active == is_active)
-    
-    # Search query (name or description) - handle optional fields
+
+    # Only show trips whose start_date is in the future
+    if only_future:
+        conditions.append(Trip.start_date > now)
+
+    # Only show trips whose registration deadline hasn't passed
+    # (if deadline is NULL, fall back to start_date > now)
+    if only_open_registration:
+        conditions.append(
+            or_(
+                and_(Trip.registration_deadline.isnot(None), Trip.registration_deadline >= now),
+                and_(Trip.registration_deadline.is_(None), Trip.start_date > now),
+            )
+        )
+
+    if starting_city_id is not None:
+        conditions.append(Trip.starting_city_id == starting_city_id)
+
+    if is_international is not None:
+        conditions.append(Trip.is_international == is_international)
+
+    # Filter by destination_ids (OR: trip must have at least one of these destinations)
+    if destination_ids:
+        dest_subq = (
+            select(TripDestination.trip_id)
+            .where(TripDestination.destination_id.in_(destination_ids))
+            .distinct()
+            .subquery()
+        )
+        conditions.append(Trip.id.in_(select(dest_subq.c.trip_id)))
+
+    # Filter by number of destinations (single = 1, multiple = >1)
+    if single_destination is not None:
+        count_subq = (
+            select(TripDestination.trip_id, func.count(TripDestination.id).label('dest_count'))
+            .group_by(TripDestination.trip_id)
+            .subquery()
+        )
+        if single_destination:
+            conditions.append(
+                or_(
+                    Trip.id.in_(select(count_subq.c.trip_id).where(count_subq.c.dest_count == 1)),
+                    Trip.id.notin_(select(count_subq.c.trip_id)),  # no destinations = treat as single
+                )
+            )
+        else:
+            conditions.append(
+                Trip.id.in_(select(count_subq.c.trip_id).where(count_subq.c.dest_count > 1))
+            )
+
     if search_query:
         search_pattern = f"%{search_query}%"
-        search_conditions = []
-        if Trip.name_en is not None:
-            search_conditions.append(Trip.name_en.ilike(search_pattern))
-        if Trip.name_ar is not None:
-            search_conditions.append(Trip.name_ar.ilike(search_pattern))
-        if Trip.description_en is not None:
-            search_conditions.append(Trip.description_en.ilike(search_pattern))
-        if Trip.description_ar is not None:
-            search_conditions.append(Trip.description_ar.ilike(search_pattern))
-        if search_conditions:
-            conditions.append(or_(*search_conditions))
-    
-    # Date filters
+        conditions.append(or_(
+            Trip.name_en.ilike(search_pattern),
+            Trip.name_ar.ilike(search_pattern),
+            Trip.description_en.ilike(search_pattern),
+            Trip.description_ar.ilike(search_pattern),
+        ))
+
     if start_date_from:
         conditions.append(Trip.start_date >= start_date_from)
-    
     if start_date_to:
         conditions.append(Trip.start_date <= start_date_to)
-    
     if end_date_from:
         conditions.append(Trip.end_date >= end_date_from)
-    
     if end_date_to:
         conditions.append(Trip.end_date <= end_date_to)
-    
-    # Participants filter
+
     if min_participants is not None:
         conditions.append(Trip.max_participants >= min_participants)
-    
     if max_participants is not None:
         conditions.append(Trip.max_participants <= max_participants)
-    
-    # Apply all conditions
+
     if conditions:
         statement = statement.where(and_(*conditions))
-    
-    # Price filtering requires joining with packages
+
     if needs_package_join:
         statement = statement.join(TripPackage, Trip.id == TripPackage.trip_id)
-        
         if min_price is not None:
             statement = statement.where(TripPackage.price >= min_price)
-        
         if max_price is not None:
             statement = statement.where(TripPackage.price <= max_price)
-    
-    # Rating filtering - get trips with average rating >= min_rating
+
     if needs_rating_join:
-        # Subquery to calculate average rating per trip
         rating_subquery = (
             select(
                 TripRatingModel.trip_id,
@@ -168,23 +202,15 @@ def search_and_filter_trips(
             .having(func.avg(TripRatingModel.rating) >= min_rating)
             .subquery()
         )
-        
-        statement = statement.join(
-            rating_subquery,
-            Trip.id == rating_subquery.c.trip_id
-        )
-    
-    # Order by start_date (most recent first) - must come before distinct
-    statement = statement.order_by(Trip.id, Trip.start_date.desc())
-    
-    # Distinct to avoid duplicate trips when joining
-    # Use distinct on Trip.id to avoid issues with JSON columns
+        statement = statement.join(rating_subquery, Trip.id == rating_subquery.c.trip_id)
+
+    # Newest trips first (created_at desc)
     if needs_package_join or needs_provider_join or needs_rating_join:
-        statement = statement.distinct(Trip.id)
-    
-    # Pagination
+        statement = statement.distinct(Trip.id, Trip.created_at)
+
+    statement = statement.order_by(Trip.created_at.desc())
     statement = statement.offset(skip).limit(limit)
-    
+
     return session.exec(statement).all()
 
 

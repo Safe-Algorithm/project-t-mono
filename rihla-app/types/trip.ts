@@ -35,6 +35,21 @@ export interface TripProvider {
   company_name: string;
 }
 
+export interface StartingCity {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  country_code: string;
+}
+
+export interface DestinationInfo {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  country_code: string;
+  type: string;
+}
+
 export interface Trip {
   id: string;
   provider_id: string;
@@ -45,9 +60,14 @@ export interface Trip {
   description_ar: string | null;
   start_date: string;
   end_date: string;
+  registration_deadline: string | null;
   max_participants: number;
   is_active: boolean;
   is_refundable: boolean;
+  is_international: boolean;
+  starting_city_id: string | null;
+  starting_city: StartingCity | null;
+  destinations: DestinationInfo[];
   amenities: string[] | null;
   has_meeting_place: boolean;
   meeting_location: string | null;
@@ -101,6 +121,7 @@ export interface RegistrationTripInfo {
   start_date: string;
   end_date: string;
   provider_id: string;
+  trip_reference: string;
   provider: { id: string; company_name: string };
 }
 
@@ -112,8 +133,21 @@ export interface TripRegistration {
   registration_date: string;
   total_participants: number;
   total_amount: string | number;
+  spot_reserved_until: string | null;
+  booking_reference: string;
   participants: RegistrationParticipant[];
   trip: RegistrationTripInfo;
+}
+
+export interface TripUpdate {
+  id: string;
+  trip_id: string;
+  registration_id: string | null;
+  provider_id: string;
+  title: string;
+  body: string;
+  created_at: string;
+  read: boolean;
 }
 
 export interface ProviderProfile {

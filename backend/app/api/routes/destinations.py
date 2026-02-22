@@ -223,6 +223,12 @@ def add_destination_to_trip(
         session=session, trip_id=trip_id, data=data
     )
 
+    # Recompute is_international
+    from app.crud.trip import _compute_is_international
+    trip.is_international = _compute_is_international(session, trip)
+    session.add(trip)
+    session.commit()
+
     return _build_trip_destination_read(trip_dest, session)
 
 
@@ -243,6 +249,13 @@ def remove_destination_from_trip(
     crud.destination.remove_trip_destination(
         session=session, trip_id=trip_id, trip_destination_id=trip_destination_id
     )
+
+    # Recompute is_international
+    from app.crud.trip import _compute_is_international
+    trip.is_international = _compute_is_international(session, trip)
+    session.add(trip)
+    session.commit()
+
     return None
 
 

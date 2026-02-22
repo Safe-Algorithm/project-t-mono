@@ -6,9 +6,10 @@ import pytest
 from datetime import datetime, timedelta
 from decimal import Decimal
 from unittest.mock import patch, AsyncMock, MagicMock
+from freezegun import freeze_time
 from sqlmodel import Session
 
-from app.tasks.worker import send_trip_reminders, send_review_reminders, send_payment_reminders
+from app.tasks.worker import send_trip_reminders, send_review_reminders, send_payment_reminders, cancel_expired_spot_reservations
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
 from app.models.links import TripRating
@@ -346,3 +347,136 @@ async def test_worker_handles_errors_gracefully(session: Session):
         
         with pytest.raises(Exception, match="Database error"):
             await send_payment_reminders()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for cancel_expired_spot_reservations
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+@freeze_time("2025-01-01 12:00:00")
+async def test_cancel_expired_spot_reservations_cancels_expired(session: Session):
+    """Registrations with status=pending_payment and expired spot_reserved_until are cancelled."""
+    provider = _create_provider(session)
+    trip = _create_trip(session, provider)
+    user = create_random_user(session)
+
+    # Frozen at 12:00 — reservation expired 1 minute ago
+    expired_reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        status="pending_payment",
+        total_participants=1,
+        total_amount=Decimal("500.00"),
+        spot_reserved_until=datetime(2025, 1, 1, 11, 59, 0),  # 1 min before frozen now
+    )
+    session.add(expired_reg)
+    session.commit()
+    session.refresh(expired_reg)
+
+    with patch("app.tasks.worker.Session") as mock_session_class:
+        mock_session_class.return_value.__enter__.return_value = session
+
+        await cancel_expired_spot_reservations()
+
+    session.refresh(expired_reg)
+    assert expired_reg.status == "cancelled"
+
+
+@pytest.mark.asyncio
+@freeze_time("2025-01-01 12:00:00")
+async def test_cancel_expired_spot_reservations_leaves_valid_reservations(session: Session):
+    """Registrations whose spot_reserved_until is still in the future must not be cancelled."""
+    provider = _create_provider(session)
+    trip = _create_trip(session, provider)
+    user = create_random_user(session)
+
+    # Frozen at 12:00 — reservation expires at 12:10, still 10 minutes away
+    valid_reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        status="pending_payment",
+        total_participants=1,
+        total_amount=Decimal("500.00"),
+        spot_reserved_until=datetime(2025, 1, 1, 12, 10, 0),  # 10 min after frozen now
+    )
+    session.add(valid_reg)
+    session.commit()
+    session.refresh(valid_reg)
+
+    with patch("app.tasks.worker.Session") as mock_session_class:
+        mock_session_class.return_value.__enter__.return_value = session
+
+        await cancel_expired_spot_reservations()
+
+    session.refresh(valid_reg)
+    assert valid_reg.status == "pending_payment"
+
+
+@pytest.mark.asyncio
+@freeze_time("2025-01-01 12:00:00")
+async def test_cancel_expired_spot_reservations_ignores_confirmed(session: Session):
+    """Already-confirmed registrations must never be cancelled by the task."""
+    provider = _create_provider(session)
+    trip = _create_trip(session, provider)
+    user = create_random_user(session)
+
+    # Confirmed registration whose spot window has long expired — must stay confirmed
+    confirmed_reg = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        status="confirmed",
+        total_participants=1,
+        total_amount=Decimal("500.00"),
+        spot_reserved_until=datetime(2025, 1, 1, 11, 0, 0),  # 1 hour before frozen now
+    )
+    session.add(confirmed_reg)
+    session.commit()
+    session.refresh(confirmed_reg)
+
+    with patch("app.tasks.worker.Session") as mock_session_class:
+        mock_session_class.return_value.__enter__.return_value = session
+
+        await cancel_expired_spot_reservations()
+
+    session.refresh(confirmed_reg)
+    assert confirmed_reg.status == "confirmed"
+
+
+@pytest.mark.asyncio
+@freeze_time("2025-01-01 12:00:00")
+async def test_cancel_expired_spot_reservations_ignores_no_reservation(session: Session):
+    """pending_payment registrations with no spot_reserved_until must not be cancelled."""
+    provider = _create_provider(session)
+    trip = _create_trip(session, provider)
+    user = create_random_user(session)
+
+    reg_no_expiry = TripRegistration(
+        trip_id=trip.id,
+        user_id=user.id,
+        status="pending_payment",
+        total_participants=1,
+        total_amount=Decimal("500.00"),
+        spot_reserved_until=None,
+    )
+    session.add(reg_no_expiry)
+    session.commit()
+    session.refresh(reg_no_expiry)
+
+    with patch("app.tasks.worker.Session") as mock_session_class:
+        mock_session_class.return_value.__enter__.return_value = session
+
+        await cancel_expired_spot_reservations()
+
+    session.refresh(reg_no_expiry)
+    assert reg_no_expiry.status == "pending_payment"
+
+
+@pytest.mark.asyncio
+async def test_cancel_expired_spot_reservations_handles_error_gracefully(session: Session):
+    """Task must raise on database error (so Taskiq can log/retry it)."""
+    with patch("app.tasks.worker.Session") as mock_session_class:
+        mock_session_class.return_value.__enter__.side_effect = Exception("DB down")
+
+        with pytest.raises(Exception, match="DB down"):
+            await cancel_expired_spot_reservations()

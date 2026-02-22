@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
+from freezegun import freeze_time
 from app.core.config import settings
 from app.models.user import UserRole
 from app.models.source import RequestSource
@@ -37,8 +38,8 @@ def test_read_trips(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip for Provider",
         description_en="A trip created for a specific provider",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=20
     )
     crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -52,8 +53,8 @@ def test_read_trip(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip for Reading",
         description_en="A trip created for reading test",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=5
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -87,8 +88,8 @@ def test_read_trip_without_packages_fails(client: TestClient, session: Session) 
     trip_in = TripCreate(
         name_en="Test Trip Without Packages",
         description_en="A trip without packages should fail",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=5
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -105,8 +106,8 @@ def test_update_trip(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip to Update",
         description_en="A trip to be updated",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=15
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -122,8 +123,8 @@ def test_delete_trip(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip to Delete",
         description_en="A trip to be deleted",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -144,8 +145,8 @@ def test_create_trip_package(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip for Package",
         description_en="A trip to test packages",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -173,8 +174,8 @@ def test_get_trip_packages(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip for Getting Packages",
         description_en="A trip to test getting packages",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -209,8 +210,8 @@ def test_update_trip_package(client: TestClient, session: Session) -> None:
     trip_in = TripCreate(
         name_en="Test Trip for Package Update",
         description_en="A trip to test package updates",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -255,8 +256,8 @@ def test_register_for_trip_single_participant(mock_email, client: TestClient, se
     trip_in = TripCreate(
         name_en="Test Trip for Registration",
         description_en="A trip to test registration",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -310,8 +311,8 @@ def test_register_for_trip_multiple_participants(mock_email, client: TestClient,
     trip_in = TripCreate(
         name_en="Test Trip for Multi Registration",
         description_en="A trip to test multi-participant registration",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -370,8 +371,8 @@ def test_register_for_trip_with_required_fields_validation(client: TestClient, s
     trip_in = TripCreate(
         name_en="Test Trip for Required Fields Validation",
         description_en="A trip to test required fields validation",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -423,8 +424,8 @@ def test_create_trip_package_with_required_fields(client: TestClient, session: S
     trip_in = TripCreate(
         name_en="Test Trip for Package with Required Fields",
         description_en="A trip to test packages with required fields",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -455,8 +456,8 @@ def test_update_trip_package_required_fields(client: TestClient, session: Sessio
     trip_in = TripCreate(
         name_en="Test Trip for Package Update with Required Fields",
         description_en="A trip to test package required fields updates",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -501,8 +502,8 @@ def test_set_package_required_fields(client: TestClient, session: Session) -> No
     trip_in = TripCreate(
         name_en="Test Trip for Package Required Fields",
         description_en="A trip to test setting package required fields",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -538,8 +539,8 @@ def test_get_package_required_fields(client: TestClient, session: Session) -> No
     trip_in = TripCreate(
         name_en="Test Trip for Getting Package Required Fields",
         description_en="A trip to test getting package required fields",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -589,8 +590,8 @@ def test_register_for_trip_with_package_specific_required_fields(mock_email, cli
     trip_in = TripCreate(
         name_en="Test Trip for Package-Specific Required Fields",
         description_en="A trip to test package-specific required fields validation",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -667,8 +668,8 @@ def test_register_for_trip_missing_package_required_fields(client: TestClient, s
     trip_in = TripCreate(
         name_en="Test Trip for Missing Package Required Fields",
         description_en="A trip to test missing package required fields validation",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -723,8 +724,8 @@ def test_get_trip_registrations(mock_email, client: TestClient, session: Session
     trip_in = TripCreate(
         name_en="Test Trip for Getting Registrations",
         description_en="A trip to test getting registrations",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -938,8 +939,8 @@ def test_register_for_trip_with_registration_user_tracking(mock_email, client: T
     trip_in = TripCreate(
         name_en="Test Trip for Registration User Tracking",
         description_en="A trip to test registration user tracking",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -1017,8 +1018,8 @@ def test_register_for_trip_multiple_registration_users_fails(client: TestClient,
     trip_in = TripCreate(
         name_en="Test Trip for Multiple Registration Users",
         description_en="A trip to test multiple registration users validation",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -1079,8 +1080,8 @@ def test_register_for_trip_no_registration_user_allowed(mock_email, client: Test
     trip_in = TripCreate(
         name_en="Test Trip for No Registration User",
         description_en="A trip to test no registration user scenario",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
@@ -1145,8 +1146,8 @@ def test_mandatory_fields_always_included_in_packages(client: TestClient, sessio
     trip_in = TripCreate(
         name_en="Test Trip for Mandatory Fields",
         description_en="A trip to test mandatory required fields",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
@@ -2068,3 +2069,787 @@ def test_trip_read_includes_images(client: TestClient, session: Session) -> None
     assert "images" in content
     assert len(content["images"]) == 2
     assert "https://example.com/image1.jpg" in content["images"]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for registration guards (inactive trip, past trip, full trip)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _make_package(session, trip_id):
+    """Helper: create a minimal active package for a trip."""
+    from app.models.trip_package import TripPackage as TripPackageModel
+    pkg = TripPackageModel(
+        trip_id=trip_id,
+        name_en="Standard",
+        description_en="Basic",
+        price=100.0,
+        is_active=True,
+    )
+    session.add(pkg)
+    session.commit()
+    session.refresh(pkg)
+    return pkg
+
+
+def test_register_for_inactive_trip_is_blocked(client: TestClient, session: Session) -> None:
+    """Registration must be rejected when the trip is inactive."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Inactive Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=10,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    trip.is_active = False
+    session.add(trip)
+    session.commit()
+
+    _make_package(session, trip.id)
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+    assert response.status_code == 400
+    assert "no longer available" in response.json()["detail"].lower()
+
+
+def test_register_for_past_trip_is_blocked(client: TestClient, session: Session) -> None:
+    """Registration must be rejected when the trip start date is in the past."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Past Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=10,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    # Manually backdate the trip
+    trip.start_date = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+    session.add(trip)
+    session.commit()
+
+    _make_package(session, trip.id)
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+    assert response.status_code == 400
+    assert "started or passed" in response.json()["detail"].lower()
+
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+def test_register_for_full_trip_is_blocked(mock_email, client: TestClient, session: Session) -> None:
+    """Registration must be rejected when the trip is at capacity."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Full Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=1,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    _make_package(session, trip.id)
+
+    # First user fills the single spot
+    user1, headers1 = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    r1 = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=headers1,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+    assert r1.status_code == 200
+
+    # Second user should be blocked
+    user2, headers2 = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    r2 = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=headers2,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Bob"}]},
+    )
+    assert r2.status_code == 400
+    assert "spot" in r2.json()["detail"].lower()
+
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+def test_register_respects_pending_payment_in_capacity_count(mock_email, client: TestClient, session: Session) -> None:
+    """pending_payment registrations must count toward capacity, not just confirmed ones."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Capacity Test Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=2,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    _make_package(session, trip.id)
+
+    # Fill both spots with pending_payment registrations
+    for _ in range(2):
+        u, h = user_authentication_headers(client, session, role=UserRole.NORMAL)
+        client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/register",
+            headers=h,
+            json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "X"}]},
+        )
+
+    # Third registration must be blocked even though none are confirmed
+    u3, h3 = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    r = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=h3,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Y"}]},
+    )
+    assert r.status_code == 400
+    assert "spot" in r.json()["detail"].lower()
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for pending_payment status and spot_reserved_until on registration
+# ──────────────────────────────────────────────────────────────────────────────
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+def test_registration_creates_pending_payment_status(mock_email, client: TestClient, session: Session) -> None:
+    """New registrations must have status=pending_payment, not pending or confirmed."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Payment Status Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=10,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    _make_package(session, trip.id)
+
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "pending_payment"
+
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+@freeze_time("2025-06-01 10:00:00")
+def test_registration_sets_spot_reserved_until(mock_email, client: TestClient, session: Session) -> None:
+    """spot_reserved_until must be exactly 15 minutes from the frozen registration time."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Spot Reservation Trip",
+        description_en="desc",
+        start_date=datetime.datetime(2025, 7, 1),
+        end_date=datetime.datetime(2025, 7, 2),
+        max_participants=10,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    _make_package(session, trip.id)
+
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["spot_reserved_until"] is not None
+
+    reserved_until = datetime.datetime.fromisoformat(data["spot_reserved_until"].replace("Z", ""))
+    # Frozen at 10:00:00 — must be exactly 10:15:00
+    expected = datetime.datetime(2025, 6, 1, 10, 15, 0)
+    assert reserved_until == expected
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for GET /trips/registrations/{registration_id}
+# ──────────────────────────────────────────────────────────────────────────────
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+def test_get_my_registration_by_id(mock_email, client: TestClient, session: Session) -> None:
+    """User can fetch their own registration by ID."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Get Registration Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=10,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    _make_package(session, trip.id)
+
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    reg_response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=mobile_headers,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+    assert reg_response.status_code == 200
+    registration_id = reg_response.json()["id"]
+
+    # Fetch by ID
+    get_response = client.get(
+        f"{settings.API_V1_STR}/trips/registrations/{registration_id}",
+        headers=mobile_headers,
+    )
+    assert get_response.status_code == 200
+    data = get_response.json()
+    assert data["id"] == registration_id
+    assert data["status"] == "pending_payment"
+    assert data["total_participants"] == 1
+
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+def test_get_registration_by_id_returns_404_for_unknown(mock_email, client: TestClient, session: Session) -> None:
+    """Fetching a non-existent registration ID returns 404."""
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    fake_id = str(uuid.uuid4())
+    response = client.get(
+        f"{settings.API_V1_STR}/trips/registrations/{fake_id}",
+        headers=mobile_headers,
+    )
+    assert response.status_code == 404
+
+
+@patch("app.services.email.email_service.send_booking_confirmation_email")
+def test_get_registration_by_id_forbidden_for_other_user(mock_email, client: TestClient, session: Session) -> None:
+    """A user must not be able to fetch another user's registration."""
+    provider_user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_in = TripCreate(
+        name_en="Forbidden Registration Trip",
+        description_en="desc",
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
+        max_participants=10,
+    )
+    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider_user.provider)
+    _make_package(session, trip.id)
+
+    owner, owner_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    reg_response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/register",
+        headers=owner_headers,
+        json={"total_participants": 1, "total_amount": 100.0, "participants": [{"name": "Alice"}]},
+    )
+    registration_id = reg_response.json()["id"]
+
+    # Different user tries to access it
+    other_user, other_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    response = client.get(
+        f"{settings.API_V1_STR}/trips/registrations/{registration_id}",
+        headers=other_headers,
+    )
+    assert response.status_code == 403
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Tests for registration_deadline, starting_city, is_international, destinations
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _make_destination(session, type_="country", country_code="SA", slug="saudi-arabia",
+                      name_en="Saudi Arabia", name_ar="السعودية", parent_id=None):
+    """Helper: create a Destination row directly."""
+    from app.models.destination import Destination, DestinationType
+    dest = Destination(
+        type=DestinationType.COUNTRY if type_ == "country" else DestinationType.CITY,
+        country_code=country_code,
+        slug=slug,
+        full_slug=slug,
+        name_en=name_en,
+        name_ar=name_ar,
+        timezone="Asia/Riyadh",
+        currency_code="SAR",
+        is_active=True,
+        display_order=0,
+        parent_id=parent_id,
+    )
+    session.add(dest)
+    session.commit()
+    session.refresh(dest)
+    return dest
+
+
+def _make_trip_destination(session, trip_id, destination_id):
+    """Helper: link a destination to a trip."""
+    from app.models.trip_destination import TripDestination
+    td = TripDestination(trip_id=trip_id, destination_id=destination_id)
+    session.add(td)
+    session.commit()
+    session.refresh(td)
+    return td
+
+
+def test_registration_deadline_must_be_before_start_date(client: TestClient, session: Session) -> None:
+    """Creating a trip with registration_deadline after start_date must fail."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    deadline_after = start + datetime.timedelta(days=1)
+    data = {
+        "name_en": "Bad Deadline Trip",
+        "description_en": "desc",
+        "start_date": start.isoformat(),
+        "end_date": (start + datetime.timedelta(days=5)).isoformat(),
+        "max_participants": 10,
+        "registration_deadline": deadline_after.isoformat(),
+    }
+    response = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=data)
+    assert response.status_code == 422
+
+
+def test_registration_deadline_on_start_date_is_valid(client: TestClient, session: Session) -> None:
+    """registration_deadline equal to start_date must be accepted."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    data = {
+        "name_en": "Same Day Deadline Trip",
+        "description_en": "desc",
+        "start_date": start.isoformat(),
+        "end_date": (start + datetime.timedelta(days=5)).isoformat(),
+        "max_participants": 10,
+        "registration_deadline": start.isoformat(),
+    }
+    response = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=data)
+    assert response.status_code == 200
+    assert response.json()["registration_deadline"] is not None
+
+
+def test_trip_read_includes_registration_deadline(client: TestClient, session: Session) -> None:
+    """GET /trips/{id} must return registration_deadline in the response."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    deadline = start - datetime.timedelta(days=2)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Deadline Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+            registration_deadline=deadline,
+        ),
+        provider=user.provider,
+    )
+    _make_package(session, trip.id)
+    response = client.get(f"{settings.API_V1_STR}/trips/{trip.id}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert "registration_deadline" in data
+    assert data["registration_deadline"] is not None
+
+
+def test_trip_read_includes_is_international_and_starting_city(client: TestClient, session: Session) -> None:
+    """GET /trips/{id} must return is_international and starting_city fields."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    country = _make_destination(session)
+    city = _make_destination(
+        session, type_="city", country_code="SA", slug="riyadh",
+        name_en="Riyadh", name_ar="الرياض", parent_id=country.id,
+    )
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="City Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+            starting_city_id=city.id,
+        ),
+        provider=user.provider,
+    )
+    _make_package(session, trip.id)
+    response = client.get(f"{settings.API_V1_STR}/trips/{trip.id}", headers=headers)
+    assert response.status_code == 200
+    data = response.json()
+    assert "is_international" in data
+    assert data["is_international"] is False
+    assert "starting_city_id" in data
+    assert data["starting_city_id"] == str(city.id)
+
+
+def test_public_trip_response_includes_destinations(client: TestClient, session: Session) -> None:
+    """GET /public-trips/{id} must return a destinations list."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    country = _make_destination(session, slug="sa-dest-pub", name_en="Saudi Arabia Pub")
+    city = _make_destination(
+        session, type_="city", country_code="SA", slug="jeddah-pub",
+        name_en="Jeddah", name_ar="جدة", parent_id=country.id,
+    )
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Destinations Response Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip.is_active = True
+    session.add(trip)
+    _make_trip_destination(session, trip.id, city.id)
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips/{trip.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert "destinations" in data
+    assert len(data["destinations"]) == 1
+    assert data["destinations"][0]["name_en"] == "Jeddah"
+
+
+def test_public_feed_excludes_past_trips(client: TestClient, session: Session) -> None:
+    """GET /public-trips must not return trips whose start_date is in the past."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+    future_trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Future Only Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    future_trip.is_active = True
+    session.add(future_trip)
+
+    past_trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Past Only Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    past_trip.is_active = True
+    past_trip.start_date = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+    session.add(past_trip)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Only+Trip")
+    assert response.status_code == 200
+    names = [t["name_en"] for t in response.json()]
+    assert "Future Only Trip" in names
+    assert "Past Only Trip" not in names
+
+
+def test_public_feed_excludes_trips_with_expired_deadline(client: TestClient, session: Session) -> None:
+    """GET /public-trips must exclude trips whose registration_deadline has passed."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+
+    open_trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Open Deadline Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+            registration_deadline=start - datetime.timedelta(days=1),  # future deadline
+        ),
+        provider=user.provider,
+    )
+    open_trip.is_active = True
+    session.add(open_trip)
+
+    closed_trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Closed Deadline Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+            registration_deadline=start - datetime.timedelta(days=1),
+        ),
+        provider=user.provider,
+    )
+    closed_trip.is_active = True
+    # Backdate the deadline to the past
+    closed_trip.registration_deadline = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+    session.add(closed_trip)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Deadline+Trip")
+    assert response.status_code == 200
+    names = [t["name_en"] for t in response.json()]
+    assert "Open Deadline Trip" in names
+    assert "Closed Deadline Trip" not in names
+
+
+def test_filter_public_trips_by_destination_ids_or_logic(client: TestClient, session: Session) -> None:
+    """destination_ids filter uses OR: trips with ANY of the given destinations are returned."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    country = _make_destination(session, slug="sa-or-filter", name_en="Saudi Arabia OR")
+    jeddah = _make_destination(
+        session, type_="city", country_code="SA", slug="jeddah-or",
+        name_en="Jeddah OR", name_ar="جدة", parent_id=country.id,
+    )
+    makkah = _make_destination(
+        session, type_="city", country_code="SA", slug="makkah-or",
+        name_en="Makkah OR", name_ar="مكة", parent_id=country.id,
+    )
+    riyadh = _make_destination(
+        session, type_="city", country_code="SA", slug="riyadh-or",
+        name_en="Riyadh OR", name_ar="الرياض", parent_id=country.id,
+    )
+
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+
+    # Trip A: goes to Jeddah
+    trip_a = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Jeddah Trip OR",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_a.is_active = True
+    session.add(trip_a)
+    _make_trip_destination(session, trip_a.id, jeddah.id)
+
+    # Trip B: goes to Makkah
+    trip_b = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Makkah Trip OR",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_b.is_active = True
+    session.add(trip_b)
+    _make_trip_destination(session, trip_b.id, makkah.id)
+
+    # Trip C: goes to Riyadh only (should NOT match)
+    trip_c = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Riyadh Trip OR",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_c.is_active = True
+    session.add(trip_c)
+    _make_trip_destination(session, trip_c.id, riyadh.id)
+    session.commit()
+
+    # Filter for Jeddah OR Makkah
+    response = client.get(
+        f"{settings.API_V1_STR}/public-trips"
+        f"?destination_ids={jeddah.id}&destination_ids={makkah.id}"
+        f"&search=Trip+OR"
+    )
+    assert response.status_code == 200
+    names = [t["name_en"] for t in response.json()]
+    assert "Jeddah Trip OR" in names
+    assert "Makkah Trip OR" in names
+    assert "Riyadh Trip OR" not in names
+
+
+def test_filter_public_trips_single_destination(client: TestClient, session: Session) -> None:
+    """single_destination=true returns only trips with exactly one destination."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    country = _make_destination(session, slug="sa-single", name_en="Saudi Arabia Single")
+    city1 = _make_destination(
+        session, type_="city", country_code="SA", slug="city1-single",
+        name_en="City1 Single", name_ar="مدينة1", parent_id=country.id,
+    )
+    city2 = _make_destination(
+        session, type_="city", country_code="SA", slug="city2-single",
+        name_en="City2 Single", name_ar="مدينة2", parent_id=country.id,
+    )
+
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+
+    # Single-destination trip
+    trip_single = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Single Dest Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_single.is_active = True
+    session.add(trip_single)
+    _make_trip_destination(session, trip_single.id, city1.id)
+
+    # Multi-destination trip
+    trip_multi = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Multi Dest Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_multi.is_active = True
+    session.add(trip_multi)
+    _make_trip_destination(session, trip_multi.id, city1.id)
+    _make_trip_destination(session, trip_multi.id, city2.id)
+    session.commit()
+
+    # Filter single_destination=true
+    response = client.get(
+        f"{settings.API_V1_STR}/public-trips?single_destination=true&search=Dest+Trip"
+    )
+    assert response.status_code == 200
+    names = [t["name_en"] for t in response.json()]
+    assert "Single Dest Trip" in names
+    assert "Multi Dest Trip" not in names
+
+    # Filter single_destination=false (multiple)
+    response2 = client.get(
+        f"{settings.API_V1_STR}/public-trips?single_destination=false&search=Dest+Trip"
+    )
+    assert response2.status_code == 200
+    names2 = [t["name_en"] for t in response2.json()]
+    assert "Multi Dest Trip" in names2
+    assert "Single Dest Trip" not in names2
+
+
+def test_filter_public_trips_by_is_international(client: TestClient, session: Session) -> None:
+    """is_international filter correctly separates domestic and international trips."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+
+    domestic_trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Domestic Intl Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    domestic_trip.is_active = True
+    domestic_trip.is_international = False
+    session.add(domestic_trip)
+
+    international_trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="International Intl Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    international_trip.is_active = True
+    international_trip.is_international = True
+    session.add(international_trip)
+    session.commit()
+
+    # Filter domestic
+    r_domestic = client.get(
+        f"{settings.API_V1_STR}/public-trips?is_international=false&search=Intl+Trip"
+    )
+    assert r_domestic.status_code == 200
+    names_d = [t["name_en"] for t in r_domestic.json()]
+    assert "Domestic Intl Trip" in names_d
+    assert "International Intl Trip" not in names_d
+
+    # Filter international
+    r_intl = client.get(
+        f"{settings.API_V1_STR}/public-trips?is_international=true&search=Intl+Trip"
+    )
+    assert r_intl.status_code == 200
+    names_i = [t["name_en"] for t in r_intl.json()]
+    assert "International Intl Trip" in names_i
+    assert "Domestic Intl Trip" not in names_i
+
+
+def test_public_feed_ordered_newest_first(client: TestClient, session: Session) -> None:
+    """GET /public-trips must return trips ordered by created_at descending."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    start = datetime.datetime.utcnow() + datetime.timedelta(days=10)
+
+    trip_old = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Oldest Ordering Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_old.is_active = True
+    trip_old.created_at = datetime.datetime.utcnow() - datetime.timedelta(hours=2)
+    session.add(trip_old)
+
+    trip_new = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Newest Ordering Trip",
+            description_en="desc",
+            start_date=start,
+            end_date=start + datetime.timedelta(days=5),
+            max_participants=10,
+        ),
+        provider=user.provider,
+    )
+    trip_new.is_active = True
+    trip_new.created_at = datetime.datetime.utcnow()
+    session.add(trip_new)
+    session.commit()
+
+    response = client.get(f"{settings.API_V1_STR}/public-trips?search=Ordering+Trip")
+    assert response.status_code == 200
+    trips = response.json()
+    names = [t["name_en"] for t in trips]
+    assert "Newest Ordering Trip" in names
+    assert "Oldest Ordering Trip" in names
+    # Newest must appear before oldest
+    assert names.index("Newest Ordering Trip") < names.index("Oldest Ordering Trip")

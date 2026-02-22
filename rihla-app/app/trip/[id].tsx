@@ -182,6 +182,54 @@ export default function TripDetailScreen() {
             />
           </View>
 
+          {/* Route: Starting city → Destinations */}
+          {(trip.starting_city || (trip.destinations && trip.destinations.length > 0)) && (
+            <View style={s.routeBox}>
+              <Ionicons name="navigate-outline" size={18} color={colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={s.routeLabel}>{t('trip.route')}</Text>
+                <View style={s.routeRow}>
+                  {trip.starting_city && (
+                    <View style={s.routeChip}>
+                      <Ionicons name="location" size={12} color={colors.primary} />
+                      <Text style={s.routeChipText}>
+                        {i18n.language === 'ar'
+                          ? trip.starting_city.name_ar || trip.starting_city.name_en
+                          : trip.starting_city.name_en || trip.starting_city.name_ar}
+                      </Text>
+                    </View>
+                  )}
+                  {trip.starting_city && trip.destinations && trip.destinations.length > 0 && (
+                    <Ionicons
+                      name={i18n.language === 'ar' ? 'arrow-back' : 'arrow-forward'}
+                      size={14}
+                      color={colors.textTertiary}
+                    />
+                  )}
+                  {(trip.destinations ?? []).map((dest, i) => (
+                    <React.Fragment key={dest.id}>
+                      <View style={s.routeChip}>
+                        <Ionicons name="flag-outline" size={12} color={colors.accent} />
+                        <Text style={[s.routeChipText, { color: colors.accent }]}>
+                          {i18n.language === 'ar' ? dest.name_ar || dest.name_en : dest.name_en || dest.name_ar}
+                        </Text>
+                      </View>
+                      {i < (trip.destinations?.length ?? 0) - 1 && (
+                        <Text style={s.routeSep}>·</Text>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </View>
+                {trip.is_international && (
+                  <View style={s.intlBadge}>
+                    <Ionicons name="globe-outline" size={12} color={colors.primary} />
+                    <Text style={s.intlText}>{t('trip.internationalTrip')}</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
+
           {/* Meeting place */}
           {trip.has_meeting_place && trip.meeting_location && (
             <View style={s.meetingBox}>
@@ -416,6 +464,19 @@ function makeStyles(c: ThemeColors) {
   infoChipLabel: { fontSize: FontSize.xs, color: c.textTertiary, fontWeight: '500' },
   infoChipValue: { fontSize: FontSize.sm, color: c.textPrimary, fontWeight: '700' },
 
+  routeBox: {
+    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
+    backgroundColor: c.gray50,
+    borderRadius: Radius.lg, padding: 14, marginBottom: 20,
+    borderLeftWidth: 3, borderLeftColor: c.primary,
+  },
+  routeLabel: { fontSize: FontSize.xs, color: c.primary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  routeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
+  routeChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: c.surface, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: c.border },
+  routeChipText: { fontSize: FontSize.xs, color: c.textPrimary, fontWeight: '600' },
+  routeSep: { fontSize: FontSize.sm, color: c.textTertiary },
+  intlBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
+  intlText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '600' },
   meetingBox: {
     flexDirection: 'row', gap: 12, alignItems: 'flex-start',
     backgroundColor: c.primarySurface,

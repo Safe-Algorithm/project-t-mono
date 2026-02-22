@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import i18n from '../lib/i18n';
 import apiClient from '../lib/api';
-import { Trip, TripRating, Review, TripRegistration, ProviderProfile } from '../types/trip';
+import { Trip, TripRating, Review, TripRegistration, ProviderProfile, TripUpdate } from '../types/trip';
 
 export interface FieldOption {
   value: string;
@@ -42,8 +42,32 @@ export interface TripFilters {
   min_participants?: number;
   max_participants?: number;
   min_rating?: number;
+  starting_city_id?: string;
+  is_international?: boolean;
+  destination_ids?: string[];
+  single_destination?: boolean;
   skip?: number;
   limit?: number;
+}
+
+export interface DestinationOption {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  type: string;
+  country_code: string;
+  children?: DestinationOption[];
+}
+
+export function useDestinations() {
+  return useQuery<DestinationOption[]>({
+    queryKey: ['destinations', 'active'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<DestinationOption[]>('/destinations');
+      return data;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
 }
 
 export function usePublicTrips(filters: TripFilters = {}) {
@@ -52,7 +76,12 @@ export function usePublicTrips(filters: TripFilters = {}) {
     queryFn: async () => {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([k, v]) => {
-        if (v !== undefined && v !== '') params.append(k, String(v));
+        if (v === undefined || v === '') return;
+        if (k === 'destination_ids' && Array.isArray(v)) {
+          (v as string[]).forEach((id) => params.append('destination_ids', id));
+        } else {
+          params.append(k, String(v));
+        }
       });
       const { data } = await apiClient.get<Trip[]>(`/public-trips?${params}`);
       return data;
@@ -169,5 +198,98 @@ export function useSubmitReview() {
       qc.invalidateQueries({ queryKey: ['trips', tripId, 'reviews'] });
       qc.invalidateQueries({ queryKey: ['trips', tripId, 'rating'] });
     },
+  });
+}
+
+export function useRegistration(registrationId: string | null) {
+  return useQuery<TripRegistration>({
+    queryKey: ['registrations', registrationId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<TripRegistration>(`/trips/registrations/${registrationId}`);
+      return data;
+    },
+    enabled: !!registrationId,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'pending_payment' ? 5000 : false;
+    },
+  });
+}
+
+export interface PaymentInitiateResponse {
+  payment_id: string;
+  moyasar_payment_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+  source: { type: string; transaction_url?: string; [key: string]: any };
+  callback_url?: string;
+}
+
+export function useCreatePayment() {
+  return useMutation({
+    mutationFn: async ({
+      registrationId,
+      paymentMethod,
+      callbackUrl,
+    }: {
+      registrationId: string;
+      paymentMethod: string;
+      callbackUrl: string;
+    }): Promise<PaymentInitiateResponse> => {
+      const { data } = await apiClient.post<PaymentInitiateResponse>('/payments/create', {
+        registration_id: registrationId,
+        payment_method: paymentMethod,
+        callback_url: callbackUrl,
+      });
+      return data;
+    },
+  });
+}
+
+export function useTripUpdates(tripId: string | null) {
+  return useQuery<TripUpdate[]>({
+    queryKey: ['trip-updates', tripId],
+    queryFn: async () => {
+      const { data } = await apiClient.get<TripUpdate[]>(`/trips/${tripId}/updates`);
+      return data;
+    },
+    enabled: !!tripId,
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useMarkUpdateRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (updateId: string) => {
+      await apiClient.post(`/updates/${updateId}/mark-read`, {});
+    },
+    onSuccess: (_data, updateId) => {
+      qc.invalidateQueries({ queryKey: ['trip-updates'] });
+    },
+  });
+}
+
+export function useAllMyTripUpdates() {
+  const { data: registrations } = useMyRegistrations();
+  return useQuery<TripUpdate[]>({
+    queryKey: ['all-trip-updates', registrations?.map((r) => r.trip_id)],
+    queryFn: async () => {
+      if (!registrations?.length) return [];
+      const results = await Promise.all(
+        registrations
+          .filter((r) => r.status === 'confirmed' || r.status === 'pending_payment')
+          .map((r) =>
+            apiClient
+              .get<TripUpdate[]>(`/trips/${r.trip_id}/updates`)
+              .then((res) => res.data)
+              .catch(() => [] as TripUpdate[])
+          )
+      );
+      return results.flat().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    },
+    enabled: !!registrations?.length,
+    staleTime: 1000 * 30,
   });
 }

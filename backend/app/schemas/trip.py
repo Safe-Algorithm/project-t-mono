@@ -23,17 +23,20 @@ class TripBase(BaseModel):
     has_meeting_place: bool = False
     meeting_location: Optional[str] = None
     meeting_time: Optional[datetime] = None
+    registration_deadline: Optional[datetime] = None
+    starting_city_id: Optional[uuid.UUID] = None
+    is_international: bool = False
 
 
 class TripCreate(TripBase):
     @model_validator(mode='after')
-    def validate_bilingual_fields(self):
-        # Check if at least one name field is provided
+    def validate_trip_fields(self):
         if not self.name_en and not self.name_ar:
             raise ValueError('At least one of name_en or name_ar must be provided')
-        # Check if at least one description field is provided
         if not self.description_en and not self.description_ar:
             raise ValueError('At least one of description_en or description_ar must be provided')
+        if self.registration_deadline and self.registration_deadline > self.start_date:
+            raise ValueError('registration_deadline must be on or before start_date')
         return self
 
 
@@ -53,6 +56,15 @@ class TripUpdate(BaseModel):
     has_meeting_place: Optional[bool] = None
     meeting_location: Optional[str] = None
     meeting_time: Optional[datetime] = None
+    registration_deadline: Optional[datetime] = None
+    starting_city_id: Optional[uuid.UUID] = None
+    is_international: Optional[bool] = None
+
+    @model_validator(mode='after')
+    def validate_deadline(self):
+        if self.registration_deadline and self.start_date and self.registration_deadline > self.start_date:
+            raise ValueError('registration_deadline must be on or before start_date')
+        return self
 
 
 class TripRatingCreate(BaseModel):
@@ -60,15 +72,40 @@ class TripRatingCreate(BaseModel):
     comment: Optional[str] = None
 
 
+class StartingCityInfo(BaseModel):
+    id: uuid.UUID
+    name_en: str
+    name_ar: str
+    country_code: str
+
+    class Config:
+        from_attributes = True
+
+
+class DestinationInfo(BaseModel):
+    id: uuid.UUID
+    name_en: str
+    name_ar: str
+    country_code: str
+    type: str
+
+    class Config:
+        from_attributes = True
+
+
 class ProviderInfo(BaseModel):
     id: uuid.UUID
     company_name: str
+
 
 class TripRead(TripBase):
     id: uuid.UUID
     provider_id: uuid.UUID
     provider: ProviderInfo
     is_active: bool
+    trip_reference: str
+    starting_city: Optional[StartingCityInfo] = None
+    destinations: List[DestinationInfo] = []
     packages: List[TripPackageWithRequiredFields] = []
     extra_fees: List[TripExtraFeeResponse] = []
 

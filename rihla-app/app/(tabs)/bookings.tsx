@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useMyRegistrations } from '../../hooks/useTrips';
+import { useMyRegistrations, useAllMyTripUpdates } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -33,7 +33,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
     : '';
 
   return (
-    <TouchableOpacity style={s.card} onPress={() => router.push(`/trip/${reg.trip_id}`)} activeOpacity={0.85}>
+    <TouchableOpacity style={s.card} onPress={() => router.push(`/booking/${reg.id}`)} activeOpacity={0.85}>
       <View style={s.cardHeader}>
         <View style={{ flex: 1 }}>
           <Text style={s.tripName} numberOfLines={1}>{tripName}</Text>
@@ -72,14 +72,26 @@ export default function BookingsScreen() {
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const { data: registrations, isLoading } = useMyRegistrations();
+  const { data: allUpdates } = useAllMyTripUpdates();
+  const unreadCount = allUpdates?.filter((u) => !u.read).length ?? 0;
 
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{t('bookings.title')}</Text>
-        {registrations && registrations.length > 0 && (
-          <Text style={s.count}>{registrations.length}</Text>
-        )}
+        <View style={s.headerRight}>
+          {registrations && registrations.length > 0 && (
+            <Text style={s.count}>{registrations.length}</Text>
+          )}
+          <TouchableOpacity style={s.updatesBtn} onPress={() => router.push('/trip-updates')}>
+            <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+            {unreadCount > 0 && (
+              <View style={s.unreadDot}>
+                <Text style={s.unreadDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
       {isLoading ? (
         <View style={s.list}>
@@ -112,9 +124,13 @@ export default function BookingsScreen() {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
-    header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
     title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     count: { backgroundColor: c.primary, color: c.white, fontSize: FontSize.sm, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, overflow: 'hidden' },
+    updatesBtn: { position: 'relative', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+    unreadDot: { position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: c.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+    unreadDotText: { color: c.white, fontSize: 9, fontWeight: '800' },
     list: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, gap: 12 },
     card: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 16, gap: 10, ...Shadow.sm },
     cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },

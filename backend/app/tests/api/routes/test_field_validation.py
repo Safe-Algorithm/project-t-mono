@@ -501,8 +501,8 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
     trip_in = TripCreate(
         name_en="Test Trip with Validation",
         description_en="A trip to test validation integration",
-        start_date=datetime.datetime.utcnow(),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
+        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=10
     )
     trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=provider)

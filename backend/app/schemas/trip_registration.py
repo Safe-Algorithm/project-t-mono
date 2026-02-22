@@ -42,7 +42,7 @@ class TripRegistrationParticipant(TripParticipantBase):
 class TripRegistrationBase(BaseModel):
     total_participants: int = 1
     total_amount: Decimal
-    status: str = "pending"
+    status: str = "pending_payment"
 
 
 class TripRegistrationCreate(TripRegistrationBase):
@@ -59,7 +59,9 @@ class TripRegistration(TripRegistrationBase):
     trip_id: uuid.UUID
     user_id: uuid.UUID
     registration_date: datetime
-    participants: List[TripRegistrationParticipant] = []  # Removed package_id - now per participant
+    spot_reserved_until: Optional[datetime] = None
+    booking_reference: str
+    participants: List[TripRegistrationParticipant] = []
 
     class Config:
         from_attributes = True

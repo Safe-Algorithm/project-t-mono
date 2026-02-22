@@ -44,8 +44,11 @@ export interface Trip {
   description_ar: string;
   start_date: string; // datetime
   end_date: string; // datetime
+  registration_deadline?: string | null;
   max_participants: number;
   is_active: boolean;
+  is_international?: boolean;
+  starting_city_id?: string | null;
   provider_id: string; // uuid
   images?: string[];
   trip_metadata?: Record<string, any>;
