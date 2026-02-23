@@ -118,10 +118,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     if (trip) {
       // Populate trip form data
       setFormData({
-        name_en: trip.name_en,
-        name_ar: trip.name_ar,
-        description_en: trip.description_en,
-        description_ar: trip.description_ar,
+        name_en: trip.name_en ?? '',
+        name_ar: trip.name_ar ?? '',
+        description_en: trip.description_en ?? '',
+        description_ar: trip.description_ar ?? '',
         start_date: new Date(trip.start_date).toISOString().substring(0, 16),
         end_date: new Date(trip.end_date).toISOString().substring(0, 16),
         registration_deadline: trip.registration_deadline ? new Date(trip.registration_deadline).toISOString().substring(0, 16) : '',

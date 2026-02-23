@@ -14,6 +14,54 @@ interface User {
   source?: string;
 }
 
+interface UserDetail {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  is_active: boolean;
+  source: string;
+  provider_id: string | null;
+  provider_company_name: string | null;
+  preferred_language: string;
+  created_at: string | null;
+  updated_at: string | null;
+  registrations: RegistrationSummary[];
+}
+
+interface RegistrationSummary {
+  id: string;
+  booking_reference: string;
+  trip_id: string;
+  trip_name: string | null;
+  trip_reference: string | null;
+  status: string;
+  total_participants: number;
+  total_amount: string;
+  registration_date: string | null;
+  payments: PaymentSummary[];
+}
+
+interface PaymentSummary {
+  id: string;
+  moyasar_payment_id: string;
+  amount: string;
+  currency: string;
+  status: string;
+  created_at: string | null;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: 'bg-green-100 text-green-800',
+  pending_payment: 'bg-yellow-100 text-yellow-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  cancelled: 'bg-red-100 text-red-800',
+  completed: 'bg-blue-100 text-blue-800',
+  paid: 'bg-green-100 text-green-800',
+  failed: 'bg-red-100 text-red-800',
+};
+
 type UserTab = 'admin' | 'provider' | 'normal';
 
 const UsersPage = () => {
@@ -22,6 +70,21 @@ const UsersPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
+  const [userDetailLoading, setUserDetailLoading] = useState(false);
+
+  const openUserDetail = async (userId: string) => {
+    setUserDetailLoading(true);
+    setSelectedUser(null);
+    try {
+      const detail = await api.get<UserDetail>(`/admin/users/${userId}`);
+      setSelectedUser(detail);
+    } catch (err) {
+      console.error('Failed to load user detail:', err);
+    } finally {
+      setUserDetailLoading(false);
+    }
+  };
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
@@ -176,8 +239,8 @@ const UsersPage = () => {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-2 px-4 border-b">{user.name}</td>
+                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer" onClick={() => openUserDetail(user.id)}>
+                    <td className="py-2 px-4 border-b font-medium text-blue-600 hover:underline">{user.name}</td>
                     <td className="py-2 px-4 border-b">{user.email}</td>
                     <td className="py-2 px-4 border-b">{user.phone}</td>
                     <td className="py-2 px-4 border-b">
@@ -218,6 +281,100 @@ const UsersPage = () => {
           </div>
         )}
       </div>
+
+      {/* User Detail Drawer */}
+      {(selectedUser || userDetailLoading) && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black bg-opacity-40" onClick={() => setSelectedUser(null)} />
+          <div className="w-full max-w-2xl bg-white dark:bg-gray-900 h-full overflow-y-auto shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="font-bold text-lg">User Detail</h3>
+              <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+
+            {userDetailLoading ? (
+              <div className="flex-1 flex items-center justify-center">
+                <p className="text-gray-500">Loading…</p>
+              </div>
+            ) : selectedUser ? (
+              <div className="p-4 space-y-6 flex-1">
+                {/* Profile */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <h4 className="font-semibold text-sm mb-3">Profile</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div><span className="text-gray-500 block text-xs">Name</span><span className="font-medium">{selectedUser.name}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Email</span><span className="font-medium">{selectedUser.email || '—'}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Phone</span><span className="font-medium">{selectedUser.phone || '—'}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Role</span><span className="font-medium capitalize">{selectedUser.role}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Source</span><span className="font-medium">{selectedUser.source}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Language</span><span className="font-medium uppercase">{selectedUser.preferred_language}</span></div>
+                    <div><span className="text-gray-500 block text-xs">Status</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${selectedUser.is_active ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {selectedUser.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    {selectedUser.provider_company_name && (
+                      <div><span className="text-gray-500 block text-xs">Company</span><span className="font-medium">{selectedUser.provider_company_name}</span></div>
+                    )}
+                    {selectedUser.created_at && (
+                      <div><span className="text-gray-500 block text-xs">Registered</span><span className="font-medium">{new Date(selectedUser.created_at).toLocaleString()}</span></div>
+                    )}
+                    {selectedUser.updated_at && (
+                      <div><span className="text-gray-500 block text-xs">Last Updated</span><span className="font-medium">{new Date(selectedUser.updated_at).toLocaleString()}</span></div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Registrations */}
+                <div>
+                  <h4 className="font-semibold text-sm mb-3">Bookings ({selectedUser.registrations.length})</h4>
+                  {selectedUser.registrations.length === 0 ? (
+                    <p className="text-gray-500 text-sm">No bookings found.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {selectedUser.registrations.map(reg => (
+                        <div key={reg.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-medium text-sm">{reg.trip_name || 'Unknown Trip'}</p>
+                              <p className="text-xs text-gray-500 font-mono">{reg.booking_reference}</p>
+                              {reg.trip_reference && <p className="text-xs text-gray-400">Trip ref: {reg.trip_reference}</p>}
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[reg.status] || 'bg-gray-100 text-gray-700'}`}>
+                              {reg.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                            <span>👥 {reg.total_participants} participant{reg.total_participants !== 1 ? 's' : ''}</span>
+                            <span>💰 {reg.total_amount} SAR</span>
+                            {reg.registration_date && <span>📅 {new Date(reg.registration_date).toLocaleDateString()}</span>}
+                          </div>
+                          {/* Payments */}
+                          {reg.payments.length > 0 && (
+                            <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                              <p className="text-xs font-medium text-gray-500 mb-1">Payments</p>
+                              <div className="space-y-1">
+                                {reg.payments.map(p => (
+                                  <div key={p.id} className="flex justify-between items-center text-xs">
+                                    <span className="font-mono text-gray-400">{p.moyasar_payment_id || p.id.slice(0, 8)}</span>
+                                    <span>{p.amount} {p.currency}</span>
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-semibold ${STATUS_COLORS[p.status] || 'bg-gray-100 text-gray-700'}`}>{p.status}</span>
+                                    {p.created_at && <span className="text-gray-400">{new Date(p.created_at).toLocaleDateString()}</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       {/* Invite Modal */}
       {showInviteModal && (

@@ -1224,14 +1224,14 @@ async def register_for_trip(
 
 
 
-@router.get("/{trip_id}/registrations", response_model=List[TripRegistration])
+@router.get("/{trip_id}/registrations")
 def get_trip_registrations(
     *,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     current_user: User = Depends(get_current_active_provider),
 ):
-    """Get all registrations for a trip (provider only)."""
+    """Get all registrations for a trip (provider only), enriched with user info."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -1261,8 +1261,10 @@ def get_trip_registrations(
         provider={"id": str(provider.id), "company_name": provider.company_name} if provider else None,
     )
 
-    return [
-        TripRegistrationSchema(
+    result = []
+    for reg in registrations:
+        user = session.get(User, reg.user_id)
+        reg_dict = TripRegistrationSchema(
             id=reg.id,
             trip_id=reg.trip_id,
             user_id=reg.user_id,
@@ -1274,9 +1276,13 @@ def get_trip_registrations(
             booking_reference=reg.booking_reference,
             participants=list(reg.participants or []),
             trip=trip_info,
-        )
-        for reg in registrations
-    ]
+        ).model_dump()
+        reg_dict["user_name"] = user.name if user else None
+        reg_dict["user_email"] = user.email if user else None
+        reg_dict["user_phone"] = user.phone if user else None
+        result.append(reg_dict)
+
+    return result
 
 
 # Field Validation Endpoints

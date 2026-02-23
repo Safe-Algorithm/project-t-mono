@@ -65,14 +65,19 @@ interface Provider {
 
 interface Trip {
   id: string;
-  name_en: string;
-  name_ar: string;
-  description_en: string;
-  description_ar: string;
+  name_en: string | null;
+  name_ar: string | null;
+  description_en: string | null;
+  description_ar: string | null;
   start_date: string;
   end_date: string;
+  registration_deadline?: string | null;
   max_participants: number;
   is_active: boolean;
+  is_international?: boolean;
+  starting_city_id?: string | null;
+  starting_city?: { id: string; name_en: string; name_ar: string } | null;
+  trip_reference?: string | null;
   provider_id: string;
   provider: Provider;
   images?: string[];
@@ -84,6 +89,28 @@ interface Trip {
   meeting_location?: string;
   meeting_time?: string;
 }
+
+interface TripRegistration {
+  id: string;
+  booking_reference: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string | null;
+  user_phone: string | null;
+  total_participants: number;
+  total_amount: string;
+  status: string;
+  registration_date: string;
+  participants: any[];
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  confirmed: 'bg-green-100 text-green-800',
+  pending_payment: 'bg-yellow-100 text-yellow-800',
+  pending: 'bg-yellow-100 text-yellow-800',
+  cancelled: 'bg-red-100 text-red-800',
+  completed: 'bg-blue-100 text-blue-800',
+};
 
 interface FieldMetadata {
   [key: string]: {
@@ -101,6 +128,8 @@ const TripDetailPage = () => {
   const [fieldMetadata, setFieldMetadata] = useState<FieldMetadata>({});
   const [tripDestinations, setTripDestinations] = useState<TripDestinationInfo[]>([]);
   const [tripUpdates, setTripUpdates] = useState<TripUpdateInfo[]>([]);
+  const [registrations, setRegistrations] = useState<TripRegistration[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<TripRegistration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
@@ -191,6 +220,22 @@ const TripDetailPage = () => {
         } catch (updErr) {
           console.error('Failed to fetch trip updates:', updErr);
         }
+
+        // Fetch registrations (uses provider endpoint but admin token is accepted via admin route)
+        try {
+          const regsResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/admin/trips/${id}/registrations`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-Source': 'admin_panel',
+            },
+          });
+          if (regsResponse.ok) {
+            const regsData = await regsResponse.json();
+            setRegistrations(regsData);
+          }
+        } catch (regErr) {
+          console.error('Failed to fetch registrations:', regErr);
+        }
         
       } catch (err) {
         if (err instanceof Error) {
@@ -266,6 +311,30 @@ const TripDetailPage = () => {
             <p className={`mt-1 text-sm font-semibold ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>
               {trip.is_refundable ? t('common.yes') : t('common.no')}
             </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Registration Deadline</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—'}</p>
+          </div>
+          {trip.starting_city && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Starting City</label>
+              <p className="mt-1 text-sm text-gray-900 dark:text-white">📍 {trip.starting_city.name_en}</p>
+            </div>
+          )}
+          {trip.trip_reference && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Trip Reference</label>
+              <p className="mt-1 text-sm font-mono text-gray-900 dark:text-white">{trip.trip_reference}</p>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
+            <p className="mt-1 text-sm text-gray-900 dark:text-white">{trip.is_international ? '🌍 International' : '🏠 Domestic'}</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bookings</label>
+            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{registrations.length} total · {registrations.filter(r => r.status === 'confirmed').length} confirmed</p>
           </div>
         </div>
         <div className="mt-4">
@@ -396,6 +465,141 @@ const TripDetailPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bookings */}
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
+        <h2 className="text-2xl font-semibold mb-4">Bookings ({registrations.length})</h2>
+        {registrations.length === 0 ? (
+          <p className="text-gray-500 text-sm">No bookings yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
+                  <th className="py-2 px-3 text-gray-500 font-medium">Booking Ref</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Name</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Email</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Phone</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Participants</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Amount</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Status</th>
+                  <th className="py-2 px-3 text-gray-500 font-medium">Date</th>
+                  <th className="py-2 px-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {registrations.map(reg => (
+                  <tr key={reg.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td className="py-2 px-3 font-mono text-xs">{reg.booking_reference}</td>
+                    <td className="py-2 px-3 font-medium">{reg.user_name || '—'}</td>
+                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{reg.user_email || '—'}</td>
+                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{reg.user_phone || '—'}</td>
+                    <td className="py-2 px-3 text-center">{reg.total_participants}</td>
+                    <td className="py-2 px-3">{reg.total_amount} SAR</td>
+                    <td className="py-2 px-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[reg.status] || 'bg-gray-100 text-gray-700'}`}>
+                        {reg.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td className="py-2 px-3 text-gray-500 text-xs">{new Date(reg.registration_date).toLocaleDateString()}</td>
+                    <td className="py-2 px-3">
+                      <button onClick={() => setSelectedBooking(reg)} className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 text-xs font-medium">
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Booking Detail Modal */}
+      {selectedBooking && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black bg-opacity-40" onClick={() => setSelectedBooking(null)} />
+          <div className="w-full max-w-xl bg-white dark:bg-gray-900 h-full overflow-y-auto shadow-2xl flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <h3 className="font-bold text-lg">Booking Detail</h3>
+                <p className="text-xs text-gray-500 font-mono">{selectedBooking.booking_reference}</p>
+              </div>
+              <button onClick={() => setSelectedBooking(null)} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+            </div>
+            <div className="p-4 space-y-4 flex-1">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <h4 className="font-semibold text-sm mb-3">Booker</h4>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><span className="text-gray-500 block text-xs">Name</span><span className="font-medium">{selectedBooking.user_name || '—'}</span></div>
+                  <div><span className="text-gray-500 block text-xs">Email</span><span className="font-medium">{selectedBooking.user_email || '—'}</span></div>
+                  <div><span className="text-gray-500 block text-xs">Phone</span><span className="font-medium">{selectedBooking.user_phone || '—'}</span></div>
+                  <div><span className="text-gray-500 block text-xs">Status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[selectedBooking.status] || 'bg-gray-100 text-gray-700'}`}>
+                      {selectedBooking.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <div><span className="text-gray-500 block text-xs">Participants</span><span className="font-medium">{selectedBooking.total_participants}</span></div>
+                  <div><span className="text-gray-500 block text-xs">Amount</span><span className="font-medium">{selectedBooking.total_amount} SAR</span></div>
+                  <div className="col-span-2"><span className="text-gray-500 block text-xs">Booked On</span><span className="font-medium">{new Date(selectedBooking.registration_date).toLocaleString()}</span></div>
+                </div>
+              </div>
+              {selectedBooking.participants?.length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Participants ({selectedBooking.participants.length})</h4>
+                  <div className="space-y-2">
+                    {selectedBooking.participants.map((p: any, i: number) => {
+                      const pkg = trip.packages.find((pk: TripPackage) => pk.id === p.package_id);
+                      return (
+                        <div key={p.id || i} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-sm">
+                          <div className="flex justify-between items-start mb-1">
+                            <p className="font-medium">{p.name || `Participant ${i + 1}`}</p>
+                            {pkg && (
+                              <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 font-medium">
+                                📦 {pkg.name_en || pkg.name_ar}
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-1 mt-1 text-xs text-gray-500">
+                            {p.email && <span>✉ {p.email}</span>}
+                            {p.phone && <span>📞 {p.phone}</span>}
+                            {p.date_of_birth && <span>🎂 {p.date_of_birth}</span>}
+                            {p.gender && <span>👤 {p.gender}</span>}
+                            {p.id_iqama_number && <span>🪪 {p.id_iqama_number}</span>}
+                            {p.passport_number && <span>📘 {p.passport_number}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {/* Updates for this booking */}
+              {tripUpdates.filter(u => u.registration_id === selectedBooking.id || u.registration_id === null).length > 0 && (
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">Updates</h4>
+                  <div className="space-y-2">
+                    {tripUpdates.filter(u => u.registration_id === selectedBooking.id || u.registration_id === null).map(u => (
+                      <div key={u.id} className={`rounded-lg p-3 text-sm border ${u.registration_id ? 'border-purple-200 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-200 bg-gray-50 dark:bg-gray-800'}`}>
+                        <div className="flex justify-between items-start mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-medium text-xs">{u.title}</span>
+                            {u.is_important && <span className="px-1 py-0.5 bg-red-100 text-red-700 rounded text-xs">Important</span>}
+                            {u.registration_id ? <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Targeted</span> : <span className="px-1 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">Broadcast</span>}
+                          </div>
+                          <span className="text-xs text-gray-400">{new Date(u.created_at).toLocaleString()}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{u.message}</p>
+                        <p className="text-xs text-gray-400 mt-1">Read: {u.read_count} / {u.total_recipients}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

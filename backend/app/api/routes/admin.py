@@ -335,6 +335,81 @@ def list_users(
     
     return result
 
+@router.get("/users/{user_id}")
+def get_user_detail(
+    user_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Get full user detail including registrations and payments."""
+    from sqlmodel import select as sql_select
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.payment import Payment as PaymentModel
+    from app.models.trip import Trip as TripModel
+
+    user = user_crud.get_user_by_id(session, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    provider_company_name = None
+    if user.provider_id:
+        provider = provider_crud.get_provider(session, provider_id=user.provider_id)
+        if provider:
+            provider_company_name = provider.company_name
+
+    registrations = session.exec(
+        sql_select(TripRegistrationModel).where(TripRegistrationModel.user_id == user_id)
+    ).all()
+
+    reg_list = []
+    for reg in registrations:
+        trip = session.get(TripModel, reg.trip_id)
+        trip_name = None
+        if trip:
+            trip_name = trip.name_en or trip.name_ar
+        payments = session.exec(
+            sql_select(PaymentModel).where(PaymentModel.registration_id == reg.id)
+        ).all()
+        reg_list.append({
+            "id": str(reg.id),
+            "booking_reference": reg.booking_reference,
+            "trip_id": str(reg.trip_id),
+            "trip_name": trip_name,
+            "trip_reference": getattr(trip, "trip_reference", None),
+            "status": reg.status,
+            "total_participants": reg.total_participants,
+            "total_amount": str(reg.total_amount),
+            "registration_date": reg.registration_date.isoformat() if reg.registration_date else None,
+            "payments": [
+                {
+                    "id": str(p.id),
+                    "moyasar_payment_id": p.moyasar_payment_id,
+                    "amount": str(p.amount),
+                    "currency": p.currency,
+                    "status": p.status,
+                    "created_at": p.created_at.isoformat() if p.created_at else None,
+                }
+                for p in payments
+            ],
+        })
+
+    return {
+        "id": str(user.id),
+        "name": user.name,
+        "email": user.email,
+        "phone": user.phone,
+        "role": user.role.value if hasattr(user.role, "value") else user.role,
+        "is_active": user.is_active,
+        "source": user.source.value if hasattr(user.source, "value") else user.source,
+        "provider_id": str(user.provider_id) if user.provider_id else None,
+        "provider_company_name": provider_company_name,
+        "preferred_language": getattr(user, "preferred_language", "en"),
+        "created_at": user.created_at.isoformat() if getattr(user, "created_at", None) else None,
+        "updated_at": user.updated_at.isoformat() if getattr(user, "updated_at", None) else None,
+        "registrations": reg_list,
+    }
+
+
 @router.get("/trips", response_model=List[TripRead])
 def list_all_trips(
     session: Session = Depends(get_session),
@@ -460,6 +535,48 @@ def list_all_trips(
         ))
     
     return trip_responses
+
+@router.get("/trips/{trip_id}/registrations")
+def get_trip_registrations_admin(
+    trip_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Get all registrations for a trip (admin view), enriched with user info."""
+    from sqlmodel import select as sql_select
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.schemas.trip_registration import TripRegistration as TripRegistrationSchema
+
+    trip = trip_crud.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    registrations = session.exec(
+        sql_select(TripRegistrationModel).where(TripRegistrationModel.trip_id == trip_id)
+    ).all()
+
+    result = []
+    for reg in registrations:
+        user = session.get(User, reg.user_id)
+        reg_dict = TripRegistrationSchema(
+            id=reg.id,
+            trip_id=reg.trip_id,
+            user_id=reg.user_id,
+            total_participants=reg.total_participants,
+            total_amount=reg.total_amount,
+            status=reg.status,
+            registration_date=reg.registration_date,
+            spot_reserved_until=reg.spot_reserved_until,
+            booking_reference=reg.booking_reference,
+            participants=list(reg.participants or []),
+        ).model_dump()
+        reg_dict["user_name"] = user.name if user else None
+        reg_dict["user_email"] = user.email if user else None
+        reg_dict["user_phone"] = user.phone if user else None
+        result.append(reg_dict)
+
+    return result
+
 
 @router.get("/trips/{trip_id}", response_model=TripRead)
 def get_trip_details(
