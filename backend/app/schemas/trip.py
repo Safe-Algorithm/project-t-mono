@@ -18,17 +18,21 @@ class TripBase(BaseModel):
     max_participants: int
     images: Optional[List[str]] = None
     trip_metadata: Optional[dict] = None
-    is_refundable: bool = True
-    amenities: Optional[List[TripAmenity]] = None
     has_meeting_place: bool = False
     meeting_location: Optional[str] = None
     meeting_time: Optional[datetime] = None
     registration_deadline: Optional[datetime] = None
     starting_city_id: Optional[uuid.UUID] = None
     is_international: bool = False
+    is_packaged_trip: bool = False
 
 
 class TripCreate(TripBase):
+    # For non-packaged trips: these go into the hidden package
+    price: Optional[float] = None
+    is_refundable: Optional[bool] = None
+    amenities: Optional[List[TripAmenity]] = None
+
     @model_validator(mode='after')
     def validate_trip_fields(self):
         if not self.name_en and not self.name_ar:
@@ -51,14 +55,17 @@ class TripUpdate(BaseModel):
     is_active: Optional[bool] = None
     images: Optional[List[str]] = None
     trip_metadata: Optional[dict] = None
-    is_refundable: Optional[bool] = None
-    amenities: Optional[List[TripAmenity]] = None
     has_meeting_place: Optional[bool] = None
     meeting_location: Optional[str] = None
     meeting_time: Optional[datetime] = None
     registration_deadline: Optional[datetime] = None
     starting_city_id: Optional[uuid.UUID] = None
     is_international: Optional[bool] = None
+    is_packaged_trip: Optional[bool] = None
+    # For non-packaged trips: these update the hidden package
+    price: Optional[float] = None
+    is_refundable: Optional[bool] = None
+    amenities: Optional[List[TripAmenity]] = None
 
     @model_validator(mode='after')
     def validate_deadline(self):
@@ -109,6 +116,11 @@ class TripRead(TripBase):
     destinations: List[DestinationInfo] = []
     packages: List[TripPackageWithRequiredFields] = []
     extra_fees: List[TripExtraFeeResponse] = []
+    is_packaged_trip: bool = False
+    # Computed from hidden package for non-packaged trips; None for packaged trips
+    price: Optional[float] = None
+    is_refundable: Optional[bool] = None
+    amenities: Optional[List[TripAmenity]] = None
 
     class Config:
         from_attributes = True

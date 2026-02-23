@@ -16,7 +16,12 @@ export interface TripPackage {
   price: string | number;
   currency: string;
   is_active: boolean;
+  max_participants?: number | null;
+  available_spots?: number | null;
+  is_refundable?: boolean | null;
+  amenities?: string[] | null;
   required_fields: string[];
+  required_fields_details?: TripPackageRequiredField[];
 }
 
 export interface TripExtraFee {
@@ -53,7 +58,7 @@ export interface DestinationInfo {
 export interface Trip {
   id: string;
   provider_id: string;
-  provider?: TripProvider;
+  provider: TripProvider;
   name_en: string | null;
   name_ar: string | null;
   description_en: string | null;
@@ -64,12 +69,14 @@ export interface Trip {
   max_participants: number;
   available_spots: number;
   is_active: boolean;
-  is_refundable: boolean;
+  is_packaged_trip: boolean;
+  price?: number | null;
+  is_refundable?: boolean | null;
   is_international: boolean;
   starting_city_id: string | null;
   starting_city: StartingCity | null;
   destinations: DestinationInfo[];
-  amenities: string[] | null;
+  amenities?: string[] | null;
   has_meeting_place: boolean;
   meeting_location: string | null;
   meeting_time: string | null;
@@ -125,6 +132,7 @@ export interface RegistrationTripInfo {
   trip_reference: string;
   provider: { id: string; company_name: string };
 }
+
 
 export interface TripRegistration {
   id: string;

@@ -35,7 +35,7 @@ const TripEditPage = () => {
 
   const handleSubmit = async (
     payload: TripUpdatePayload, 
-    packages?: CreateTripPackage[], 
+    packages?: CreateTripPackage[] | null, 
     packageFields?: { [index: number]: string[] },
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
     imageData?: { newImages: File[], imagesToDelete: string[] }
@@ -68,41 +68,63 @@ const TripEditPage = () => {
       }
       
       if (packages && packages.length > 0) {
-        // For simplicity in editing, we'll recreate packages
-        // In a production app, you might want more sophisticated package management
+        // Packaged trip: update/create packages
+        // Deactivate any previously-existing packages that were removed from the form
+        const existingPackages = trip?.packages ?? [];
+        for (let ei = packages.length; ei < existingPackages.length; ei++) {
+          try {
+            await tripService.deletePackage(id, existingPackages[ei].id.toString());
+          } catch (err) {
+            console.error('Failed to deactivate removed package:', err);
+          }
+        }
+
         for (let i = 0; i < packages.length; i++) {
           const packageData = packages[i];
-          
-          // Check if this is an existing package or new one
-          const existingPackage = trip?.packages?.[i];
+          const existingPackage = existingPackages[i];
           let packageId: string;
           
           if (existingPackage) {
-            // Update existing package
             await tripService.updatePackage(id, existingPackage.id.toString(), packageData);
             packageId = existingPackage.id.toString();
           } else {
-            // Create new package
             const createdPackage = await tripService.createPackage(id, packageData);
             packageId = createdPackage.id.toString();
           }
           
-          // Update required fields for this package
           const selectedFields = packageFields?.[i] || [];
           const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({
             field_type: fieldName,
             validation_config: validationConfigs?.[i]?.[fieldName] || {}
           }));
-          
-          // Use the new validation-aware endpoint if validation configs are present
           const hasValidationConfigs = fields.some(field => 
             field.validation_config && Object.keys(field.validation_config).length > 0
           );
-          
           if (hasValidationConfigs) {
             await tripService.setPackageRequiredFieldsWithValidation(id, packageId, fields);
           } else {
             await tripService.setPackageRequiredFields(id, packageId, fields);
+          }
+        }
+      } else if (packages === null) {
+        // Non-packaged trip: backend synced the hidden package; update its required fields
+        const tripPackages = await tripService.getPackages(id);
+        if (tripPackages.length > 0) {
+          const hiddenPkgId = tripPackages[0].id;
+          const selectedFields = packageFields?.[0] || [];
+          if (selectedFields.length > 0) {
+            const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({
+              field_type: fieldName,
+              validation_config: validationConfigs?.[0]?.[fieldName] || {}
+            }));
+            const hasValidationConfigs = fields.some(field => 
+              field.validation_config && Object.keys(field.validation_config).length > 0
+            );
+            if (hasValidationConfigs) {
+              await tripService.setPackageRequiredFieldsWithValidation(id, hiddenPkgId, fields);
+            } else {
+              await tripService.setPackageRequiredFields(id, hiddenPkgId, fields);
+            }
           }
         }
       }

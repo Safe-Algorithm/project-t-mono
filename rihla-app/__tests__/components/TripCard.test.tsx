@@ -28,6 +28,7 @@ const mockTrip: Trip = {
   max_participants: 20,
   available_spots: 8,
   is_active: true,
+  is_packaged_trip: false,
   is_refundable: true,
   is_international: false,
   starting_city_id: null,
@@ -39,6 +40,7 @@ const mockTrip: Trip = {
   amenities: ['hotel', 'meals'],
   images: [],
   provider_id: 'prov-1',
+  provider: { id: 'prov-1', company_name: 'Test Provider' },
   packages: [
     {
       id: 'pkg-1',

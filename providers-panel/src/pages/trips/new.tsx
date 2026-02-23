@@ -13,7 +13,7 @@ const NewTripPage = () => {
 
   const handleSubmit = async (
     payload: TripCreatePayload | TripUpdatePayload, 
-    packages?: CreateTripPackage[], 
+    packages?: CreateTripPackage[] | null, 
     packageFields?: { [index: number]: string[] },
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
     imageData?: { newImages: File[], imagesToDelete: string[] },
@@ -34,29 +34,46 @@ const NewTripPage = () => {
         }
       }
       
-      // Create packages and their required fields
       if (packages && packages.length > 0) {
+        // Packaged trip: create each package and set required fields
         for (let i = 0; i < packages.length; i++) {
           const packageData = packages[i];
           const createdPackage = await tripService.createPackage(createdTrip.id, packageData);
           
-          // Set required fields for this package if any are selected
           const selectedFields = packageFields?.[i] || [];
           if (selectedFields.length > 0) {
             const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({
               field_type: fieldName,
               validation_config: validationConfigs?.[i]?.[fieldName] || {}
             }));
-            
-            // Use the new validation-aware endpoint if validation configs are present
             const hasValidationConfigs = fields.some(field => 
               field.validation_config && Object.keys(field.validation_config).length > 0
             );
-            
             if (hasValidationConfigs) {
               await tripService.setPackageRequiredFieldsWithValidation(createdTrip.id, createdPackage.id, fields);
             } else {
               await tripService.setPackageRequiredFields(createdTrip.id, createdPackage.id, fields);
+            }
+          }
+        }
+      } else if (packages === null) {
+        // Non-packaged trip: backend auto-created the hidden package; update its required fields
+        const tripPackages = await tripService.getPackages(createdTrip.id);
+        if (tripPackages.length > 0) {
+          const hiddenPkgId = tripPackages[0].id;
+          const selectedFields = packageFields?.[0] || [];
+          if (selectedFields.length > 0) {
+            const fields: PackageRequiredField[] = selectedFields.map(fieldName => ({
+              field_type: fieldName,
+              validation_config: validationConfigs?.[0]?.[fieldName] || {}
+            }));
+            const hasValidationConfigs = fields.some(field => 
+              field.validation_config && Object.keys(field.validation_config).length > 0
+            );
+            if (hasValidationConfigs) {
+              await tripService.setPackageRequiredFieldsWithValidation(createdTrip.id, hiddenPkgId, fields);
+            } else {
+              await tripService.setPackageRequiredFields(createdTrip.id, hiddenPkgId, fields);
             }
           }
         }

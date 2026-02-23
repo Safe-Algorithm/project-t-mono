@@ -21,6 +21,9 @@ interface TripPackage {
   price: number;
   currency: string;
   is_active: boolean;
+  max_participants?: number | null;
+  is_refundable?: boolean | null;
+  amenities?: string[] | null;
   required_fields: string[];
   required_fields_details?: TripPackageRequiredFieldDetail[];
 }
@@ -74,6 +77,7 @@ interface Trip {
   registration_deadline?: string | null;
   max_participants: number;
   is_active: boolean;
+  is_packaged_trip?: boolean;
   is_international?: boolean;
   starting_city_id?: string | null;
   starting_city?: { id: string; name_en: string; name_ar: string } | null;
@@ -258,7 +262,20 @@ const TripDetailPage = () => {
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">{t('tripDetail.title')}</h1>
+        <div>
+          <h1 className="text-3xl font-bold">{t('tripDetail.title')}</h1>
+          <div className="flex items-center gap-2 mt-2">
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {trip.is_active ? t('tripDetail.active') : t('tripDetail.cancelled')}
+            </span>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-700'}`}>
+              {trip.is_packaged_trip ? '📦 Packaged' : '🎫 Simple'}
+            </span>
+            {trip.is_international && (
+              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">🌍 International</span>
+            )}
+          </div>
+        </div>
         <button 
           onClick={() => router.back()}
           className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
@@ -306,12 +323,14 @@ const TripDetailPage = () => {
               {trip.is_active ? t('tripDetail.active') : t('tripDetail.cancelled')}
             </p>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.refundable')}</label>
-            <p className={`mt-1 text-sm font-semibold ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>
-              {trip.is_refundable ? t('common.yes') : t('common.no')}
-            </p>
-          </div>
+          {!trip.is_packaged_trip && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('tripDetail.refundable')}</label>
+              <p className={`mt-1 text-sm font-semibold ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>
+                {trip.is_refundable ? t('common.yes') : t('common.no')}
+              </p>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Registration Deadline</label>
             <p className="mt-1 text-sm text-gray-900 dark:text-white">{trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—'}</p>
@@ -346,8 +365,8 @@ const TripDetailPage = () => {
           <p className="mt-1 text-sm text-gray-900 dark:text-white" dir="rtl">{trip.description_ar}</p>
         </div>
         
-        {/* Trip Amenities */}
-        {trip.amenities && trip.amenities.length > 0 && (
+        {/* Trip Amenities — only for non-packaged trips (packaged trips have amenities per package) */}
+        {!trip.is_packaged_trip && trip.amenities && trip.amenities.length > 0 && (
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t('tripDetail.amenities')}</label>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">

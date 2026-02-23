@@ -7,6 +7,7 @@ export default {
     error: 'Error',
     retry: 'Retry',
     confirm: 'Confirm',
+    next: 'Next',
     delete: 'Delete',
     edit: 'Edit',
     done: 'Done',
@@ -112,6 +113,9 @@ export default {
     details: 'Trip Details',
     route: 'Route',
     internationalTrip: 'International Trip',
+    tripEnded: 'This trip has ended',
+    registrationClosed: 'Registration deadline has passed',
+    pricePerPerson: 'Price per person',
   },
 
   booking: {
@@ -148,6 +152,10 @@ export default {
     cardYear: 'Year',
     cardCvc: 'CVV',
     cardRequired: 'Please fill in all card details.',
+    selectPackages: 'Select Packages',
+    selectPackagesHint: 'Choose how many participants per package',
+    totalParticipants: 'Total: {{count}} participant(s)',
+    simpleTrip: 'Simple Trip',
   },
 
   bookings: {

@@ -32,6 +32,9 @@ export interface TripPackage {
   price: number;
   currency: string;
   is_active: boolean;
+  max_participants?: number | null;
+  is_refundable?: boolean | null;
+  amenities?: string[] | null;
   required_fields: string[];
   required_fields_details?: TripPackageRequiredField[];
 }
@@ -47,6 +50,7 @@ export interface Trip {
   registration_deadline?: string | null;
   max_participants: number;
   is_active: boolean;
+  is_packaged_trip: boolean;
   is_international?: boolean;
   starting_city_id?: string | null;
   provider_id: string; // uuid
@@ -59,6 +63,7 @@ export interface Trip {
   meeting_location?: string;
   meeting_time?: string;
   extra_fees?: TripExtraFee[];
+  price?: number | null;
 }
 
 export interface TripExtraFee {
@@ -103,6 +108,9 @@ export interface CreateTripPackage {
   description_ar: string;
   price: number;
   currency: string;
+  max_participants?: number | null;
+  is_refundable?: boolean | null;
+  amenities?: string[] | null;
 }
 
 export interface UpdateTripPackage {

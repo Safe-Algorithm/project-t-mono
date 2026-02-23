@@ -35,8 +35,11 @@ def _compute_is_international(session: Session, trip: Trip) -> bool:
     return False
 
 
+_PACKAGE_ONLY_FIELDS = {"price", "is_refundable", "amenities"}
+
+
 def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) -> Trip:
-    trip_data = trip_in.model_dump()
+    trip_data = {k: v for k, v in trip_in.model_dump().items() if k not in _PACKAGE_ONLY_FIELDS}
     trip = Trip(**trip_data, provider_id=provider.id)
     session.add(trip)
     session.commit()
@@ -217,6 +220,8 @@ def search_and_filter_trips(
 def update_trip(*, session: Session, db_trip: Trip, trip_in: TripUpdate) -> Trip:
     trip_data = trip_in.model_dump(exclude_unset=True)
     for key, value in trip_data.items():
+        if key in _PACKAGE_ONLY_FIELDS:
+            continue  # handled by _sync_hidden_package in the route layer
         setattr(db_trip, key, value)
     session.add(db_trip)
     session.commit()

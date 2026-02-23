@@ -7,6 +7,7 @@ export default {
     error: 'خطأ',
     retry: 'إعادة المحاولة',
     confirm: 'تأكيد',
+    next: 'التالي',
     delete: 'حذف',
     edit: 'تعديل',
     done: 'تم',
@@ -112,6 +113,9 @@ export default {
     details: 'تفاصيل الرحلة',
     route: 'المسار',
     internationalTrip: 'رحلة دولية',
+    tripEnded: 'انتهت هذه الرحلة',
+    registrationClosed: 'انتهى موعد التسجيل',
+    pricePerPerson: 'السعر للشخص',
   },
 
   booking: {
@@ -148,6 +152,10 @@ export default {
     cardYear: 'السنة',
     cardCvc: 'CVV',
     cardRequired: 'يرجى تعبئة جميع بيانات البطاقة.',
+    selectPackages: 'اختر الباقات',
+    selectPackagesHint: 'حدد عدد المشاركين لكل باقة',
+    totalParticipants: 'الإجمالي: {{count}} مشارك',
+    simpleTrip: 'رحلة عادية',
   },
 
   bookings: {

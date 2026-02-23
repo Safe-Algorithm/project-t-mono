@@ -8,14 +8,17 @@ export interface TripCreatePayload {
   description_ar: string;
   start_date: string;
   end_date: string;
-  price: number;
+  registration_deadline?: string;
   max_participants: number;
+  is_packaged_trip?: boolean;
   trip_metadata?: Record<string, any>;
+  price?: number;
   is_refundable?: boolean;
   amenities?: string[];
   has_meeting_place?: boolean;
   meeting_location?: string;
   meeting_time?: string;
+  starting_city_id?: string;
 }
 
 export interface TripUpdatePayload extends Partial<TripCreatePayload> {
@@ -79,6 +82,10 @@ export const tripService = {
 
   updatePackage: (tripId: string, packageId: string, payload: UpdateTripPackage): Promise<TripPackage> => {
     return api.put<TripPackage>(`/trips/${tripId}/packages/${packageId}`, payload);
+  },
+
+  deletePackage: (tripId: string, packageId: string): Promise<void> => {
+    return api.del<void>(`/trips/${tripId}/packages/${packageId}`);
   },
 
   // Package required fields management

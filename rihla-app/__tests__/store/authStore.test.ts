@@ -24,6 +24,8 @@ const FULL_USER = {
   phone: null,
   avatar_url: null,
   is_active: true,
+  is_email_verified: true,
+  is_phone_verified: false,
   role: 'user',
 };
 

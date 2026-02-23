@@ -26,6 +26,7 @@ from app.schemas.file_definition import (
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
 from app.core.redis import redis_client
+from app.api.routes.public_trips import build_trip_read as _build_trip_read_public
 
 
 from app.core.config import settings
@@ -466,74 +467,7 @@ def list_all_trips(
         limit=limit
     )
     
-    # Build TripRead responses with packages and required fields
-    trip_responses = []
-    for trip in trips:
-        # Get packages with required fields
-        packages = session.query(TripPackageModel).filter(
-            TripPackageModel.trip_id == trip.id,
-            TripPackageModel.is_active == True
-        ).all()
-        
-        packages_with_fields = []
-        for package in packages:
-            required_fields = session.query(TripPackageRequiredField).filter(
-                TripPackageRequiredField.package_id == package.id
-            ).all()
-            required_field_types = [rf.field_type.value for rf in required_fields]
-            
-            # Build detailed field information with validation configs
-            required_fields_details = []
-            for rf in required_fields:
-                required_fields_details.append({
-                    "id": str(rf.id),
-                    "package_id": str(rf.package_id),
-                    "field_type": rf.field_type.value,
-                    "is_required": rf.is_required,
-                    "validation_config": rf.validation_config
-                })
-            
-            packages_with_fields.append(TripPackageWithRequiredFields(
-                id=package.id,
-                trip_id=package.trip_id,
-                name_en=package.name_en,
-                name_ar=package.name_ar,
-                description_en=package.description_en,
-                description_ar=package.description_ar,
-                price=package.price,
-                is_active=package.is_active,
-                required_fields=required_field_types,
-                required_fields_details=required_fields_details
-            ))
-        
-        # Get provider info
-        provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-        provider_info = {
-            "id": provider.id,
-            "company_name": provider.company_name
-        } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-        
-        trip_responses.append(TripRead(
-            id=trip.id,
-            provider_id=trip.provider_id,
-            provider=provider_info,
-            name_en=trip.name_en,
-            name_ar=trip.name_ar,
-            description_en=trip.description_en,
-            description_ar=trip.description_ar,
-            start_date=trip.start_date,
-            end_date=trip.end_date,
-            max_participants=trip.max_participants,
-            trip_metadata=trip.trip_metadata,
-            is_active=trip.is_active,
-            trip_reference=trip.trip_reference,
-            registration_deadline=trip.registration_deadline,
-            starting_city_id=trip.starting_city_id,
-            starting_city=_get_starting_city_info(session, trip),
-            is_international=trip.is_international,
-            packages=packages_with_fields
-        ))
-    
+    trip_responses = [_build_trip_read_public(trip, session) for trip in trips]
     return trip_responses
 
 @router.get("/trips/{trip_id}/registrations")
@@ -589,83 +523,7 @@ def get_trip_details(
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     
-    # Get packages with required fields
-    packages = session.query(TripPackageModel).filter(
-        TripPackageModel.trip_id == trip_id,
-        TripPackageModel.is_active == True
-    ).all()
-    
-    packages_with_fields = []
-    for package in packages:
-        required_fields = session.query(TripPackageRequiredField).filter(
-            TripPackageRequiredField.package_id == package.id
-        ).all()
-        required_field_types = [rf.field_type.value for rf in required_fields]
-        
-        # Build detailed field information with validation configs
-        required_fields_details = []
-        for rf in required_fields:
-            required_fields_details.append({
-                "id": str(rf.id),
-                "package_id": str(rf.package_id),
-                "field_type": rf.field_type.value,
-                "is_required": rf.is_required,
-                "validation_config": rf.validation_config
-            })
-        
-        packages_with_fields.append(TripPackageWithRequiredFields(
-            id=package.id,
-            trip_id=package.trip_id,
-            name_en=package.name_en,
-            name_ar=package.name_ar,
-            description_en=package.description_en,
-            description_ar=package.description_ar,
-            price=package.price,
-            is_active=package.is_active,
-            required_fields=required_field_types,
-            required_fields_details=required_fields_details
-        ))
-    
-    # Get provider info
-    provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-    provider_info = {
-        "id": provider.id,
-        "company_name": provider.company_name
-    } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-    
-    # Get extra fees
-    from app.models.trip_amenity import TripExtraFee
-    extra_fees = session.query(TripExtraFee).filter(
-        TripExtraFee.trip_id == trip_id
-    ).all()
-    
-    return TripRead(
-        id=trip.id,
-        provider_id=trip.provider_id,
-        provider=provider_info,
-        name_en=trip.name_en,
-        name_ar=trip.name_ar,
-        description_en=trip.description_en,
-        description_ar=trip.description_ar,
-        start_date=trip.start_date,
-        end_date=trip.end_date,
-        max_participants=trip.max_participants,
-        images=trip.images,
-        trip_metadata=trip.trip_metadata,
-        is_active=trip.is_active,
-        is_refundable=trip.is_refundable,
-        amenities=trip.amenities,
-        has_meeting_place=trip.has_meeting_place,
-        meeting_location=trip.meeting_location,
-        meeting_time=trip.meeting_time,
-        trip_reference=trip.trip_reference,
-        registration_deadline=trip.registration_deadline,
-        starting_city_id=trip.starting_city_id,
-        starting_city=_get_starting_city_info(session, trip),
-        is_international=trip.is_international,
-        packages=packages_with_fields,
-        extra_fees=extra_fees
-    )
+    return _build_trip_read_public(trip, session)
 
 
 @router.get("/available-fields", response_model=AvailableFieldsResponse)
@@ -746,74 +604,7 @@ def get_provider_trips(
     """Get all trips for a specific provider."""
     trips = trip_crud.get_trips_by_provider(session=session, provider_id=provider_id, skip=skip, limit=limit)
     
-    # Build TripRead responses with packages and required fields
-    trip_responses = []
-    for trip in trips:
-        # Get packages with required fields
-        packages = session.query(TripPackageModel).filter(
-            TripPackageModel.trip_id == trip.id,
-            TripPackageModel.is_active == True
-        ).all()
-        
-        packages_with_fields = []
-        for package in packages:
-            required_fields = session.query(TripPackageRequiredField).filter(
-                TripPackageRequiredField.package_id == package.id
-            ).all()
-            required_field_types = [rf.field_type.value for rf in required_fields]
-            
-            # Build detailed field information with validation configs
-            required_fields_details = []
-            for rf in required_fields:
-                required_fields_details.append({
-                    "id": str(rf.id),
-                    "package_id": str(rf.package_id),
-                    "field_type": rf.field_type.value,
-                    "is_required": rf.is_required,
-                    "validation_config": rf.validation_config
-                })
-            
-            packages_with_fields.append(TripPackageWithRequiredFields(
-                id=package.id,
-                trip_id=package.trip_id,
-                name_en=package.name_en,
-                name_ar=package.name_ar,
-                description_en=package.description_en,
-                description_ar=package.description_ar,
-                price=package.price,
-                is_active=package.is_active,
-                required_fields=required_field_types,
-                required_fields_details=required_fields_details
-            ))
-        
-        # Get provider info
-        provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
-        provider_info = {
-            "id": provider.id,
-            "company_name": provider.company_name
-        } if provider else {"id": trip.provider_id, "company_name": "Unknown"}
-        
-        trip_responses.append(TripRead(
-            id=trip.id,
-            provider_id=trip.provider_id,
-            provider=provider_info,
-            name_en=trip.name_en,
-            name_ar=trip.name_ar,
-            description_en=trip.description_en,
-            description_ar=trip.description_ar,
-            start_date=trip.start_date,
-            end_date=trip.end_date,
-            max_participants=trip.max_participants,
-            trip_metadata=trip.trip_metadata,
-            is_active=trip.is_active,
-            trip_reference=trip.trip_reference,
-            registration_deadline=trip.registration_deadline,
-            starting_city_id=trip.starting_city_id,
-            starting_city=_get_starting_city_info(session, trip),
-            is_international=trip.is_international,
-            packages=packages_with_fields
-        ))
-    
+    trip_responses = [_build_trip_read_public(trip, session) for trip in trips]
     return trip_responses
 
 

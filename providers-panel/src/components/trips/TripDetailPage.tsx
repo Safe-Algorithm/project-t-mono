@@ -162,6 +162,9 @@ const TripDetailPage: React.FC = () => {
           <div className="flex items-center gap-2 mt-2">
             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{trip.is_active ? 'Active' : 'Inactive'}</span>
             {trip.is_international && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">International</span>}
+            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-700'}`}>
+              {trip.is_packaged_trip ? '📦 Packaged' : '🎫 Simple'}
+            </span>
           </div>
         </div>
         <div className="flex gap-2">
@@ -193,7 +196,9 @@ const TripDetailPage: React.FC = () => {
           <div><span className="text-gray-500">End Date</span><p className="font-medium mt-0.5">{new Date(trip.end_date).toLocaleString()}</p></div>
           <div><span className="text-gray-500">Registration Deadline</span><p className="font-medium mt-0.5">{trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—'}</p></div>
           <div><span className="text-gray-500">Max Participants</span><p className="font-medium mt-0.5">{trip.max_participants}</p></div>
-          <div><span className="text-gray-500">Refundable</span><p className={`font-medium mt-0.5 ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>{trip.is_refundable ? 'Yes' : 'No'}</p></div>
+          {!trip.is_packaged_trip && (
+            <div><span className="text-gray-500">Refundable</span><p className={`font-medium mt-0.5 ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>{trip.is_refundable ? 'Yes' : 'No'}</p></div>
+          )}
           {(trip as any).starting_city && <div><span className="text-gray-500">Starting City</span><p className="font-medium mt-0.5">📍 {(trip as any).starting_city.name_en}</p></div>}
         </div>
         {(trip.description_en || trip.description_ar) && (
@@ -211,7 +216,7 @@ const TripDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Destinations + Amenities */}
+      {/* Destinations + Amenities (amenities only shown for non-packaged trips at trip level) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {tripDestinations.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
@@ -225,7 +230,7 @@ const TripDetailPage: React.FC = () => {
             </div>
           </div>
         )}
-        {trip.amenities && trip.amenities.length > 0 && (
+        {!trip.is_packaged_trip && trip.amenities && trip.amenities.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
             <h3 className="font-semibold mb-3">Amenities</h3>
             <div className="flex flex-wrap gap-2">
@@ -249,11 +254,12 @@ const TripDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Packages */}
+      {/* Packages (only for packaged trips) */}
+      {trip.is_packaged_trip && (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Packages ({trip.packages.length})</h2>
         {trip.packages.length === 0 ? (
-          <p className="text-yellow-600 text-sm">⚠ No packages. At least one package is required.</p>
+          <p className="text-yellow-600 text-sm">⚠ No packages yet. Add at least 2 packages for a packaged trip.</p>
         ) : (
           <div className="space-y-3">
             {trip.packages.map(pkg => (
@@ -264,6 +270,13 @@ const TripDetailPage: React.FC = () => {
                     {pkg.name_ar && <p className="text-sm text-gray-500" dir="rtl">{pkg.name_ar}</p>}
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{pkg.description_en || pkg.description_ar}</p>
                     <p className="text-sm font-bold mt-1">{pkg.price} {pkg.currency || 'SAR'}</p>
+                    {pkg.max_participants != null && <p className="text-xs text-gray-500 mt-0.5">Max: {pkg.max_participants} participants</p>}
+                    {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-green-600' : 'text-red-600'}>{pkg.is_refundable ? '✓ Refundable' : '✗ Non-refundable'}</span></p>}
+                    {pkg.amenities && pkg.amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {pkg.amenities.map(a => <span key={a} className="px-1.5 py-0.5 bg-green-50 border border-green-200 rounded text-xs text-green-700">{amenityLabels[a] || a}</span>)}
+                      </div>
+                    )}
                   </div>
                   <span className={`px-2 py-0.5 rounded text-xs font-semibold ${pkg.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{pkg.is_active ? 'Active' : 'Inactive'}</span>
                 </div>
@@ -279,6 +292,7 @@ const TripDetailPage: React.FC = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Broadcast Updates */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">

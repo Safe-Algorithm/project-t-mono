@@ -48,8 +48,8 @@ class RegistrationTripInfo(BaseModel):
     start_date: datetime
     end_date: datetime
     provider_id: uuid.UUID
-    trip_reference: Optional[str] = None
-    provider: Optional[Dict[str, Any]] = None
+    trip_reference: str
+    provider: Dict[str, Any]
 
     class Config:
         from_attributes = True
@@ -78,7 +78,7 @@ class TripRegistration(TripRegistrationBase):
     spot_reserved_until: Optional[datetime] = None
     booking_reference: str
     participants: List[TripRegistrationParticipant] = []
-    trip: Optional[RegistrationTripInfo] = None
+    trip: RegistrationTripInfo
 
     class Config:
         from_attributes = True

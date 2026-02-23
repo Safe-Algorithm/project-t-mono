@@ -3,7 +3,8 @@ from typing import TYPE_CHECKING, List, Optional
 from decimal import Decimal
 from enum import Enum
 
-from sqlmodel import Field, Relationship, SQLModel
+from sqlalchemy.ext.mutable import MutableList
+from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from .trip import Trip
@@ -29,6 +30,13 @@ class TripPackage(SQLModel, table=True):
     price: Decimal = Field(decimal_places=2, max_digits=10)
     currency: Currency = Field(default=Currency.SAR)
     is_active: bool = Field(default=True)
-    
+
+    # Per-package capacity (used for both packaged and non-packaged trips)
+    max_participants: Optional[int] = Field(default=None)
+
+    # Per-package amenities and refundability (mirrors trip-level for non-packaged trips)
+    is_refundable: Optional[bool] = Field(default=None)
+    amenities: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
+
     trip: "Trip" = Relationship(back_populates="packages")
     required_fields: List["TripPackageRequiredField"] = Relationship(back_populates="package", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

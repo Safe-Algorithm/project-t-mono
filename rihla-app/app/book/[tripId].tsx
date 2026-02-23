@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Alert, KeyboardAvoidingView, Platform,
@@ -7,68 +7,136 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip, useFieldMetadata, useMyRegistrations } from '../../hooks/useTrips';
+import { useTrip, useFieldMetadata } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
 import ParticipantField, { FieldType } from '../../components/booking/ParticipantField';
 import apiClient from '../../lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { TripPackage } from '../../types/trip';
 
 interface Participant {
-  [fieldType: string]: string;
+  package_id?: string;
+  [fieldType: string]: string | undefined;
+}
+
+interface PackageSelection {
+  package: TripPackage;
+  count: number;
 }
 
 export default function BookingScreen() {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
-  const { tripId, packageId } = useLocalSearchParams<{ tripId: string; packageId: string }>();
+  const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const { data: trip, isLoading: tripLoading } = useTrip(tripId);
   const { data: fieldMetadata } = useFieldMetadata();
   const qc = useQueryClient();
-  const [participantCount, setParticipantCount] = useState(1);
-  const [participants, setParticipants] = useState<Participant[]>([{}]);
   const [loading, setLoading] = useState(false);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
-  const [step, setStep] = useState<'participants' | 'confirm'>('participants');
+  const [step, setStep] = useState<'count' | 'fields' | 'confirm'>('count');
 
-  const selectedPackage = trip?.packages?.find((p) => p.id === packageId);
-  const requiredFields = (selectedPackage?.required_fields ?? []).map((ft) => ({
-    field_type: ft as FieldType,
-    is_required: true,
-    validation_config: (selectedPackage as any)?.required_fields_details?.find((d: any) => d.field_type === ft)?.validation_config ?? null,
-  }));
-  const totalPrice = selectedPackage ? Number(selectedPackage.price) * participantCount : 0;
+  // Non-packaged state
+  const [simpleCount, setSimpleCount] = useState(1);
+  const [simpleParticipants, setSimpleParticipants] = useState<Participant[]>([{}]);
 
-  const updateParticipant = (index: number, field: string, value: string) => {
-    setParticipants((prev) => {
+  // Packaged state
+  const [pkgSelections, setPkgSelections] = useState<PackageSelection[]>([]);
+  const [pkgParticipants, setPkgParticipants] = useState<Participant[]>([]);
+
+  const isPackaged = trip?.is_packaged_trip ?? false;
+  const activePackages = useMemo(() => trip?.packages?.filter(p => p.is_active) ?? [], [trip]);
+
+  // Non-packaged: mandatory fields (backend auto-assigns hidden package)
+  const simpleRequiredFields = useMemo(() => [
+    { field_type: 'name' as FieldType, is_required: true, validation_config: null },
+    { field_type: 'date_of_birth' as FieldType, is_required: true, validation_config: null },
+  ], []);
+
+  // Packaged: flat list of {participant, pkg, globalIndex}
+  const pkgFlatList = useMemo(() => {
+    const list: { participant: Participant; pkg: TripPackage; globalIndex: number }[] = [];
+    let idx = 0;
+    for (const sel of pkgSelections) {
+      for (let i = 0; i < sel.count; i++) {
+        list.push({ participant: pkgParticipants[idx] ?? {}, pkg: sel.package, globalIndex: idx });
+        idx++;
+      }
+    }
+    return list;
+  }, [pkgSelections, pkgParticipants]);
+
+  const totalParticipants = isPackaged
+    ? pkgSelections.reduce((acc, sel) => acc + sel.count, 0)
+    : simpleCount;
+
+  const nonPackagedPrice = trip?.price ?? 0;
+  const totalAmount = isPackaged
+    ? pkgSelections.reduce((acc, sel) => acc + Number(sel.package.price) * sel.count, 0)
+    : nonPackagedPrice * simpleCount;
+
+  const updateSimpleParticipant = (index: number, field: string, value: string) => {
+    setSimpleParticipants(prev => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
       return updated;
     });
   };
 
-  const changeCount = (delta: number) => {
-    const newCount = Math.max(1, Math.min(10, participantCount + delta));
-    setParticipantCount(newCount);
-    setParticipants((prev) => {
-      if (newCount > prev.length) {
-        return [...prev, ...Array(newCount - prev.length).fill({})];
-      }
+  const updatePkgParticipant = (globalIndex: number, field: string, value: string) => {
+    setPkgParticipants(prev => {
+      const updated = [...prev];
+      if (!updated[globalIndex]) updated[globalIndex] = {};
+      updated[globalIndex] = { ...updated[globalIndex], [field]: value };
+      return updated;
+    });
+  };
+
+  const changeSimpleCount = (delta: number) => {
+    const newCount = Math.max(1, Math.min(10, simpleCount + delta));
+    setSimpleCount(newCount);
+    setSimpleParticipants(prev => {
+      if (newCount > prev.length) return [...prev, ...Array(newCount - prev.length).fill({})];
       return prev.slice(0, newCount);
     });
   };
 
-  const validate = () => {
-    for (let i = 0; i < participantCount; i++) {
-      for (const field of requiredFields) {
-        if (field.is_required && !participants[i]?.[field.field_type]?.trim()) {
-          Alert.alert(
-            t('common.error'),
-            `${t(`fields.${field.field_type}` as any, { defaultValue: field.field_type.replace(/_/g, ' ') })} - ${t('booking.participant', { number: i + 1 })}`
-          );
-          return false;
+  const addPkgCount = (pkg: TripPackage) => {
+    setPkgSelections(prev => {
+      const existing = prev.find(s => s.package.id === pkg.id);
+      if (existing) return prev.map(s => s.package.id === pkg.id ? { ...s, count: s.count + 1 } : s);
+      return [...prev, { package: pkg, count: 1 }];
+    });
+  };
+
+  const removePkgCount = (pkgId: string) => {
+    setPkgSelections(prev => {
+      const existing = prev.find(s => s.package.id === pkgId);
+      if (!existing) return prev;
+      if (existing.count <= 1) return prev.filter(s => s.package.id !== pkgId);
+      return prev.map(s => s.package.id === pkgId ? { ...s, count: s.count - 1 } : s);
+    });
+  };
+
+  const validateFields = () => {
+    if (!isPackaged) {
+      for (let i = 0; i < simpleCount; i++) {
+        for (const field of simpleRequiredFields) {
+          if (!simpleParticipants[i]?.[field.field_type]?.trim()) {
+            Alert.alert(t('common.error'), `${field.field_type.replace(/_/g, ' ')} — ${t('booking.participant', { number: i + 1 })}`);
+            return false;
+          }
+        }
+      }
+    } else {
+      for (const { participant, pkg, globalIndex } of pkgFlatList) {
+        for (const ft of (pkg.required_fields ?? [])) {
+          if (!participant[ft]?.trim()) {
+            Alert.alert(t('common.error'), `${ft.replace(/_/g, ' ')} — ${t('booking.participant', { number: globalIndex + 1 })}`);
+            return false;
+          }
         }
       }
     }
@@ -76,32 +144,38 @@ export default function BookingScreen() {
   };
 
   const handleBook = async () => {
-    if (!validate()) return;
     setLoading(true);
     try {
-      const pricePerPerson = selectedPackage ? Number(selectedPackage.price) : 0;
-      const payload = {
-        total_participants: participantCount,
-        total_amount: (pricePerPerson * participantCount).toFixed(2),
-        participants: participants.slice(0, participantCount).map((p, i) => ({
-          package_id: packageId,
-          is_registration_user: i === 0,
-          ...p,
-        })),
-      };
+      let payload: any;
+      if (!isPackaged) {
+        payload = {
+          total_participants: simpleCount,
+          total_amount: totalAmount.toFixed(2),
+          participants: simpleParticipants.slice(0, simpleCount).map((p, i) => ({
+            is_registration_user: i === 0,
+            ...p,
+          })),
+        };
+      } else {
+        payload = {
+          total_participants: totalParticipants,
+          total_amount: totalAmount.toFixed(2),
+          participants: pkgFlatList.map(({ participant, pkg }, i) => ({
+            package_id: pkg.id,
+            is_registration_user: i === 0,
+            ...participant,
+          })),
+        };
+      }
       const { data: registration } = await apiClient.post(`/trips/${tripId}/register`, payload);
-
-      // Invalidate list so My Trips tab shows the new booking immediately
       qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
-
-      // Go straight to booking detail with autoPayment=true — card modal opens immediately
       router.replace(`/booking/${registration.id}?autoPayment=true`);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
         ? (detail[0]?.msg ?? t('common.error'))
         : (typeof detail === 'string' ? detail : t('common.error'));
-      if (detail === 'You already have an active registration for this trip. Check your bookings.') {
+      if (typeof detail === 'string' && detail.includes('already have an active registration')) {
         setAlreadyRegistered(true);
       } else {
         Alert.alert(t('booking.title'), msg);
@@ -135,12 +209,12 @@ export default function BookingScreen() {
     );
   }
 
-  if (!trip || !selectedPackage) {
+  if (!trip) {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.center}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.gray300} />
-          <Text style={s.errorText}>{t('trip.noPackages')}</Text>
+          <Text style={s.errorText}>{t('trip.notFound')}</Text>
           <Button title={t('trip.goBack')} onPress={() => router.back()} variant="outline" />
         </View>
       </SafeAreaView>
@@ -148,7 +222,10 @@ export default function BookingScreen() {
   }
 
   const tripName = (i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip';
-  const pkgName = (i18n.language === 'ar' ? (selectedPackage.name_ar || selectedPackage.name_en) : (selectedPackage.name_en || selectedPackage.name_ar)) || 'Package';
+  const steps = ['count', 'fields', 'confirm'] as const;
+  const stepIndex = steps.indexOf(step);
+
+  const canProceedFromCount = isPackaged ? totalParticipants > 0 : true;
 
   return (
     <View style={s.container}>
@@ -162,79 +239,158 @@ export default function BookingScreen() {
           <View style={{ width: 40 }} />
         </View>
         <View style={s.progress}>
-          <View style={[s.progressStep, s.progressStepActive]}>
-            <Text style={s.progressStepText}>1</Text>
-          </View>
-          <View style={[s.progressLine, step === 'confirm' && s.progressLineActive]} />
-          <View style={[s.progressStep, step === 'confirm' && s.progressStepActive]}>
-            <Text style={[s.progressStepText, step !== 'confirm' && s.progressStepTextInactive]}>2</Text>
-          </View>
+          {steps.map((st, idx) => (
+            <React.Fragment key={st}>
+              <View style={[s.progressStep, idx <= stepIndex && s.progressStepActive]}>
+                <Text style={[s.progressStepText, idx > stepIndex && s.progressStepTextInactive]}>{idx + 1}</Text>
+              </View>
+              {idx < steps.length - 1 && (
+                <View style={[s.progressLine, idx < stepIndex && s.progressLineActive]} />
+              )}
+            </React.Fragment>
+          ))}
         </View>
       </SafeAreaView>
 
       <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
+
+        {/* Summary */}
         <View style={s.summaryCard}>
           <Text style={s.summaryTrip} numberOfLines={1}>{tripName}</Text>
-          <Text style={s.summaryPkg}>{pkgName}</Text>
-          <View style={s.summaryRow}>
-            <Text style={s.summaryLabel}>{t('booking.perPerson')}</Text>
-            <Text style={s.summaryPrice}>{t('booking.priceFormat', { price: Number(selectedPackage.price).toLocaleString() })}</Text>
-          </View>
+          <Text style={s.summaryPkg}>{isPackaged ? t('booking.selectPackages', { defaultValue: 'Select Packages' }) : t('booking.simpleTrip', { defaultValue: 'Simple Trip' })}</Text>
         </View>
 
-        {step === 'participants' && (
+        {/* ── STEP 1: Count / Package Selection ── */}
+        {step === 'count' && (
           <>
-            <View style={s.section}>
-              <Text style={s.sectionTitle}>{t('booking.participants')}</Text>
-              <View style={s.counterRow}>
-                <TouchableOpacity style={[s.counterBtn, participantCount <= 1 && s.counterBtnDisabled]} onPress={() => changeCount(-1)} disabled={participantCount <= 1}>
-                  <Ionicons name="remove" size={20} color={participantCount <= 1 ? colors.gray300 : colors.textPrimary} />
-                </TouchableOpacity>
-                <Text style={s.counterValue}>{participantCount}</Text>
-                <TouchableOpacity style={[s.counterBtn, participantCount >= 10 && s.counterBtnDisabled]} onPress={() => changeCount(1)} disabled={participantCount >= 10}>
-                  <Ionicons name="add" size={20} color={participantCount >= 10 ? colors.gray300 : colors.textPrimary} />
-                </TouchableOpacity>
+            {!isPackaged ? (
+              <View style={s.section}>
+                <Text style={s.sectionTitle}>{t('booking.participants')}</Text>
+                <View style={s.counterRow}>
+                  <TouchableOpacity style={[s.counterBtn, simpleCount <= 1 && s.counterBtnDisabled]} onPress={() => changeSimpleCount(-1)} disabled={simpleCount <= 1}>
+                    <Ionicons name="remove" size={20} color={simpleCount <= 1 ? colors.gray300 : colors.textPrimary} />
+                  </TouchableOpacity>
+                  <Text style={s.counterValue}>{simpleCount}</Text>
+                  <TouchableOpacity style={[s.counterBtn, simpleCount >= 10 && s.counterBtnDisabled]} onPress={() => changeSimpleCount(1)} disabled={simpleCount >= 10}>
+                    <Ionicons name="add" size={20} color={simpleCount >= 10 ? colors.gray300 : colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-            {Array.from({ length: participantCount }, (_, i) => (
-              <View key={i} style={s.section}>
-                <Text style={s.sectionTitle}>{t('booking.participant', { number: i + 1 })}</Text>
-                {requiredFields.length === 0 ? (
-                  <Text style={s.noFields}>{t('booking.package')}</Text>
-                ) : (
-                  <View style={s.fields}>
-                    {requiredFields.map((field) => (
-                      <ParticipantField
-                        key={field.field_type}
-                        fieldType={field.field_type}
-                        value={participants[i]?.[field.field_type] ?? ''}
-                        onChange={(v) => updateParticipant(i, field.field_type, v)}
-                        isRequired={field.is_required}
-                        metadata={fieldMetadata?.[field.field_type]}
-                        allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
-                      />
-                    ))}
-                  </View>
+            ) : (
+              <View style={s.section}>
+                <Text style={s.sectionTitle}>{t('booking.selectPackages', { defaultValue: 'Select Packages' })}</Text>
+                <Text style={s.sectionSubtitle}>{t('booking.selectPackagesHint', { defaultValue: 'Choose how many participants per package' })}</Text>
+                {activePackages.map(pkg => {
+                  const sel = pkgSelections.find(s => s.package.id === pkg.id);
+                  const count = sel?.count ?? 0;
+                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
+                  return (
+                    <View key={pkg.id} style={s.pkgCard}>
+                      <View style={s.pkgInfo}>
+                        <Text style={s.pkgName}>{pkgName}</Text>
+                        <Text style={s.pkgPrice}>{t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}</Text>
+                      </View>
+                      <View style={s.counterRow}>
+                        <TouchableOpacity style={[s.counterBtn, count <= 0 && s.counterBtnDisabled]} onPress={() => removePkgCount(pkg.id)} disabled={count <= 0}>
+                          <Ionicons name="remove" size={18} color={count <= 0 ? colors.gray300 : colors.textPrimary} />
+                        </TouchableOpacity>
+                        <Text style={s.counterValue}>{count}</Text>
+                        <TouchableOpacity style={s.counterBtn} onPress={() => addPkgCount(pkg)}>
+                          <Ionicons name="add" size={18} color={colors.textPrimary} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  );
+                })}
+                {totalParticipants > 0 && (
+                  <Text style={s.totalParticipantsHint}>{t('booking.totalParticipants', { defaultValue: 'Total: {{count}} participant(s)', count: totalParticipants })}</Text>
                 )}
               </View>
-            ))}
-            <Button title={t('common.confirm')} onPress={() => { if (validate()) setStep('confirm'); }} fullWidth size="lg" style={s.continueBtn} />
+            )}
+            <Button
+              title={t('common.next', { defaultValue: 'Next' })}
+              onPress={() => setStep('fields')}
+              fullWidth size="lg" style={s.continueBtn}
+              disabled={!canProceedFromCount}
+            />
           </>
         )}
 
+        {/* ── STEP 2: Fill Participant Fields ── */}
+        {step === 'fields' && (
+          <>
+            {!isPackaged ? (
+              Array.from({ length: simpleCount }, (_, i) => (
+                <View key={i} style={s.section}>
+                  <Text style={s.sectionTitle}>{t('booking.participant', { number: i + 1 })}</Text>
+                  <View style={s.fields}>
+                    {simpleRequiredFields.map(field => (
+                      <ParticipantField
+                        key={field.field_type}
+                        fieldType={field.field_type}
+                        value={simpleParticipants[i]?.[field.field_type] ?? ''}
+                        onChange={v => updateSimpleParticipant(i, field.field_type, v)}
+                        isRequired={field.is_required}
+                        metadata={fieldMetadata?.[field.field_type]}
+                      />
+                    ))}
+                  </View>
+                </View>
+              ))
+            ) : (
+              pkgFlatList.map(({ participant, pkg, globalIndex }) => {
+                const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
+                const fields = (pkg.required_fields ?? []).map(ft => ({
+                  field_type: ft as FieldType,
+                  is_required: true,
+                  validation_config: pkg.required_fields_details?.find(d => d.field_type === ft)?.validation_config ?? null,
+                }));
+                return (
+                  <View key={globalIndex} style={s.section}>
+                    <Text style={s.sectionTitle}>{t('booking.participant', { number: globalIndex + 1 })}</Text>
+                    <Text style={s.pkgBadge}>{pkgLabel}</Text>
+                    <View style={s.fields}>
+                      {fields.map(field => (
+                        <ParticipantField
+                          key={field.field_type}
+                          fieldType={field.field_type}
+                          value={participant[field.field_type] ?? ''}
+                          onChange={v => updatePkgParticipant(globalIndex, field.field_type, v)}
+                          isRequired={field.is_required}
+                          metadata={fieldMetadata?.[field.field_type]}
+                          allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+            <View style={s.actionRow}>
+              <Button title={t('common.back')} variant="outline" onPress={() => setStep('count')} style={s.backActionBtn} />
+              <Button title={t('common.confirm')} onPress={() => { if (validateFields()) setStep('confirm'); }} style={s.payBtn} size="lg" />
+            </View>
+          </>
+        )}
+
+        {/* ── STEP 3: Confirm ── */}
         {step === 'confirm' && (
           <>
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t('booking.confirmBooking')}</Text>
               <View style={s.confirmCard}>
                 <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
-                <ConfirmRow label={t('booking.package')} value={pkgName} s={s} />
-                <ConfirmRow label={t('booking.participants')} value={String(participantCount)} s={s} />
-                <ConfirmRow label={t('booking.perPerson')} value={t('booking.priceFormat', { price: Number(selectedPackage.price).toLocaleString() })} s={s} />
-                <View style={s.totalRow}>
-                  <Text style={s.totalLabel}>{t('booking.totalAmount')}</Text>
-                  <Text style={s.totalValue}>{t('booking.priceFormat', { price: totalPrice.toLocaleString() })}</Text>
-                </View>
+                <ConfirmRow label={t('booking.participants')} value={String(totalParticipants)} s={s} />
+                {isPackaged && pkgSelections.map(sel => {
+                  const pName = (i18n.language === 'ar' ? (sel.package.name_ar || sel.package.name_en) : (sel.package.name_en || sel.package.name_ar)) || 'Package';
+                  return <ConfirmRow key={sel.package.id} label={pName} value={`${sel.count} × ${Number(sel.package.price).toLocaleString()} SAR`} s={s} />;
+                })}
+                {isPackaged && (
+                  <View style={s.totalRow}>
+                    <Text style={s.totalLabel}>{t('booking.totalAmount')}</Text>
+                    <Text style={s.totalValue}>{t('booking.priceFormat', { price: totalAmount.toLocaleString() })}</Text>
+                  </View>
+                )}
               </View>
             </View>
             <View style={s.section}>
@@ -244,7 +400,7 @@ export default function BookingScreen() {
               </View>
             </View>
             <View style={s.actionRow}>
-              <Button title={t('common.back')} variant="outline" onPress={() => setStep('participants')} style={s.backActionBtn} />
+              <Button title={t('common.back')} variant="outline" onPress={() => setStep('fields')} style={s.backActionBtn} />
               <Button title={t('booking.confirmBooking')} onPress={handleBook} loading={loading} style={s.payBtn} size="lg" />
             </View>
           </>
@@ -300,6 +456,13 @@ function makeStyles(c: ThemeColors) {
     fields: { gap: 14 },
     noFields: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
     continueBtn: { marginTop: 8 },
+    sectionSubtitle: { fontSize: FontSize.sm, color: c.textSecondary, marginBottom: 12, marginTop: -8 },
+    pkgCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: c.surface, borderRadius: Radius.lg, padding: 14, marginBottom: 10, ...Shadow.sm },
+    pkgInfo: { flex: 1, marginRight: 12 },
+    pkgName: { fontSize: FontSize.md, fontWeight: '700', color: c.textPrimary },
+    pkgPrice: { fontSize: FontSize.sm, color: c.accent, fontWeight: '600', marginTop: 2 },
+    totalParticipantsHint: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600', marginTop: 8, textAlign: 'center' },
+    pkgBadge: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600', marginBottom: 10, backgroundColor: c.primarySurface, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.md },
     confirmCard: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 16, gap: 12, ...Shadow.sm },
     confirmRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     confirmLabel: { fontSize: FontSize.md, color: c.textSecondary },

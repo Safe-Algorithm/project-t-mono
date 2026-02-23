@@ -22,6 +22,9 @@ class TripPackageBase(BaseModel):
     price: Decimal
     currency: Currency = Currency.SAR
     is_active: bool = True
+    max_participants: Optional[int] = None
+    is_refundable: Optional[bool] = None
+    amenities: Optional[List[str]] = None
 
     @field_validator('name_en', 'name_ar', 'description_en', 'description_ar', mode='before')
     @classmethod
@@ -31,7 +34,7 @@ class TripPackageBase(BaseModel):
 
 class TripPackageCreate(TripPackageBase):
     required_fields: Optional[List[TripFieldType]] = []
-    
+
     @model_validator(mode='after')
     def validate_bilingual_fields(self):
         if not self.name_en and not self.name_ar:
@@ -50,6 +53,9 @@ class TripPackageUpdate(BaseModel):
     currency: Optional[Currency] = None
     is_active: Optional[bool] = None
     required_fields: Optional[List[TripFieldType]] = None
+    max_participants: Optional[int] = None
+    is_refundable: Optional[bool] = None
+    amenities: Optional[List[str]] = None
 
     @field_validator('name_en', 'name_ar', 'description_en', 'description_ar', mode='before')
     @classmethod
@@ -84,5 +90,9 @@ class TripPackageWithRequiredFields(BaseModel):
     price: Decimal
     currency: Currency = Currency.SAR
     is_active: bool = True
+    max_participants: Optional[int] = None
+    available_spots: Optional[int] = None
+    is_refundable: Optional[bool] = None
+    amenities: Optional[List[str]] = None
     required_fields: List[TripFieldType] = []
     required_fields_details: Optional[List[TripPackageRequiredFieldDetail]] = []

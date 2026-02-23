@@ -7,7 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, CardDetails } from '../../hooks/useTrips';
+import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, CardDetails } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -233,6 +233,7 @@ export default function BookingDetailScreen() {
   }
 
   const trip = registration.trip;
+  const { data: tripDetail } = useTrip(registration.trip_id ?? null);
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const tripName = trip
     ? ((i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip')
@@ -263,7 +264,12 @@ export default function BookingDetailScreen() {
               <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={16} color={copied ? colors.success : colors.primary} />
             </TouchableOpacity>
           </View>
-          <Text style={s.tripName}>{tripName}</Text>
+          <TouchableOpacity onPress={() => registration.trip_id && router.push(`/trip/${registration.trip_id}` as any)} activeOpacity={0.7}>
+            <View style={s.tripNameRow}>
+              <Text style={s.tripName}>{tripName}</Text>
+              <Ionicons name={i18n.language === 'ar' ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.primary} />
+            </View>
+          </TouchableOpacity>
           <Text style={s.providerName}>{trip?.provider?.company_name}</Text>
         </View>
 
@@ -403,18 +409,34 @@ export default function BookingDetailScreen() {
         {registration.participants?.length > 0 && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>{t('booking.participantDetails')}</Text>
-            {registration.participants.map((p, i) => (
-              <View key={p.id} style={s.participantCard}>
-                <Text style={s.participantTitle}>{t('booking.participant', { number: i + 1 })}</Text>
-                {p.name && <InfoRow label={t('common.name')} value={p.name} />}
-                {p.email && <InfoRow label="Email" value={p.email} />}
-                {p.phone && <InfoRow label={t('common.phone')} value={p.phone} />}
-                {p.date_of_birth && <InfoRow label={t('common.dob')} value={p.date_of_birth} />}
-                {p.gender && <InfoRow label={t('common.gender')} value={p.gender} />}
-                {p.passport_number && <InfoRow label={t('common.passport')} value={p.passport_number} />}
-                {p.id_iqama_number && <InfoRow label={t('common.nationalId')} value={p.id_iqama_number} />}
-              </View>
-            ))}
+            {registration.participants.map((p, i) => {
+              const pkgName = p.package_id && tripDetail?.packages
+                ? (() => {
+                    const pkg = tripDetail.packages.find((pk) => pk.id === p.package_id);
+                    if (!pkg) return null;
+                    return (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || null;
+                  })()
+                : null;
+              return (
+                <View key={p.id} style={s.participantCard}>
+                  <View style={s.participantTitleRow}>
+                    <Text style={s.participantTitle}>{t('booking.participant', { number: i + 1 })}</Text>
+                    {pkgName && (
+                      <View style={s.pkgBadge}>
+                        <Text style={s.pkgBadgeText}>{pkgName}</Text>
+                      </View>
+                    )}
+                  </View>
+                  {p.name && <InfoRow label={t('common.name')} value={p.name} />}
+                  {p.email && <InfoRow label="Email" value={p.email} />}
+                  {p.phone && <InfoRow label={t('common.phone')} value={p.phone} />}
+                  {p.date_of_birth && <InfoRow label={t('common.dob')} value={p.date_of_birth} />}
+                  {p.gender && <InfoRow label={t('common.gender')} value={p.gender} />}
+                  {p.passport_number && <InfoRow label={t('common.passport')} value={p.passport_number} />}
+                  {p.id_iqama_number && <InfoRow label={t('common.nationalId')} value={p.id_iqama_number} />}
+                </View>
+              );
+            })}
           </View>
         )}
 
@@ -461,7 +483,8 @@ function makeStyles(c: ThemeColors) {
     cardTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
     refRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     refValue: { fontSize: FontSize.sm, fontWeight: '700', color: c.primary, fontFamily: 'monospace' },
-    tripName: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary },
+    tripNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    tripName: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary, flex: 1 },
     providerName: { fontSize: FontSize.sm, color: c.textTertiary },
     section: { marginBottom: 20 },
     sectionTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary, marginBottom: 12 },
@@ -472,7 +495,10 @@ function makeStyles(c: ThemeColors) {
     infoValue: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary, flex: 1, textAlign: 'right' },
     divider: { height: 1, backgroundColor: c.border },
     participantCard: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 16, marginBottom: 10, ...Shadow.sm },
-    participantTitle: { fontSize: FontSize.md, fontWeight: '700', color: c.primary, marginBottom: 8 },
+    participantTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    participantTitle: { fontSize: FontSize.md, fontWeight: '700', color: c.primary },
+    pkgBadge: { backgroundColor: c.primarySurface, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3 },
+    pkgBadgeText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '700' },
     updatesList: { gap: 10 },
     bubble: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 14, ...Shadow.sm, borderLeftWidth: 3, borderLeftColor: c.border },
     bubbleUnread: { borderLeftColor: c.primary, backgroundColor: c.primarySurface },

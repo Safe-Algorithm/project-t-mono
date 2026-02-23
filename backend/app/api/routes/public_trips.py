@@ -76,29 +76,68 @@ def get_public_field_metadata(
 
 def build_trip_read(trip, session: Session) -> TripRead:
     """Convert a Trip ORM object to a TripRead schema with properly built packages."""
-    packages = session.query(TripPackageModel).filter(
+    all_packages = session.query(TripPackageModel).filter(
         TripPackageModel.trip_id == trip.id,
         TripPackageModel.is_active == True
     ).all()
 
-    packages_with_fields = []
-    for package in packages:
-        required_fields = session.query(TripPackageRequiredField).filter(
-            TripPackageRequiredField.package_id == package.id
-        ).all()
-        required_field_types = [rf.field_type.value for rf in required_fields]
-        packages_with_fields.append(TripPackageWithRequiredFields(
-            id=package.id,
-            trip_id=package.trip_id,
-            name_en=package.name_en,
-            name_ar=package.name_ar,
-            description_en=package.description_en,
-            description_ar=package.description_ar,
-            price=package.price,
-            currency=package.currency,
-            is_active=package.is_active,
-            required_fields=required_field_types,
-        ))
+    is_packaged = getattr(trip, 'is_packaged_trip', False)
+    resp_price = None
+    resp_is_refundable = None
+    resp_amenities = None
+
+    if is_packaged:
+        from app.models.trip_registration import TripRegistration as TripRegistrationModel, TripRegistrationParticipant as TripParticipantModel
+        packages_with_fields = []
+        for package in all_packages:
+            required_fields = session.query(TripPackageRequiredField).filter(
+                TripPackageRequiredField.package_id == package.id
+            ).all()
+            required_field_types = [rf.field_type.value for rf in required_fields]
+            required_fields_details = [
+                {"id": str(rf.id), "package_id": str(rf.package_id), "field_type": rf.field_type.value,
+                 "is_required": rf.is_required, "validation_config": rf.validation_config}
+                for rf in required_fields
+            ]
+            pkg_available_spots = None
+            if package.max_participants is not None:
+                booked_in_pkg = (
+                    session.query(TripParticipantModel)
+                    .join(TripRegistrationModel, TripParticipantModel.registration_id == TripRegistrationModel.id)
+                    .filter(
+                        TripParticipantModel.package_id == package.id,
+                        TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+                    )
+                    .count()
+                )
+                pkg_available_spots = max(0, package.max_participants - booked_in_pkg)
+            packages_with_fields.append(TripPackageWithRequiredFields(
+                id=package.id,
+                trip_id=package.trip_id,
+                name_en=package.name_en,
+                name_ar=package.name_ar,
+                description_en=package.description_en,
+                description_ar=package.description_ar,
+                price=package.price,
+                currency=package.currency,
+                is_active=package.is_active,
+                max_participants=package.max_participants,
+                available_spots=pkg_available_spots,
+                is_refundable=package.is_refundable,
+                amenities=package.amenities,
+                required_fields=required_field_types,
+                required_fields_details=required_fields_details,
+            ))
+    else:
+        # Non-packaged: hide packages, surface hidden package fields in response only
+        packages_with_fields = []
+        if all_packages:
+            hp = all_packages[0]
+            if hp.max_participants is not None:
+                trip.max_participants = hp.max_participants
+            resp_price = float(hp.price) if hp.price is not None else None
+            resp_is_refundable = hp.is_refundable
+            resp_amenities = hp.amenities
 
     from app.crud import provider as provider_crud
     provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
@@ -139,7 +178,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
                 "type": dest.type.value if hasattr(dest.type, 'value') else str(dest.type),
             })
 
-    # Compute available spots: max minus confirmed/pending_payment participants
+    # Compute available spots
     from app.models.trip_registration import TripRegistration as TripRegistrationModel
     active_regs = session.exec(
         sql_select(TripRegistrationModel).where(
@@ -164,8 +203,9 @@ def build_trip_read(trip, session: Session) -> TripRead:
         images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
-        is_refundable=trip.is_refundable,
-        amenities=trip.amenities,
+        price=resp_price,
+        is_refundable=resp_is_refundable,
+        amenities=resp_amenities,
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
         meeting_time=trip.meeting_time,
@@ -174,6 +214,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         starting_city_id=trip.starting_city_id,
         starting_city=starting_city_info,
         is_international=trip.is_international,
+        is_packaged_trip=is_packaged,
         destinations=destinations_info,
         packages=packages_with_fields,
         extra_fees=[],

@@ -10,7 +10,6 @@ def _generate_trip_ref() -> str:
     return f"TRIP-{uuid.uuid4().hex[:8].upper()}"
 
 from .links import TripParticipant, TripRating
-from .trip_amenity import TripAmenity
 
 if TYPE_CHECKING:
     from .provider import Provider
@@ -51,14 +50,12 @@ class Trip(SQLModel, table=True):
     # True when from-city country != any destination country
     is_international: bool = Field(default=False, index=True)
 
+    # False = single hidden package (price/amenities/refundability shown at trip level)
+    # True  = multiple visible packages (each with own price/amenities/refundability)
+    is_packaged_trip: bool = Field(default=False, index=True)
+
     # Using JSONB for flexible metadata like itinerary, inclusions, exclusions
     trip_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
-    
-    # Refundability
-    is_refundable: bool = Field(default=True)
-    
-    # Amenities (stored as JSON array of enum values)
-    amenities: Optional[List[TripAmenity]] = Field(default=None, sa_column=Column(JSON))
     
     # Meeting Place
     has_meeting_place: bool = Field(default=False)

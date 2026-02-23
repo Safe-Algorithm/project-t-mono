@@ -18,10 +18,15 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 from sqlmodel import SQLModel
 
-# Import your models here so that they are registered with SQLModel
-from app.models.user import User  # noqa
-from app.models.provider import Provider, ProviderRequest # noqa
-from app.models.trip import Trip  # noqa
+# Import all models so autogenerate picks up the complete schema
+from app.models import (  # noqa
+    User, Provider, ProviderRequest, Trip, TripPackage, TripPackageRequiredField,
+    TripRegistration, TripRegistrationParticipant, TripFavorite, TripLike, TripBookmark,
+    Payment, PaymentAuditLog, TripAmenity, TripExtraFee, ProviderRating,
+    Destination, DestinationType, Place, PlaceType, TripDestination,
+    SupportTicket, TripSupportTicket, TicketMessage,
+    TripUpdate, TripUpdateReceipt, FileDefinition, ProviderFile,
+)
 from app.models.links import TripParticipant, TripRating  # noqa
 
 # this is the Alembic Config object, which provides

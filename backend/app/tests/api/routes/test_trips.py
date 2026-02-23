@@ -57,48 +57,70 @@ def test_read_trip(client: TestClient, session: Session) -> None:
         end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
         max_participants=5
     )
-    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
-    
-    # Create a package for the trip (required for trip to be readable)
-    package_data = {
-        "name_en": "Standard Package",
-            "name_ar": "Standard Package AR",
-        "description_en": "Basic trip package",
-            "description_ar": "Basic trip package AR",
-        "price": 150.0
-    }
-    package_response = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/packages",
+    # Non-packaged trip: create via API so hidden package is auto-created
+    response = client.post(
+        f"{settings.API_V1_STR}/trips",
         headers=headers,
-        json=package_data
+        json={
+            "name_en": "Test Trip for Reading",
+            "description_en": "A trip created for reading test",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+            "max_participants": 5,
+            "is_packaged_trip": False,
+        }
     )
-    assert package_response.status_code == 200
-    
-    response = client.get(f"{settings.API_V1_STR}/trips/{trip.id}", headers=headers)
+    assert response.status_code == 200
+    trip_id = response.json()["id"]
+
+    response = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
     assert response.status_code == 200
     content = response.json()
-    assert content["name_en"] == trip.name_en
-    assert len(content["packages"]) == 1
-    assert content["packages"][0]["name_en"] == "Standard Package"
+    assert content["name_en"] == "Test Trip for Reading"
+    # Non-packaged trips hide packages in API response
+    assert content["packages"] == []
+    assert content["is_packaged_trip"] == False
+    assert content["max_participants"] == 5
 
 
-def test_read_trip_without_packages_fails(client: TestClient, session: Session) -> None:
-    """Test that reading a trip without packages returns 400 error"""
+def test_read_packaged_trip_shows_packages(client: TestClient, session: Session) -> None:
+    """Test that packaged trips expose packages in the API response"""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
-    trip_in = TripCreate(
-        name_en="Test Trip Without Packages",
-        description_en="A trip without packages should fail",
-        start_date=datetime.datetime.utcnow() + datetime.timedelta(days=30),
-        end_date=datetime.datetime.utcnow() + datetime.timedelta(days=31),
-        max_participants=5
+    # Create a packaged trip via API
+    response = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Packaged Trip",
+            "description_en": "A trip with packages",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+            "max_participants": 10,
+            "is_packaged_trip": True,
+        }
     )
-    trip = crud.trip.create_trip(session=session, trip_in=trip_in, provider=user.provider)
-    
-    # Try to read trip without packages - should fail
-    response = client.get(f"{settings.API_V1_STR}/trips/{trip.id}", headers=headers)
-    assert response.status_code == 400
-    content = response.json()
-    assert "must have at least one package" in content["detail"]
+    assert response.status_code == 200
+    trip_id = response.json()["id"]
+    assert response.json()["is_packaged_trip"] == True
+    # No packages yet — empty list
+    assert response.json()["packages"] == []
+    # Add a package
+    pkg_response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/packages",
+        headers=headers,
+        json={
+            "name_en": "Economy", "name_ar": "اقتصادي",
+            "description_en": "Economy package", "description_ar": "باقة اقتصادية",
+            "price": 100.0, "max_participants": 5,
+        }
+    )
+    assert pkg_response.status_code == 200
+    # Now reading the trip should show the package
+    read_response = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert read_response.status_code == 200
+    content = read_response.json()
+    assert len(content["packages"]) == 1
+    assert content["packages"][0]["name_en"] == "Economy"
 
 
 def test_update_trip(client: TestClient, session: Session) -> None:

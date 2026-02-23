@@ -40,8 +40,8 @@ export default function TripDetailScreen() {
   const insets = useSafeAreaInsets();
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [selectedPackage, setSelectedPackage] = useState<TripPackage | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
+  const isRTL = i18n.language === 'ar';
 
   const { data: trip, isLoading } = useTrip(id);
   const { data: rating } = useTripRating(id);
@@ -86,6 +86,11 @@ export default function TripDetailScreen() {
   const images = trip.images ?? [];
   const activePackages = trip.packages?.filter((p) => p.is_active) ?? [];
 
+  const now = new Date();
+  const isPastDeadline = trip.registration_deadline ? new Date(trip.registration_deadline) < now : false;
+  const isTripEnded = new Date(trip.end_date) < now;
+  const isBookable = trip.is_active && trip.available_spots > 0 && !isPastDeadline && !isTripEnded;
+
   return (
     <View style={s.container}>
       <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[0]}>
@@ -94,14 +99,15 @@ export default function TripDetailScreen() {
           {images.length > 0 ? (
             <View>
               <FlatList
-                data={images}
+                data={isRTL ? [...images].reverse() : images}
                 keyExtractor={(_, i) => String(i)}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
-                onMomentumScrollEnd={(e) =>
-                  setImageIndex(Math.round(e.nativeEvent.contentOffset.x / W))
-                }
+                onMomentumScrollEnd={(e) => {
+                  const rawIndex = Math.round(e.nativeEvent.contentOffset.x / W);
+                  setImageIndex(isRTL ? images.length - 1 - rawIndex : rawIndex);
+                }}
                 renderItem={({ item }) => (
                   <Image source={{ uri: item }} style={s.heroImage} />
                 )}
@@ -179,12 +185,14 @@ export default function TripDetailScreen() {
               value={trip.available_spots === 0 ? t('trip.soldOut') : t('trip.spotsLeft', { count: trip.available_spots })}
               colors={colors} s={s}
             />
-            <InfoChip
-              icon="refresh-outline"
-              label={t('booking.package')}
-              value={trip.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
-              colors={colors} s={s}
-            />
+            {trip.is_refundable != null && (
+              <InfoChip
+                icon="refresh-outline"
+                label={t('booking.package')}
+                value={trip.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
+                colors={colors} s={s}
+              />
+            )}
           </View>
 
           {/* Route: Starting city → Destinations */}
@@ -302,53 +310,80 @@ export default function TripDetailScreen() {
             </View>
           )}
 
-          {/* Packages */}
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>{t('trip.choosePackage')}</Text>
-            {activePackages.length === 0 ? (
-              <Text style={s.noPackages}>{t('trip.noPackages')}</Text>
-            ) : (
-              <View style={s.packages}>
-                {activePackages.map((pkg) => {
-                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
-                  const pkgDesc = i18n.language === 'ar' ? (pkg.description_ar || pkg.description_en) : (pkg.description_en || pkg.description_ar);
-                  const isSelected = selectedPackage?.id === pkg.id;
-                  return (
-                    <TouchableOpacity
-                      key={pkg.id}
-                      style={[s.packageCard, isSelected && s.packageCardSelected]}
-                      onPress={() => setSelectedPackage(isSelected ? null : pkg)}
-                    >
-                      <View style={s.packageHeader}>
-                        <Text style={[s.packageName, isSelected && s.packageNameSelected]}>
-                          {pkgName}
-                        </Text>
-                        <Text style={[s.packagePrice, isSelected && s.packagePriceSelected]}>
-                          {t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}
-                        </Text>
-                      </View>
-                      {pkgDesc && (
-                        <Text style={s.packageDesc} numberOfLines={2}>{pkgDesc}</Text>
-                      )}
-                      {pkg.required_fields.length > 0 && (
-                        <View style={s.fieldsRow}>
-                          <Ionicons name="document-text-outline" size={12} color={colors.textTertiary} />
-                          <Text style={s.fieldsText}>
-                            {t('trip.requiredFields', { count: pkg.required_fields.length })}
+          {/* Packages — only shown for packaged trips */}
+          {trip.is_packaged_trip && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('trip.choosePackage')}</Text>
+              {activePackages.length === 0 ? (
+                <Text style={s.noPackages}>{t('trip.noPackages')}</Text>
+              ) : (
+                <View style={s.packages}>
+                  {activePackages.map((pkg) => {
+                    const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
+                    const pkgDesc = i18n.language === 'ar' ? (pkg.description_ar || pkg.description_en) : (pkg.description_en || pkg.description_ar);
+                    return (
+                      <View key={pkg.id} style={s.packageCard}>
+                        <View style={s.packageHeader}>
+                          <Text style={s.packageName}>{pkgName}</Text>
+                          <Text style={s.packagePrice}>
+                            {t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}
                           </Text>
                         </View>
-                      )}
-                      {isSelected && (
-                        <View style={s.selectedCheck}>
-                          <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                        {pkgDesc && <Text style={s.packageDesc} numberOfLines={2}>{pkgDesc}</Text>}
+                        {/* Amenities */}
+                        {pkg.amenities && pkg.amenities.length > 0 && (
+                          <View style={s.pkgAmenitiesRow}>
+                            {pkg.amenities.map((a) => (
+                              <View key={a} style={s.pkgAmenityChip}>
+                                <Ionicons name={(AMENITY_ICONS[a] ?? 'checkmark-outline') as any} size={11} color={colors.primary} />
+                                <Text style={s.pkgAmenityText}>
+                                  {t(`amenities.${a}` as any, { defaultValue: a.replace(/_/g, ' ') })}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                        <View style={s.pkgMetaRow}>
+                          {pkg.available_spots != null && (
+                            <View style={s.pkgMetaChip}>
+                              <Ionicons
+                                name="people-outline"
+                                size={12}
+                                color={pkg.available_spots === 0 ? colors.error : colors.textTertiary}
+                              />
+                              <Text style={[s.pkgMetaText, pkg.available_spots === 0 && { color: colors.error }]}>
+                                {pkg.available_spots === 0
+                                  ? t('trip.soldOut')
+                                  : t('trip.spotsLeft', { count: pkg.available_spots })}
+                              </Text>
+                            </View>
+                          )}
+                          {pkg.is_refundable != null && (
+                            <View style={s.pkgMetaChip}>
+                              <Ionicons
+                                name={pkg.is_refundable ? 'refresh-outline' : 'close-circle-outline'}
+                                size={12}
+                                color={pkg.is_refundable ? colors.success : colors.error}
+                              />
+                              <Text style={[s.pkgMetaText, { color: pkg.is_refundable ? colors.success : colors.error }]}>
+                                {pkg.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
+                              </Text>
+                            </View>
+                          )}
+                          {pkg.required_fields.length > 0 && (
+                            <View style={s.pkgMetaChip}>
+                              <Ionicons name="document-text-outline" size={12} color={colors.textTertiary} />
+                              <Text style={s.pkgMetaText}>{t('trip.requiredFields', { count: pkg.required_fields.length })}</Text>
+                            </View>
+                          )}
                         </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-          </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Reviews */}
           {reviews && reviews.length > 0 && (
@@ -380,23 +415,40 @@ export default function TripDetailScreen() {
 
       {/* Bottom CTA */}
       <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-        {selectedPackage ? (
+        {isTripEnded ? (
+          <Text style={s.selectHint}>{t('trip.tripEnded')}</Text>
+        ) : isPastDeadline ? (
+          <Text style={s.selectHint}>{t('trip.registrationClosed')}</Text>
+        ) : !trip.is_active ? (
+          <Text style={s.selectHint}>{t('trip.inactive')}</Text>
+        ) : trip.available_spots === 0 ? (
+          <Text style={s.selectHint}>{t('trip.soldOut')}</Text>
+        ) : !trip.is_packaged_trip ? (
+          // Simple trip: show price + direct Book Now
           <View style={s.bottomContent}>
-            <View>
-              <Text style={s.bottomLabel}>{t('trip.selectedPackage')}</Text>
-              <Text style={s.bottomPrice}>
-                {t('booking.priceFormat', { price: Number(selectedPackage.price).toLocaleString() })}
-              </Text>
-            </View>
+            {trip.price != null && (
+              <View>
+                <Text style={s.bottomLabel}>{t('trip.pricePerPerson')}</Text>
+                <Text style={s.bottomPrice}>
+                  {t('booking.priceFormat', { price: Number(trip.price).toLocaleString() })}
+                </Text>
+              </View>
+            )}
             <Button
               title={t('trip.bookNow')}
-              onPress={() => router.push(`/book/${id}?packageId=${selectedPackage.id}`)}
-              style={s.bookBtn}
+              onPress={() => router.push(`/book/${id}`)}
+              style={trip.price != null ? s.bookBtn : undefined}
+              fullWidth={trip.price == null}
               size="lg"
             />
           </View>
         ) : (
-          <Text style={s.selectHint}>{t('trip.selectHint')}</Text>
+          // Packaged trip: go directly to booking (package selection happens in booking flow)
+          <Button
+            title={t('trip.bookNow')}
+            onPress={() => router.push(`/book/${id}`)}
+            fullWidth size="lg"
+          />
         )}
       </View>
     </View>
@@ -528,8 +580,17 @@ function makeStyles(c: ThemeColors) {
   packageDesc: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 8 },
   fieldsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   fieldsText: { fontSize: FontSize.xs, color: c.textTertiary },
-  selectedCheck: { position: 'absolute', top: 12, right: 12 },
   noPackages: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
+  pkgAmenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 4 },
+  pkgAmenityChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: c.primarySurface, borderRadius: Radius.full,
+    paddingHorizontal: 8, paddingVertical: 3,
+  },
+  pkgAmenityText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '600' },
+  pkgMetaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  pkgMetaChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  pkgMetaText: { fontSize: FontSize.xs, color: c.textTertiary, fontWeight: '500' },
 
   reviewCard: {
     backgroundColor: c.surface, borderRadius: Radius.xl,
