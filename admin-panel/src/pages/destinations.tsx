@@ -102,150 +102,122 @@ export default function DestinationsPage() {
     return false;
   });
 
+  const btnSm = "px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors";
+
   if (loading) {
-    return <div className="flex items-center justify-center h-64"><div className="text-lg text-gray-500">{t('destinations.loading')}</div></div>;
+    return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" /></div>;
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">{t('destinations.title')}</h1>
-        <button
-          onClick={() => { setEditingDestination(null); setShowCountryModal(true); }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('destinations.title')}</h1>
+          <div className="flex gap-4 mt-1 text-xs text-slate-400 dark:text-slate-500">
+            <span>{destinations.length} countries</span>
+            <span>{destinations.reduce((s, c) => s + (c.children?.length || 0), 0)} cities</span>
+            <span>{destinations.filter(c => c.is_active).length} active</span>
+          </div>
+        </div>
+        <button onClick={() => { setEditingDestination(null); setShowCountryModal(true); }}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
           {t('destinations.addCountry')}
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-lg">
-          {error}
-          <button onClick={() => setError(null)} className="ml-2 font-bold">&times;</button>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="hover:opacity-70 text-lg leading-none">&times;</button>
         </div>
       )}
 
-      {/* Search */}
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder={t('destinations.search')}
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-2 border rounded-lg dark:bg-gray-800 dark:border-gray-700"
-        />
-      </div>
-
-      {/* Stats */}
-      <div className="mb-4 flex gap-4 text-sm text-gray-500 dark:text-gray-400">
-        <span>{destinations.length} {t('destinations.countries')}</span>
-        <span>{destinations.reduce((sum, c) => sum + (c.children?.length || 0), 0)} {t('destinations.cities')}</span>
-        <span>{destinations.filter(c => c.is_active).length} {t('destinations.activeCountries')}</span>
+      <div className="relative">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input type="text" placeholder={t('destinations.search')} value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm" />
       </div>
 
       {/* Tree View */}
-      <div className="space-y-1">
+      <div className="space-y-2">
         {filteredDestinations.map(country => (
-          <div key={country.id} className="border dark:border-gray-700 rounded-lg overflow-hidden">
+          <div key={country.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
             {/* Country Row */}
-            <div className={`flex items-center gap-2 px-4 py-3 ${country.is_active ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50 opacity-70'}`}>
-              <button onClick={() => toggleCountry(country.id)} className="text-gray-400 hover:text-gray-600 w-6">
-                {expandedCountries.has(country.id) ? '▼' : '▶'}
+            <div className={`flex flex-wrap items-center gap-2 px-4 py-3 ${!country.is_active ? 'opacity-60' : ''}`}>
+              <button onClick={() => toggleCountry(country.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <svg className={`w-4 h-4 transition-transform ${expandedCountries.has(country.id) ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>
-              <span className="font-mono text-xs bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{country.country_code}</span>
-              <span className="font-medium">{country.name_en}</span>
-              <span className="text-gray-500 dark:text-gray-400 text-sm" dir="rtl">{country.name_ar}</span>
-              <span className="text-xs text-gray-400 ml-auto">
-                {country.children?.length || 0} {t('destinations.cities')}
-              </span>
-              <button
-                onClick={() => handleActivate(country.id, !country.is_active)}
-                className={`px-2 py-0.5 text-xs rounded ${country.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
-              >
-                {country.is_active ? t('destinations.activate') : t('destinations.deactivate')}
+              <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-lg">{country.country_code}</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{country.name_en}</span>
+              <span className="text-slate-400 dark:text-slate-500 text-sm" dir="rtl">{country.name_ar}</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">{country.children?.length || 0} cities</span>
+              <button onClick={() => handleActivate(country.id, !country.is_active)}
+                className={`${btnSm} ${country.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                {country.is_active ? 'Active' : 'Inactive'}
               </button>
-              <button
-                onClick={() => { setSelectedCountry(country); setEditingDestination(null); setShowCityModal(true); }}
-                className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded hover:bg-blue-200"
-              >
-                {t('destinations.addCity')}
+              <button onClick={() => { setSelectedCountry(country); setEditingDestination(null); setShowCityModal(true); }}
+                className={`${btnSm} bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 hover:bg-sky-200 dark:hover:bg-sky-900/50`}>
+                + City
               </button>
-              <button
-                onClick={() => { setEditingDestination(country); setShowCountryModal(true); }}
-                className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded hover:bg-yellow-200"
-              >
-                {t('destinations.edit')}
+              <button onClick={() => { setEditingDestination(country); setShowCountryModal(true); }}
+                className={`${btnSm} bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200`}>
+                Edit
               </button>
-              <button
-                onClick={() => handleDeleteDestination(country.id, country.name_en)}
-                className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200"
-              >
-                {t('destinations.delete')}
+              <button onClick={() => handleDeleteDestination(country.id, country.name_en)}
+                className={`${btnSm} bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200`}>
+                Delete
               </button>
             </div>
 
             {/* Cities */}
             {expandedCountries.has(country.id) && country.children && country.children.length > 0 && (
-              <div className="border-t dark:border-gray-700">
+              <div className="border-t border-slate-100 dark:border-slate-800">
                 {country.children.map(city => (
-                  <div key={city.id}>
-                    <div className={`flex items-center gap-2 px-4 py-2 pl-12 ${city.is_active ? 'bg-gray-50 dark:bg-gray-800/80' : 'bg-gray-100 dark:bg-gray-900/50 opacity-70'}`}>
-                      <button onClick={() => toggleCity(city.id)} className="text-gray-400 hover:text-gray-600 w-6">
-                        {expandedCities.has(city.id) ? '▼' : '▶'}
+                  <div key={city.id} className="border-b border-slate-100 dark:border-slate-800 last:border-b-0">
+                    <div className={`flex flex-wrap items-center gap-2 px-4 py-2.5 pl-10 bg-slate-50 dark:bg-slate-800/40 ${!city.is_active ? 'opacity-60' : ''}`}>
+                      <button onClick={() => toggleCity(city.id)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                        <svg className={`w-3.5 h-3.5 transition-transform ${expandedCities.has(city.id) ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                       </button>
-                      <span className="text-blue-600 dark:text-blue-400">↳</span>
-                      <span className="font-medium text-sm">{city.name_en}</span>
-                      <span className="text-gray-500 dark:text-gray-400 text-xs" dir="rtl">{city.name_ar}</span>
-                      <span className="text-xs text-gray-400 ml-auto">
-                        {city.places?.length || 0} {t('destinations.places')}
-                      </span>
-                      <button
-                        onClick={() => handleActivate(city.id, !city.is_active)}
-                        className={`px-2 py-0.5 text-xs rounded ${city.is_active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'}`}
-                      >
-                        {city.is_active ? t('destinations.activate') : t('destinations.deactivate')}
+                      <span className="text-sky-500 text-xs">↳</span>
+                      <span className="font-medium text-sm text-slate-800 dark:text-slate-200">{city.name_en}</span>
+                      <span className="text-slate-400 dark:text-slate-500 text-xs" dir="rtl">{city.name_ar}</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 ml-auto">{city.places?.length || 0} places</span>
+                      <button onClick={() => handleActivate(city.id, !city.is_active)}
+                        className={`${btnSm} ${city.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                        {city.is_active ? 'Active' : 'Inactive'}
                       </button>
-                      <button
-                        onClick={() => { setSelectedCity(city); setEditingPlace(null); setShowPlaceModal(true); }}
-                        className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded hover:bg-purple-200"
-                      >
-                        {t('destinations.addPlace')}
+                      <button onClick={() => { setSelectedCity(city); setEditingPlace(null); setShowPlaceModal(true); }}
+                        className={`${btnSm} bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 hover:bg-violet-200`}>
+                        + Place
                       </button>
-                      <button
-                        onClick={() => { setEditingDestination(city); setSelectedCountry(country); setShowCityModal(true); }}
-                        className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded hover:bg-yellow-200"
-                      >
-                        {t('destinations.edit')}
+                      <button onClick={() => { setEditingDestination(city); setSelectedCountry(country); setShowCityModal(true); }}
+                        className={`${btnSm} bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200`}>
+                        Edit
                       </button>
-                      <button
-                        onClick={() => handleDeleteDestination(city.id, city.name_en)}
-                        className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200"
-                      >
-                        {t('destinations.delete')}
+                      <button onClick={() => handleDeleteDestination(city.id, city.name_en)}
+                        className={`${btnSm} bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200`}>
+                        Delete
                       </button>
                     </div>
 
                     {/* Places */}
                     {expandedCities.has(city.id) && city.places && city.places.length > 0 && (
-                      <div className="border-t dark:border-gray-700/50">
+                      <div className="border-t border-slate-100 dark:border-slate-800/50">
                         {city.places.map(place => (
-                          <div key={place.id} className="flex items-center gap-2 px-4 py-1.5 pl-20 bg-gray-100 dark:bg-gray-900/30 text-sm">
-                            <span className="text-purple-500">📍</span>
-                            <span>{place.name_en}</span>
-                            <span className="text-gray-400 text-xs" dir="rtl">{place.name_ar}</span>
-                            <span className="text-xs text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{place.type}</span>
+                          <div key={place.id} className="flex flex-wrap items-center gap-2 px-4 py-2 pl-16 bg-slate-50/50 dark:bg-slate-800/20 text-sm">
+                            <svg className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                            <span className="font-medium text-slate-700 dark:text-slate-300">{place.name_en}</span>
+                            <span className="text-slate-400 dark:text-slate-500 text-xs" dir="rtl">{place.name_ar}</span>
+                            <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-lg">{place.type}</span>
                             <span className="ml-auto" />
-                            <button
-                              onClick={() => { setEditingPlace(place); setSelectedCity(city); setShowPlaceModal(true); }}
-                              className="px-2 py-0.5 text-xs bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded hover:bg-yellow-200"
-                            >
-                              {t('destinations.edit')}
+                            <button onClick={() => { setEditingPlace(place); setSelectedCity(city); setShowPlaceModal(true); }}
+                              className={`${btnSm} bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 hover:bg-amber-200`}>
+                              Edit
                             </button>
-                            <button
-                              onClick={() => handleDeletePlace(place.id, place.name_en)}
-                              className="px-2 py-0.5 text-xs bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded hover:bg-red-200"
-                            >
-                              {t('destinations.delete')}
+                            <button onClick={() => handleDeletePlace(place.id, place.name_en)}
+                              className={`${btnSm} bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 hover:bg-red-200`}>
+                              Delete
                             </button>
                           </div>
                         ))}
@@ -260,8 +232,11 @@ export default function DestinationsPage() {
       </div>
 
       {filteredDestinations.length === 0 && (
-        <div className="text-center py-12 text-gray-500">
-          {t('destinations.noResults')}
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No destinations found</p>
         </div>
       )}
 
@@ -350,56 +325,59 @@ function CountryModal({ destination, onClose, onSaved }: { destination: Destinat
     }
   };
 
+  const iCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
+  const lCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5";
+
   return (
     <ModalWrapper title={isEdit ? t('destinations.editCountryTitle') : t('destinations.addCountryTitle')} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+        {error && <div className="px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.nameEn')} *</label>
-            <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>{t('destinations.nameEn')} *</label>
+            <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.nameAr')} *</label>
-            <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>{t('destinations.nameAr')} *</label>
+            <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className={iCls} />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           {!isEdit && (
             <div>
-              <label className="block text-sm font-medium mb-1">{t('destinations.countryCode')} *</label>
-              <input required maxLength={2} value={form.country_code} onChange={e => setForm(f => ({ ...f, country_code: e.target.value.toUpperCase() }))} placeholder="SA" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 uppercase" />
+              <label className={lCls}>{t('destinations.countryCode')} *</label>
+              <input required maxLength={2} value={form.country_code} onChange={e => setForm(f => ({ ...f, country_code: e.target.value.toUpperCase() }))} placeholder="SA" className={iCls + ' uppercase'} />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium mb-1">Slug</label>
-            <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Slug</label>
+            <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Timezone</label>
-            <input value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} placeholder="Asia/Riyadh" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Timezone</label>
+            <input value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} placeholder="Asia/Riyadh" className={iCls} />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Currency Code</label>
-            <input maxLength={3} value={form.currency_code} onChange={e => setForm(f => ({ ...f, currency_code: e.target.value.toUpperCase() }))} placeholder="SAR" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 uppercase" />
+            <label className={lCls}>Currency</label>
+            <input maxLength={3} value={form.currency_code} onChange={e => setForm(f => ({ ...f, currency_code: e.target.value.toUpperCase() }))} placeholder="SAR" className={iCls + ' uppercase'} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Display Order</label>
-            <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Order</label>
+            <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className={iCls} />
           </div>
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm">{t('destinations.isActive')}</span>
+          <div className="flex items-end pb-1">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4 accent-sky-500" />
+              Active
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">{t('destinations.cancel')}</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-            {saving ? t('destinations.save') + '...' : isEdit ? t('action.update') : t('action.create')}
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">{t('destinations.cancel')}</button>
+          <button type="submit" disabled={saving} className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors disabled:opacity-50">
+            {saving ? 'Saving…' : isEdit ? t('action.update') : t('action.create')}
           </button>
         </div>
       </form>
@@ -460,50 +438,53 @@ function CityModal({ country, city, onClose, onSaved }: { country: Destination; 
     }
   };
 
+  const iCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
+  const lCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5";
+
   return (
-    <ModalWrapper title={isEdit ? `${t('destinations.editCityTitle')} - ${country.name_en}` : `${t('destinations.addCityTitle')} - ${country.name_en}`} onClose={onClose}>
+    <ModalWrapper title={isEdit ? `${t('destinations.editCityTitle')} — ${country.name_en}` : `${t('destinations.addCityTitle')} — ${country.name_en}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+        {error && <div className="px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.nameEn')} *</label>
-            <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>{t('destinations.nameEn')} *</label>
+            <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.nameAr')} *</label>
-            <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>{t('destinations.nameAr')} *</label>
+            <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className={iCls} />
           </div>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Slug</label>
-            <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Slug</label>
+            <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Timezone</label>
-            <input value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Timezone</label>
+            <input value={form.timezone} onChange={e => setForm(f => ({ ...f, timezone: e.target.value }))} className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Currency</label>
-            <input maxLength={3} value={form.currency_code} onChange={e => setForm(f => ({ ...f, currency_code: e.target.value.toUpperCase() }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600 uppercase" />
+            <label className={lCls}>Currency</label>
+            <input maxLength={3} value={form.currency_code} onChange={e => setForm(f => ({ ...f, currency_code: e.target.value.toUpperCase() }))} className={iCls + ' uppercase'} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Display Order</label>
-            <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Order</label>
+            <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className={iCls} />
           </div>
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm">{t('destinations.isActive')}</span>
+          <div className="flex items-end pb-1">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4 accent-sky-500" />
+              Active
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">{t('destinations.cancel')}</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-            {saving ? t('destinations.save') + '...' : isEdit ? t('action.update') : t('action.create')}
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">{t('destinations.cancel')}</button>
+          <button type="submit" disabled={saving} className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors disabled:opacity-50">
+            {saving ? 'Saving…' : isEdit ? t('action.update') : t('action.create')}
           </button>
         </div>
       </form>
@@ -557,58 +538,61 @@ function PlaceModal({ city, place, onClose, onSaved }: { city: Destination; plac
     }
   };
 
+  const iCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
+  const lCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5";
+
   return (
-    <ModalWrapper title={isEdit ? `${t('destinations.editPlaceTitle')} - ${city.name_en}` : `${t('destinations.addPlaceTitle')} - ${city.name_en}`} onClose={onClose}>
+    <ModalWrapper title={isEdit ? `${t('destinations.editPlaceTitle')} — ${city.name_en}` : `${t('destinations.addPlaceTitle')} — ${city.name_en}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <div className="p-2 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+        {error && <div className="px-3 py-2.5 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">{error}</div>}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.nameEn')} *</label>
-            <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>{t('destinations.nameEn')} *</label>
+            <input required value={form.name_en} onChange={e => setForm(f => ({ ...f, name_en: e.target.value, slug: isEdit ? f.slug : slugify(e.target.value) }))} className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.nameAr')} *</label>
-            <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>{t('destinations.nameAr')} *</label>
+            <input required dir="rtl" value={form.name_ar} onChange={e => setForm(f => ({ ...f, name_ar: e.target.value }))} className={iCls} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">{t('destinations.type')} *</label>
-            <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+            <label className={lCls}>{t('destinations.type')} *</label>
+            <select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className={iCls}>
               {PLACE_TYPES.map(pt => <option key={pt} value={pt}>{pt.replace('_', ' ')}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Slug</label>
-            <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Slug</label>
+            <input value={form.slug} onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className={iCls} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Latitude</label>
-            <input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="24.7341" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Latitude</label>
+            <input type="number" step="any" value={form.latitude} onChange={e => setForm(f => ({ ...f, latitude: e.target.value }))} placeholder="24.7341" className={iCls} />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Longitude</label>
-            <input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="46.5729" className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Longitude</label>
+            <input type="number" step="any" value={form.longitude} onChange={e => setForm(f => ({ ...f, longitude: e.target.value }))} placeholder="46.5729" className={iCls} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Display Order</label>
-            <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className="w-full px-3 py-2 border rounded dark:bg-gray-700 dark:border-gray-600" />
+            <label className={lCls}>Order</label>
+            <input type="number" value={form.display_order} onChange={e => setForm(f => ({ ...f, display_order: parseInt(e.target.value) || 0 }))} className={iCls} />
           </div>
-          <div className="flex items-end">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4" />
-              <span className="text-sm">{t('destinations.isActive')}</span>
+          <div className="flex items-end pb-1">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+              <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} className="w-4 h-4 accent-sky-500" />
+              Active
             </label>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 border rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:border-gray-600">{t('destinations.cancel')}</button>
-          <button type="submit" disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50">
-            {saving ? t('destinations.save') + '...' : isEdit ? t('action.update') : t('action.create')}
+          <button type="button" onClick={onClose} className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">{t('destinations.cancel')}</button>
+          <button type="submit" disabled={saving} className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold transition-colors disabled:opacity-50">
+            {saving ? 'Saving…' : isEdit ? t('action.update') : t('action.create')}
           </button>
         </div>
       </form>
@@ -619,13 +603,13 @@ function PlaceModal({ city, place, onClose, onSaved }: { city: Destination; plac
 // ===== Modal Wrapper =====
 function ModalWrapper({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h2 className="text-lg font-semibold">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">{title}</h2>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none">&times;</button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="p-5">{children}</div>
       </div>
     </div>
   );

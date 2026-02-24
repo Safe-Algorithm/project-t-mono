@@ -105,158 +105,105 @@ export default function FileDefinitionsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const thCls = "text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide";
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
+    </div>
+  );
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">File Definitions</h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage required documents for provider registration
-            </p>
-          </div>
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <PlusIcon />
-            Add File Definition
-          </button>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">File Definitions</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage required documents for provider registration</p>
         </div>
+        <button onClick={handleCreate}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors flex-shrink-0">
+          <PlusIcon />
+          Add File Definition
+        </button>
       </div>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300">
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-700 dark:text-red-400 text-sm">
           {error}
         </div>
       )}
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Order
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name (EN)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Name (AR)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Extensions
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Max Size
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {fileDefinitions.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                  <div className="mx-auto text-gray-400 mb-3">
-                    <FileIcon />
-                  </div>
-                  <p className="text-lg font-medium">No file definitions yet</p>
-                  <p className="text-sm mt-1">Create your first file definition to get started</p>
-                </td>
-              </tr>
-            ) : (
-              fileDefinitions.map((definition) => (
-                <tr key={definition.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {definition.display_order}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {definition.name_en}
-                    </div>
-                    <div className="text-xs text-gray-500">{definition.key}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {definition.name_ar}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-wrap gap-1">
-                      {definition.allowed_extensions.map((ext) => (
-                        <span
-                          key={ext}
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
-                        >
-                          .{ext}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {definition.max_size_mb} MB
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      <span
-                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-                          definition.is_active
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                            : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        {definition.is_active ? (
-                          <CheckCircleIcon />
-                        ) : (
-                          <XCircleIcon />
-                        )}
-                        {definition.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                      {definition.is_required && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                          Required
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(definition)}
-                        className="text-blue-600 hover:text-blue-900 p-1 rounded hover:bg-blue-50"
-                        title="Edit"
-                      >
-                        <EditIcon />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(definition.id)}
-                        className={`p-1 rounded ${
-                          deleteConfirm === definition.id
-                            ? 'text-red-600 bg-red-50'
-                            : 'text-gray-600 hover:text-red-600 hover:bg-red-50'
-                        }`}
-                        title={deleteConfirm === definition.id ? 'Click again to confirm' : 'Delete'}
-                      >
-                        <TrashIcon />
-                      </button>
-                    </div>
-                  </td>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        {fileDefinitions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+              <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+            </div>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-sm">No file definitions yet</p>
+            <p className="text-slate-400 dark:text-slate-500 text-xs">Create your first file definition to get started</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                  <th className={thCls}>#</th>
+                  <th className={thCls}>Name (EN)</th>
+                  <th className={`${thCls} hidden sm:table-cell`}>Name (AR)</th>
+                  <th className={`${thCls} hidden md:table-cell`}>Extensions</th>
+                  <th className={`${thCls} hidden md:table-cell`}>Max Size</th>
+                  <th className={thCls}>Status</th>
+                  <th className="py-3 px-4 text-end text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Actions</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {fileDefinitions.map((definition) => (
+                  <tr key={definition.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 text-slate-400 dark:text-slate-500 font-mono text-xs">{definition.display_order}</td>
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-slate-900 dark:text-white">{definition.name_en}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 font-mono">{definition.key}</p>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400 hidden sm:table-cell" dir="rtl">{definition.name_ar}</td>
+                    <td className="py-3 px-4 hidden md:table-cell">
+                      <div className="flex flex-wrap gap-1">
+                        {definition.allowed_extensions.map(ext => (
+                          <span key={ext} className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">.{ext}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-400 hidden md:table-cell">{definition.max_size_mb} MB</td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${definition.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
+                          {definition.is_active ? <CheckCircleIcon /> : <XCircleIcon />}
+                          {definition.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        {definition.is_required && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Required</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => handleEdit(definition)} title="Edit"
+                          className="w-8 h-8 flex items-center justify-center rounded-xl text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors">
+                          <EditIcon />
+                        </button>
+                        <button onClick={() => handleDelete(definition.id)}
+                          title={deleteConfirm === definition.id ? 'Click again to confirm' : 'Delete'}
+                          className={`w-8 h-8 flex items-center justify-center rounded-xl transition-colors ${deleteConfirm === definition.id ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20' : 'text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'}`}>
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (

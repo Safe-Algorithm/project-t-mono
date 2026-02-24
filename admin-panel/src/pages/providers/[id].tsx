@@ -138,26 +138,14 @@ const ProviderDetailPage = () => {
     setRejectionReason('');
   };
 
-  const getStatusBadge = (status: string) => {
+  const fileStatusBadge = (status: string) => {
     switch (status) {
       case 'accepted':
-        return (
-          <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full flex items-center">
-            <span className="mr-1">✓</span> Accepted
-          </span>
-        );
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">Accepted</span>;
       case 'rejected':
-        return (
-          <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full flex items-center">
-            <span className="mr-1">✗</span> Rejected
-          </span>
-        );
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">Rejected</span>;
       case 'processing':
-        return (
-          <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full flex items-center">
-            <span className="mr-1">⏳</span> Under Review
-          </span>
-        );
+        return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">Under Review</span>;
       default:
         return null;
     }
@@ -240,113 +228,84 @@ const ProviderDetailPage = () => {
     fetchProviderDetails();
   }, [token, id]);
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error}</p>;
-  if (!provider) return <p>Provider not found</p>;
+  const thCls = "text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide";
+  const lCls = "text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1";
+
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" /></div>;
+  if (error) return <div className="flex flex-col items-center justify-center h-64 gap-3"><p className="text-red-500 dark:text-red-400 text-sm">{error}</p><button onClick={() => router.push('/providers')} className="text-sm text-sky-600 dark:text-sky-400 hover:underline">Back to Providers</button></div>;
+  if (!provider) return <div className="flex items-center justify-center h-64"><p className="text-slate-500 dark:text-slate-400 text-sm">Provider not found</p></div>;
+
+  const providerStatusCls =
+    provider.status === 'approved' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' :
+    provider.status === 'pending'  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' :
+    provider.status === 'denied'   ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+    'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400';
 
   return (
-    <div className="container mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Provider Details</h1>
-        <button 
-          onClick={() => router.push('/providers')}
-          className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
-        >
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          {provider.company_avatar_url ? (
+            <img src={provider.company_avatar_url} alt={provider.company_name} className="w-14 h-14 rounded-2xl object-cover border-2 border-slate-200 dark:border-slate-700 flex-shrink-0" />
+          ) : (
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center flex-shrink-0">
+              <svg className="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+            </div>
+          )}
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{provider.company_name}</h1>
+            <span className={`inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${providerStatusCls}`}>{provider.status || 'unknown'}</span>
+          </div>
+        </div>
+        <button onClick={() => router.push('/providers')} className="inline-flex items-center gap-1.5 text-sm text-sky-600 dark:text-sky-400 hover:text-sky-700 font-medium">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
           Back to Providers
         </button>
       </div>
 
-      {/* Provider Information */}
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mb-6">
-        <h2 className="text-2xl font-semibold mb-4">Company Information</h2>
-        
-        {/* Company Avatar */}
-        {provider.company_avatar_url && (
-          <div className="mb-6 flex justify-center">
-            <img
-              src={provider.company_avatar_url}
-              alt={`${provider.company_name} avatar`}
-              className="h-32 w-32 rounded-full object-cover border-4 border-gray-200 shadow-lg"
-            />
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Company Name</label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-white">{provider.company_name}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-white">{provider.company_email}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Phone</label>
-            <p className="mt-1 text-sm text-gray-900 dark:text-white">{provider.company_phone}</p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-            <span className={`mt-1 inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-              provider.status === 'approved' 
-                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                : provider.status === 'pending'
-                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'
-                : provider.status === 'denied'
-                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-            }`}>
-              {provider.status || 'unknown'}
-            </span>
-          </div>
+      {/* Company Info */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Company Information</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><p className={lCls}>Company Name</p><p className="text-sm text-slate-900 dark:text-white font-medium">{provider.company_name}</p></div>
+          <div><p className={lCls}>Email</p><p className="text-sm text-slate-900 dark:text-white">{provider.company_email}</p></div>
+          <div><p className={lCls}>Phone</p><p className="text-sm text-slate-900 dark:text-white">{provider.company_phone}</p></div>
+          <div><p className={lCls}>Status</p><span className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold ${providerStatusCls}`}>{provider.status || 'unknown'}</span></div>
         </div>
       </div>
 
-      {/* Provider Trips */}
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
-        <h2 className="text-2xl font-semibold mb-4">Trips ({trips.length})</h2>
+      {/* Trips */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Trips <span className="text-slate-400 font-normal">({trips.length})</span></h2>
+        </div>
         {trips.length === 0 ? (
-          <p className="text-gray-500">No trips found for this provider.</p>
+          <div className="py-12 text-center"><p className="text-slate-400 dark:text-slate-500 text-sm">No trips found for this provider.</p></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white dark:bg-gray-800">
+            <table className="min-w-full text-sm">
               <thead>
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">Trip Name</th>
-                  <th className="py-2 px-4 border-b text-left">Start Date</th>
-                  <th className="py-2 px-4 border-b text-left">End Date</th>
-                  <th className="py-2 px-4 border-b text-left">Price</th>
-                  <th className="py-2 px-4 border-b text-left">Max Participants</th>
-                  <th className="py-2 px-4 border-b text-left">Status</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                  <th className={thCls}>Trip Name</th>
+                  <th className={`${thCls} hidden sm:table-cell`}>Dates</th>
+                  <th className={`${thCls} hidden md:table-cell`}>Price</th>
+                  <th className={`${thCls} hidden md:table-cell`}>Max</th>
+                  <th className={thCls}>Status</th>
                 </tr>
               </thead>
-              <tbody>
-                {trips.map((trip) => (
-                  <tr 
-                    key={trip.id} 
-                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                    onClick={() => router.push(`/trips/${trip.id}`)}
-                  >
-                    <td className="py-2 px-4 border-b">
-                      <div>
-                        <p className="font-medium text-blue-600 hover:text-blue-800">{trip.name}</p>
-                        <p className="text-sm text-gray-500">{trip.description}</p>
-                      </div>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {trips.map(trip => (
+                  <tr key={trip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors" onClick={() => router.push(`/trips/${trip.id}`)}>
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-sky-600 dark:text-sky-400">{trip.name}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-1">{trip.description}</p>
                     </td>
-                    <td className="py-2 px-4 border-b">{new Date(trip.start_date).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 border-b">{new Date(trip.end_date).toLocaleDateString()}</td>
-                    <td className="py-2 px-4 border-b">
-                      {trip.packages.length > 0 ? 
-                        trip.packages.map(pkg => `${pkg.price} ${pkg.currency || 'SAR'}`).join(', ') : 
-                        'No packages'
-                      }
-                    </td>
-                    <td className="py-2 px-4 border-b">{trip.max_participants}</td>
-                    <td className="py-2 px-4 border-b">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        trip.is_active 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                      }`}>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-xs hidden sm:table-cell">{new Date(trip.start_date).toLocaleDateString()} – {new Date(trip.end_date).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{trip.packages.length > 0 ? trip.packages.map(p => `${p.price} ${p.currency || 'SAR'}`).join(', ') : '—'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{trip.max_participants}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
                         {trip.is_active ? 'Active' : 'Cancelled'}
                       </span>
                     </td>
@@ -358,58 +317,37 @@ const ProviderDetailPage = () => {
         )}
       </div>
 
-      {/* Provider Files */}
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-6">
-        <h2 className="text-2xl font-semibold mb-4">Uploaded Documents ({files.length})</h2>
+      {/* Documents */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Uploaded Documents <span className="text-slate-400 font-normal">({files.length})</span></h2>
+        </div>
         {files.length === 0 ? (
-          <p className="text-gray-500">No documents uploaded yet.</p>
+          <div className="py-12 text-center"><p className="text-slate-400 dark:text-slate-500 text-sm">No documents uploaded yet.</p></div>
         ) : (
-          <div className="space-y-2">
-            {files.map((file) => (
-              <div key={file.id} className="flex items-center justify-between p-4 bg-gray-50 rounded border border-gray-200 dark:border-gray-700">
-                <div className="flex-1">
-                  <div className="flex items-center">
-                    <span className="text-2xl mr-3">📄</span>
-                    <div>
-                      {file.file_definition && (
-                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                          {file.file_definition.name_en}
-                        </p>
-                      )}
-                      <a 
-                        href={file.file_url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                      >
-                        {file.file_name}
-                      </a>
-                      <p className="text-xs text-gray-500">
-                        {(file.file_size_bytes / 1024 / 1024).toFixed(2)} MB • 
-                        {file.file_extension.toUpperCase()} • 
-                        Uploaded {new Date(file.uploaded_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {files.map(file => (
+              <div key={file.id} className="flex flex-wrap items-center gap-3 px-5 py-4">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
                 </div>
-                <div className="flex items-center space-x-2">
-                  {getStatusBadge(file.file_verification_status)}
+                <div className="flex-1 min-w-0">
+                  {file.file_definition && <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">{file.file_definition.name_en}</p>}
+                  <a href={file.file_url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-sky-600 dark:text-sky-400 hover:underline truncate block">{file.file_name}</a>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{(file.file_size_bytes / 1024 / 1024).toFixed(2)} MB · {file.file_extension.toUpperCase()} · {new Date(file.uploaded_at).toLocaleDateString()}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {fileStatusBadge(file.file_verification_status)}
                   {file.file_verification_status !== 'accepted' && (
-                    <button
-                      onClick={() => updateFileStatus(file.id, 'accepted')}
-                      disabled={updatingFileStatus[file.id]}
-                      className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded disabled:opacity-50"
-                    >
-                      {updatingFileStatus[file.id] ? 'Updating...' : 'Accept'}
+                    <button onClick={() => updateFileStatus(file.id, 'accepted')} disabled={updatingFileStatus[file.id]}
+                      className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
+                      {updatingFileStatus[file.id] ? '…' : 'Accept'}
                     </button>
                   )}
                   {file.file_verification_status !== 'rejected' && (
-                    <button
-                      onClick={() => handleRejectClick(file.id)}
-                      disabled={updatingFileStatus[file.id]}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded disabled:opacity-50"
-                    >
-                      {updatingFileStatus[file.id] ? 'Updating...' : 'Reject'}
+                    <button onClick={() => handleRejectClick(file.id)} disabled={updatingFileStatus[file.id]}
+                      className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50">
+                      {updatingFileStatus[file.id] ? '…' : 'Reject'}
                     </button>
                   )}
                 </div>
@@ -419,38 +357,36 @@ const ProviderDetailPage = () => {
         )}
       </div>
 
-      {/* Provider Users */}
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 mt-6">
-        <h2 className="text-2xl font-semibold mb-4">Users ({users.length})</h2>
+      {/* Users */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Users <span className="text-slate-400 font-normal">({users.length})</span></h2>
+        </div>
         {users.length === 0 ? (
-          <p className="text-gray-500">No users found for this provider.</p>
+          <div className="py-12 text-center"><p className="text-slate-400 dark:text-slate-500 text-sm">No users found for this provider.</p></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white dark:bg-gray-800">
+            <table className="min-w-full text-sm">
               <thead>
-                <tr>
-                  <th className="py-2 px-4 border-b text-left">Name</th>
-                  <th className="py-2 px-4 border-b text-left">Email</th>
-                  <th className="py-2 px-4 border-b text-left">Phone</th>
-                  <th className="py-2 px-4 border-b text-left">Role</th>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
+                  <th className={thCls}>Name</th>
+                  <th className={`${thCls} hidden sm:table-cell`}>Email</th>
+                  <th className={`${thCls} hidden md:table-cell`}>Phone</th>
+                  <th className={thCls}>Role</th>
                 </tr>
               </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="py-2 px-4 border-b">{user.name}</td>
-                    <td className="py-2 px-4 border-b">{user.email}</td>
-                    <td className="py-2 px-4 border-b">{user.phone}</td>
-                    <td className="py-2 px-4 border-b">
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        user.role === 'admin' 
-                          ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                          : user.role === 'provider'
-                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                          : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
-                        {user.role}
-                      </span>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {users.map(user => (
+                  <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">{user.name}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">{user.email}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{user.phone}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        user.role === 'admin'    ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+                        user.role === 'provider' ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400' :
+                        'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                      }`}>{user.role}</span>
                     </td>
                   </tr>
                 ))}
@@ -460,33 +396,22 @@ const ProviderDetailPage = () => {
         )}
       </div>
 
-      {/* Rejection Reason Modal */}
+      {/* Rejection Modal */}
       {rejectingFileId && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Reject File</h3>
-            <p className="text-sm text-gray-600 mb-4">
-              Please provide a reason for rejecting this file. The provider will see this message.
-            </p>
-            <textarea
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="Enter rejection reason..."
-              className="w-full border border-gray-300 rounded-lg p-3 mb-4 min-h-[100px] focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              autoFocus
-            />
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={handleRejectCancel}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRejectSubmit}
-                disabled={!rejectionReason.trim()}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 w-full max-w-md shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">Reject File</h3>
+              <button onClick={handleRejectCancel} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none">&times;</button>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Please provide a reason for rejecting this file. The provider will see this message.</p>
+            <textarea value={rejectionReason} onChange={e => setRejectionReason(e.target.value)} placeholder="Enter rejection reason…"
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 text-sm min-h-[100px] resize-none transition mb-4"
+              autoFocus />
+            <div className="flex justify-end gap-2">
+              <button onClick={handleRejectCancel} className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
+              <button onClick={handleRejectSubmit} disabled={!rejectionReason.trim()}
+                className="px-4 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors disabled:opacity-50">
                 Reject File
               </button>
             </div>

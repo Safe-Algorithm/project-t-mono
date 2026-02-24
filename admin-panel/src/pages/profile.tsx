@@ -206,62 +206,50 @@ const Profile: React.FC = () => {
     }
   };
 
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
+  const labelCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1.5";
+
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8 dark:text-white">Profile Settings</h1>
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Profile Settings</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your account information</p>
+      </div>
 
       {message && (
-        <div className={`mb-6 p-4 rounded-lg ${
-          message.type === 'success' ? 'bg-green-50 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-50 text-red-800 dark:bg-red-900 dark:text-red-200'
+        <div className={`px-4 py-3 rounded-xl border text-sm ${
+          message.type === 'success'
+            ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
         }`}>
-          <span>{message.text}</span>
+          {message.text}
         </div>
       )}
 
-      {/* Avatar Section */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 dark:text-white">Profile Picture</h2>
-        <div className="flex items-center gap-6">
-          <div className="relative">
+      {/* Avatar */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Profile Picture</h2>
+        <div className="flex items-center gap-5">
+          <div className="relative flex-shrink-0">
             {avatarPreview ? (
-              <img 
-                src={avatarPreview} 
-                alt="Avatar" 
-                className="w-32 h-32 rounded-full object-cover border-4 border-gray-200 dark:border-gray-600"
-              />
+              <img src={avatarPreview} alt="Avatar" className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200 dark:border-slate-700" />
             ) : (
-              <div className="w-32 h-32 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                <span className="text-4xl text-gray-400">👤</span>
+              <div className="w-20 h-20 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center border-2 border-slate-200 dark:border-slate-700">
+                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
               </div>
             )}
-            <label 
-              htmlFor="avatar-upload" 
-              className="absolute bottom-0 right-0 bg-blue-600 text-white p-2 rounded-full cursor-pointer hover:bg-blue-700 transition"
-            >
-              <span className="text-xl">📷</span>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                onChange={handleAvatarChange}
-                className="hidden"
-              />
+            <label htmlFor="avatar-upload" className="absolute -bottom-1 -right-1 w-7 h-7 bg-sky-500 hover:bg-sky-600 text-white rounded-lg flex items-center justify-center cursor-pointer transition-colors shadow-sm">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+              <input id="avatar-upload" type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" onChange={handleAvatarChange} className="hidden" />
             </label>
           </div>
           <div>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-              Upload a profile picture. Max size: 5MB
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              Supported formats: JPG, PNG, GIF, WebP
-            </p>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-1">Max size: 5MB</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">JPG, PNG, GIF, WebP</p>
             {avatarFile && (
-              <button
-                onClick={handleAvatarUpload}
-                disabled={loading}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              >
-                💾 Upload Avatar
+              <button onClick={handleAvatarUpload} disabled={loading}
+                className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50">
+                {loading ? 'Uploading…' : 'Upload Avatar'}
               </button>
             )}
           </div>
@@ -269,91 +257,45 @@ const Profile: React.FC = () => {
       </div>
 
       {/* Profile Information */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 dark:text-white">Profile Information</h2>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Profile Information</h2>
         <form onSubmit={handleProfileUpdate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              👤 Name
-            </label>
-            <input
-              type="text"
-              value={profileData.name}
-              onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              required
-            />
+            <label className={labelCls}>Name</label>
+            <input type="text" value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className={inputCls} required />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              ✉️ Email
-            </label>
+            <label className={labelCls}>Email</label>
             {!changingEmail ? (
               <div className="flex gap-2">
-                <input
-                  type="email"
-                  value={profileData.email}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
-                  disabled
-                />
-                <button
-                  type="button"
-                  onClick={() => setChangingEmail(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  Change Email
+                <input type="email" value={profileData.email} disabled
+                  className="flex-1 px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-400 dark:text-slate-500 text-sm" />
+                <button type="button" onClick={() => setChangingEmail(true)}
+                  className="px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors">
+                  Change
                 </button>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  <input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="Enter new email"
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendEmailOtp}
-                    disabled={sendingEmailOtp || !newEmail}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-                  >
-                    {sendingEmailOtp ? 'Sending...' : 'Send OTP'}
+                  <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="New email address" className={inputCls + ' flex-1'} />
+                  <button type="button" onClick={handleSendEmailOtp} disabled={sendingEmailOtp || !newEmail}
+                    className="px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 flex-shrink-0">
+                    {sendingEmailOtp ? 'Sending…' : 'Send OTP'}
                   </button>
                 </div>
                 {emailOtpSent && (
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={emailOtp}
-                      onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="Enter 6-digit OTP"
-                      maxLength={6}
-                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleVerifyEmailChange}
-                      disabled={verifyingEmailOtp || emailOtp.length !== 6}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
-                    >
-                      {verifyingEmailOtp ? 'Verifying...' : 'Verify'}
+                    <input type="text" value={emailOtp} onChange={e => setEmailOtp(e.target.value.replace(/\D/g,'').slice(0,6))} placeholder="6-digit OTP" maxLength={6} className={inputCls + ' flex-1'} />
+                    <button type="button" onClick={handleVerifyEmailChange} disabled={verifyingEmailOtp || emailOtp.length !== 6}
+                      className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 flex-shrink-0">
+                      {verifyingEmailOtp ? 'Verifying…' : 'Verify'}
                     </button>
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setChangingEmail(false);
-                    setNewEmail('');
-                    setEmailOtp('');
-                    setEmailOtpSent(false);
-                  }}
-                  className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-200"
-                >
+                <button type="button" onClick={() => { setChangingEmail(false); setNewEmail(''); setEmailOtp(''); setEmailOtpSent(false); }}
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
                   Cancel
                 </button>
               </div>
@@ -361,63 +303,32 @@ const Profile: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              📱 Phone
-            </label>
-            <input
-              type="tel"
-              value={profileData.phone}
-              onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <label className={labelCls}>Phone</label>
+            <input type="tel" value={profileData.phone} onChange={e => setProfileData({ ...profileData, phone: e.target.value })} className={inputCls} />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || (profileData.name === user?.name && profileData.phone === user?.phone)}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            💾 Save Changes
+          <button type="submit" disabled={loading || (profileData.name === user?.name && profileData.phone === user?.phone)}
+            className="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50">
+            {loading ? 'Saving…' : 'Save Changes'}
           </button>
         </form>
       </div>
 
       {/* Change Password */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4 dark:text-white">Change Password</h2>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Change Password</h2>
         <form onSubmit={handlePasswordChange} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              🔒 New Password
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              minLength={8}
-            />
+            <label className={labelCls}>New Password</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputCls} minLength={8} />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              🔒 Confirm New Password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              minLength={8}
-            />
+            <label className={labelCls}>Confirm New Password</label>
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls} minLength={8} />
           </div>
-
-          <button
-            type="submit"
-            disabled={loading || !newPassword || !confirmPassword}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-          >
-            🔒 Change Password
+          <button type="submit" disabled={loading || !newPassword || !confirmPassword}
+            className="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50">
+            {loading ? 'Updating…' : 'Change Password'}
           </button>
         </form>
       </div>
