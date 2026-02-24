@@ -74,6 +74,7 @@ export default function BookingDetailScreen() {
   const { registrationId, autoPayment } = useLocalSearchParams<{ registrationId: string; autoPayment?: string }>();
   const { data: registration, isLoading } = useRegistration(registrationId ?? null);
   const { data: updates } = useTripUpdates(registration?.trip_id ?? null);
+  const { data: tripDetail } = useTrip(registration?.trip_id ?? null);
   const markRead = useMarkUpdateRead();
   const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
@@ -233,7 +234,6 @@ export default function BookingDetailScreen() {
   }
 
   const trip = registration.trip;
-  const { data: tripDetail } = useTrip(registration.trip_id ?? null);
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const tripName = trip
     ? ((i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip')

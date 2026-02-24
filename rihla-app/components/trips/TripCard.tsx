@@ -53,8 +53,19 @@ function formatDate(dateStr: string, lang: string): string {
 }
 
 function getMinPrice(trip: Trip): number | null {
+  if (trip.price != null) return Number(trip.price);
   if (!trip.packages?.length) return null;
   return Math.min(...trip.packages.map((p) => Number(p.price)));
+}
+
+function getDisplayAmenities(trip: Trip): string[] | null {
+  if (trip.amenities && trip.amenities.length > 0) return trip.amenities;
+  if (!trip.packages?.length) return null;
+  let best: string[] = [];
+  for (const pkg of trip.packages) {
+    if ((pkg.amenities?.length ?? 0) > best.length) best = pkg.amenities ?? [];
+  }
+  return best.length > 0 ? best : null;
 }
 
 export default function TripCard({ trip, onPress, isFavorite = false, onFavoriteToggle, compact = false, testID }: TripCardProps) {
@@ -66,9 +77,10 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
 
   const coverImage = trip.images?.[0];
   const minPrice = getMinPrice(trip);
+  const displayAmenities = getDisplayAmenities(trip);
   const name = getLocalizedName(trip, i18n.language);
   const packageCount = trip.packages?.length ?? 0;
-  const priceKey = packageCount === 1 ? 'trip.priceOnly' : 'trip.fromPrice';
+  const priceKey = trip.is_packaged_trip ? 'trip.fromPrice' : 'trip.priceOnly';
   const routeLabel = getDestLabel(trip, i18n.language);
 
   if (compact) {
@@ -168,16 +180,16 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
             </>
           )}
         </View>
-        {trip.amenities && trip.amenities.length > 0 && (
+        {displayAmenities && displayAmenities.length > 0 && (
           <View style={s.amenitiesRow}>
-            {trip.amenities.slice(0, 3).map((a) => (
+            {displayAmenities.slice(0, 3).map((a) => (
               <View key={a} style={s.amenityChip}>
                 <Text style={s.amenityText}>{t(`amenities.${a}` as any, { defaultValue: a.replace(/_/g, ' ') })}</Text>
               </View>
             ))}
-            {trip.amenities.length > 3 && (
+            {displayAmenities.length > 3 && (
               <View style={s.amenityChip}>
-                <Text style={s.amenityText}>+{trip.amenities.length - 3}</Text>
+                <Text style={s.amenityText}>+{displayAmenities.length - 3}</Text>
               </View>
             )}
           </View>

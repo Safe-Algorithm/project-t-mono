@@ -81,6 +81,7 @@ def search_and_filter_trips(
     is_international: Optional[bool] = None,
     destination_ids: Optional[List[uuid.UUID]] = None,
     single_destination: Optional[bool] = None,
+    amenities: Optional[List[str]] = None,
     only_future: bool = False,
     only_open_registration: bool = False,
     skip: int = 0,
@@ -96,7 +97,7 @@ def search_and_filter_trips(
     statement = select(Trip)
 
     needs_provider_join = provider_name is not None
-    needs_package_join = min_price is not None or max_price is not None
+    needs_package_join = min_price is not None or max_price is not None or bool(amenities)
     needs_rating_join = min_rating is not None
 
     if needs_provider_join:
@@ -190,10 +191,23 @@ def search_and_filter_trips(
 
     if needs_package_join:
         statement = statement.join(TripPackage, Trip.id == TripPackage.trip_id)
+        statement = statement.where(TripPackage.is_active == True)
         if min_price is not None:
             statement = statement.where(TripPackage.price >= min_price)
         if max_price is not None:
             statement = statement.where(TripPackage.price <= max_price)
+        if amenities:
+            import json
+            from sqlalchemy import text
+            # Use a raw SQL expression for the JSONB containment check.
+            # CAST(col AS jsonb) @> CAST(:val AS jsonb) returns rows where the
+            # package amenities array contains ALL selected amenities.
+            # This works regardless of whether the column is stored as json or jsonb.
+            amenities_json = json.dumps(amenities)
+            statement = statement.where(
+                text("CAST(trippackage.amenities AS jsonb) @> CAST(:amenities AS jsonb)")
+                .bindparams(amenities=amenities_json)
+            )
 
     if needs_rating_join:
         rating_subquery = (

@@ -74,6 +74,8 @@ export default {
     domestic: 'Domestic',
     international: 'International',
     ratingAny: 'Any',
+    amenities: 'Amenities',
+    amenitiesHint: 'Only show trips with a package that includes all selected amenities',
   },
 
   trip: {

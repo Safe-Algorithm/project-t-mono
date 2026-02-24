@@ -46,6 +46,7 @@ export interface TripFilters {
   is_international?: boolean;
   destination_ids?: string[];
   single_destination?: boolean;
+  amenities?: string[];
   skip?: number;
   limit?: number;
 }
@@ -77,8 +78,8 @@ export function usePublicTrips(filters: TripFilters = {}) {
       const params = new URLSearchParams();
       Object.entries(filters).forEach(([k, v]) => {
         if (v === undefined || v === '') return;
-        if (k === 'destination_ids' && Array.isArray(v)) {
-          (v as string[]).forEach((id) => params.append('destination_ids', id));
+        if ((k === 'destination_ids' || k === 'amenities') && Array.isArray(v)) {
+          (v as string[]).forEach((val) => params.append(k, val));
         } else {
           params.append(k, String(v));
         }
@@ -90,7 +91,7 @@ export function usePublicTrips(filters: TripFilters = {}) {
   });
 }
 
-export function useTrip(tripId: string) {
+export function useTrip(tripId: string | null) {
   return useQuery({
     queryKey: ['trips', tripId],
     queryFn: async () => {

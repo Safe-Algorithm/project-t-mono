@@ -243,6 +243,7 @@ def list_public_trips(
     is_international: Optional[bool] = None,
     destination_ids: Optional[List[uuid.UUID]] = Query(default=None),
     single_destination: Optional[bool] = None,
+    amenities: Optional[List[str]] = Query(default=None),
 ):
     """Retrieve and filter all trips (public endpoint for mobile app).
     
@@ -275,6 +276,7 @@ def list_public_trips(
         is_international=is_international,
         destination_ids=destination_ids,
         single_destination=single_destination,
+        amenities=amenities,
         only_future=True,
         only_open_registration=True,
         skip=skip,

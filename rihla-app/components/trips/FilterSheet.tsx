@@ -23,6 +23,11 @@ interface FilterSheetProps {
   onApply: (filters: TripFilters) => void;
 }
 
+const ALL_AMENITIES = [
+  'flight_tickets', 'bus', 'tour_guide', 'tours',
+  'hotel', 'meals', 'insurance', 'visa_assistance',
+] as const;
+
 const RATING_STAR_OPTIONS = [
   { labelKey: 'filters.ratingAny', value: undefined },
   { label: '4+ ★', value: 4 },
@@ -53,6 +58,12 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
     const current = local.destination_ids ?? [];
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
     update('destination_ids', next.length ? next : undefined);
+  };
+
+  const toggleAmenity = (key: string) => {
+    const current = local.amenities ?? [];
+    const next = current.includes(key) ? current.filter((x) => x !== key) : [...current, key];
+    update('amenities', next.length ? next : undefined);
   };
 
   const handleApply = () => {
@@ -174,6 +185,26 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
                   onChangeText={(v) => update('max_participants', v ? Number(v) : undefined)}
                   placeholderTextColor={colors.textTertiary} />
               </View>
+            </View>
+
+            {/* Amenities */}
+            <Text style={s.sectionLabel}>{t('filters.amenities')}</Text>
+            <Text style={s.sectionHint}>{t('filters.amenitiesHint')}</Text>
+            <View style={s.chipWrap}>
+              {ALL_AMENITIES.map((key) => {
+                const selected = (local.amenities ?? []).includes(key);
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[s.ratingChip, selected && s.ratingChipActive]}
+                    onPress={() => toggleAmenity(key)}
+                  >
+                    <Text style={[s.ratingChipText, selected && s.ratingChipTextActive]}>
+                      {t(`amenities.${key}` as any)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             {/* Rating */}

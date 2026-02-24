@@ -74,6 +74,8 @@ export default {
     domestic: 'داخلية',
     international: 'دولية',
     ratingAny: 'الكل',
+    amenities: 'المميزات',
+    amenitiesHint: 'اعرض فقط الرحلات التي تحتوي على باقة تشمل جميع المميزات المختارة',
   },
 
   trip: {
