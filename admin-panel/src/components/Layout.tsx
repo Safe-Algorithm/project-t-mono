@@ -110,20 +110,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Brand */}
-      <div className="px-4 py-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-xl bg-sky-500 flex items-center justify-center flex-shrink-0">
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+      <div className="px-5 py-5 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/>
             </svg>
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">rihla رحلة</p>
-            <p className="text-xs text-slate-400 dark:text-slate-500 leading-tight">Admin Panel</p>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <ThemeToggle />
-            <LanguageSwitcher />
+          <div>
+            <p className="text-base font-bold text-slate-900 dark:text-white leading-tight">rihla رحلة</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">Admin Panel</p>
           </div>
         </div>
       </div>
@@ -149,8 +145,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         ))}
       </nav>
 
-      {/* Profile + Logout */}
+      {/* Bottom: theme/lang + profile + logout */}
       <div className="px-3 py-4 border-t border-slate-200 dark:border-slate-800 space-y-1">
+        <div className="flex items-center gap-2 px-3 mb-2">
+          <ThemeToggle />
+          <LanguageSwitcher />
+        </div>
         <Link
           href="/profile"
           onClick={() => setMobileOpen(false)}

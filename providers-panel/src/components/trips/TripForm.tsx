@@ -555,8 +555,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             <p className={labelCls}>{t('trip.amenities')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {Object.entries(amenityLabels).map(([value, label]) => (
-                <label key={value} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm transition ${selectedAmenities.includes(value) ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 font-semibold' : 'border-gray-200 dark:border-gray-600'}`}>
-                  <input type="checkbox" checked={selectedAmenities.includes(value)} onChange={() => toggleAmenity(value)} className="accent-sky-500" />
+                <label key={value} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm font-medium transition ${selectedAmenities.includes(value) ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                  <input type="checkbox" checked={selectedAmenities.includes(value)} onChange={() => toggleAmenity(value)} className="accent-sky-500 flex-shrink-0" />
                   {label}
                 </label>
               ))}
@@ -572,16 +572,16 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                 const hasValidations = field.available_validations && field.available_validations.length > 0;
                 const showConfig = showTripFieldValidation[field.field_name] || false;
                 return (
-                  <div key={field.field_name} className={`rounded-lg border p-3 ${isChecked ? 'border-sky-200 bg-sky-50 dark:bg-sky-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
-                    <div className="flex items-center justify-between">
-                      <label className={`flex items-center gap-2 text-sm flex-1 ${mandatory ? 'opacity-60' : 'cursor-pointer'}`}>
-                        <input type="checkbox" checked={isChecked} disabled={mandatory} onChange={() => { if (mandatory) return; setTripRequiredFields(prev => prev.includes(field.field_name) ? prev.filter(f => f !== field.field_name) : [...prev, field.field_name]); }} className="accent-sky-500" />
-                        <span className="font-medium">{field.display_name}</span>
-                        <span className="text-gray-400 text-xs">({field.ui_type})</span>
-                        {mandatory && <span className="text-red-400 text-xs font-bold">(required)</span>}
+                  <div key={field.field_name} className={`rounded-xl border p-3 transition-colors ${isChecked ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <label className={`flex items-center gap-2 text-sm flex-1 min-w-0 ${mandatory ? 'opacity-60' : 'cursor-pointer'}`}>
+                        <input type="checkbox" checked={isChecked} disabled={mandatory} onChange={() => { if (mandatory) return; setTripRequiredFields(prev => prev.includes(field.field_name) ? prev.filter(f => f !== field.field_name) : [...prev, field.field_name]); }} className="accent-sky-500 flex-shrink-0" />
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{field.display_name}</span>
+                        <span className="text-slate-400 dark:text-slate-500 text-xs">({field.ui_type})</span>
+                        {mandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">(required)</span>}
                       </label>
                       {isChecked && hasValidations && (
-                        <button type="button" onClick={() => setShowTripFieldValidation(prev => ({ ...prev, [field.field_name]: !prev[field.field_name] }))} className={`text-xs px-2 py-1 rounded border transition ${showConfig ? 'bg-sky-500 text-white border-sky-500' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                        <button type="button" onClick={() => setShowTripFieldValidation(prev => ({ ...prev, [field.field_name]: !prev[field.field_name] }))} className={`text-xs px-2.5 py-1 rounded-lg border transition flex-shrink-0 ${showConfig ? 'bg-sky-500 text-white border-sky-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-sky-400'}`}>
                           {showConfig ? t('form.hide') : t('form.configure')} {t('form.validations')}
                         </button>
                       )}
@@ -710,8 +710,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                     {Object.entries(amenityLabels).map(([value, label]) => {
                       const pkgAmenities = pkg.amenities ?? [];
                       return (
-                        <label key={value} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs transition ${pkgAmenities.includes(value) ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 font-semibold' : 'border-gray-200 dark:border-gray-600'}`}>
-                          <input type="checkbox" checked={pkgAmenities.includes(value)} onChange={() => { const updated = pkgAmenities.includes(value) ? pkgAmenities.filter(a => a !== value) : [...pkgAmenities, value]; updatePackage(index, 'amenities', updated as any); }} className="accent-sky-500" />
+                        <label key={value} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-medium transition ${pkgAmenities.includes(value) ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
+                          <input type="checkbox" checked={pkgAmenities.includes(value)} onChange={() => { const updated = pkgAmenities.includes(value) ? pkgAmenities.filter(a => a !== value) : [...pkgAmenities, value]; updatePackage(index, 'amenities', updated as any); }} className="accent-sky-500 flex-shrink-0" />
                           {label}
                         </label>
                       );
@@ -728,16 +728,16 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                       const hasValidations = field.available_validations && field.available_validations.length > 0;
                       const showConfig = showValidationConfig[index]?.[field.field_name] || false;
                       return (
-                        <div key={field.field_name} className={`rounded-lg border p-3 ${isChecked ? 'border-sky-200 bg-sky-50 dark:bg-sky-900/20' : 'border-gray-200 dark:border-gray-700'}`}>
-                          <div className="flex items-center justify-between">
-                            <label className={`flex items-center gap-2 text-sm flex-1 ${isMandatory ? 'opacity-60' : 'cursor-pointer'}`}>
-                              <input type="checkbox" checked={isChecked} disabled={isMandatory} onChange={() => toggleRequiredField(index, field.field_name)} className="accent-sky-500" />
-                              <span className="font-medium">{field.display_name}</span>
-                              <span className="text-gray-400 text-xs">({field.ui_type})</span>
-                              {isMandatory && <span className="text-red-400 text-xs font-bold">({t('package.required')})</span>}
+                        <div key={field.field_name} className={`rounded-xl border p-3 transition-colors ${isChecked ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/30'}`}>
+                          <div className="flex items-center justify-between gap-2">
+                            <label className={`flex items-center gap-2 text-sm flex-1 min-w-0 ${isMandatory ? 'opacity-60' : 'cursor-pointer'}`}>
+                              <input type="checkbox" checked={isChecked} disabled={isMandatory} onChange={() => toggleRequiredField(index, field.field_name)} className="accent-sky-500 flex-shrink-0" />
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{field.display_name}</span>
+                              <span className="text-slate-400 dark:text-slate-500 text-xs">({field.ui_type})</span>
+                              {isMandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">({t('package.required')})</span>}
                             </label>
                             {isChecked && hasValidations && (
-                              <button type="button" onClick={() => toggleValidationConfigVisibility(index, field.field_name)} className={`text-xs px-2 py-1 rounded border transition ${showConfig ? 'bg-sky-500 text-white border-sky-500' : 'bg-gray-100 text-gray-700 border-gray-300'}`}>
+                              <button type="button" onClick={() => toggleValidationConfigVisibility(index, field.field_name)} className={`text-xs px-2.5 py-1 rounded-lg border transition flex-shrink-0 ${showConfig ? 'bg-sky-500 text-white border-sky-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-sky-400'}`}>
                                 {showConfig ? t('form.hide') : t('form.configure')} {t('form.validations')}
                               </button>
                             )}

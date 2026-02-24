@@ -197,49 +197,43 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     });
   }
 
+  const selectCls = "w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition";
+  const labelCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1";
+
   if (loading) {
     return (
-      <div style={{ padding: '0.5rem', color: '#888', fontSize: '0.9rem' }}>
-        Loading destinations...
+      <div className="flex items-center gap-2 py-2 text-sm text-slate-400 dark:text-slate-500">
+        <div className="w-4 h-4 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+        Loading destinations…
       </div>
     );
   }
 
   return (
-    <div style={{ border: '1px solid #ddd', padding: '1rem', borderRadius: '4px', marginBottom: '1rem' }}>
-      <h3 style={{ marginTop: 0, marginBottom: '0.75rem' }}>Trip Destinations *</h3>
-
+    <div className="space-y-3">
       {error && (
-        <div style={{ padding: '0.5rem', backgroundColor: '#ffebee', color: '#c62828', borderRadius: '4px', marginBottom: '0.75rem', fontSize: '0.9rem' }}>
-          {error}
-          <button onClick={() => setError(null)} style={{ marginLeft: '0.5rem', fontWeight: 'bold', border: 'none', background: 'none', cursor: 'pointer', color: '#c62828' }}>&times;</button>
+        <div className="flex items-center justify-between gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError(null)} className="font-bold text-red-500 hover:text-red-700 dark:hover:text-red-300 leading-none">&times;</button>
         </div>
       )}
 
-      {/* Current destinations */}
-      {displayItems.length > 0 && (
-        <div style={{ marginBottom: '0.75rem' }}>
+      {/* Added destinations list */}
+      {displayItems.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
           {displayItems.map((item, index) => (
-            <div key={item.key} style={{
-              display: 'flex', alignItems: 'center', gap: '0.5rem',
-              padding: '0.5rem 0.75rem', marginBottom: '0.25rem',
-              backgroundColor: '#e3f2fd', border: '1px solid #90caf9', borderRadius: '4px',
-            }}>
-              <span style={{ fontWeight: 500, fontSize: '0.9rem', color: '#1565c0' }}>
-                {item.name}
-              </span>
+            <div key={item.key} className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-700 rounded-xl text-sm">
+              <span className="font-semibold text-sky-700 dark:text-sky-300">{item.name}</span>
               {item.placeName && (
-                <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                  &rarr; {item.placeName}
-                </span>
+                <>
+                  <svg className="w-3 h-3 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                  <span className="text-sky-600 dark:text-sky-400">{item.placeName}</span>
+                </>
               )}
               <button
                 type="button"
                 onClick={() => handleRemove(index)}
-                style={{
-                  marginLeft: 'auto', color: '#c62828', fontWeight: 'bold',
-                  border: 'none', background: 'none', cursor: 'pointer', fontSize: '1rem',
-                }}
+                className="ml-1 w-5 h-5 flex items-center justify-center rounded-full text-sky-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-base leading-none"
                 title="Remove"
               >
                 &times;
@@ -247,27 +241,20 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
             </div>
           ))}
         </div>
-      )}
-
-      {displayItems.length === 0 && (
-        <p style={{ fontSize: '0.85rem', color: '#e65100', marginBottom: '0.75rem' }}>
+      ) : (
+        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
           No destinations added yet. Please add at least one destination.
         </p>
       )}
 
-      {/* Add destination form */}
-      <div style={{ padding: '0.75rem', backgroundColor: '#fafafa', border: '1px solid #eee', borderRadius: '4px' }}>
-        <p style={{ fontSize: '0.75rem', fontWeight: 600, color: '#888', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Add Destination</p>
+      {/* Add destination picker */}
+      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 space-y-3">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Add Destination</p>
 
-        {/* Country */}
-        <div style={{ marginBottom: '0.5rem' }}>
-          <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>Country</label>
-          <select
-            value={selectedCountryId}
-            onChange={e => setSelectedCountryId(e.target.value)}
-            style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
-          >
-            <option value="">-- Select Country --</option>
+        <div>
+          <label className={labelCls}>Country</label>
+          <select value={selectedCountryId} onChange={e => setSelectedCountryId(e.target.value)} className={selectCls}>
+            <option value="">— Select Country —</option>
             {destinations.map(country => (
               <option key={country.id} value={country.id}>
                 {country.country_code} - {getName(country)}
@@ -276,35 +263,23 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
           </select>
         </div>
 
-        {/* City */}
         {selectedCountryId && cities.length > 0 && (
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>City (optional)</label>
-            <select
-              value={selectedCityId}
-              onChange={e => setSelectedCityId(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
-            >
-              <option value="">-- Select City --</option>
+          <div>
+            <label className={labelCls}>City <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+            <select value={selectedCityId} onChange={e => setSelectedCityId(e.target.value)} className={selectCls}>
+              <option value="">— Select City —</option>
               {cities.map(city => (
-                <option key={city.id} value={city.id}>
-                  {getName(city)}
-                </option>
+                <option key={city.id} value={city.id}>{getName(city)}</option>
               ))}
             </select>
           </div>
         )}
 
-        {/* Place */}
         {selectedCityId && cityPlaces.length > 0 && (
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: '#666', marginBottom: '0.25rem' }}>Place (optional)</label>
-            <select
-              value={selectedPlaceId}
-              onChange={e => setSelectedPlaceId(e.target.value)}
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '4px', fontSize: '0.9rem' }}
-            >
-              <option value="">-- Select Place --</option>
+          <div>
+            <label className={labelCls}>Place <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+            <select value={selectedPlaceId} onChange={e => setSelectedPlaceId(e.target.value)} className={selectCls}>
+              <option value="">— Select Place —</option>
               {cityPlaces.map(place => (
                 <option key={place.id} value={place.id}>
                   {getName(place)} ({place.type.replace('_', ' ')})
@@ -318,15 +293,13 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
           type="button"
           onClick={handleAdd}
           disabled={adding || !selectedCountryId}
-          style={{
-            width: '100%', padding: '0.5rem', marginTop: '0.25rem',
-            backgroundColor: selectedCountryId ? '#28a745' : '#ccc',
-            color: 'white', border: 'none', borderRadius: '4px',
-            cursor: selectedCountryId ? 'pointer' : 'not-allowed',
-            fontSize: '0.9rem', fontWeight: 500,
-          }}
+          className={`w-full py-2 px-4 rounded-lg text-sm font-semibold transition-colors ${
+            selectedCountryId && !adding
+              ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+              : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+          }`}
         >
-          {adding ? 'Adding...' : '+ Add Destination'}
+          {adding ? 'Adding…' : '+ Add Destination'}
         </button>
       </div>
     </div>

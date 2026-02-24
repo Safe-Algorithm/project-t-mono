@@ -161,23 +161,58 @@ const TripEditPage = () => {
     }
   };
 
-  if (isLoading) return <p>Loading...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!trip) return <p>Trip not found.</p>;
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent animate-spin" />
+    </div>
+  );
+
+  if (error && !trip) return (
+    <div className="flex flex-col items-center justify-center h-64 gap-3">
+      <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
+      <button onClick={() => router.back()} className="text-sm text-sky-600 dark:text-sky-400 hover:underline">Go back</button>
+    </div>
+  );
+
+  if (!trip) return (
+    <div className="flex items-center justify-center h-64">
+      <p className="text-slate-400 dark:text-slate-500 text-sm">Trip not found.</p>
+    </div>
+  );
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h1>Edit Trip</h1>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <button onClick={() => router.push(`/trips/${id}`)} style={{ padding: '0.5rem 1rem' }}>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Trip</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{trip.name_en || trip.name_ar}</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => router.push(`/trips/${id}`)}
+            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
             View Details
           </button>
-          <button onClick={handleDelete} disabled={isSubmitting} style={{ backgroundColor: 'red', color: 'white', padding: '0.5rem 1rem' }}>
+          <button
+            onClick={handleDelete}
+            disabled={isSubmitting}
+            className="px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Delete Trip
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+          </svg>
+          {error}
+        </div>
+      )}
+
       <TripForm trip={trip} onSubmit={handleSubmit} isSubmitting={isSubmitting} />
     </div>
   );
