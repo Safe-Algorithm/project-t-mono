@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import { useRouter } from 'next/router';
+import { useTranslation } from 'react-i18next';
 
 interface Provider {
   id: string;
@@ -103,6 +104,7 @@ const TripsPage = () => {
     setIsActive('all');
   };
 
+  const { t } = useTranslation();
   const inputCls = "w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
   const labelCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5";
 
@@ -120,15 +122,15 @@ const TripsPage = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">All Trips</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Showing {trips.length} trip{trips.length !== 1 ? 's' : ''}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('nav.trips')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('trips.totalCount_other', { count: trips.length })}</p>
         </div>
         <button
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border ${showFilters ? 'bg-sky-500 text-white border-sky-500' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg>
-          {showFilters ? 'Hide Filters' : 'Filters'}
+          {showFilters ? t('common.close') : t('common.filter', 'Filters')}
         </button>
       </div>
 
@@ -137,19 +139,19 @@ const TripsPage = () => {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className={labelCls}>Search</label>
-              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Name or description…" className={inputCls} />
+              <label className={labelCls}>{t('common.search')}</label>
+              <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder={t('common.searchPlaceholder', 'Name or description…')} className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Provider Name</label>
+              <label className={labelCls}>{t('nav.providers')}</label>
               <input type="text" value={providerName} onChange={e => setProviderName(e.target.value)} placeholder="Provider…" className={inputCls} />
             </div>
             <div>
-              <label className={labelCls}>Status</label>
+              <label className={labelCls}>{t('common.status')}</label>
               <select value={isActive} onChange={e => setIsActive(e.target.value)} className={inputCls}>
-                <option value="all">All</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
+                <option value="all">{t('common.all')}</option>
+                <option value="true">{t('status.active')}</option>
+                <option value="false">{t('status.inactive')}</option>
               </select>
             </div>
             <div>
@@ -198,7 +200,7 @@ const TripsPage = () => {
           </div>
           <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
             <button onClick={handleClearFilters} className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-              Clear All Filters
+              {t('common.clearFilters', 'Clear All Filters')}
             </button>
           </div>
         </div>
@@ -218,11 +220,11 @@ const TripsPage = () => {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Trip</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Provider</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Dates</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">Price</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('trips.colTrip')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('nav.providers')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">{t('trips.colDates')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">{t('trips.colPrice')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('trips.colStatus')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -250,7 +252,7 @@ const TripsPage = () => {
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}>
-                        {trip.is_active ? 'Active' : 'Inactive'}
+                        {trip.is_active ? t('status.active') : t('status.inactive')}
                       </span>
                     </td>
                   </tr>

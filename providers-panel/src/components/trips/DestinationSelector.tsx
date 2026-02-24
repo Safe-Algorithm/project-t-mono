@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { destinationService, Destination, Place, TripDestination } from '../../services/destinationService';
 import { useTranslation } from 'react-i18next';
+import { destinationService, Destination, Place, TripDestination } from '../../services/destinationService';
 
 // A local selection entry (used in form-state mode before trip is created)
 export interface DestinationSelection {
@@ -197,6 +197,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     });
   }
 
+  const { t } = useTranslation();
   const selectCls = "w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition";
   const labelCls = "block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1";
 
@@ -204,7 +205,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     return (
       <div className="flex items-center gap-2 py-2 text-sm text-slate-400 dark:text-slate-500">
         <div className="w-4 h-4 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
-        Loading destinations…
+        {t('destinations.loading')}
       </div>
     );
   }
@@ -243,18 +244,18 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
         </div>
       ) : (
         <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-          No destinations added yet. Please add at least one destination.
+          {t('destinations.noDestinationsYet')}
         </p>
       )}
 
       {/* Add destination picker */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 p-4 space-y-3">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">Add Destination</p>
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide">{t('destinations.addDestination')}</p>
 
         <div>
-          <label className={labelCls}>Country</label>
+          <label className={labelCls}>{t('destinations.country')}</label>
           <select value={selectedCountryId} onChange={e => setSelectedCountryId(e.target.value)} className={selectCls}>
-            <option value="">— Select Country —</option>
+            <option value="">{t('destinations.selectCountryPlaceholder')}</option>
             {destinations.map(country => (
               <option key={country.id} value={country.id}>
                 {country.country_code} - {getName(country)}
@@ -265,9 +266,9 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
 
         {selectedCountryId && cities.length > 0 && (
           <div>
-            <label className={labelCls}>City <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+            <label className={labelCls}>{t('destinations.city')} <span className="normal-case font-normal text-slate-400">({t('common.optional')})</span></label>
             <select value={selectedCityId} onChange={e => setSelectedCityId(e.target.value)} className={selectCls}>
-              <option value="">— Select City —</option>
+              <option value="">{t('destinations.selectCityPlaceholder')}</option>
               {cities.map(city => (
                 <option key={city.id} value={city.id}>{getName(city)}</option>
               ))}
@@ -277,9 +278,9 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
 
         {selectedCityId && cityPlaces.length > 0 && (
           <div>
-            <label className={labelCls}>Place <span className="normal-case font-normal text-slate-400">(optional)</span></label>
+            <label className={labelCls}>{t('destinations.place')} <span className="normal-case font-normal text-slate-400">({t('common.optional')})</span></label>
             <select value={selectedPlaceId} onChange={e => setSelectedPlaceId(e.target.value)} className={selectCls}>
-              <option value="">— Select Place —</option>
+              <option value="">{t('destinations.selectPlacePlaceholder')}</option>
               {cityPlaces.map(place => (
                 <option key={place.id} value={place.id}>
                   {getName(place)} ({place.type.replace('_', ' ')})
@@ -299,7 +300,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
               : 'bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
           }`}
         >
-          {adding ? 'Adding…' : '+ Add Destination'}
+          {adding ? t('destinations.adding') : t('destinations.addButton')}
         </button>
       </div>
     </div>

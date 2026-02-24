@@ -3,8 +3,13 @@ import { providerService } from '../services/providerService';
 import { FullRegistrationPayload } from '../types/user';
 import { fileDefinitionsService, FileDefinition } from '../services/fileDefinitions';
 import FileSelector from '../components/registration/FileSelector';
+import { useTranslation } from 'react-i18next';
+import ThemeToggle from '@/components/ThemeToggle';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const RegisterPage = () => {
+  const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -231,246 +236,247 @@ const RegisterPage = () => {
     }
   };
 
+  const inputCls = 'w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition text-sm';
+  const labelCls = 'block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5';
+  const sectionTitleCls = 'text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4';
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Provider Registration</h1>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Create your provider account to start offering trips</p>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex" dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Left decorative panel */}
+      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-sky-500 to-sky-700 flex-col items-center justify-center p-12 relative overflow-hidden flex-shrink-0">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-64 h-64 rounded-full bg-white" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-white" />
         </div>
-        
-        <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">User Details</h2>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    placeholder="John Doe" 
-                    value={formData.name} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+        <div className="relative z-10 text-center text-white">
+          <div className="w-20 h-20 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+          </div>
+          <h1 className="text-5xl font-bold mb-2">رحلة</h1>
+          <p className="text-xl font-light opacity-90 mb-1">Rihla</p>
+          <p className="text-sm opacity-75 mt-4 max-w-xs leading-relaxed">
+            {isRTL ? 'منصة إدارة الرحلات للمزودين' : 'The travel management platform for trip providers'}
+          </p>
+          <div className="mt-8 space-y-3 text-start">
+            {[
+              isRTL ? 'إنشاء وإدارة الرحلات' : 'Create & manage trips',
+              isRTL ? 'تتبع الحجوزات' : 'Track bookings',
+              isRTL ? 'التواصل مع المسافرين' : 'Communicate with travelers',
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 text-white/90 text-sm">
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
                 </div>
-                
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right form panel */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-y-auto">
+        {/* Top controls */}
+        <div className="flex justify-end items-center gap-2 p-4 flex-shrink-0">
+          <ThemeToggle />
+          <LanguageSwitcher />
+        </div>
+
+        <div className="flex-1 flex items-start justify-center px-6 py-6">
+          <div className="w-full max-w-lg">
+            {/* Mobile brand */}
+            <div className="lg:hidden text-center mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-sky-500 flex items-center justify-center mx-auto mb-3 shadow-md">
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">رحلة</h2>
+            </div>
+
+            <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
+              {isRTL ? 'إنشاء حساب مزود' : 'Create provider account'}
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+              {isRTL ? 'أدخل بياناتك لبدء تقديم الرحلات' : 'Fill in your details to start offering trips'}
+            </p>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* ── User Details ── */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                <p className={sectionTitleCls}>{isRTL ? 'بيانات المستخدم' : 'User Details'}</p>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Address</label>
+                  <label className={labelCls}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
+                  <input type="text" name="name" placeholder={isRTL ? 'محمد أحمد' : 'John Doe'} value={formData.name} onChange={handleChange} required className={inputCls} />
+                </div>
+
+                <div>
+                  <label className={labelCls}>{isRTL ? 'البريد الإلكتروني' : 'Email Address'}</label>
                   <div className="flex gap-2">
-                    <input 
-                      type="email" 
-                      name="email" 
-                      placeholder="john@example.com" 
-                      value={formData.email} 
-                      onChange={handleChange} 
-                      disabled={!emailEditable}
-                      required 
-                      className={`flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!emailEditable ? 'bg-gray-100' : ''}`}
+                    <input
+                      type="email" name="email" placeholder="you@company.com"
+                      value={formData.email} onChange={handleChange}
+                      disabled={!emailEditable} required
+                      className={`${inputCls} flex-1 ${!emailEditable ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                     {!emailVerified && emailEditable && (
-                      <button 
-                        type="button" 
-                        onClick={handleSendOTP} 
-                        disabled={sendingOtp || !formData.email}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
-                      >
-                        {sendingOtp ? 'Sending...' : 'Verify Email'}
+                      <button type="button" onClick={handleSendOTP} disabled={sendingOtp || !formData.email}
+                        className="px-4 py-2.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                        {sendingOtp
+                          ? <span className="flex items-center gap-1.5"><svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{isRTL ? 'إرسال...' : 'Sending...'}</span>
+                          : (isRTL ? 'تحقق' : 'Verify')}
                       </button>
                     )}
                     {emailVerified && (
-                      <button 
-                        type="button" 
-                        onClick={handleEditEmail}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 whitespace-nowrap transition-colors"
-                      >
-                        Edit Email
+                      <button type="button" onClick={handleEditEmail}
+                        className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium rounded-xl transition-colors whitespace-nowrap">
+                        {isRTL ? 'تعديل' : 'Edit'}
                       </button>
                     )}
                   </div>
-                  
+
                   {otpSent && !emailVerified && (
-                    <div className="flex gap-2 mt-2">
-                      <input 
-                        type="text" 
-                        placeholder="Enter 6-digit OTP" 
-                        value={otp} 
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        maxLength={6}
-                        className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      />
-                      <button 
-                        type="button" 
-                        onClick={handleVerifyOTP} 
-                        disabled={verifyingOtp || otp.length !== 6}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
-                      >
-                        {verifyingOtp ? 'Verifying...' : 'Verify OTP'}
-                      </button>
-                      <button 
-                        type="button" 
-                        onClick={handleSendOTP} 
-                        disabled={sendingOtp}
-                        className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap transition-colors"
-                      >
-                        Resend
-                      </button>
+                    <div className="mt-3 p-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl space-y-2">
+                      <p className="text-xs text-sky-700 dark:text-sky-400">{isRTL ? 'تم إرسال رمز التحقق إلى بريدك الإلكتروني' : 'A verification code was sent to your email'}</p>
+                      <div className="flex gap-2">
+                        <input type="text" placeholder={isRTL ? 'أدخل الرمز المكون من 6 أرقام' : 'Enter 6-digit code'}
+                          value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6}
+                          className={`${inputCls} flex-1 tracking-widest font-mono`} />
+                        <button type="button" onClick={handleVerifyOTP} disabled={verifyingOtp || otp.length !== 6}
+                          className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                          {verifyingOtp
+                            ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                            : (isRTL ? 'تأكيد' : 'Confirm')}
+                        </button>
+                        <button type="button" onClick={handleSendOTP} disabled={sendingOtp}
+                          className="px-3 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm rounded-xl transition-colors whitespace-nowrap">
+                          {isRTL ? 'إعادة إرسال' : 'Resend'}
+                        </button>
+                      </div>
                     </div>
                   )}
-                  
+
                   {emailVerified && (
-                    <p className="text-green-600 text-sm mt-2 flex items-center">
-                      <svg className="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <div className="mt-2 flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      Email verified
-                    </p>
+                      {isRTL ? 'تم التحقق من البريد الإلكتروني' : 'Email verified'}
+                    </div>
                   )}
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                  <input 
-                    type="text" 
-                    name="phone" 
-                    placeholder="+966 50 123 4567" 
-                    value={formData.phone} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <label className={labelCls}>{isRTL ? 'رقم الهاتف' : 'Phone Number'}</label>
+                  <input type="text" name="phone" placeholder="+966 50 123 4567" value={formData.phone} onChange={handleChange} required className={inputCls} />
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
-                  <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="••••••••" 
-                    value={formData.password} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <label className={labelCls}>{isRTL ? 'كلمة المرور' : 'Password'}</label>
+                  <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required className={inputCls} />
                 </div>
               </div>
-            </div>
             
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Company Details</h2>
-              <div className="space-y-4">
+              {/* ── Company Details ── */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                <p className={sectionTitleCls}>{isRTL ? 'بيانات الشركة' : 'Company Details'}</p>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
-                  <input 
-                    type="text" 
-                    name="companyName" 
-                    placeholder="ABC Travel Company" 
-                    value={formData.companyName} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <label className={labelCls}>{isRTL ? 'اسم الشركة' : 'Company Name'}</label>
+                  <input type="text" name="companyName" placeholder={isRTL ? 'شركة السفر المتحدة' : 'ABC Travel Company'} value={formData.companyName} onChange={handleChange} required className={inputCls} />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Email</label>
-                  <input 
-                    type="email" 
-                    name="companyEmail" 
-                    placeholder="info@company.com" 
-                    value={formData.companyEmail} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Phone</label>
-                  <input 
-                    type="text" 
-                    name="companyPhone" 
-                    placeholder="+966 11 123 4567" 
-                    value={formData.companyPhone} 
-                    onChange={handleChange} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>{isRTL ? 'البريد الإلكتروني للشركة' : 'Company Email'}</label>
+                    <input type="email" name="companyEmail" placeholder="info@company.com" value={formData.companyEmail} onChange={handleChange} required className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{isRTL ? 'هاتف الشركة' : 'Company Phone'}</label>
+                    <input type="text" name="companyPhone" placeholder="+966 11 123 4567" value={formData.companyPhone} onChange={handleChange} required className={inputCls} />
+                  </div>
                 </div>
               </div>
-            </div>
-            
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">Required Documents</h2>
-              {loadingFiles ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <p className="ml-3 text-gray-600 dark:text-gray-400">Loading file requirements...</p>
+
+              {/* ── Required Documents ── */}
+              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+                <p className={sectionTitleCls}>{isRTL ? 'المستندات المطلوبة' : 'Required Documents'}</p>
+                {loadingFiles ? (
+                  <div className="flex items-center justify-center gap-3 py-8">
+                    <div className="w-5 h-5 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'جاري تحميل المتطلبات...' : 'Loading requirements...'}</p>
+                  </div>
+                ) : fileDefinitions.length > 0 ? (
+                  <div className="space-y-3">
+                    {fileDefinitions.map(definition => (
+                      <FileSelector
+                        key={definition.id}
+                        definition={definition}
+                        onFileChange={handleFileChange(definition.id)}
+                        currentFile={uploadedFiles[definition.id]}
+                        language={isRTL ? 'ar' : 'en'}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
+                    {isRTL ? 'لا توجد متطلبات مستندات.' : 'No document requirements configured.'}
+                  </p>
+                )}
+              </div>
+
+              {/* ── Alerts ── */}
+              {success && (
+                <div className="flex items-start gap-3 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                  <svg className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400">{success}</p>
                 </div>
-              ) : fileDefinitions.length > 0 ? (
-                <div className="space-y-4">
-                  {fileDefinitions.map(definition => (
-                    <FileSelector
-                      key={definition.id}
-                      definition={definition}
-                      onFileChange={handleFileChange(definition.id)}
-                      currentFile={uploadedFiles[definition.id]}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-center py-4">No file requirements configured.</p>
               )}
-            </div>
-            
-            <div className="pt-6">
-              <button 
-                type="submit" 
+
+              {error && (
+                <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+                  <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                </div>
+              )}
+
+              {/* ── Submit ── */}
+              <button
+                type="submit"
                 disabled={loading || !emailVerified}
-                className="w-full py-3 px-4 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors shadow-md"
+                className="w-full py-2.5 px-4 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors text-sm shadow-sm"
               >
                 {loading ? (
-                  <span className="flex items-center justify-center">
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    Registering...
+                    {isRTL ? 'جاري التسجيل...' : 'Registering...'}
                   </span>
-                ) : emailVerified ? 'Complete Registration' : 'Verify Email First'}
+                ) : emailVerified
+                  ? (isRTL ? 'إتمام التسجيل' : 'Complete Registration')
+                  : (isRTL ? 'تحقق من البريد الإلكتروني أولاً' : 'Verify Email First')}
               </button>
-              
-              {success && (
-                <div className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                  <p className="text-green-800 flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                    </svg>
-                    {success}
-                  </p>
-                </div>
-              )}
-              
-              {error && (
-                <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <p className="text-red-800 flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    {error}
-                  </p>
-                </div>
-              )}
-            </div>
-          </form>
+
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 pb-6">
+                {isRTL ? 'لديك حساب بالفعل؟ ' : 'Already have an account? '}
+                <a href="/login" className="text-sky-500 hover:text-sky-600 font-semibold">
+                  {isRTL ? 'سجّل دخولك' : 'Sign in'}
+                </a>
+              </p>
+            </form>
+          </div>
         </div>
-        
-        <p className="text-center mt-6 text-sm text-gray-600 dark:text-gray-400">
-          Already have an account?{' '}
-          <a href="/login" className="text-blue-600 hover:text-blue-700 font-medium">Sign in here</a>
-        </p>
       </div>
     </div>
   );

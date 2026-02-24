@@ -248,6 +248,115 @@ const resources = {
       "common.open": "Open",
       "common.send": "Send",
       "common.noData": "No data found.",
+      "common.goBack": "Go back",
+      "common.optional": "optional",
+      "common.required": "required",
+
+      // Trip form — dates & capacity section
+      "trip.datesCapacity": "Dates & Capacity",
+      "trip.startDateTime": "Start Date & Time",
+      "trip.endDateTime": "End Date & Time",
+      "trip.registrationDeadline": "Registration Deadline",
+      "trip.registrationDeadlineHint": "≤ start date",
+      "trip.maxParticipantsPlaceholder": "e.g. 20",
+
+      // Trip form — starting city section
+      "trip.startingCity": "Starting City",
+      "trip.startingCityHint": "The city from which this trip departs.",
+      "trip.startingCitySelected": "Starting city selected",
+      "trip.country": "Country",
+      "trip.city": "City",
+      "trip.selectCountry": "Select country…",
+      "trip.selectCity": "Select city…",
+
+      // Trip form — settings & destinations
+      "trip.settingsDestinations": "Settings & Destinations",
+
+      // Trip form — trip type
+      "trip.tripType": "Trip Type",
+      "trip.tripTypeHint": "Choose whether this trip has multiple selectable packages or a single price.",
+      "trip.simpleTrip": "Simple Trip",
+      "trip.simpleTripDesc": "One price for all participants",
+      "trip.packagedTrip": "Packaged Trip",
+      "trip.packagedTripDesc": "Multiple packages, each with its own price",
+
+      // Trip form — price/policy section
+      "trip.pricePolicyFields": "Price, Policy & Fields",
+      "trip.pricePerPerson": "Price per Person (SAR)",
+      "trip.pricePlaceholder": "e.g. 250",
+      "trip.requiredParticipantFields": "Required Participant Fields",
+      "trip.requiredFieldsNote": "Name and Date of Birth are always required.",
+      "trip.provideOneLanguage": "Provide info in at least one language (English or Arabic)",
+      "trip.optionalIfArabic": "optional if Arabic provided",
+      "trip.optionalIfEnglish": "optional if English provided",
+
+      // Trip form — error banner
+      "form.fixFollowing": "Please fix the following:",
+      "form.uploadingImages": "Uploading images, please wait…",
+
+      // Trip form — packages section
+      "package.minRequired": "minimum 2 required",
+      "package.provideOneLanguage": "Provide info in at least one language (English or Arabic)",
+      "package.nameEnOptional": "optional",
+      "package.maxParticipants": "Max Participants",
+      "package.maxParticipantsPlaceholder": "e.g. 10",
+      "package.pricePlaceholder": "e.g. 250",
+      "package.refundable": "Refundable",
+      "package.amenities": "Amenities",
+      "package.nameDOBAlwaysRequired": "Name & DOB always required.",
+
+      // Destinations selector
+      "destinations.addDestination": "Add Destination",
+      "destinations.noDestinationsYet": "No destinations added yet. Please add at least one destination.",
+      "destinations.loading": "Loading destinations…",
+      "destinations.addButton": "+ Add Destination",
+      "destinations.adding": "Adding…",
+      "destinations.country": "Country",
+      "destinations.city": "City",
+      "destinations.place": "Place",
+      "destinations.selectCountryPlaceholder": "— Select Country —",
+      "destinations.selectCityPlaceholder": "— Select City —",
+      "destinations.selectPlacePlaceholder": "— Select Place —",
+
+      // Validation config
+      "validation.rulesFor": "Validation Rules — {{field}}",
+      "validation.noOptions": "No validation options available for this field type.",
+      "validation.configureHint": "Configure validation rules that participants must meet for this field:",
+      "validation.errors": "Validation Errors:",
+      "validation.currentConfig": "Current Configuration:",
+      "validation.loading": "Loading validation options…",
+
+      // Trips list page
+      "trips.totalCount_one": "{{count}} trip total",
+      "trips.totalCount_other": "{{count}} trips total",
+      "trips.searchPlaceholder": "Search trips...",
+      "trips.filterAll": "All",
+      "trips.filterActive": "Active",
+      "trips.filterInactive": "Inactive",
+      "trips.colTrip": "Trip",
+      "trips.colDates": "Dates",
+      "trips.colPrice": "Price",
+      "trips.colSeats": "Seats",
+      "trips.colStatus": "Status",
+      "trips.typePackaged": "Packaged",
+      "trips.typeSimple": "Simple",
+      "trips.pkg": "pkg",
+      "trips.getStarted": "Get started by creating your first trip",
+
+      // New/Edit trip pages
+      "trip.createNew": "Create New Trip",
+      "trip.createNewSubtitle": "Fill in the details to create a new trip offering",
+      "trip.editTrip": "Edit Trip",
+      "trip.viewDetails": "View Details",
+      "trip.deleteTrip": "Delete Trip",
+      "trip.cancelCreate": "Cancel",
+      "trip.loadingError": "An unknown error occurred while fetching trip details.",
+      "trip.notFound": "Trip not found.",
+      "trip.goBack": "Go back",
+
+      // Layout
+      "layout.providerPanel": "Provider Panel",
+      "layout.logoutConfirm": "Logout?",
     }
   },
   ar: {
@@ -494,6 +603,115 @@ const resources = {
       "common.open": "فتح",
       "common.send": "إرسال",
       "common.noData": "لا توجد بيانات.",
+      "common.goBack": "رجوع",
+      "common.optional": "اختياري",
+      "common.required": "مطلوب",
+
+      // Trip form — dates & capacity section
+      "trip.datesCapacity": "التواريخ والسعة",
+      "trip.startDateTime": "تاريخ ووقت البدء",
+      "trip.endDateTime": "تاريخ ووقت الانتهاء",
+      "trip.registrationDeadline": "آخر موعد للتسجيل",
+      "trip.registrationDeadlineHint": "≤ تاريخ البدء",
+      "trip.maxParticipantsPlaceholder": "مثال: 20",
+
+      // Trip form — starting city section
+      "trip.startingCity": "مدينة الانطلاق",
+      "trip.startingCityHint": "المدينة التي تنطلق منها هذه الرحلة.",
+      "trip.startingCitySelected": "تم اختيار مدينة الانطلاق",
+      "trip.country": "الدولة",
+      "trip.city": "المدينة",
+      "trip.selectCountry": "اختر الدولة…",
+      "trip.selectCity": "اختر المدينة…",
+
+      // Trip form — settings & destinations
+      "trip.settingsDestinations": "الإعدادات والوجهات",
+
+      // Trip form — trip type
+      "trip.tripType": "نوع الرحلة",
+      "trip.tripTypeHint": "اختر ما إذا كانت الرحلة تحتوي على باقات متعددة أو سعر واحد.",
+      "trip.simpleTrip": "رحلة عادية",
+      "trip.simpleTripDesc": "سعر واحد لجميع المشاركين",
+      "trip.packagedTrip": "رحلة بباقات",
+      "trip.packagedTripDesc": "باقات متعددة، كل منها بسعرها الخاص",
+
+      // Trip form — price/policy section
+      "trip.pricePolicyFields": "السعر والسياسة والحقول",
+      "trip.pricePerPerson": "السعر للشخص (ريال)",
+      "trip.pricePlaceholder": "مثال: 250",
+      "trip.requiredParticipantFields": "الحقول المطلوبة للمشارك",
+      "trip.requiredFieldsNote": "الاسم وتاريخ الميلاد مطلوبان دائماً.",
+      "trip.provideOneLanguage": "أدخل المعلومات بلغة واحدة على الأقل (إنجليزي أو عربي)",
+      "trip.optionalIfArabic": "اختياري إذا تم إدخال العربي",
+      "trip.optionalIfEnglish": "اختياري إذا تم إدخال الإنجليزي",
+
+      // Trip form — error banner
+      "form.fixFollowing": "يرجى تصحيح ما يلي:",
+      "form.uploadingImages": "جاري رفع الصور، يرجى الانتظار…",
+
+      // Trip form — packages section
+      "package.minRequired": "الحد الأدنى 2 مطلوب",
+      "package.provideOneLanguage": "أدخل المعلومات بلغة واحدة على الأقل (إنجليزي أو عربي)",
+      "package.nameEnOptional": "اختياري",
+      "package.maxParticipants": "الحد الأقصى للمشاركين",
+      "package.maxParticipantsPlaceholder": "مثال: 10",
+      "package.pricePlaceholder": "مثال: 250",
+      "package.refundable": "قابل للاسترداد",
+      "package.amenities": "المرافق",
+      "package.nameDOBAlwaysRequired": "الاسم وتاريخ الميلاد مطلوبان دائماً.",
+
+      // Destinations selector
+      "destinations.addDestination": "إضافة وجهة",
+      "destinations.noDestinationsYet": "لم تتم إضافة وجهات بعد. يرجى إضافة وجهة واحدة على الأقل.",
+      "destinations.loading": "جاري تحميل الوجهات…",
+      "destinations.addButton": "+ إضافة وجهة",
+      "destinations.adding": "جاري الإضافة…",
+      "destinations.country": "الدولة",
+      "destinations.city": "المدينة",
+      "destinations.place": "المكان",
+      "destinations.selectCountryPlaceholder": "— اختر الدولة —",
+      "destinations.selectCityPlaceholder": "— اختر المدينة —",
+      "destinations.selectPlacePlaceholder": "— اختر المكان —",
+
+      // Validation config
+      "validation.rulesFor": "قواعد التحقق — {{field}}",
+      "validation.noOptions": "لا توجد خيارات تحقق متاحة لهذا النوع من الحقول.",
+      "validation.configureHint": "قم بتكوين قواعد التحقق التي يجب أن يستوفيها المشاركون لهذا الحقل:",
+      "validation.errors": "أخطاء التحقق:",
+      "validation.currentConfig": "التكوين الحالي:",
+      "validation.loading": "جاري تحميل خيارات التحقق…",
+
+      // Trips list page
+      "trips.totalCount_one": "{{count}} رحلة إجمالاً",
+      "trips.totalCount_other": "{{count}} رحلة إجمالاً",
+      "trips.searchPlaceholder": "ابحث عن رحلة...",
+      "trips.filterAll": "الكل",
+      "trips.filterActive": "نشط",
+      "trips.filterInactive": "غير نشط",
+      "trips.colTrip": "الرحلة",
+      "trips.colDates": "التواريخ",
+      "trips.colPrice": "السعر",
+      "trips.colSeats": "المقاعد",
+      "trips.colStatus": "الحالة",
+      "trips.typePackaged": "بباقات",
+      "trips.typeSimple": "عادية",
+      "trips.pkg": "باقة",
+      "trips.getStarted": "ابدأ بإنشاء رحلتك الأولى",
+
+      // New/Edit trip pages
+      "trip.createNew": "إنشاء رحلة جديدة",
+      "trip.createNewSubtitle": "أدخل التفاصيل لإنشاء رحلة جديدة",
+      "trip.editTrip": "تعديل الرحلة",
+      "trip.viewDetails": "عرض التفاصيل",
+      "trip.deleteTrip": "حذف الرحلة",
+      "trip.cancelCreate": "إلغاء",
+      "trip.loadingError": "حدث خطأ غير معروف أثناء جلب تفاصيل الرحلة.",
+      "trip.notFound": "الرحلة غير موجودة.",
+      "trip.goBack": "رجوع",
+
+      // Layout
+      "layout.providerPanel": "لوحة مقدم الخدمة",
+      "layout.logoutConfirm": "تسجيل الخروج؟",
     }
   }
 };

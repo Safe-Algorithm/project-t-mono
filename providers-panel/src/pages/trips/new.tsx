@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from 'react-i18next';
 import TripForm from '../../components/trips/TripForm';
 import { tripService, TripCreatePayload, TripUpdatePayload } from '../../services/tripService';
 import { destinationService } from '../../services/destinationService';
@@ -8,6 +9,7 @@ import { CreateTripPackage, PackageRequiredField, ValidationConfig } from '../..
 
 const NewTripPage = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,16 +106,16 @@ const NewTripPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create New Trip</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Fill in the details to create a new trip offering</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{t('trip.createNew')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('trip.createNewSubtitle')}</p>
         </div>
         <button
           onClick={() => router.push('/trips')}
-          className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
         >
-          Cancel
+          {t('trip.cancelCreate')}
         </button>
       </div>
 

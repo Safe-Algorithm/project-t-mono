@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
+import { useTranslation } from 'react-i18next';
 
 interface Provider {
   id: string;
@@ -13,6 +14,7 @@ interface Provider {
 }
 
 const ProvidersPage = () => {
+  const { t } = useTranslation();
   const [providers, setProviders] = useState<Provider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +68,8 @@ const ProvidersPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Providers</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{providers.length} registered providers</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('nav.providers')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('trips.totalCount_other', { count: providers.length })}</p>
         </div>
         <div className="relative w-full sm:w-64">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +77,7 @@ const ProvidersPage = () => {
           </svg>
           <input
             type="text"
-            placeholder="Search providers..."
+            placeholder={t('common.search')}
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm"
@@ -96,10 +98,10 @@ const ProvidersPage = () => {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Company</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">Phone</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('common.company', 'Company')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('common.email')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">{t('common.phone')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('common.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">

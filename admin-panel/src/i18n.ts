@@ -210,6 +210,55 @@ const resources = {
       "common.send": "Send",
       "common.noData": "No data found.",
       "common.back": "Back",
+      "common.goBack": "Go back",
+      "common.optional": "optional",
+      "common.status": "Status",
+      "common.email": "Email",
+      "common.phone": "Phone",
+      "common.company": "Company",
+      "common.clearFilters": "Clear All Filters",
+
+      // Trip count keys (shared with provider panel pattern)
+      "trips.totalCount_one": "{{count}} trip total",
+      "trips.totalCount_other": "{{count}} trips total",
+      "trips.colTrip": "Trip",
+      "trips.colDates": "Dates",
+      "trips.colPrice": "Price",
+      "trips.colStatus": "Status",
+
+      // Admin Layout extras
+      "nav.myProfile": "My Profile",
+      "nav.logoutConfirm": "Are you sure you want to logout?",
+      "nav.adminPanel": "Admin Panel",
+      "nav.adminHeader": "rihla رحلة Admin",
+
+      // Provider detail page
+      "provider.companyDetails": "Company Details",
+      "provider.trips": "Trips",
+      "provider.documents": "Documents",
+      "provider.users": "Users",
+      "provider.accept": "Accept",
+      "provider.reject": "Reject",
+      "provider.rejectionReason": "Rejection Reason",
+      "provider.submitRejection": "Submit Rejection",
+      "provider.verificationStatus": "Verification Status",
+      "provider.noTrips": "No trips found.",
+      "provider.noDocuments": "No documents found.",
+      "provider.noUsers": "No users found.",
+
+      // File definitions
+      "fileDef.title": "File Definitions",
+      "fileDef.subtitle": "Manage required documents for provider registration.",
+      "fileDef.addNew": "Add New",
+      "fileDef.name": "Name",
+      "fileDef.extensions": "Extensions",
+      "fileDef.maxSize": "Max Size",
+      "fileDef.status": "Status",
+      "fileDef.actions": "Actions",
+      "fileDef.noDefinitions": "No file definitions found.",
+      "fileDef.required": "Required",
+      "fileDef.optional": "Optional",
+      "fileDef.deleteConfirm": "Are you sure you want to delete this file definition?",
     }
   },
   ar: {
@@ -418,6 +467,55 @@ const resources = {
       "common.send": "إرسال",
       "common.noData": "لا توجد بيانات.",
       "common.back": "رجوع",
+      "common.goBack": "رجوع",
+      "common.optional": "اختياري",
+      "common.status": "الحالة",
+      "common.email": "البريد الإلكتروني",
+      "common.phone": "الهاتف",
+      "common.company": "الشركة",
+      "common.clearFilters": "مسح جميع الفلاتر",
+
+      // Trip count keys
+      "trips.totalCount_one": "{{count}} رحلة إجمالاً",
+      "trips.totalCount_other": "{{count}} رحلة إجمالاً",
+      "trips.colTrip": "الرحلة",
+      "trips.colDates": "التواريخ",
+      "trips.colPrice": "السعر",
+      "trips.colStatus": "الحالة",
+
+      // Admin Layout extras
+      "nav.myProfile": "ملفي الشخصي",
+      "nav.logoutConfirm": "هل أنت متأكد من تسجيل الخروج؟",
+      "nav.adminPanel": "لوحة الإدارة",
+      "nav.adminHeader": "rihla رحلة الإدارة",
+
+      // Provider detail page
+      "provider.companyDetails": "تفاصيل الشركة",
+      "provider.trips": "الرحلات",
+      "provider.documents": "الوثائق",
+      "provider.users": "المستخدمون",
+      "provider.accept": "قبول",
+      "provider.reject": "رفض",
+      "provider.rejectionReason": "سبب الرفض",
+      "provider.submitRejection": "إرسال الرفض",
+      "provider.verificationStatus": "حالة التحقق",
+      "provider.noTrips": "لا توجد رحلات.",
+      "provider.noDocuments": "لا توجد وثائق.",
+      "provider.noUsers": "لا يوجد مستخدمون.",
+
+      // File definitions
+      "fileDef.title": "تعريفات الملفات",
+      "fileDef.subtitle": "إدارة الوثائق المطلوبة لتسجيل مقدمي الخدمات.",
+      "fileDef.addNew": "إضافة جديد",
+      "fileDef.name": "الاسم",
+      "fileDef.extensions": "الامتدادات",
+      "fileDef.maxSize": "الحجم الأقصى",
+      "fileDef.status": "الحالة",
+      "fileDef.actions": "الإجراءات",
+      "fileDef.noDefinitions": "لا توجد تعريفات ملفات.",
+      "fileDef.required": "مطلوب",
+      "fileDef.optional": "اختياري",
+      "fileDef.deleteConfirm": "هل أنت متأكد من حذف تعريف الملف هذا؟",
     }
   }
 };

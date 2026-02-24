@@ -414,18 +414,18 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     }
   };
 
-  const inputCls = 'w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition';
-  const labelCls = 'block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1';
-  const sectionCls = 'bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 shadow-sm';
-  const sectionTitleCls = 'text-base font-bold text-gray-900 dark:text-white mb-4';
+  const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition placeholder-slate-400 dark:placeholder-slate-500';
+  const labelCls = 'block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5';
+  const sectionCls = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5';
+  const sectionTitleCls = 'text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-4';
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-5 max-w-2xl">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full max-w-3xl">
 
       {/* ── Error banner (auto-scrolled into view) ── */}
       {errors.length > 0 && (
         <div ref={errorRef} className="flex flex-col gap-1 bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-xl p-4">
-          <p className="text-sm font-bold text-red-700 dark:text-red-400">Please fix the following:</p>
+          <p className="text-sm font-bold text-red-700 dark:text-red-400">{t('form.fixFollowing')}</p>
           <ul className="list-disc list-inside">
             {errors.map((error, i) => (
               <li key={i} className="text-sm text-red-600 dark:text-red-300">{error}</li>
@@ -437,22 +437,22 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {/* ── Basic Info ── */}
       <div className={sectionCls}>
         <p className={sectionTitleCls}>{t('trip.details')}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Provide info in at least one language (English or Arabic)</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('trip.provideOneLanguage')}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>{t('trip.nameEn')} <span className="font-normal text-gray-400">(optional if Arabic provided)</span></label>
+            <label className={labelCls}>{t('trip.nameEn')} <span className="font-normal text-slate-400">({t('trip.optionalIfArabic')})</span></label>
             <input className={inputCls} name="name_en" value={formData.name_en} onChange={handleChange} placeholder={t('trip.nameEn')} />
           </div>
           <div>
-            <label className={labelCls}>{t('trip.nameAr')} <span className="font-normal text-gray-400">(optional if English provided)</span></label>
+            <label className={labelCls}>{t('trip.nameAr')} <span className="font-normal text-slate-400">({t('trip.optionalIfEnglish')})</span></label>
             <input className={inputCls} name="name_ar" value={formData.name_ar} onChange={handleChange} placeholder={t('trip.nameAr')} dir="rtl" />
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>{t('trip.descriptionEn')} <span className="font-normal text-gray-400">(optional if Arabic provided)</span></label>
+            <label className={labelCls}>{t('trip.descriptionEn')} <span className="font-normal text-slate-400">({t('trip.optionalIfArabic')})</span></label>
             <textarea className={inputCls} rows={3} name="description_en" value={formData.description_en} onChange={handleChange} placeholder={t('trip.descriptionEn')} />
           </div>
           <div className="sm:col-span-2">
-            <label className={labelCls}>{t('trip.descriptionAr')} <span className="font-normal text-gray-400">(optional if English provided)</span></label>
+            <label className={labelCls}>{t('trip.descriptionAr')} <span className="font-normal text-slate-400">({t('trip.optionalIfEnglish')})</span></label>
             <textarea className={inputCls} rows={3} name="description_ar" value={formData.description_ar} onChange={handleChange} placeholder={t('trip.descriptionAr')} dir="rtl" />
           </div>
         </div>
@@ -460,55 +460,55 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
       {/* ── Dates ── */}
       <div className={sectionCls}>
-        <p className={sectionTitleCls}>Dates &amp; Capacity</p>
+        <p className={sectionTitleCls}>{t('trip.datesCapacity')}</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Start Date &amp; Time</label>
+            <label className={labelCls}>{t('trip.startDateTime')}</label>
             <input className={inputCls} type="datetime-local" name="start_date" value={formData.start_date} onChange={handleChange} required />
           </div>
           <div>
-            <label className={labelCls}>End Date &amp; Time</label>
+            <label className={labelCls}>{t('trip.endDateTime')}</label>
             <input className={inputCls} type="datetime-local" name="end_date" value={formData.end_date} onChange={handleChange} required />
           </div>
           <div>
-            <label className={labelCls}>Registration Deadline <span className="font-normal text-gray-400">(≤ start date)</span></label>
+            <label className={labelCls}>{t('trip.registrationDeadline')} <span className="font-normal text-slate-400">({t('trip.registrationDeadlineHint')})</span></label>
             <input className={inputCls} type="datetime-local" name="registration_deadline" value={formData.registration_deadline} onChange={handleChange} />
           </div>
           <div>
             <label className={labelCls}>{t('trip.maxParticipants')}</label>
-            <input className={inputCls} type="number" name="max_participants" value={formData.max_participants} onChange={handleChange} placeholder="e.g. 20" min="1" required />
+            <input className={inputCls} type="number" name="max_participants" value={formData.max_participants} onChange={handleChange} placeholder={t('trip.maxParticipantsPlaceholder')} min="1" required />
           </div>
         </div>
       </div>
 
       {/* ── Starting City ── */}
       <div className={sectionCls}>
-        <p className={sectionTitleCls}>Starting City</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">The city from which this trip departs.</p>
+        <p className={sectionTitleCls}>{t('trip.startingCity')}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('trip.startingCityHint')}</p>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelCls}>Country</label>
+            <label className={labelCls}>{t('trip.country')}</label>
             <select className={inputCls} value={selectedCountryId} onChange={e => { setSelectedCountryId(e.target.value); setStartingCityId(''); }}>
-              <option value="">Select country…</option>
+              <option value="">{t('trip.selectCountry')}</option>
               {countries.map(c => <option key={c.id} value={c.id}>{c.name_en}</option>)}
             </select>
           </div>
           <div>
-            <label className={labelCls}>City</label>
+            <label className={labelCls}>{t('trip.city')}</label>
             <select className={inputCls} value={startingCityId} onChange={e => setStartingCityId(e.target.value)} disabled={!selectedCountryId}>
-              <option value="">Select city…</option>
+              <option value="">{t('trip.selectCity')}</option>
               {cities.map(c => <option key={c.id} value={c.id}>{c.name_en}</option>)}
             </select>
           </div>
         </div>
-        {startingCityId && <p className="text-xs text-green-600 mt-2">✓ Starting city selected</p>}
+        {startingCityId && <p className="text-xs text-green-600 dark:text-green-400 mt-2">✓ {t('trip.startingCitySelected')}</p>}
       </div>
       {/* ── Status + Destinations ── */}
       <div className={sectionCls}>
-        <p className={sectionTitleCls}>Settings &amp; Destinations</p>
+        <p className={sectionTitleCls}>{t('trip.settingsDestinations')}</p>
         <label className="flex items-center gap-2 mb-4 cursor-pointer">
           <input type="checkbox" name="is_active" checked={formData.is_active} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('status.active')}</span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('status.active')}</span>
         </label>
         {trip ? (
           <DestinationSelector tripId={trip.id} />
@@ -519,21 +519,21 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
       {/* ── Trip Type Toggle ── */}
       <div className="bg-sky-50 dark:bg-sky-900/20 rounded-xl border-2 border-sky-200 dark:border-sky-700 p-5">
-        <p className="text-base font-bold text-sky-800 dark:text-sky-300 mb-1">Trip Type</p>
-        <p className="text-xs text-sky-600 dark:text-sky-400 mb-4">Choose whether this trip has multiple selectable packages or a single price.</p>
+        <p className="text-base font-bold text-sky-800 dark:text-sky-300 mb-1">{t('trip.tripType')}</p>
+        <p className="text-xs text-sky-600 dark:text-sky-400 mb-4">{t('trip.tripTypeHint')}</p>
         <div className="grid grid-cols-2 gap-3">
-          <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${!isPackagedTrip ? 'border-sky-500 bg-sky-100 dark:bg-sky-900/40' : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
+          <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${!isPackagedTrip ? 'border-sky-500 bg-sky-100 dark:bg-sky-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
             <input type="radio" name="trip_type" checked={!isPackagedTrip} onChange={() => setIsPackagedTrip(false)} className="accent-sky-500" />
             <div>
-              <div className="text-sm font-bold text-gray-900 dark:text-white">Simple Trip</div>
-              <div className="text-xs text-gray-500">One price for all participants</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.simpleTrip')}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{t('trip.simpleTripDesc')}</div>
             </div>
           </label>
-          <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${isPackagedTrip ? 'border-sky-500 bg-sky-100 dark:bg-sky-900/40' : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800'}`}>
+          <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${isPackagedTrip ? 'border-sky-500 bg-sky-100 dark:bg-sky-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
             <input type="radio" name="trip_type" checked={isPackagedTrip} onChange={() => setIsPackagedTrip(true)} className="accent-sky-500" />
             <div>
-              <div className="text-sm font-bold text-gray-900 dark:text-white">Packaged Trip</div>
-              <div className="text-xs text-gray-500">Multiple packages, each with its own price</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.packagedTrip')}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{t('trip.packagedTripDesc')}</div>
             </div>
           </label>
         </div>
@@ -542,14 +542,14 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {/* ── Non-packaged: trip-level price, refundability, amenities, required fields ── */}
       {!isPackagedTrip && (
         <div className={sectionCls}>
-          <p className={sectionTitleCls}>Price, Policy &amp; Fields</p>
+          <p className={sectionTitleCls}>{t('trip.pricePolicyFields')}</p>
           <div className="mb-4">
-            <label className={labelCls}>Price per Person (SAR)</label>
-            <input className={inputCls} type="number" value={tripPrice} onChange={e => setTripPrice(parseFloat(e.target.value) || 0)} placeholder="e.g. 250" min="0.01" step="0.01" />
+            <label className={labelCls}>{t('trip.pricePerPerson')}</label>
+            <input className={inputCls} type="number" value={tripPrice} onChange={e => setTripPrice(parseFloat(e.target.value) || 0)} placeholder={t('trip.pricePlaceholder')} min="0.01" step="0.01" />
           </div>
           <label className="flex items-center gap-2 mb-4 cursor-pointer">
             <input type="checkbox" name="is_refundable" checked={formData.is_refundable} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('trip.refundable')}</span>
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('trip.refundable')}</span>
           </label>
           <div className="mb-4">
             <p className={labelCls}>{t('trip.amenities')}</p>
@@ -563,8 +563,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             </div>
           </div>
           <div>
-            <p className={labelCls}>Required Participant Fields</p>
-            <p className="text-xs text-gray-500 mb-2">Name and Date of Birth are always required.</p>
+            <p className={labelCls}>{t('trip.requiredParticipantFields')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('trip.requiredFieldsNote')}</p>
             <div className="flex flex-col gap-2">
               {availableFields.map(field => {
                 const mandatory = ['name', 'date_of_birth'].includes(field.field_name);
@@ -578,7 +578,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                         <input type="checkbox" checked={isChecked} disabled={mandatory} onChange={() => { if (mandatory) return; setTripRequiredFields(prev => prev.includes(field.field_name) ? prev.filter(f => f !== field.field_name) : [...prev, field.field_name]); }} className="accent-sky-500 flex-shrink-0" />
                         <span className="font-semibold text-slate-800 dark:text-slate-200">{field.display_name}</span>
                         <span className="text-slate-400 dark:text-slate-500 text-xs">({field.ui_type})</span>
-                        {mandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">(required)</span>}
+                        {mandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">({t('common.required')})</span>}
                       </label>
                       {isChecked && hasValidations && (
                         <button type="button" onClick={() => setShowTripFieldValidation(prev => ({ ...prev, [field.field_name]: !prev[field.field_name] }))} className={`text-xs px-2.5 py-1 rounded-lg border transition flex-shrink-0 ${showConfig ? 'bg-sky-500 text-white border-sky-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-sky-400'}`}>
@@ -602,7 +602,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <p className={sectionTitleCls}>{t('trip.meetingPlace')}</p>
         <label className="flex items-center gap-2 mb-4 cursor-pointer">
           <input type="checkbox" name="has_meeting_place" checked={formData.has_meeting_place} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
-          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t('trip.meetingPlaceDescription')}</span>
+          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('trip.meetingPlaceDescription')}</span>
         </label>
         {formData.has_meeting_place && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-6">
@@ -621,13 +621,13 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {/* ── Images ── */}
       <div className={sectionCls}>
         <p className={sectionTitleCls}>{t('trip.images')}</p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">{t('trip.imagesDescription')} <span className="font-semibold">JPG, PNG, WEBP</span></p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('trip.imagesDescription')} <span className="font-semibold">JPG, PNG, WEBP</span></p>
         {tripImages.length > 0 && (
           <div className="mb-4">
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">{t('trip.currentImages')}</p>
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">{t('trip.currentImages')}</p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {tripImages.map((imageUrl, index) => (
-                <div key={index} className="relative rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                <div key={index} className="relative rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700">
                   <img src={imageUrl} alt={`Trip ${index + 1}`} className="w-full h-28 object-cover" />
                   <button type="button" onClick={() => removeExistingImage(imageUrl)} className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-0.5 rounded">{t('form.remove')}</button>
                 </div>
@@ -637,7 +637,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         )}
         {newImageFiles.length > 0 && (
           <div className="mb-4">
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">{t('trip.newImages')}</p>
+            <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">{t('trip.newImages')}</p>
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {newImageFiles.map((file, index) => (
                 <div key={index} className="relative rounded-lg overflow-hidden border border-sky-300 dark:border-sky-700">
@@ -653,59 +653,59 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <label htmlFor="trip-image-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg cursor-pointer transition">
           + {t('form.addImages')}
         </label>
-        <p className="text-xs text-gray-400 mt-2">Supported: JPG · PNG · WEBP</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Supported: JPG · PNG · WEBP</p>
       </div>
 
       {/* ── Packaged: multi-package section ── */}
       {isPackagedTrip && (
         <div className={sectionCls}>
           <div className="flex items-center justify-between mb-1">
-            <p className={sectionTitleCls + ' mb-0'}>Packages <span className="text-sm font-normal text-gray-400">(minimum 2 required)</span></p>
+            <p className={sectionTitleCls + ' mb-0'}>{t('package.packageNumber', { number: '' }).replace(' ', '')} <span className="text-sm font-normal text-slate-400">({t('package.minRequired')})</span></p>
           </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">Provide info in at least one language (English or Arabic)</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('package.provideOneLanguage')}</p>
           <div className="flex flex-col gap-4">
             {packages.map((pkg, index) => (
-              <div key={index} className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 bg-gray-50 dark:bg-gray-900/30">
+              <div key={index} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/30">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200">{t('package.packageNumber', { number: index + 1 })}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{t('package.packageNumber', { number: index + 1 })}</p>
                   {packages.length > 2 ? (
                     <button type="button" onClick={() => removePackage(index)} className="text-xs text-red-600 hover:text-red-700 font-semibold">{t('form.removePackage')}</button>
                   ) : (
-                    <span className="text-xs text-gray-400">(min 2 packages)</span>
+                    <span className="text-xs text-slate-400">(min 2 {t('common.required')})</span>
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className={labelCls}>{t('package.nameEn')} <span className="font-normal text-gray-400">(opt.)</span></label>
+                    <label className={labelCls}>{t('package.nameEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
                     <input className={inputCls} value={pkg.name_en} onChange={(e) => updatePackage(index, 'name_en', e.target.value)} placeholder={t('package.nameEn')} />
                   </div>
                   <div>
-                    <label className={labelCls}>{t('package.nameAr')} <span className="font-normal text-gray-400">(opt.)</span></label>
+                    <label className={labelCls}>{t('package.nameAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
                     <input className={inputCls} value={pkg.name_ar} onChange={(e) => updatePackage(index, 'name_ar', e.target.value)} placeholder={t('package.nameAr')} dir="rtl" />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelCls}>{t('package.descriptionEn')} <span className="font-normal text-gray-400">(opt.)</span></label>
+                    <label className={labelCls}>{t('package.descriptionEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
                     <textarea className={inputCls} rows={2} value={pkg.description_en} onChange={(e) => updatePackage(index, 'description_en', e.target.value)} placeholder={t('package.descriptionEn')} />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelCls}>{t('package.descriptionAr')} <span className="font-normal text-gray-400">(opt.)</span></label>
+                    <label className={labelCls}>{t('package.descriptionAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
                     <textarea className={inputCls} rows={2} value={pkg.description_ar} onChange={(e) => updatePackage(index, 'description_ar', e.target.value)} placeholder={t('package.descriptionAr')} dir="rtl" />
                   </div>
                   <div>
                     <label className={labelCls}>{t('package.price')} (SAR)</label>
-                    <input className={inputCls} type="number" value={pkg.price} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder="e.g. 250" min="0.01" step="0.01" required />
+                    <input className={inputCls} type="number" value={pkg.price} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder={t('package.pricePlaceholder')} min="0.01" step="0.01" required />
                   </div>
                   <div>
-                    <label className={labelCls}>Max Participants</label>
-                    <input className={inputCls} type="number" value={pkg.max_participants ?? ''} onChange={(e) => updatePackage(index, 'max_participants', parseInt(e.target.value) || 0)} placeholder="e.g. 10" min="1" />
+                    <label className={labelCls}>{t('package.maxParticipants')}</label>
+                    <input className={inputCls} type="number" value={pkg.max_participants ?? ''} onChange={(e) => updatePackage(index, 'max_participants', parseInt(e.target.value) || 0)} placeholder={t('package.maxParticipantsPlaceholder')} min="1" />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 mb-3 cursor-pointer">
                   <input type="checkbox" checked={pkg.is_refundable ?? false} onChange={(e) => updatePackage(index, 'is_refundable', e.target.checked)} className="w-4 h-4 accent-sky-500" />
-                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Refundable</span>
+                  <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('trip.refundable')}</span>
                 </label>
                 <div className="mb-3">
-                  <p className={labelCls}>Amenities</p>
+                  <p className={labelCls}>{t('trip.amenities')}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {Object.entries(amenityLabels).map(([value, label]) => {
                       const pkgAmenities = pkg.amenities ?? [];
@@ -720,7 +720,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                 </div>
                 <div>
                   <p className={labelCls}>{t('package.requiredFields')}</p>
-                  <p className="text-xs text-gray-500 mb-2">{t('package.note')}: Name &amp; DOB always required.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('package.nameDOBAlwaysRequired')}</p>
                   <div className="flex flex-col gap-2">
                     {availableFields.map((field) => {
                       const isMandatory = ['name', 'date_of_birth'].includes(field.field_name);
@@ -734,7 +734,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                               <input type="checkbox" checked={isChecked} disabled={isMandatory} onChange={() => toggleRequiredField(index, field.field_name)} className="accent-sky-500 flex-shrink-0" />
                               <span className="font-semibold text-slate-800 dark:text-slate-200">{field.display_name}</span>
                               <span className="text-slate-400 dark:text-slate-500 text-xs">({field.ui_type})</span>
-                              {isMandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">({t('package.required')})</span>}
+                              {isMandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">({t('common.required')})</span>}
                             </label>
                             {isChecked && hasValidations && (
                               <button type="button" onClick={() => toggleValidationConfigVisibility(index, field.field_name)} className={`text-xs px-2.5 py-1 rounded-lg border transition flex-shrink-0 ${showConfig ? 'bg-sky-500 text-white border-sky-500' : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-sky-400'}`}>
@@ -775,7 +775,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           {isSubmitting ? t('form.submitting') : (trip ? t('form.updateTrip') : t('form.createTrip'))}
         </button>
         {isSubmitting && (
-          <p className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">Uploading images, please wait…</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 animate-pulse">{t('form.uploadingImages')}</p>
         )}
       </div>
     </form>

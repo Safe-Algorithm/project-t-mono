@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import { colors, borderRadius, boxShadow } from './src/theme'
 
 const config: Config = {
   content: [
@@ -9,6 +10,25 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      colors: {
+        brand:   colors.brand,
+        success: colors.success,
+        danger:  colors.danger,
+        warning: colors.warning,
+        surface: colors.surface,
+      },
+      borderRadius: {
+        card:   borderRadius.card,
+        modal:  borderRadius.modal,
+        badge:  borderRadius.badge,
+        input:  borderRadius.input,
+        btn:    borderRadius.button,
+      },
+      boxShadow: {
+        card:   boxShadow.card,
+        modal:  boxShadow.modal,
+        btn:    boxShadow.button,
+      },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-conic':

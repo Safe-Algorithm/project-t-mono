@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useTranslation } from 'react-i18next';
 import TripForm from '../../../components/trips/TripForm';
 import { tripService, TripUpdatePayload } from '../../../services/tripService';
 import { Trip, CreateTripPackage, PackageRequiredField, ValidationConfig } from '../../../types/trip';
 
 const TripEditPage = () => {
   const router = useRouter();
+  const { t } = useTranslation();
   const { id } = router.query;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,7 +25,7 @@ const TripEditPage = () => {
           if (err instanceof Error) {
             setError(err.message);
           } else {
-            setError('An unknown error occurred while fetching trip details.');
+            setError(t('trip.loadingError'));
           }
         } finally {
           setIsLoading(false);
@@ -134,7 +136,7 @@ const TripEditPage = () => {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('An unknown error occurred while updating the trip.');
+        setError(t('trip.loadingError'));
       }
     } finally {
       setIsSubmitting(false);
@@ -143,7 +145,7 @@ const TripEditPage = () => {
 
   const handleDelete = async () => {
     if (!id || typeof id !== 'string') return;
-    if (window.confirm('Are you sure you want to delete this trip?')) {
+    if (window.confirm(t('trip.deleteTrip') + '?')) {
         setIsSubmitting(true);
         setError(null);
         try {
@@ -170,36 +172,36 @@ const TripEditPage = () => {
   if (error && !trip) return (
     <div className="flex flex-col items-center justify-center h-64 gap-3">
       <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
-      <button onClick={() => router.back()} className="text-sm text-sky-600 dark:text-sky-400 hover:underline">Go back</button>
+      <button onClick={() => router.back()} className="text-sm text-sky-600 dark:text-sky-400 hover:underline">{t('trip.goBack')}</button>
     </div>
   );
 
   if (!trip) return (
     <div className="flex items-center justify-center h-64">
-      <p className="text-slate-400 dark:text-slate-500 text-sm">Trip not found.</p>
+      <p className="text-slate-400 dark:text-slate-500 text-sm">{t('trip.notFound')}</p>
     </div>
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Trip</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{trip.name_en || trip.name_ar}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{t('trip.editTrip')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 truncate">{trip.name_en || trip.name_ar}</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
             onClick={() => router.push(`/trips/${id}`)}
-            className="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            className="px-3 py-2 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
-            View Details
+            {t('trip.viewDetails')}
           </button>
           <button
             onClick={handleDelete}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 text-xs sm:text-sm font-semibold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Delete Trip
+            {t('trip.deleteTrip')}
           </button>
         </div>
       </div>

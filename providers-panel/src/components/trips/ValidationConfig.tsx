@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ValidationConfig, ValidationMetadata, FieldMetadata } from '../../types/trip';
 import { tripService } from '../../services/tripService';
 
@@ -19,6 +20,7 @@ const ValidationConfigComponent: React.FC<ValidationConfigProps> = ({
   const [validationMetadata, setValidationMetadata] = useState<Record<string, ValidationMetadata>>({});
   const [loading, setLoading] = useState(true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const loadValidationData = async () => {
@@ -197,7 +199,7 @@ const ValidationConfigComponent: React.FC<ValidationConfigProps> = ({
     return (
       <div className="flex items-center gap-2 mt-3 py-2 text-sm text-slate-400 dark:text-slate-500">
         <div className="w-4 h-4 rounded-full border-2 border-sky-500 border-t-transparent animate-spin flex-shrink-0" />
-        Loading validation options…
+        {t('validation.loading')}
       </div>
     );
   }
@@ -208,22 +210,22 @@ const ValidationConfigComponent: React.FC<ValidationConfigProps> = ({
   return (
     <div className="mt-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-3">
       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-        Validation Rules — {fieldMetadata.display_name}
+        {t('validation.rulesFor', { field: fieldMetadata.display_name })}
       </p>
 
       {!hasAvailableValidations ? (
         <p className="text-sm italic text-slate-400 dark:text-slate-500">
-          No validation options available for this field type.
+          {t('validation.noOptions')}
         </p>
       ) : (
         <>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Configure validation rules that participants must meet for this field:
+            {t('validation.configureHint')}
           </p>
 
           {validationErrors.length > 0 && (
             <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
-              <p className="font-semibold mb-1">Validation Errors:</p>
+              <p className="font-semibold mb-1">{t('validation.errors')}</p>
               <ul className="list-disc list-inside space-y-0.5">
                 {validationErrors.map((error, index) => (
                   <li key={index}>{error}</li>
@@ -287,7 +289,7 @@ const ValidationConfigComponent: React.FC<ValidationConfigProps> = ({
 
           {Object.keys(currentConfig).length > 0 && (
             <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Current Configuration:</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('validation.currentConfig')}</p>
               <pre className="text-xs text-slate-700 dark:text-slate-300 overflow-x-auto">
                 {JSON.stringify(currentConfig, null, 2)}
               </pre>

@@ -4,7 +4,8 @@ import { useTrips } from '../../hooks/useTrips';
 import { useTranslation } from 'react-i18next';
 import { Trip } from '../../types/trip';
 
-function TripStatusBadge({ isActive, isRTL }: { isActive: boolean; isRTL: boolean }) {
+function TripStatusBadge({ isActive }: { isActive: boolean; isRTL: boolean }) {
+  const { t } = useTranslation();
   return (
     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
       isActive
@@ -12,7 +13,7 @@ function TripStatusBadge({ isActive, isRTL }: { isActive: boolean; isRTL: boolea
         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
     }`}>
       <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-      {isActive ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'غير نشط' : 'Inactive')}
+      {isActive ? t('trips.filterActive') : t('trips.filterInactive')}
     </span>
   );
 }
@@ -56,7 +57,7 @@ const TripsPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('trips.title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            {isRTL ? `${trips.length} رحلة إجمالاً` : `${trips.length} trip${trips.length !== 1 ? 's' : ''} total`}
+            {t('trips.totalCount_other', { count: trips.length })}
           </p>
         </div>
         <Link
@@ -80,7 +81,7 @@ const TripsPage = () => {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={isRTL ? 'ابحث عن رحلة...' : 'Search trips...'}
+            placeholder={t('trips.searchPlaceholder')}
             className={`w-full ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm transition`}
           />
         </div>
@@ -95,7 +96,7 @@ const TripsPage = () => {
                   : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800'
               }`}
             >
-              {s === 'all' ? (isRTL ? 'الكل' : 'All') : s === 'active' ? (isRTL ? 'نشط' : 'Active') : (isRTL ? 'غير نشط' : 'Inactive')}
+              {s === 'all' ? t('trips.filterAll') : s === 'active' ? t('trips.filterActive') : t('trips.filterInactive')}
             </button>
           ))}
         </div>
@@ -118,7 +119,7 @@ const TripsPage = () => {
             </svg>
             <p className="text-slate-500 dark:text-slate-400 font-medium mb-1">{t('trips.noTrips')}</p>
             <p className="text-slate-400 dark:text-slate-500 text-sm mb-4">
-              {isRTL ? 'ابدأ بإنشاء رحلتك الأولى' : 'Get started by creating your first trip'}
+              {t('trips.getStarted')}
             </p>
             <Link href="/trips/new" className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,20 +133,20 @@ const TripsPage = () => {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    {isRTL ? 'الرحلة' : 'Trip'}
+                  <th className="text-start px-4 sm:px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    {t('trips.colTrip')}
                   </th>
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">
-                    {isRTL ? 'التواريخ' : 'Dates'}
+                  <th className="text-start px-4 sm:px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">
+                    {t('trips.colDates')}
                   </th>
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">
-                    {isRTL ? 'السعر' : 'Price'}
+                  <th className="text-start px-4 sm:px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">
+                    {t('trips.colPrice')}
                   </th>
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">
-                    {isRTL ? 'المقاعد' : 'Seats'}
+                  <th className="text-start px-4 sm:px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">
+                    {t('trips.colSeats')}
                   </th>
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    {isRTL ? 'الحالة' : 'Status'}
+                  <th className="text-start px-4 sm:px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    {t('trips.colStatus')}
                   </th>
                   <th className="px-6 py-3" />
                 </tr>
@@ -171,8 +172,8 @@ const TripsPage = () => {
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{getTripName(trip)}</p>
                           <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                            {trip.is_packaged_trip ? (isRTL ? 'رحلة بباقات' : 'Packaged') : (isRTL ? 'رحلة عادية' : 'Simple')}
-                            {trip.packages?.length ? ` · ${trip.packages.length} ${isRTL ? 'باقة' : 'pkg'}` : ''}
+                            {trip.is_packaged_trip ? t('trips.typePackaged') : t('trips.typeSimple')}
+                            {trip.packages?.length ? ` · ${trip.packages.length} ${t('trips.pkg')}` : ''}
                           </p>
                         </div>
                       </div>
@@ -193,7 +194,7 @@ const TripsPage = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                         <Link href={`/trips/${trip.id}`} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium text-xs">
-                          {isRTL ? 'عرض' : 'View'}
+                          {t('common.view')}
                         </Link>
                         <Link href={`/trips/${trip.id}/edit`} className="text-sky-500 hover:text-sky-600 font-medium text-xs">
                           {t('common.edit')}
