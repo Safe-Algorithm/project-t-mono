@@ -6,6 +6,16 @@ from app.tests.utils.user import random_email, random_lower_string
 from app.tests.utils.user import user_authentication_headers
 from io import BytesIO
 from unittest.mock import patch, AsyncMock
+import io
+from PIL import Image as PILImage
+
+
+def make_test_jpeg(width: int = 100, height: int = 100) -> bytes:
+    """Return minimal valid JPEG bytes."""
+    img = PILImage.new("RGB", (width, height), color=(80, 120, 200))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
 
 def test_register_provider(client: TestClient, session: Session) -> None:
     user_data = {
@@ -64,8 +74,8 @@ def test_upload_company_avatar(client: TestClient, session: Session) -> None:
             "fileId": "test-avatar-id"
         })
         
-        # Create fake image file
-        avatar = BytesIO(b"fake avatar content")
+        # Create a real minimal JPEG so Pillow processing succeeds
+        avatar = BytesIO(make_test_jpeg())
         files = {"file": ("avatar.jpg", avatar, "image/jpeg")}
         
         response = client.post(
@@ -106,8 +116,8 @@ def test_upload_company_avatar_file_too_large(client: TestClient, session: Sessi
     """Test uploading avatar that exceeds size limit"""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     
-    # Create fake large file (6MB)
-    large_file = BytesIO(b"x" * (6 * 1024 * 1024))
+    # Create fake large file (11MB — exceeds the 10MB raw input limit)
+    large_file = BytesIO(b"x" * (11 * 1024 * 1024))
     files = {"file": ("large_avatar.jpg", large_file, "image/jpeg")}
     
     response = client.post(
@@ -136,8 +146,8 @@ def test_upload_company_avatar_replaces_old(client: TestClient, session: Session
             "fileId": "test-new-avatar-id"
         })
         
-        # Upload new avatar
-        avatar = BytesIO(b"fake new avatar content")
+        # Upload new avatar (real JPEG so Pillow processing succeeds)
+        avatar = BytesIO(make_test_jpeg())
         files = {"file": ("new_avatar.jpg", avatar, "image/jpeg")}
         
         response = client.post(

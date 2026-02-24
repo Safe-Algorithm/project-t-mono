@@ -182,27 +182,36 @@ async def upload_company_avatar(
     
     # Read file content
     content = await file.read()
-    
-    # Validate file size (5MB max)
-    max_size = 5 * 1024 * 1024
+
+    # Validate file size (10MB raw max — will be compressed before storage)
+    max_size = 10 * 1024 * 1024
     if len(content) > max_size:
         raise HTTPException(
             status_code=400,
-            detail="File is too large. Maximum size is 5MB"
+            detail="File is too large. Maximum size is 10MB"
         )
-    
+
+    # Compress and resize to avatar dimensions — off-thread to avoid blocking event loop
+    from app.services.image_processing import process_avatar_image
+    import asyncio
+    try:
+        loop = asyncio.get_event_loop()
+        processed = await loop.run_in_executor(
+            None, process_avatar_image, content, file.filename or "avatar.jpg"
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
     # Delete old avatar if exists
-    # Note: We only have the URL, not the file_id needed for deletion
-    # In production, you might want to store file_id separately or extract it from URL
     if provider.company_avatar_url:
         logger.info(f"Old avatar will be replaced: {provider.company_avatar_url}")
-    
+
     # Upload new avatar
     try:
         file_info = await storage_service.upload_file(
-            file_data=content,
+            file_data=processed.data,
             file_name=file.filename,
-            content_type=file.content_type,
+            content_type=processed.content_type,
             folder="company_avatars"
         )
         

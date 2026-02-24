@@ -10,6 +10,15 @@ from app.models.user import UserRole
 from app.models.source import RequestSource
 from app.tests.utils.user import user_authentication_headers
 from unittest.mock import patch, AsyncMock
+from PIL import Image as PILImage
+
+
+def make_test_jpeg(width: int = 100, height: int = 100) -> bytes:
+    """Return minimal valid JPEG bytes at the given dimensions."""
+    img = PILImage.new("RGB", (width, height), color=(80, 120, 200))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
 
 
 def test_get_current_user_profile(client: TestClient, session: Session) -> None:
@@ -94,8 +103,8 @@ def test_upload_avatar_success(client: TestClient, session: Session) -> None:
             'fileName': 'avatars/user_123/avatar.jpg'
         })
         
-        # Create test image file
-        image_content = b"fake image content"
+        # Create a real minimal JPEG so Pillow processing succeeds
+        image_content = make_test_jpeg()
         files = {
             'file': ('avatar.jpg', io.BytesIO(image_content), 'image/jpeg')
         }
@@ -140,8 +149,8 @@ def test_upload_avatar_file_too_large(client: TestClient, session: Session) -> N
         client, session, role=UserRole.NORMAL, source=RequestSource.MOBILE_APP
     )
     
-    # Create file larger than 5MB
-    large_content = b"x" * (6 * 1024 * 1024)  # 6MB
+    # Create file larger than 10MB (new limit)
+    large_content = b"x" * (11 * 1024 * 1024)  # 11MB
     files = {
         'file': ('large_avatar.jpg', io.BytesIO(large_content), 'image/jpeg')
     }
@@ -173,7 +182,7 @@ def test_upload_avatar_replaces_old_avatar(client: TestClient, session: Session)
         
         # Upload first avatar
         files1 = {
-            'file': ('avatar1.jpg', io.BytesIO(b"image1"), 'image/jpeg')
+            'file': ('avatar1.jpg', io.BytesIO(make_test_jpeg()), 'image/jpeg')
         }
         response1 = client.post(
             f"{settings.API_V1_STR}/users/me/avatar",
@@ -190,7 +199,7 @@ def test_upload_avatar_replaces_old_avatar(client: TestClient, session: Session)
         })
         
         files2 = {
-            'file': ('avatar2.jpg', io.BytesIO(b"image2"), 'image/jpeg')
+            'file': ('avatar2.jpg', io.BytesIO(make_test_jpeg()), 'image/jpeg')
         }
         response2 = client.post(
             f"{settings.API_V1_STR}/users/me/avatar",
@@ -269,7 +278,7 @@ def test_avatar_upload_works_for_all_sources(client: TestClient, session: Sessio
             })
             
             files = {
-                'file': ('avatar.jpg', io.BytesIO(b"image"), 'image/jpeg')
+                'file': ('avatar.jpg', io.BytesIO(make_test_jpeg()), 'image/jpeg')
             }
             
             response = client.post(

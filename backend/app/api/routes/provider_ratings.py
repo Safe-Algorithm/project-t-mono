@@ -202,8 +202,10 @@ async def upload_provider_rating_images(
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
 
+    from app.services.image_processing import process_review_image
+
     allowed_extensions = ["jpg", "jpeg", "png", "webp"]
-    max_size = 5 * 1024 * 1024
+    max_size = 10 * 1024 * 1024  # 10 MB raw input
 
     existing_images = list(rating.images or [])
     if len(existing_images) + len(files) > 5:
@@ -220,14 +222,23 @@ async def upload_provider_rating_images(
 
         file_content = await upload.read()
         if len(file_content) > max_size:
-            raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
+            raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
 
-        unique_name = f"{uuid.uuid4()}.{file_extension}"
+        try:
+            import asyncio
+            loop = asyncio.get_event_loop()
+            processed = await loop.run_in_executor(
+                None, process_review_image, file_content, upload.filename or "image.jpg"
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        unique_name = f"{uuid.uuid4()}.jpg"
         upload_result = await storage_service.upload_file(
-            file_data=file_content,
+            file_data=processed.data,
             file_name=unique_name,
             folder=f"provider_ratings/rating_{rating_id}",
-            content_type=upload.content_type,
+            content_type=processed.content_type,
         )
 
         new_urls.append(upload_result["downloadUrl"])

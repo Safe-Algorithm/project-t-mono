@@ -7,6 +7,15 @@ from datetime import datetime, timedelta, date
 from decimal import Decimal
 import io
 from unittest.mock import patch, AsyncMock
+from PIL import Image as PILImage
+
+
+def make_test_jpeg(width: int = 100, height: int = 100) -> bytes:
+    """Return minimal valid JPEG bytes."""
+    img = PILImage.new("RGB", (width, height), color=(80, 120, 200))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -639,7 +648,7 @@ def test_upload_provider_rating_images(client: TestClient, session: Session):
     with patch("app.api.routes.provider_ratings.storage_service") as mock_storage:
         mock_storage.upload_file = AsyncMock(return_value=mock_upload_result)
 
-        file_content = b"fake image content"
+        file_content = make_test_jpeg()
         response = client.post(
             f"{settings.API_V1_STR}/providers/ratings/{rating_id}/images",
             headers=headers,

@@ -94,6 +94,20 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     setCities(country?.children?.filter(c => c.type === 'city') ?? []);
   }, [selectedCountryId, countries]);
 
+  // Resolve the parent country for the starting city once countries are loaded.
+  // This is a separate effect because countries load asynchronously and may not
+  // be available when the trip effect first runs.
+  useEffect(() => {
+    if (!trip?.starting_city_id || !countries.length || selectedCountryId) return;
+    for (const country of countries) {
+      const found = country.children?.some(c => c.id === trip.starting_city_id);
+      if (found) {
+        setSelectedCountryId(country.id);
+        break;
+      }
+    }
+  }, [trip, countries]);
+
   useEffect(() => {
     // Load available fields on component mount
     const loadAvailableFields = async () => {
@@ -144,6 +158,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       });
       if (trip.starting_city_id) {
         setStartingCityId(trip.starting_city_id);
+        // Country resolution is deferred to a separate effect that depends on
+        // both trip and countries, since countries may not be loaded yet here.
       }
 
       // Populate amenities
@@ -157,10 +173,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       }
 
       if (!trip.is_packaged_trip) {
-        // Non-packaged: price and required fields come from the hidden package (not exposed in API)
-        // We keep trip-level amenities/refundability in formData above
-        // Price is not in TripRead for non-packaged trips; default 0 for new trips
-        setTripPrice(0);
+        // Non-packaged: price comes from the hidden package and is exposed via trip.price
+        setTripPrice(trip.price ?? 0);
         setTripRequiredFields(['name', 'date_of_birth']);
       } else if (trip.packages && trip.packages.length > 0) {
         // Packaged: populate packages
@@ -319,11 +333,46 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     }));
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setNewImageFiles(prev => [...prev, ...filesArray]);
-    }
+  const [imageErrors, setImageErrors] = useState<string[]>([]);
+
+  const checkImageResolution = (file: File): Promise<{ ok: boolean; reason?: string }> =>
+    new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const img = new window.Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        const landscapeOk = w >= 800 && h >= 600;
+        const portraitOk  = w >= 600 && h >= 800;
+        if (landscapeOk || portraitOk) {
+          resolve({ ok: true });
+        } else {
+          resolve({ ok: false, reason: `"${file.name}" is too small (${w}×${h} px). Minimum: 800×600 px.` });
+        }
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve({ ok: false, reason: `"${file.name}" could not be read.` }); };
+      img.src = url;
+    });
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const filesArray = Array.from(e.target.files);
+    const rejected: string[] = [];
+    const accepted: File[] = [];
+
+    await Promise.all(filesArray.map(async file => {
+      const result = await checkImageResolution(file);
+      if (result.ok) {
+        accepted.push(file);
+      } else {
+        rejected.push(result.reason!);
+      }
+    }));
+
+    setImageErrors(rejected);
+    if (accepted.length > 0) setNewImageFiles(prev => [...prev, ...accepted]);
+    e.target.value = '';
   };
 
   const removeNewImage = (index: number) => {
@@ -621,7 +670,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {/* ── Images ── */}
       <div className={sectionCls}>
         <p className={sectionTitleCls}>{t('trip.images')}</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('trip.imagesDescription')} <span className="font-semibold">JPG, PNG, WEBP</span></p>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+          {t('trip.imagesDescription')} <span className="font-semibold">JPG, PNG, WEBP</span>
+          {' · '}{t('trip.imagesMinRes', 'Min. 800×600 px')}
+        </p>
         {tripImages.length > 0 && (
           <div className="mb-4">
             <p className="text-sm font-semibold text-slate-600 dark:text-slate-400 mb-2">{t('trip.currentImages')}</p>
@@ -653,7 +705,26 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <label htmlFor="trip-image-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg cursor-pointer transition">
           + {t('form.addImages')}
         </label>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Supported: JPG · PNG · WEBP</p>
+
+        {imageErrors.length > 0 && (
+          <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+            <p className="text-xs font-semibold text-red-700 dark:text-red-400 mb-1">
+              {t('trip.imageRejected', 'The following images were rejected:')}
+            </p>
+            <ul className="list-disc list-inside space-y-0.5">
+              {imageErrors.map((msg, i) => (
+                <li key={i} className="text-xs text-red-600 dark:text-red-400">{msg}</li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={() => setImageErrors([])}
+              className="mt-2 text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 underline"
+            >
+              {t('common.dismiss', 'Dismiss')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Packaged: multi-package section ── */}

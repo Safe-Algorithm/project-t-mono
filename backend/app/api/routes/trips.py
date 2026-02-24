@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 import logging
 from typing import List, Dict, Any, Optional
@@ -1273,61 +1274,70 @@ async def upload_trip_images(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
 ):
-    """Upload images for a trip."""
+    """Upload images for a trip.
+
+    Images are validated for minimum resolution (800×600 px), then compressed
+    and downscaled to a maximum long edge of 1920 px before being stored.
+    """
     from app.services.storage import storage_service
-    
+    from app.services.image_processing import process_trip_image
+
     # Get trip and verify ownership
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
-    
+
     if trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not authorized to upload images for this trip")
-    
-    # Validate file types and sizes
+
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
-    max_size = 5 * 1024 * 1024  # 5MB
-    
+    max_size = 10 * 1024 * 1024  # 10 MB raw input (will be compressed before storage)
+
     uploaded_urls = []
-    
+
     for file in files:
-        # Validate file type
         if file.content_type not in allowed_types:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid file type: {file.content_type}. Allowed types: {', '.join(allowed_types)}"
+                detail=f"Invalid file type: {file.content_type}. Allowed types: JPEG, PNG, WEBP"
             )
-        
-        # Read file content
+
         content = await file.read()
-        
-        # Validate file size
+
         if len(content) > max_size:
             raise HTTPException(
                 status_code=400,
-                detail=f"File {file.filename} is too large. Maximum size is 5MB"
+                detail=f"File '{file.filename}' is too large. Maximum accepted size is 10 MB"
             )
-        
-        # Upload to storage
+
+        # Validate resolution and compress — run in thread pool to avoid blocking the event loop
+        try:
+            loop = asyncio.get_event_loop()
+            processed = await loop.run_in_executor(
+                None, process_trip_image, content, file.filename or "image.jpg"
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
         try:
             file_info = await storage_service.upload_file(
-                file_data=content,
+                file_data=processed.data,
                 file_name=file.filename,
-                content_type=file.content_type,
+                content_type=processed.content_type,
                 folder="trip_images"
             )
             uploaded_urls.append(file_info["downloadUrl"])
         except Exception as e:
             logger.error(f"Error uploading file {file.filename}: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to upload {file.filename}")
-    
+            raise HTTPException(status_code=500, detail=f"Failed to upload '{file.filename}'")
+
     # Update trip with new image URLs
     current_images = trip.images or []
     trip.images = current_images + uploaded_urls
     session.add(trip)
     session.commit()
     session.refresh(trip)
-    
+
     return {
         "message": f"Successfully uploaded {len(uploaded_urls)} images",
         "uploaded_urls": uploaded_urls,

@@ -6,6 +6,15 @@ import uuid
 from datetime import datetime, timedelta, date
 import io
 from unittest.mock import patch, AsyncMock
+from PIL import Image as PILImage
+
+
+def make_test_jpeg(width: int = 100, height: int = 100) -> bytes:
+    """Return minimal valid JPEG bytes."""
+    img = PILImage.new("RGB", (width, height), color=(80, 120, 200))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG")
+    return buf.getvalue()
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session
@@ -695,8 +704,8 @@ def test_upload_review_images_success_max_5(client: TestClient, session: Session
         ])
 
         files = [
-            ("files", ("a.webp", io.BytesIO(b"img1"), "image/webp")),
-            ("files", ("b.webp", io.BytesIO(b"img2"), "image/webp")),
+            ("files", ("a.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")),
+            ("files", ("b.jpg", io.BytesIO(make_test_jpeg()), "image/jpeg")),
         ]
         response = client.post(
             f"{settings.API_V1_STR}/reviews/{review_id}/images",

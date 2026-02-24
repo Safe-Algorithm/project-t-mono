@@ -16,6 +16,16 @@ import datetime
 import uuid
 from io import BytesIO
 from unittest.mock import patch, MagicMock, AsyncMock
+from PIL import Image as PILImage
+
+
+def make_test_jpeg(width: int = 800, height: int = 600) -> BytesIO:
+    """Create a minimal valid JPEG at the given resolution for use in tests."""
+    img = PILImage.new("RGB", (width, height), color=(100, 150, 200))
+    buf = BytesIO()
+    img.save(buf, format="JPEG")
+    buf.seek(0)
+    return buf
 
 def test_create_trip(client: TestClient, session: Session) -> None:
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
@@ -1855,10 +1865,10 @@ def test_upload_trip_images(client: TestClient, session: Session) -> None:
             "fileId": "test-file-id"
         })
         
-        # Create fake image files
-        image1 = BytesIO(b"fake image content 1")
-        image2 = BytesIO(b"fake image content 2")
-        
+        # Create valid 800x600 JPEG files that pass the resolution check
+        image1 = make_test_jpeg(800, 600)
+        image2 = make_test_jpeg(800, 600)
+
         files = [
             ("files", ("test1.jpg", image1, "image/jpeg")),
             ("files", ("test2.jpg", image2, "image/jpeg"))
@@ -1929,18 +1939,48 @@ def test_upload_trip_images_file_too_large(client: TestClient, session: Session)
         provider=user.provider
     )
     
-    # Create fake large file (6MB)
-    large_file = BytesIO(b"x" * (6 * 1024 * 1024))
+    # Create fake large file (11MB — exceeds the 10MB raw input limit)
+    large_file = BytesIO(b"x" * (11 * 1024 * 1024))
     files = [("files", ("large.jpg", large_file, "image/jpeg"))]
-    
+
     response = client.post(
         f"{settings.API_V1_STR}/trips/{trip.id}/upload-images",
         headers=headers,
         files=files
     )
-    
+
     assert response.status_code == 400
     assert "too large" in response.json()["detail"]
+
+
+def test_upload_trip_images_too_small(client: TestClient, session: Session) -> None:
+    """Test that uploading an image below minimum resolution is rejected."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    trip = crud.trip.create_trip(
+        session=session,
+        trip_in=TripCreate(
+            name_en="Test Trip for Low-Res Images",
+            description_en="Testing low-res image rejection",
+            start_date=datetime.datetime.utcnow(),
+            end_date=datetime.datetime.utcnow() + datetime.timedelta(days=1),
+            max_participants=10
+        ),
+        provider=user.provider
+    )
+
+    # 400x300 is below the 800x600 minimum
+    small_image = make_test_jpeg(400, 300)
+    files = [("files", ("small.jpg", small_image, "image/jpeg"))]
+
+    response = client.post(
+        f"{settings.API_V1_STR}/trips/{trip.id}/upload-images",
+        headers=headers,
+        files=files
+    )
+
+    assert response.status_code == 400
+    assert "too small" in response.json()["detail"].lower()
 
 
 def test_delete_trip_image(client: TestClient, session: Session) -> None:
