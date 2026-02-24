@@ -148,242 +148,280 @@ const TripDetailPage: React.FC = () => {
   const pendingCount = registrations.filter(r => r.status === 'pending_payment' || r.status === 'pending').length;
   const availableSpots = trip ? trip.max_participants - registrations.filter(r => ['confirmed', 'pending_payment'].includes(r.status)).reduce((sum, r) => sum + r.total_participants, 0) : 0;
 
-  if (loading) return <div className="p-8 text-gray-500">{t('status.loading')}</div>;
-  if (error) return <div className="p-8 text-red-500">{t('status.error')}: {error}</div>;
-  if (!trip) return <div className="p-8 text-gray-500">{t('status.notFound')}</div>;
+  const cardCls = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800";
+  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
+    </div>
+  );
+  if (error) return (
+    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+      {t('status.error')}: {error}
+    </div>
+  );
+  if (!trip) return (
+    <div className="p-8 text-slate-400 dark:text-slate-500 text-sm">{t('status.notFound')}</div>
+  );
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold">{trip.name_en || trip.name_ar}</h1>
-          {trip.name_ar && <p className="text-lg text-gray-500 mt-1" dir="rtl">{trip.name_ar}</p>}
-          <div className="flex items-center gap-2 mt-2">
-            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{trip.is_active ? 'Active' : 'Inactive'}</span>
-            {trip.is_international && <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">International</span>}
-            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-700'}`}>
-              {trip.is_packaged_trip ? '📦 Packaged' : '🎫 Simple'}
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{trip.name_en || trip.name_ar}</h1>
+          {trip.name_ar && trip.name_en && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5" dir="rtl">{trip.name_ar}</p>}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{trip.is_active ? 'Active' : 'Inactive'}</span>
+            {trip.is_international && <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">International</span>}
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+              {trip.is_packaged_trip ? 'Packaged' : 'Simple'}
             </span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => router.push(`/trips/${tripId}/edit`)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">{t('action.editTrip')}</button>
-          <button onClick={() => router.push('/trips')} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium">{t('action.backToTrips')}</button>
+        <div className="flex gap-2 flex-shrink-0">
+          <button onClick={() => router.push(`/trips/${tripId}/edit`)}
+            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-sm font-medium transition-colors">
+            {t('action.editTrip')}
+          </button>
+          <button onClick={() => router.push('/trips')}
+            className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+            {t('action.backToTrips')}
+          </button>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Bookings', value: registrations.length, color: 'text-gray-900 dark:text-white' },
-          { label: 'Confirmed', value: confirmedCount, color: 'text-green-600' },
-          { label: 'Pending Payment', value: pendingCount, color: 'text-yellow-600' },
-          { label: 'Available Spots', value: Math.max(0, availableSpots), color: availableSpots <= 5 ? 'text-red-600' : 'text-blue-600' },
+          { label: 'Total Bookings', value: registrations.length, color: 'text-slate-900 dark:text-white' },
+          { label: 'Confirmed', value: confirmedCount, color: 'text-emerald-600 dark:text-emerald-400' },
+          { label: 'Pending Payment', value: pendingCount, color: 'text-amber-600 dark:text-amber-400' },
+          { label: 'Available Spots', value: Math.max(0, availableSpots), color: availableSpots <= 5 ? 'text-red-600 dark:text-red-400' : 'text-sky-600 dark:text-sky-400' },
         ].map(s => (
-          <div key={s.label} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <p className="text-xs text-gray-500 mb-1">{s.label}</p>
+          <div key={s.label} className={`${cardCls} p-4`}>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{s.label}</p>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Trip Info */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Trip Information</h2>
+      <div className={`${cardCls} p-6`}>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Trip Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-          <div><span className="text-gray-500">Start Date</span><p className="font-medium mt-0.5">{new Date(trip.start_date).toLocaleString()}</p></div>
-          <div><span className="text-gray-500">End Date</span><p className="font-medium mt-0.5">{new Date(trip.end_date).toLocaleString()}</p></div>
-          <div><span className="text-gray-500">Registration Deadline</span><p className="font-medium mt-0.5">{trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—'}</p></div>
-          <div><span className="text-gray-500">Max Participants</span><p className="font-medium mt-0.5">{trip.max_participants}</p></div>
+          {[
+            { label: 'Start Date', value: new Date(trip.start_date).toLocaleString() },
+            { label: 'End Date', value: new Date(trip.end_date).toLocaleString() },
+            { label: 'Registration Deadline', value: trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—' },
+            { label: 'Max Participants', value: String(trip.max_participants) },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
+              <p className="font-medium text-slate-900 dark:text-white mt-0.5">{value}</p>
+            </div>
+          ))}
           {!trip.is_packaged_trip && (
-            <div><span className="text-gray-500">Refundable</span><p className={`font-medium mt-0.5 ${trip.is_refundable ? 'text-green-600' : 'text-red-600'}`}>{trip.is_refundable ? 'Yes' : 'No'}</p></div>
+            <div>
+              <span className="text-xs text-slate-400 dark:text-slate-500">Refundable</span>
+              <p className={`font-medium mt-0.5 ${trip.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{trip.is_refundable ? 'Yes' : 'No'}</p>
+            </div>
           )}
-          {(trip as any).starting_city && <div><span className="text-gray-500">Starting City</span><p className="font-medium mt-0.5">📍 {(trip as any).starting_city.name_en}</p></div>}
+          {(trip as any).starting_city && (
+            <div>
+              <span className="text-xs text-slate-400 dark:text-slate-500">Starting City</span>
+              <p className="font-medium text-slate-900 dark:text-white mt-0.5">{(trip as any).starting_city.name_en}</p>
+            </div>
+          )}
         </div>
         {(trip.description_en || trip.description_ar) && (
-          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-            {trip.description_en && <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">{trip.description_en}</p>}
-            {trip.description_ar && <p className="text-sm text-gray-500" dir="rtl">{trip.description_ar}</p>}
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+            {trip.description_en && <p className="text-sm text-slate-700 dark:text-slate-300 mb-2 leading-relaxed">{trip.description_en}</p>}
+            {trip.description_ar && <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed" dir="rtl">{trip.description_ar}</p>}
           </div>
         )}
         {trip.has_meeting_place && (
-          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-            <p className="text-sm font-medium mb-1">Meeting Place</p>
-            {trip.meeting_location && <p className="text-sm">📍 {trip.meeting_location}</p>}
-            {trip.meeting_time && <p className="text-sm">🕐 {new Date(trip.meeting_time).toLocaleString()}</p>}
+          <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm">
+            <p className="font-medium text-slate-900 dark:text-white mb-2">Meeting Place</p>
+            {trip.meeting_location && <p className="text-slate-600 dark:text-slate-400">{trip.meeting_location}</p>}
+            {trip.meeting_time && <p className="text-slate-600 dark:text-slate-400">{new Date(trip.meeting_time).toLocaleString()}</p>}
           </div>
         )}
       </div>
 
-      {/* Destinations + Amenities (amenities only shown for non-packaged trips at trip level) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {tripDestinations.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <h3 className="font-semibold mb-3">Destinations</h3>
-            <div className="flex flex-wrap gap-2">
-              {tripDestinations.map(td => (
-                <span key={td.id} className="px-3 py-1 bg-blue-50 border border-blue-200 rounded-full text-sm text-blue-800">
-                  {td.destination?.name_en || 'Unknown'}{td.place ? ` → ${td.place.name_en}` : ''}
-                </span>
-              ))}
+      {/* Destinations + Amenities */}
+      {(tripDestinations.length > 0 || (!trip.is_packaged_trip && trip.amenities && trip.amenities.length > 0)) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tripDestinations.length > 0 && (
+            <div className={`${cardCls} p-5`}>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Destinations</h3>
+              <div className="flex flex-wrap gap-2">
+                {tripDestinations.map(td => (
+                  <span key={td.id} className="px-3 py-1 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800/40 rounded-full text-sm text-sky-700 dark:text-sky-400">
+                    {td.destination?.name_en || 'Unknown'}{td.place ? ` → ${td.place.name_en}` : ''}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-        {!trip.is_packaged_trip && trip.amenities && trip.amenities.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-            <h3 className="font-semibold mb-3">Amenities</h3>
-            <div className="flex flex-wrap gap-2">
-              {trip.amenities.map(a => (
-                <span key={a} className="px-3 py-1 bg-green-50 border border-green-200 rounded-full text-sm text-green-800">✓ {amenityLabels[a] || a}</span>
-              ))}
+          )}
+          {!trip.is_packaged_trip && trip.amenities && trip.amenities.length > 0 && (
+            <div className={`${cardCls} p-5`}>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Amenities</h3>
+              <div className="flex flex-wrap gap-2">
+                {trip.amenities.map(a => (
+                  <span key={a} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-sm text-emerald-700 dark:text-emerald-400">✓ {amenityLabels[a] || a}</span>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Images */}
       {trip.images && trip.images.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
-          <h3 className="font-semibold mb-3">Images</h3>
+        <div className={`${cardCls} p-5`}>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Images</h3>
           <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
             {trip.images.map((url, i) => (
-              <img key={i} src={url} alt="" className="w-full h-24 object-cover rounded cursor-pointer hover:opacity-80" onClick={() => window.open(url, '_blank')} />
+              <img key={i} src={url} alt="" className="w-full h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(url, '_blank')} />
             ))}
           </div>
         </div>
       )}
 
-      {/* Packages (only for packaged trips) */}
+      {/* Packages */}
       {trip.is_packaged_trip && (
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Packages ({trip.packages.length})</h2>
-        {trip.packages.length === 0 ? (
-          <p className="text-yellow-600 text-sm">⚠ No packages yet. Add at least 2 packages for a packaged trip.</p>
-        ) : (
-          <div className="space-y-3">
-            {trip.packages.map(pkg => (
-              <div key={pkg.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h4 className="font-semibold">{pkg.name_en || pkg.name_ar}</h4>
-                    {pkg.name_ar && <p className="text-sm text-gray-500" dir="rtl">{pkg.name_ar}</p>}
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{pkg.description_en || pkg.description_ar}</p>
-                    <p className="text-sm font-bold mt-1">{pkg.price} {pkg.currency || 'SAR'}</p>
-                    {pkg.max_participants != null && <p className="text-xs text-gray-500 mt-0.5">Max: {pkg.max_participants} participants</p>}
-                    {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-green-600' : 'text-red-600'}>{pkg.is_refundable ? '✓ Refundable' : '✗ Non-refundable'}</span></p>}
-                    {pkg.amenities && pkg.amenities.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {pkg.amenities.map(a => <span key={a} className="px-1.5 py-0.5 bg-green-50 border border-green-200 rounded text-xs text-green-700">{amenityLabels[a] || a}</span>)}
+        <div className={cardCls}>
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Packages ({trip.packages.length})</h2>
+          </div>
+          <div className="p-6">
+            {trip.packages.length === 0 ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
+                No packages yet. Add at least 2 packages for a packaged trip.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {trip.packages.map(pkg => (
+                  <div key={pkg.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="min-w-0">
+                        <h4 className="font-semibold text-slate-900 dark:text-white">{pkg.name_en || pkg.name_ar}</h4>
+                        {pkg.name_ar && pkg.name_en && <p className="text-xs text-slate-400 dark:text-slate-500" dir="rtl">{pkg.name_ar}</p>}
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pkg.description_en || pkg.description_ar}</p>
+                        <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{pkg.price} {pkg.currency || 'SAR'}</p>
+                        {pkg.max_participants != null && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Max: {pkg.max_participants} participants</p>}
+                        {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{pkg.is_refundable ? '✓ Refundable' : '✗ Non-refundable'}</span></p>}
+                        {pkg.amenities && pkg.amenities.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {pkg.amenities.map(a => <span key={a} className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-xs text-emerald-700 dark:text-emerald-400">{amenityLabels[a] || a}</span>)}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${pkg.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{pkg.is_active ? 'Active' : 'Inactive'}</span>
+                    </div>
+                    {pkg.required_fields?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                        {pkg.required_fields.map((f: string) => (
+                          <span key={f} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-full text-xs text-slate-600 dark:text-slate-400">{getFieldDisplayName(f)}</span>
+                        ))}
                       </div>
                     )}
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${pkg.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>{pkg.is_active ? 'Active' : 'Inactive'}</span>
-                </div>
-                {pkg.required_fields?.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {pkg.required_fields.map((f: string) => (
-                      <span key={f} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">{getFieldDisplayName(f)}</span>
-                    ))}
-                  </div>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </div>
-        )}
-      </div>
+        </div>
       )}
 
       {/* Broadcast Updates */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Broadcast Updates ({tripUpdates.filter(u => !u.registration_id).length})</h2>
-          <button
-            onClick={() => { setSendTarget('all'); setShowSendForm(v => !v); setSendError(null); setSendSuccess(null); }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-          >
+      <div className={cardCls}>
+        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Broadcast Updates ({tripUpdates.filter(u => !u.registration_id).length})</h2>
+          <button onClick={() => { setSendTarget('all'); setShowSendForm(v => !v); setSendError(null); setSendSuccess(null); }}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${showSendForm && sendTarget === 'all' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'bg-sky-500 hover:bg-sky-600 text-white'}`}>
             {showSendForm && sendTarget === 'all' ? 'Cancel' : 'Send to All'}
           </button>
         </div>
-        {showSendForm && sendTarget === 'all' && (
-          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-            {sendError && <p className="text-red-600 text-sm mb-2">{sendError}</p>}
-            {sendSuccess && <p className="text-green-600 text-sm mb-2">{sendSuccess}</p>}
-            <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm mb-2 dark:bg-gray-600 dark:border-gray-500" />
-            <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3}
-              className="w-full border rounded-lg px-3 py-2 text-sm mb-2 dark:bg-gray-600 dark:border-gray-500 resize-none" />
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} />
-                <span className="text-red-600 font-medium">Mark as Important</span>
-              </label>
-              <button onClick={handleSendUpdate} disabled={sending || !updateTitle.trim() || !updateMessage.trim()}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium">
-                {sending ? 'Sending…' : 'Send'}
-              </button>
-            </div>
-          </div>
-        )}
-        {tripUpdates.filter(u => !u.registration_id).length === 0 ? (
-          <p className="text-gray-500 text-sm">No broadcast updates sent yet.</p>
-        ) : (
-          <div className="space-y-3">
-            {tripUpdates.filter(u => !u.registration_id).map(u => (
-              <div key={u.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{u.title}</span>
-                    {u.is_important && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">Important</span>}
-                  </div>
-                  <span className="text-xs text-gray-400">{new Date(u.created_at).toLocaleString()}</span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{u.message}</p>
-                <p className="text-xs text-gray-400 mt-1">Read: {u.read_count ?? 0} / {u.total_recipients ?? '?'}</p>
+        <div className="p-6">
+          {showSendForm && sendTarget === 'all' && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 space-y-3">
+              {sendError && <p className="text-red-600 dark:text-red-400 text-sm">{sendError}</p>}
+              {sendSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-sm">{sendSuccess}</p>}
+              <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
+              <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-red-600 dark:text-red-400">
+                  <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} className="accent-red-500" />
+                  Mark as Important
+                </label>
+                <button onClick={handleSendUpdate} disabled={sending || !updateTitle.trim() || !updateMessage.trim()}
+                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-sm font-medium transition-colors">
+                  {sending ? 'Sending…' : 'Send'}
+                </button>
               </div>
-            ))}
-          </div>
-        )}
+            </div>
+          )}
+          {tripUpdates.filter(u => !u.registration_id).length === 0 ? (
+            <p className="text-slate-400 dark:text-slate-500 text-sm">No broadcast updates sent yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {tripUpdates.filter(u => !u.registration_id).map(u => (
+                <div key={u.id} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+                  <div className="flex justify-between items-start mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm text-slate-900 dark:text-white">{u.title}</span>
+                      {u.is_important && <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-medium">Important</span>}
+                    </div>
+                    <span className="text-xs text-slate-400 dark:text-slate-500">{new Date(u.created_at).toLocaleString()}</span>
+                  </div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{u.message}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Read: {u.read_count ?? 0} / {u.total_recipients ?? '?'}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bookings Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Bookings ({registrations.length})</h2>
+      <div className={cardCls}>
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Bookings ({registrations.length})</h2>
+        </div>
         {registrations.length === 0 ? (
-          <p className="text-gray-500 text-sm">No bookings yet.</p>
+          <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">No bookings yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 text-left">
-                  <th className="py-2 px-3 text-gray-500 font-medium">Booking Ref</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Name</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Email</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Phone</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Participants</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Amount</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Status</th>
-                  <th className="py-2 px-3 text-gray-500 font-medium">Date</th>
-                  <th className="py-2 px-3"></th>
+                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ref</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Name</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Participants</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Amount</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="py-3 px-4" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {registrations.map(reg => (
-                  <tr key={reg.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="py-2 px-3 font-mono text-xs">{reg.booking_reference}</td>
-                    <td className="py-2 px-3 font-medium">{reg.user_name || '—'}</td>
-                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{reg.user_email || '—'}</td>
-                    <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{reg.user_phone || '—'}</td>
-                    <td className="py-2 px-3 text-center">{reg.total_participants}</td>
-                    <td className="py-2 px-3">{reg.total_amount} SAR</td>
-                    <td className="py-2 px-3">
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[reg.status] || 'bg-gray-100 text-gray-700'}`}>
+                  <tr key={reg.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td className="py-3 px-4 font-mono text-xs text-slate-500 dark:text-slate-400">{reg.booking_reference}</td>
+                    <td className="py-3 px-4 font-medium text-slate-900 dark:text-white">{reg.user_name || '—'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{reg.user_email || '—'}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-center hidden sm:table-cell">{reg.total_participants}</td>
+                    <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium hidden sm:table-cell">{reg.total_amount} SAR</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[reg.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                         {reg.status.replace('_', ' ')}
                       </span>
                     </td>
-                    <td className="py-2 px-3 text-gray-500 text-xs">{new Date(reg.registration_date).toLocaleDateString()}</td>
-                    <td className="py-2 px-3">
-                      <button onClick={() => openBooking(reg)} className="px-3 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 text-xs font-medium">
+                    <td className="py-3 px-4">
+                      <button onClick={() => openBooking(reg)} className="px-3 py-1.5 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/40 rounded-xl hover:bg-sky-100 dark:hover:bg-sky-900/40 text-xs font-medium transition-colors">
                         View
                       </button>
                     </td>
@@ -398,61 +436,75 @@ const TripDetailPage: React.FC = () => {
       {/* Booking Detail Drawer */}
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black bg-opacity-40" onClick={() => { setSelectedBooking(null); setShowSendForm(false); }} />
-          <div className="w-full max-w-xl bg-white dark:bg-gray-900 h-full overflow-y-auto shadow-2xl flex flex-col">
-            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex-1 bg-black/50" onClick={() => { setSelectedBooking(null); setShowSendForm(false); }} />
+          <div className="w-full max-w-xl bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
+            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
               <div>
-                <h3 className="font-bold text-lg">Booking Detail</h3>
-                <p className="text-xs text-gray-500 font-mono">{selectedBooking.booking_reference}</p>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">Booking Detail</h3>
+                <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{selectedBooking.booking_reference}</p>
               </div>
-              <button onClick={() => { setSelectedBooking(null); setShowSendForm(false); }} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
+              <button onClick={() => { setSelectedBooking(null); setShowSendForm(false); }}
+                className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none">
+                &times;
+              </button>
             </div>
 
-            <div className="p-4 space-y-4 flex-1">
+            <div className="p-5 space-y-5 flex-1">
               {/* Booker info */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <h4 className="font-semibold text-sm mb-3">Booker Information</h4>
+              <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Booker Information</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><span className="text-gray-500 block text-xs">Name</span><span className="font-medium">{selectedBooking.user_name || '—'}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Email</span><span className="font-medium">{selectedBooking.user_email || '—'}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Phone</span><span className="font-medium">{selectedBooking.user_phone || '—'}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Status</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[selectedBooking.status] || 'bg-gray-100 text-gray-700'}`}>
+                  {[
+                    { label: 'Name', value: selectedBooking.user_name || '—' },
+                    { label: 'Email', value: selectedBooking.user_email || '—' },
+                    { label: 'Phone', value: selectedBooking.user_phone || '—' },
+                    { label: 'Participants', value: String(selectedBooking.total_participants) },
+                    { label: 'Amount', value: `${selectedBooking.total_amount} SAR` },
+                  ].map(({ label, value }) => (
+                    <div key={label}>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 block">{label}</span>
+                      <span className="font-medium text-slate-900 dark:text-white">{value}</span>
+                    </div>
+                  ))}
+                  <div>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 block">Status</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[selectedBooking.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
                       {selectedBooking.status.replace('_', ' ')}
                     </span>
                   </div>
-                  <div><span className="text-gray-500 block text-xs">Participants</span><span className="font-medium">{selectedBooking.total_participants}</span></div>
-                  <div><span className="text-gray-500 block text-xs">Amount</span><span className="font-medium">{selectedBooking.total_amount} SAR</span></div>
-                  <div className="col-span-2"><span className="text-gray-500 block text-xs">Booked On</span><span className="font-medium">{new Date(selectedBooking.registration_date).toLocaleString()}</span></div>
+                  <div className="col-span-2">
+                    <span className="text-xs text-slate-400 dark:text-slate-500 block">Booked On</span>
+                    <span className="font-medium text-slate-900 dark:text-white">{new Date(selectedBooking.registration_date).toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 
               {/* Participants */}
               {selectedBooking.participants?.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-sm mb-2">Participants ({selectedBooking.participants.length})</h4>
+                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Participants ({selectedBooking.participants.length})</h4>
                   <div className="space-y-2">
                     {selectedBooking.participants.map((p: any, i: number) => {
                       const pkg = trip.packages.find((pk: TripPackage) => pk.id === p.package_id);
                       return (
-                        <div key={p.id || i} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 text-sm">
-                          <div className="flex justify-between items-start mb-1">
-                            <p className="font-medium">{p.name || `Participant ${i + 1}`}</p>
+                        <div key={p.id || i} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-sm">
+                          <div className="flex justify-between items-start mb-2">
+                            <p className="font-semibold text-slate-900 dark:text-white">{p.name || `Participant ${i + 1}`}</p>
                             {pkg && (
-                              <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 font-medium">
-                                📦 {pkg.name_en || pkg.name_ar}
+                              <span className="px-2 py-0.5 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800/40 rounded-full text-xs text-sky-700 dark:text-sky-400 font-medium">
+                                {pkg.name_en || pkg.name_ar}
                               </span>
                             )}
                           </div>
-                          <div className="grid grid-cols-2 gap-1 mt-1 text-xs text-gray-500">
-                            {p.email && <span>✉ {p.email}</span>}
-                            {p.phone && <span>📞 {p.phone}</span>}
-                            {p.date_of_birth && <span>🎂 {p.date_of_birth}</span>}
-                            {p.gender && <span>👤 {p.gender}</span>}
-                            {p.id_iqama_number && <span>🪪 {p.id_iqama_number}</span>}
-                            {p.passport_number && <span>📘 {p.passport_number}</span>}
-                            {p.nationality && <span>🌍 {p.nationality}</span>}
-                            {p.medical_conditions && <span>🏥 {p.medical_conditions}</span>}
+                          <div className="grid grid-cols-2 gap-1 text-xs text-slate-500 dark:text-slate-400">
+                            {p.email && <span>{p.email}</span>}
+                            {p.phone && <span>{p.phone}</span>}
+                            {p.date_of_birth && <span>DOB: {p.date_of_birth}</span>}
+                            {p.gender && <span>Gender: {p.gender}</span>}
+                            {p.id_iqama_number && <span>ID: {p.id_iqama_number}</span>}
+                            {p.passport_number && <span>Passport: {p.passport_number}</span>}
+                            {p.nationality && <span>Nationality: {p.nationality}</span>}
+                            {p.medical_conditions && <span className="col-span-2">Medical: {p.medical_conditions}</span>}
                           </div>
                         </div>
                       );
@@ -463,31 +515,29 @@ const TripDetailPage: React.FC = () => {
 
               {/* Updates for this booking */}
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-semibold text-sm">Updates for this Booking</h4>
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white">Updates for this Booking</h4>
                   <button
                     onClick={() => { setSendTarget('booking'); setShowSendForm(v => !v); setSendError(null); setSendSuccess(null); }}
-                    className="px-3 py-1 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${showSendForm && sendTarget === 'booking' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'bg-sky-500 hover:bg-sky-600 text-white'}`}
                   >
                     {showSendForm && sendTarget === 'booking' ? 'Cancel' : 'Send Update'}
                   </button>
                 </div>
 
                 {showSendForm && sendTarget === 'booking' && (
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 mb-3">
-                    {sendError && <p className="text-red-600 text-xs mb-2">{sendError}</p>}
-                    {sendSuccess && <p className="text-green-600 text-xs mb-2">{sendSuccess}</p>}
-                    <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)}
-                      className="w-full border rounded px-3 py-2 text-sm mb-2 dark:bg-gray-600 dark:border-gray-500" />
-                    <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3}
-                      className="w-full border rounded px-3 py-2 text-sm mb-2 dark:bg-gray-600 dark:border-gray-500 resize-none" />
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 mb-3 space-y-2">
+                    {sendError && <p className="text-red-600 dark:text-red-400 text-xs">{sendError}</p>}
+                    {sendSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-xs">{sendSuccess}</p>}
+                    <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
+                    <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
                     <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-xs cursor-pointer">
-                        <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} />
-                        <span className="text-red-600 font-medium">Important</span>
+                      <label className="flex items-center gap-2 text-xs cursor-pointer font-medium text-red-600 dark:text-red-400">
+                        <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} className="accent-red-500" />
+                        Important
                       </label>
                       <button onClick={handleSendUpdate} disabled={sending || !updateTitle.trim() || !updateMessage.trim()}
-                        className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs font-medium">
+                        className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-xs font-medium transition-colors">
                         {sending ? 'Sending…' : 'Send'}
                       </button>
                     </div>
@@ -495,22 +545,26 @@ const TripDetailPage: React.FC = () => {
                 )}
 
                 {drawerLoading ? (
-                  <p className="text-gray-500 text-xs">Loading updates…</p>
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin w-5 h-5 rounded-full border-2 border-sky-500 border-t-transparent" />
+                  </div>
                 ) : bookingUpdates.length === 0 ? (
-                  <p className="text-gray-500 text-xs">No updates for this booking.</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-xs">No updates for this booking.</p>
                 ) : (
                   <div className="space-y-2">
                     {bookingUpdates.map(u => (
-                      <div key={u.id} className={`rounded-lg p-3 text-sm border ${u.registration_id ? 'border-purple-200 bg-purple-50 dark:bg-purple-900/20' : 'border-gray-200 bg-gray-50 dark:bg-gray-800'}`}>
+                      <div key={u.id} className={`rounded-xl p-3 text-sm border ${u.registration_id ? 'border-purple-200 dark:border-purple-800/40 bg-purple-50 dark:bg-purple-900/20' : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50'}`}>
                         <div className="flex justify-between items-start mb-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-xs">{u.title}</span>
-                            {u.is_important && <span className="px-1 py-0.5 bg-red-100 text-red-700 rounded text-xs">Important</span>}
-                            {u.registration_id ? <span className="px-1 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">Targeted</span> : <span className="px-1 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">Broadcast</span>}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-medium text-xs text-slate-900 dark:text-white">{u.title}</span>
+                            {u.is_important && <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs">Important</span>}
+                            {u.registration_id
+                              ? <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs">Targeted</span>
+                              : <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full text-xs">Broadcast</span>}
                           </div>
-                          <span className="text-xs text-gray-400">{new Date(u.created_at).toLocaleString()}</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{new Date(u.created_at).toLocaleString()}</span>
                         </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{u.message}</p>
+                        <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{u.message}</p>
                       </div>
                     ))}
                   </div>

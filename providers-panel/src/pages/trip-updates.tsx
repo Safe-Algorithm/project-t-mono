@@ -134,82 +134,65 @@ const TripUpdatesPage = () => {
   const formatDate = (d: string) => new Date(d).toLocaleString();
   const getTripName = (trip: TripOption) => trip.name_en || trip.name_ar || 'Unnamed Trip';
 
+  const inputCls = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition text-sm";
+  const selectCls = "px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition";
+
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">{t('tripUpdates.title')}</h1>
-      <p className="text-gray-500 mb-6 text-sm">{t('tripUpdates.subtitle')}</p>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('tripUpdates.title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('tripUpdates.subtitle')}</p>
+      </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 text-red-800 dark:text-red-300 text-sm">
-          {error}
-          <button onClick={() => setError(null)} className="ml-2 underline">{t('common.dismiss')}</button>
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="underline text-xs">{t('common.dismiss')}</button>
         </div>
       )}
       {success && (
-        <div className="mb-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 text-green-800 dark:text-green-300 text-sm">
-          {success}
-          <button onClick={() => setSuccess(null)} className="ml-2 underline">{t('common.dismiss')}</button>
+        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-sm text-emerald-600 dark:text-emerald-400">
+          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          <span className="flex-1">{success}</span>
+          <button onClick={() => setSuccess(null)} className="underline text-xs">{t('common.dismiss')}</button>
         </div>
       )}
 
-      {/* Trip selector */}
-      <div className="flex items-center gap-4 mb-6">
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-1">{t('tripUpdates.selectTrip')}</label>
-          <select
-            value={selectedTripId}
-            onChange={(e) => setSelectedTripId(e.target.value)}
-            className="border rounded-lg px-3 py-2 text-sm dark:bg-gray-700 dark:border-gray-600 min-w-[250px]"
-          >
-            {trips.map(trip => (
-              <option key={trip.id} value={trip.id}>{getTripName(trip)}</option>
-            ))}
+      {/* Trip selector + send button */}
+      <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+        <div className="flex-1">
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">{t('tripUpdates.selectTrip')}</label>
+          <select value={selectedTripId} onChange={e => setSelectedTripId(e.target.value)} className={`${selectCls} w-full`}>
+            {trips.map(trip => <option key={trip.id} value={trip.id}>{getTripName(trip)}</option>)}
           </select>
         </div>
-        <div className="self-end">
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
-          >
-            {showForm ? t('tripUpdates.cancel') : t('tripUpdates.sendUpdate')}
-          </button>
-        </div>
+        <button onClick={() => setShowForm(!showForm)}
+          className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors ${showForm ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700' : 'bg-sky-500 hover:bg-sky-600 text-white'}`}>
+          {showForm ? t('tripUpdates.cancel') : t('tripUpdates.sendUpdate')}
+        </button>
       </div>
 
       {/* Send form */}
       {showForm && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-          <h3 className="text-lg font-semibold mb-4">{t('tripUpdates.sendNew')}</h3>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
+          <h3 className="text-base font-semibold text-slate-900 dark:text-white">{t('tripUpdates.sendNew')}</h3>
 
-          <div className="flex gap-4 mb-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={sendTo === 'all'}
-                onChange={() => setSendTo('all')}
-                className="text-blue-600"
-              />
-              <span className="text-sm">{t('tripUpdates.allRegistered')}</span>
+          <div className="flex gap-5">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+              <input type="radio" checked={sendTo === 'all'} onChange={() => setSendTo('all')} className="accent-sky-500" />
+              {t('tripUpdates.allRegistered')}
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="radio"
-                checked={sendTo === 'registration'}
-                onChange={() => setSendTo('registration')}
-                className="text-blue-600"
-              />
-              <span className="text-sm">{t('tripUpdates.specificRegistration')}</span>
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
+              <input type="radio" checked={sendTo === 'registration'} onChange={() => setSendTo('registration')} className="accent-sky-500" />
+              {t('tripUpdates.specificRegistration')}
             </label>
           </div>
 
           {sendTo === 'registration' && (
-            <div className="mb-4">
-              <label className="text-sm font-medium text-gray-600 block mb-1">{t('tripUpdates.registration')}</label>
-              <select
-                value={selectedRegId}
-                onChange={(e) => setSelectedRegId(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-700 dark:border-gray-600"
-              >
+            <div>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">{t('tripUpdates.registration')}</label>
+              <select value={selectedRegId} onChange={e => setSelectedRegId(e.target.value)} className={`${selectCls} w-full`}>
                 <option value="">{t('tripUpdates.selectRegistration')}</option>
                 {registrations.map(r => (
                   <option key={r.id} value={r.id}>
@@ -220,105 +203,76 @@ const TripUpdatesPage = () => {
             </div>
           )}
 
-          <div className="mb-4">
-            <label className="text-sm font-medium text-gray-600 block mb-1">{t('tripUpdates.titleLabel')}</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('tripUpdates.titlePlaceholder')}
-              className="border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-700 dark:border-gray-600"
-              maxLength={255}
-            />
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">{t('tripUpdates.titleLabel')}</label>
+            <input type="text" value={title} onChange={e => setTitle(e.target.value)} placeholder={t('tripUpdates.titlePlaceholder')} className={inputCls} maxLength={255} />
           </div>
 
-          <div className="mb-4">
-            <label className="text-sm font-medium text-gray-600 block mb-1">{t('tripUpdates.messageLabel')}</label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder={t('tripUpdates.messagePlaceholder')}
-              className="border rounded-lg px-3 py-2 text-sm w-full dark:bg-gray-700 dark:border-gray-600 resize-none"
-              rows={4}
-              maxLength={5000}
-            />
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">{t('tripUpdates.messageLabel')}</label>
+            <textarea value={message} onChange={e => setMessage(e.target.value)} placeholder={t('tripUpdates.messagePlaceholder')}
+              className={`${inputCls} resize-none`} rows={4} maxLength={5000} />
           </div>
 
-          <div className="flex items-center gap-4 mb-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isImportant}
-                onChange={(e) => setIsImportant(e.target.checked)}
-                className="text-red-600"
-              />
-              <span className="text-sm font-medium text-red-600">{t('tripUpdates.markImportant')}</span>
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
+            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-red-600 dark:text-red-400">
+              <input type="checkbox" checked={isImportant} onChange={e => setIsImportant(e.target.checked)} className="accent-red-500" />
+              {t('tripUpdates.markImportant')}
             </label>
+            <button onClick={handleSend} disabled={sending || !title.trim() || !message.trim()}
+              className="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
+              {sending ? t('tripUpdates.sending') : t('tripUpdates.send')}
+            </button>
           </div>
-
-          <button
-            onClick={handleSend}
-            disabled={sending || !title.trim() || !message.trim()}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-sm font-medium"
-          >
-            {sending ? t('tripUpdates.sending') : t('tripUpdates.send')}
-          </button>
         </div>
       )}
 
       {/* Updates list */}
       {loading ? (
-        <p className="text-gray-500">{t('tripUpdates.loading')}</p>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
+        </div>
+      ) : updates.length === 0 ? (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-10 text-center">
+          <p className="text-slate-400 dark:text-slate-500 text-sm">{t('tripUpdates.noUpdates')}</p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {updates.length === 0 ? (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 text-gray-500 text-center">
-              {t('tripUpdates.noUpdates')}
-            </div>
-          ) : (
-            updates.map((u) => (
-              <div key={u.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-semibold text-lg">{u.title}</h4>
-                    {u.is_important && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">{t('tripUpdates.important')}</span>
-                    )}
-                    {u.registration_id && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">{t('tripUpdates.targeted')}</span>
-                    )}
-                  </div>
-                  <span className="text-xs text-gray-400">{formatDate(u.created_at)}</span>
+        <div className="space-y-3">
+          {updates.map(u => (
+            <div key={u.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+              <div className="flex justify-between items-start mb-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="font-semibold text-slate-900 dark:text-white">{u.title}</h4>
+                  {u.is_important && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">{t('tripUpdates.important')}</span>}
+                  {u.registration_id && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 font-medium">{t('tripUpdates.targeted')}</span>}
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mb-3">{u.message}</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span>{t('tripUpdates.recipients')}: {u.total_recipients ?? '—'}</span>
-                  <span>{t('tripUpdates.read')}: {u.read_count ?? 0}</span>
-                  <button
-                    onClick={() => viewReceipts(u.id)}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {selectedUpdateId === u.id ? t('tripUpdates.hideReceipts') : t('tripUpdates.viewReceipts')}
-                  </button>
-                </div>
-                {selectedUpdateId === u.id && selectedReceipts && (
-                  <div className="mt-3 border-t pt-3">
-                    {selectedReceipts.length === 0 ? (
-                      <p className="text-xs text-gray-400">{t('tripUpdates.noReads')}</p>
-                    ) : (
-                      <div className="space-y-1">
-                        {selectedReceipts.map(r => (
-                          <div key={r.id} className="text-xs text-gray-500">
-                            {t('tripUpdates.user')} {r.user_id.slice(0, 8)}... — {t('tripUpdates.readAt')} {formatDate(r.read_at)}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{formatDate(u.created_at)}</span>
               </div>
-            ))
-          )}
+              <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap mb-3 leading-relaxed">{u.message}</p>
+              <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <span>{t('tripUpdates.recipients')}: {u.total_recipients ?? '—'}</span>
+                <span>{t('tripUpdates.read')}: {u.read_count ?? 0}</span>
+                <button onClick={() => viewReceipts(u.id)} className="text-sky-500 hover:text-sky-600 font-medium transition-colors">
+                  {selectedUpdateId === u.id ? t('tripUpdates.hideReceipts') : t('tripUpdates.viewReceipts')}
+                </button>
+              </div>
+              {selectedUpdateId === u.id && selectedReceipts && (
+                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  {selectedReceipts.length === 0 ? (
+                    <p className="text-xs text-slate-400 dark:text-slate-500">{t('tripUpdates.noReads')}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {selectedReceipts.map(r => (
+                        <div key={r.id} className="text-xs text-slate-500 dark:text-slate-400">
+                          {t('tripUpdates.user')} {r.user_id.slice(0, 8)}... — {t('tripUpdates.readAt')} {formatDate(r.read_at)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

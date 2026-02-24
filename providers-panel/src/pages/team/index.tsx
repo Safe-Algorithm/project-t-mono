@@ -38,51 +38,41 @@ const TeamManagementPage = () => {
     }
   };
 
+  const ErrorBanner = ({ msg }: { msg: string }) => (
+    <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
+      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+      {msg}
+    </div>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Team Management</h1>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Manage your team members and their roles</p>
-          </div>
-          <Link href="/team/invite">
-            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105">
-              + Invite New Member
-            </button>
-          </Link>
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Team Management</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your team members and their roles</p>
         </div>
+        <Link href="/team/invite"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+          Invite New Member
+        </Link>
       </div>
 
-      {/* Error Messages */}
-      {error && (
-        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-      {deleteError && (
-        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 px-4 py-3 rounded-lg">
-          {deleteError}
-        </div>
-      )}
-      {updateError && (
-        <div className="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 px-4 py-3 rounded-lg">
-          {updateError}
-        </div>
-      )}
+      {error && <ErrorBanner msg={error} />}
+      {deleteError && <ErrorBanner msg={deleteError} />}
+      {updateError && <ErrorBanner msg={updateError} />}
 
-      {/* Content */}
-      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {isLoading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center items-center py-16">
+            <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
           </div>
         ) : (
-          <TeamList 
-            members={members} 
-            onDelete={handleDelete} 
-            isDeleting={isDeleting} 
+          <TeamList
+            members={members}
+            onDelete={handleDelete}
+            isDeleting={isDeleting}
             onUpdateRole={handleUpdateRole}
             isUpdating={isUpdating}
           />
