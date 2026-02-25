@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/UserContext';
 import { providerService } from '@/services/providerService';
 import { providerFilesService, FileDefinition, ProviderFile } from '@/services/fileDefinitions';
+import ImageCropper from '@/components/ui/ImageCropper';
 
 const ProfilePage = () => {
   const { user, isLoading } = useAuth();
@@ -13,6 +14,12 @@ const ProfilePage = () => {
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarCropSrc, setAvatarCropSrc] = useState<string | null>(null);
+  const [companyCover, setCompanyCover] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const [coverCropSrc, setCoverCropSrc] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -34,6 +41,7 @@ const ProfilePage = () => {
           setCompanyEmail(providerData.company_email || '');
           setCompanyPhone(providerData.company_phone || '');
           setCompanyAvatar(providerData.company_avatar_url || null);
+          setCompanyCover(providerData.company_cover_url || null);
           
           // Fetch request status - 404 is expected for approved providers
           try {
@@ -68,9 +76,15 @@ const ProfilePage = () => {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setAvatarFile(file);
-      setAvatarPreview(URL.createObjectURL(file));
+      setAvatarCropSrc(URL.createObjectURL(file));
+      e.target.value = '';
     }
+  };
+
+  const handleAvatarCropDone = (blob: Blob, previewUrl: string) => {
+    setAvatarCropSrc(null);
+    setAvatarFile(new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
+    setAvatarPreview(previewUrl);
   };
 
   const handleAvatarUpload = async () => {
@@ -91,6 +105,41 @@ const ProfilePage = () => {
       setError(error.message || 'Failed to upload avatar');
     } finally {
       setUploadingAvatar(false);
+    }
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setCoverCropSrc(URL.createObjectURL(file));
+      e.target.value = '';
+    }
+  };
+
+  const handleCoverCropDone = (blob: Blob, previewUrl: string) => {
+    setCoverCropSrc(null);
+    setCoverFile(new File([blob], 'cover.jpg', { type: 'image/jpeg' }));
+    setCoverPreview(previewUrl);
+  };
+
+  const handleCoverUpload = async () => {
+    if (!coverFile) return;
+
+    setUploadingCover(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await providerService.uploadCompanyCover(coverFile);
+      setCompanyCover(response.cover_url);
+      setCoverFile(null);
+      setCoverPreview(null);
+      setSuccess('Cover image uploaded successfully!');
+    } catch (error: any) {
+      console.error('Cover upload failed:', error);
+      setError(error.message || 'Failed to upload cover image');
+    } finally {
+      setUploadingCover(false);
     }
   };
 
@@ -188,6 +237,36 @@ const ProfilePage = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+          {/* Cover image */}
+          <div className="pb-5 border-b border-slate-100 dark:border-slate-800">
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Cover Image</p>
+            <div className="relative w-full h-36 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 ring-2 ring-slate-200 dark:ring-slate-700 mb-3">
+              {(coverPreview || companyCover) ? (
+                <img src={coverPreview || companyCover || ''} alt="Cover" className="w-full h-full object-cover" />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-1">
+                  <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">No cover image</p>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleCoverChange} className="hidden" id="cover-upload" />
+              <label htmlFor="cover-upload" className="cursor-pointer px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                Choose cover
+              </label>
+              {coverFile && (
+                <button type="button" onClick={handleCoverUpload} disabled={uploadingCover}
+                  className="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-medium transition-colors">
+                  {uploadingCover ? 'Uploading...' : 'Upload'}
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">JPG, PNG or WEBP · Source image min 1200×400 px · Crop tool opens before upload</p>
+          </div>
+
           {/* Avatar */}
           <div className="flex items-center gap-5 pb-5 border-b border-slate-100 dark:border-slate-800">
             <div className="flex-shrink-0">
@@ -214,7 +293,7 @@ const ProfilePage = () => {
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">JPG, PNG or WEBP · Max 5MB</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">JPG, PNG or WEBP · Crop tool opens before upload</p>
             </div>
           </div>
 
@@ -378,6 +457,32 @@ const ProfilePage = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Cover image crop modal */}
+      {coverCropSrc && (
+        <ImageCropper
+          imageSrc={coverCropSrc}
+          aspectRatio={3}
+          minWidth={1200}
+          minHeight={400}
+          label="Crop Cover Image (3:1)"
+          onCrop={handleCoverCropDone}
+          onCancel={() => setCoverCropSrc(null)}
+        />
+      )}
+
+      {/* Avatar crop modal */}
+      {avatarCropSrc && (
+        <ImageCropper
+          imageSrc={avatarCropSrc}
+          aspectRatio={1}
+          minWidth={200}
+          minHeight={200}
+          label="Crop Profile Avatar (1:1)"
+          onCrop={handleAvatarCropDone}
+          onCancel={() => setAvatarCropSrc(null)}
+        />
       )}
     </div>
   );

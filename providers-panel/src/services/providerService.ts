@@ -65,6 +65,27 @@ const uploadCompanyAvatar = async (file: File): Promise<{ message: string; avata
   return response.json();
 };
 
+const uploadCompanyCover = async (file: File): Promise<{ message: string; cover_url: string }> => {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/providers/upload-cover`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('provider_access_token')}`,
+      'X-Source': 'providers_panel',
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to upload cover image');
+  }
+
+  return response.json();
+};
+
 export const providerService = {
   getProviderProfile,
   updateProviderProfile,
@@ -72,4 +93,5 @@ export const providerService = {
   login,
   getRequestStatus,
   uploadCompanyAvatar,
+  uploadCompanyCover,
 };

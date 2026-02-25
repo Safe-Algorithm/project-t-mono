@@ -228,3 +228,68 @@ async def upload_company_avatar(
     except Exception as e:
         logger.error(f"Error uploading company avatar: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload avatar")
+
+
+@router.post("/upload-cover")
+async def upload_company_cover(
+    file: UploadFile = File(...),
+    session: Session = Depends(deps.get_session),
+    current_user: User = Depends(deps.get_current_active_super_provider),
+):
+    """Upload company cover image for the provider.
+
+    Minimum resolution: 1200×400 px (landscape/banner format).
+    Maximum raw size: 10 MB. Image is compressed before storage.
+    """
+    from app.services.storage import storage_service
+    from app.services.image_processing import process_cover_image
+    import asyncio
+
+    provider = provider_crud.get_provider_by_id(session, id=current_user.provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type: {file.content_type}. Allowed types: {', '.join(allowed_types)}"
+        )
+
+    content = await file.read()
+
+    max_size = 10 * 1024 * 1024
+    if len(content) > max_size:
+        raise HTTPException(
+            status_code=400,
+            detail="File is too large. Maximum size is 10MB"
+        )
+
+    try:
+        loop = asyncio.get_event_loop()
+        processed = await loop.run_in_executor(
+            None, process_cover_image, content, file.filename or "cover.jpg"
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    try:
+        file_info = await storage_service.upload_file(
+            file_data=processed.data,
+            file_name=file.filename,
+            content_type=processed.content_type,
+            folder="company_covers"
+        )
+
+        provider.company_cover_url = file_info["downloadUrl"]
+        session.add(provider)
+        session.commit()
+        session.refresh(provider)
+
+        return {
+            "message": "Company cover image uploaded successfully",
+            "cover_url": file_info["downloadUrl"]
+        }
+    except Exception as e:
+        logger.error(f"Error uploading company cover: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload cover image")

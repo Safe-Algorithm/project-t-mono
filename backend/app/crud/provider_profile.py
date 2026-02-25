@@ -71,6 +71,7 @@ def get_provider_profile_public(
         "company_email": provider.company_email,
         "company_phone": provider.company_phone,
         "company_avatar_url": provider.company_avatar_url,
+        "company_cover_url": provider.company_cover_url,
         "bio_en": provider.bio_en,
         "bio_ar": provider.bio_ar,
         "company_metadata": provider.company_metadata or {},

@@ -20,6 +20,12 @@ Review / rating images:
   - Max long edge  : 1280 px
   - Output quality : 80
   - Output format  : JPEG
+
+Provider cover images:
+  - Min resolution : 1200 × 400 px  (landscape only — cover images are always wide)
+  - Max long edge  : 3840 px  (downscaled if larger, preserving aspect ratio)
+  - Output quality : 85
+  - Output format  : JPEG
 """
 
 from __future__ import annotations
@@ -43,6 +49,11 @@ AVATAR_QUALITY        = 85
 
 REVIEW_IMAGE_MAX_LONG = 1280
 REVIEW_IMAGE_QUALITY  = 80
+
+COVER_IMAGE_MIN_WIDTH  = 1200
+COVER_IMAGE_MIN_HEIGHT = 400
+COVER_IMAGE_MAX_LONG   = 3840
+COVER_IMAGE_QUALITY    = 85
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -158,6 +169,37 @@ def process_review_image(data: bytes, filename: str) -> ProcessedImage:
     img = _to_rgb(img)
     img = _downscale_to_max_long_edge(img, REVIEW_IMAGE_MAX_LONG)
     compressed = _encode_jpeg(img, REVIEW_IMAGE_QUALITY)
+    out_w, out_h = img.size
+    return ProcessedImage(
+        data=compressed,
+        content_type="image/jpeg",
+        width=out_w,
+        height=out_h,
+    )
+
+
+def process_cover_image(data: bytes, filename: str) -> ProcessedImage:
+    """
+    Validate minimum resolution for cover images, then compress/downscale.
+
+    Minimum size is 1200×400 px (landscape only — covers are always wide banners).
+    Raises ValueError with a descriptive message if the image is too small or portrait.
+    Returns ProcessedImage with compressed JPEG bytes.
+    """
+    img = _open_image(data)
+    w, h = img.size
+
+    if w < COVER_IMAGE_MIN_WIDTH or h < COVER_IMAGE_MIN_HEIGHT:
+        raise ValueError(
+            f"Cover image '{filename}' is too small ({w}×{h} px). "
+            f"Minimum resolution is {COVER_IMAGE_MIN_WIDTH}×{COVER_IMAGE_MIN_HEIGHT} px "
+            f"(landscape / banner format required)."
+        )
+
+    img = _to_rgb(img)
+    img = _downscale_to_max_long_edge(img, COVER_IMAGE_MAX_LONG)
+    compressed = _encode_jpeg(img, COVER_IMAGE_QUALITY)
+
     out_w, out_h = img.size
     return ProcessedImage(
         data=compressed,

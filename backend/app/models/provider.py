@@ -16,7 +16,8 @@ class Provider(SQLModel, table=True):
     company_email: str = Field(unique=True, index=True)
     company_phone: str
     company_avatar_url: Optional[str] = Field(default=None)
-    
+    company_cover_url: Optional[str] = Field(default=None)
+
     # Bilingual bio fields
     bio_en: Optional[str] = Field(default=None, max_length=1000)
     bio_ar: Optional[str] = Field(default=None, max_length=1000)

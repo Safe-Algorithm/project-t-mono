@@ -59,6 +59,10 @@ export default function ProviderProfileScreen() {
 
   const bio = (i18n.language === 'ar' ? provider.bio_ar : provider.bio_en) ?? provider.bio_en ?? provider.bio_ar;
 
+  const COVER_HEIGHT = 160;
+  const AVATAR_SIZE = 80;
+  const AVATAR_OVERLAP = AVATAR_SIZE / 2;
+
   return (
     <View style={s.container}>
       <SafeAreaView style={s.headerSafe} edges={['top']}>
@@ -71,14 +75,28 @@ export default function ProviderProfileScreen() {
         </View>
       </SafeAreaView>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={s.profileCard}>
-          {provider.company_avatar_url ? (
-            <Image source={{ uri: provider.company_avatar_url }} style={s.avatar} />
-          ) : (
-            <View style={s.avatarPlaceholder}>
-              <Text style={s.avatarInitials}>{provider.company_name?.[0]?.toUpperCase() ?? 'P'}</Text>
-            </View>
-          )}
+        {/* Cover + Avatar hero section */}
+        <View style={[s.profileCard, { paddingTop: COVER_HEIGHT + AVATAR_OVERLAP + 12 }]}>
+          {/* Cover image */}
+          <View style={[s.coverContainer, { height: COVER_HEIGHT }]}>
+            {provider.company_cover_url ? (
+              <Image source={{ uri: provider.company_cover_url }} style={s.coverImage} resizeMode="cover" />
+            ) : (
+              <View style={s.coverPlaceholder}>
+                <Ionicons name="image-outline" size={32} color={colors.gray300} />
+              </View>
+            )}
+          </View>
+          {/* Avatar overlapping cover */}
+          <View style={[s.avatarWrapper, { top: COVER_HEIGHT - AVATAR_OVERLAP, width: AVATAR_SIZE + 6, height: AVATAR_SIZE + 6, borderRadius: (AVATAR_SIZE + 6) / 2 }]}>
+            {provider.company_avatar_url ? (
+              <Image source={{ uri: provider.company_avatar_url }} style={[s.avatar, { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }]} />
+            ) : (
+              <View style={[s.avatarPlaceholder, { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }]}>
+                <Text style={s.avatarInitials}>{provider.company_name?.[0]?.toUpperCase() ?? 'P'}</Text>
+              </View>
+            )}
+          </View>
           <Text style={s.companyName}>{provider.company_name}</Text>
           {provider.average_rating > 0 && (
             <View style={s.ratingRow}>
@@ -155,9 +173,13 @@ function makeStyles(c: ThemeColors) {
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
     errorText: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
     backLink: { fontSize: FontSize.md, color: c.primary, fontWeight: '600' },
-    profileCard: { backgroundColor: c.surface, alignItems: 'center', paddingVertical: 28, paddingHorizontal: 20, gap: 10, borderBottomWidth: 1, borderBottomColor: c.border },
+    profileCard: { backgroundColor: c.surface, alignItems: 'center', paddingBottom: 24, paddingHorizontal: 20, gap: 10, borderBottomWidth: 1, borderBottomColor: c.border, position: 'relative' },
+    coverContainer: { position: 'absolute', top: 0, left: 0, right: 0 },
+    coverImage: { width: '100%', height: '100%' },
+    coverPlaceholder: { width: '100%', height: '100%', backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
+    avatarWrapper: { position: 'absolute', left: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
     avatar: { width: 88, height: 88, borderRadius: 44 },
-    avatarPlaceholder: { width: 88, height: 88, borderRadius: 44, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: c.primaryLight },
+    avatarPlaceholder: { width: 88, height: 88, borderRadius: 44, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center' },
     avatarInitials: { fontSize: FontSize.xxl, fontWeight: '800', color: c.primary },
     companyName: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, textAlign: 'center' },
     ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

@@ -165,6 +165,7 @@ export interface ProviderProfile {
   company_email: string | null;
   company_phone: string | null;
   company_avatar_url: string | null;
+  company_cover_url: string | null;
   company_metadata: Record<string, any> | null;
   bio_en: string | null;
   bio_ar: string | null;
