@@ -3,6 +3,9 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import { useTranslation } from 'react-i18next';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 interface Provider {
   id: string;
@@ -16,38 +19,40 @@ interface Provider {
 const ProvidersPage = () => {
   const { t } = useTranslation();
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
   const router = useRouter();
 
+  useEffect(() => { setPage(1); }, [search]);
+
   useEffect(() => {
     if (!token) return;
-
     const fetchProviders = async () => {
+      setLoading(true);
       try {
-        const data = await api.get<Provider[]>('/admin/providers');
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        params.append('skip', ((page - 1) * PAGE_SIZE).toString());
+        params.append('limit', PAGE_SIZE.toString());
+        const data = await api.get<Provider[]>(`/admin/providers?${params}`);
         setProviders(data);
+        if (data.length < PAGE_SIZE && page === 1) setTotal(data.length);
+        else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
+        else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unexpected error occurred');
-        }
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
         setLoading(false);
       }
     };
-
     fetchProviders();
-  }, [token]);
+  }, [token, search, page]);
 
-  const [search, setSearch] = useState('');
-
-  const filtered = providers.filter(p =>
-    p.company_name.toLowerCase().includes(search.toLowerCase()) ||
-    p.company_email.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = providers;
 
   const statusCls: Record<string, string> = {
     approved: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
@@ -94,35 +99,40 @@ const ProvidersPage = () => {
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No providers found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('common.company', 'Company')}</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('common.email')}</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">{t('common.phone')}</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('common.status')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {filtered.map(provider => (
-                  <tr
-                    key={provider.id}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
-                    onClick={() => router.push(`/providers/${provider.id}`)}
-                  >
-                    <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700 dark:group-hover:text-sky-300">{provider.company_name}</td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{provider.company_email}</td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell">{provider.company_phone}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${statusCls[provider.status ?? ''] ?? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                        {provider.status || 'unknown'}
-                      </span>
-                    </td>
+          <div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('common.company', 'Company')}</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('common.email')}</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">{t('common.phone')}</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('common.status')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {filtered.map(provider => (
+                    <tr
+                      key={provider.id}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                      onClick={() => router.push(`/providers/${provider.id}`)}
+                    >
+                      <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700 dark:group-hover:text-sky-300">{provider.company_name}</td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{provider.company_email}</td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell">{provider.company_phone}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${statusCls[provider.status ?? ''] ?? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                          {provider.status || 'unknown'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 pb-4">
+              <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            </div>
           </div>
         )}
       </div>

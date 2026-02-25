@@ -47,9 +47,12 @@ export interface TripSupportTicketWithMessages extends TripSupportTicket {
 
 export const supportService = {
   // Admin support tickets (User → Admin)
-  listAdminTickets: (status?: string) => {
-    const query = status ? `?status=${status}` : '';
-    return api.get<SupportTicket[]>(`/admin/support/tickets${query}`);
+  listAdminTickets: (status?: string, skip = 0, limit = 50) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('skip', skip.toString());
+    params.append('limit', limit.toString());
+    return api.get<SupportTicket[]>(`/admin/support/tickets?${params}`);
   },
 
   getAdminTicket: (ticketId: string) => {
@@ -65,9 +68,12 @@ export const supportService = {
   },
 
   // Trip support tickets (User → Provider) - admin can view all
-  listTripTickets: (status?: string) => {
-    const query = status ? `?status=${status}` : '';
-    return api.get<TripSupportTicket[]>(`/admin/support/trip-tickets${query}`);
+  listTripTickets: (status?: string, skip = 0, limit = 50) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('skip', skip.toString());
+    params.append('limit', limit.toString());
+    return api.get<TripSupportTicket[]>(`/admin/support/trip-tickets?${params}`);
   },
 
   getTripTicket: (ticketId: string) => {

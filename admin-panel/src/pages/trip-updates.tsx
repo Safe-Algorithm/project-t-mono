@@ -2,23 +2,32 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { tripUpdateService, TripUpdate } from '../services/tripUpdateService';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 50;
 
 const TripUpdatesPage = () => {
   const { t } = useTranslation();
   const [updates, setUpdates] = useState<TripUpdate[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadUpdates();
-  }, []);
+  }, [page]);
 
   const loadUpdates = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await tripUpdateService.listAll();
+      const skip = (page - 1) * PAGE_SIZE;
+      const data = await tripUpdateService.listAll(skip, PAGE_SIZE);
       setUpdates(data);
+      if (data.length < PAGE_SIZE && page === 1) setTotal(data.length);
+      else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
+      else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
     } catch (err: any) {
       setError(err.message || 'Failed to load trip updates');
     } finally {
@@ -59,6 +68,7 @@ const TripUpdatesPage = () => {
         </div>
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+          <div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -110,6 +120,10 @@ const TripUpdatesPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 pb-4">
+            <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+          </div>
           </div>
         </div>
       )}

@@ -307,10 +307,18 @@ def list_users(
     session: Session = Depends(get_session),
     skip: int = 0,
     limit: int = 100,
+    source: Optional[str] = None,
     current_user: User = Depends(get_current_active_superuser),
 ):
     """Retrieve all users with provider company information."""
-    users = user_crud.get_users(session, skip=skip, limit=limit)
+    from app.models.source import RequestSource
+    source_filter = None
+    if source:
+        try:
+            source_filter = RequestSource(source)
+        except ValueError:
+            pass
+    users = user_crud.get_users(session, skip=skip, limit=limit, source=source_filter)
     
     # Build response with provider company names
     result = []

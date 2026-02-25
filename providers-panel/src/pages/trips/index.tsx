@@ -1,8 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTrips } from '../../hooks/useTrips';
+import { tripService, TripFilterParams } from '../../services/tripService';
 import { useTranslation } from 'react-i18next';
 import { Trip } from '../../types/trip';
+import Pagination from '../../components/ui/Pagination';
+
+const PAGE_SIZE = 20;
 
 function TripStatusBadge({ isActive }: { isActive: boolean; isRTL: boolean }) {
   const { t } = useTranslation();
@@ -23,7 +26,11 @@ const TripsPage = () => {
   const isRTL = i18n.language === 'ar';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
-  const { trips, isLoading, error } = useTrips();
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const getTripName = (trip: Trip) =>
     (isRTL ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar) || '—';
@@ -38,17 +45,42 @@ const TripsPage = () => {
     return `${min.toLocaleString()} SAR`;
   };
 
-  const filtered = useMemo(() => {
-    return trips.filter(trip => {
-      const name = getTripName(trip).toLowerCase();
-      const matchSearch = !search || name.includes(search.toLowerCase());
-      const matchStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && trip.is_active) ||
-        (statusFilter === 'inactive' && !trip.is_active);
-      return matchSearch && matchStatus;
-    });
-  }, [trips, search, statusFilter, isRTL]);
+  useEffect(() => {
+    const fetchPage = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const filters: TripFilterParams = {
+          search: search || undefined,
+          is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+          skip: (page - 1) * PAGE_SIZE,
+          limit: PAGE_SIZE,
+        };
+        const data = await tripService.getAll(filters);
+        setTrips(data);
+        if (data.length < PAGE_SIZE && page === 1) {
+          setTotal(data.length);
+        } else if (data.length < PAGE_SIZE) {
+          setTotal((page - 1) * PAGE_SIZE + data.length);
+        } else {
+          setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to fetch trips');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchPage();
+  }, [search, statusFilter, page]);
+
+  const handleFilterChange = (newSearch: string, newStatus: 'all' | 'active' | 'inactive') => {
+    setPage(1);
+    setSearch(newSearch);
+    setStatusFilter(newStatus);
+  };
+
+  const filtered = trips;
 
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -80,7 +112,7 @@ const TripsPage = () => {
           <input
             type="text"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => handleFilterChange(e.target.value, statusFilter)}
             placeholder={t('trips.searchPlaceholder')}
             className={`w-full ${isRTL ? 'pr-9 pl-4' : 'pl-9 pr-4'} py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm transition`}
           />
@@ -89,7 +121,7 @@ const TripsPage = () => {
           {(['all', 'active', 'inactive'] as const).map(s => (
             <button
               key={s}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => handleFilterChange(search, s)}
               className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border ${
                 statusFilter === s
                   ? 'bg-sky-500 text-white border-sky-500'
@@ -132,6 +164,7 @@ const TripsPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
+
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                   <th className="text-start px-4 sm:px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     {t('trips.colTrip')}
@@ -205,6 +238,9 @@ const TripsPage = () => {
                 ))}
               </tbody>
             </table>
+            <div className="px-6 pb-4">
+              <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            </div>
           </div>
         )}
       </div>

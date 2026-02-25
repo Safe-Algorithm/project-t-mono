@@ -35,6 +35,8 @@ export interface TripFilterParams {
   max_participants?: number;
   min_rating?: number;
   is_active?: boolean;
+  skip?: number;
+  limit?: number;
 }
 
 export const tripService = {
@@ -50,6 +52,8 @@ export const tripService = {
       if (filters.max_participants !== undefined) params.append('max_participants', filters.max_participants.toString());
       if (filters.min_rating !== undefined) params.append('min_rating', filters.min_rating.toString());
       if (filters.is_active !== undefined) params.append('is_active', filters.is_active.toString());
+      if (filters.skip !== undefined) params.append('skip', filters.skip.toString());
+      if (filters.limit !== undefined) params.append('limit', filters.limit.toString());
     }
     const queryString = params.toString();
     return api.get<Trip[]>(`/trips/${queryString ? `?${queryString}` : ''}`);

@@ -64,10 +64,13 @@ def list_all_support_tickets(
     session: Session,
     *,
     status_filter: Optional[TicketStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
 ) -> List[SupportTicket]:
     stmt = select(SupportTicket).order_by(SupportTicket.created_at.desc())
     if status_filter:
         stmt = stmt.where(SupportTicket.status == status_filter)
+    stmt = stmt.offset(skip).limit(limit)
     return list(session.exec(stmt).all())
 
 
@@ -149,6 +152,8 @@ def list_trip_support_tickets_by_provider(
     *,
     provider_id: uuid.UUID,
     status_filter: Optional[TicketStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
 ) -> List[TripSupportTicket]:
     stmt = (
         select(TripSupportTicket)
@@ -157,6 +162,7 @@ def list_trip_support_tickets_by_provider(
     )
     if status_filter:
         stmt = stmt.where(TripSupportTicket.status == status_filter)
+    stmt = stmt.offset(skip).limit(limit)
     return list(session.exec(stmt).all())
 
 
@@ -164,10 +170,13 @@ def list_all_trip_support_tickets(
     session: Session,
     *,
     status_filter: Optional[TicketStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
 ) -> List[TripSupportTicket]:
     stmt = select(TripSupportTicket).order_by(TripSupportTicket.created_at.desc())
     if status_filter:
         stmt = stmt.where(TripSupportTicket.status == status_filter)
+    stmt = stmt.offset(skip).limit(limit)
     return list(session.exec(stmt).all())
 
 

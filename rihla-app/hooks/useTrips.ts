@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
 import i18n from '../lib/i18n';
 import apiClient from '../lib/api';
@@ -71,22 +71,79 @@ export function useDestinations() {
   });
 }
 
+const PAGE_SIZE = 20;
+
+function buildTripParams(filters: TripFilters, skip: number, limit: number): URLSearchParams {
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([k, v]) => {
+    if (v === undefined || v === '') return;
+    if ((k === 'destination_ids' || k === 'amenities') && Array.isArray(v)) {
+      (v as string[]).forEach((val) => params.append(k, val));
+    } else {
+      params.append(k, String(v));
+    }
+  });
+  params.set('skip', String(skip));
+  params.set('limit', String(limit));
+  return params;
+}
+
 export function usePublicTrips(filters: TripFilters = {}) {
   return useQuery({
     queryKey: ['trips', 'public', filters],
     queryFn: async () => {
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([k, v]) => {
-        if (v === undefined || v === '') return;
-        if ((k === 'destination_ids' || k === 'amenities') && Array.isArray(v)) {
-          (v as string[]).forEach((val) => params.append(k, val));
-        } else {
-          params.append(k, String(v));
-        }
+      const params = buildTripParams(filters, 0, 100);
+      const { data } = await apiClient.get<Trip[]>(`/public-trips?${params}`);
+      return data;
+    },
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useInfinitePublicTrips(filters: TripFilters = {}) {
+  return useInfiniteQuery({
+    queryKey: ['trips', 'public', 'infinite', filters],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const params = buildTripParams(filters, pageParam as number, PAGE_SIZE);
+      const { data } = await apiClient.get<Trip[]>(`/public-trips?${params}`);
+      return data;
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.flat().length : undefined,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useProviderTrips(providerId: string | undefined, limit = 50) {
+  return useQuery({
+    queryKey: ['trips', 'provider', providerId, limit],
+    queryFn: async () => {
+      const params = new URLSearchParams({ provider_id: providerId!, limit: String(limit) });
+      const { data } = await apiClient.get<Trip[]>(`/public-trips?${params}`);
+      return data;
+    },
+    enabled: !!providerId,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+export function useInfiniteProviderTrips(providerId: string | undefined) {
+  return useInfiniteQuery({
+    queryKey: ['trips', 'provider', 'infinite', providerId],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const params = new URLSearchParams({
+        provider_id: providerId!,
+        skip: String(pageParam as number),
+        limit: String(PAGE_SIZE),
       });
       const { data } = await apiClient.get<Trip[]>(`/public-trips?${params}`);
       return data;
     },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.flat().length : undefined,
+    enabled: !!providerId,
     staleTime: 1000 * 60 * 2,
   });
 }
@@ -131,6 +188,23 @@ export function useMyRegistrations() {
       const { data } = await apiClient.get<TripRegistration[]>('/users/me/registrations');
       return data;
     },
+    refetchOnMount: 'always',
+    staleTime: 0,
+  });
+}
+
+export function useInfiniteRegistrations() {
+  return useInfiniteQuery({
+    queryKey: ['registrations', 'me', 'infinite'],
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const { data } = await apiClient.get<TripRegistration[]>(
+        `/users/me/registrations?skip=${pageParam as number}&limit=${PAGE_SIZE}`
+      );
+      return data;
+    },
+    getNextPageParam: (lastPage, allPages) =>
+      lastPage.length === PAGE_SIZE ? allPages.flat().length : undefined,
     refetchOnMount: 'always',
     staleTime: 0,
   });

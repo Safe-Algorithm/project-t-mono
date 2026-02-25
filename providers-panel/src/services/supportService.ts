@@ -29,9 +29,12 @@ export interface TripSupportTicketWithMessages extends TripSupportTicket {
 }
 
 export const supportService = {
-  listTickets: (status?: string) => {
-    const query = status ? `?status=${status}` : '';
-    return api.get<TripSupportTicket[]>(`/provider/support/tickets${query}`);
+  listTickets: (status?: string, skip = 0, limit = 50) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    params.append('skip', skip.toString());
+    params.append('limit', limit.toString());
+    return api.get<TripSupportTicket[]>(`/provider/support/tickets?${params}`);
   },
 
   getTicket: (ticketId: string) => {

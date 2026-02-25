@@ -5,6 +5,9 @@ import {
   TripSupportTicket,
   TripSupportTicketWithMessages,
 } from '../services/supportService';
+import Pagination from '../components/ui/Pagination';
+
+const PAGE_SIZE = 50;
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'waiting_on_user', 'resolved', 'closed'];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
@@ -28,6 +31,8 @@ const ProviderSupportPage = () => {
   const { t } = useTranslation();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [tickets, setTickets] = useState<TripSupportTicket[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [selectedTicket, setSelectedTicket] = useState<TripSupportTicketWithMessages | null>(null);
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
@@ -35,15 +40,23 @@ const ProviderSupportPage = () => {
   const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
-    loadTickets();
+    setPage(1);
   }, [statusFilter]);
+
+  useEffect(() => {
+    loadTickets();
+  }, [statusFilter, page]);
 
   const loadTickets = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await supportService.listTickets(statusFilter || undefined);
+      const skip = (page - 1) * PAGE_SIZE;
+      const data = await supportService.listTickets(statusFilter || undefined, skip, PAGE_SIZE);
       setTickets(data);
+      if (data.length < PAGE_SIZE && page === 1) setTotal(data.length);
+      else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
+      else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
     } catch (err: any) {
       setError(err.message || 'Failed to load tickets');
     } finally {
@@ -226,31 +239,36 @@ const ProviderSupportPage = () => {
           {tickets.length === 0 ? (
             <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">{t('support.noTickets')}</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('support.subject')}</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">{t('support.priority')}</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('support.status')}</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('support.created')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {tickets.map(ticket => (
-                  <tr key={ticket.id} onClick={() => openTicket(ticket.id)}
-                    className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
-                    <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white">{ticket.subject}</td>
-                    <td className="px-5 py-3.5 hidden sm:table-cell">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g, ' ')}</span>
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-400 dark:text-slate-500 text-xs hidden md:table-cell">{formatDate(ticket.created_at)}</td>
+            <div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('support.subject')}</th>
+                    <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">{t('support.priority')}</th>
+                    <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('support.status')}</th>
+                    <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('support.created')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {tickets.map(ticket => (
+                    <tr key={ticket.id} onClick={() => openTicket(ticket.id)}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition-colors">
+                      <td className="px-5 py-3.5 font-medium text-slate-900 dark:text-white">{ticket.subject}</td>
+                      <td className="px-5 py-3.5 hidden sm:table-cell">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g, ' ')}</span>
+                      </td>
+                      <td className="px-5 py-3.5 text-slate-400 dark:text-slate-500 text-xs hidden md:table-cell">{formatDate(ticket.created_at)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="px-5 pb-4">
+                <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+              </div>
+            </div>
           )}
         </div>
       )}

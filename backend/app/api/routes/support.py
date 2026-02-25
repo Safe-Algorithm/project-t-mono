@@ -247,12 +247,14 @@ def user_reply_trip_support_ticket(
 )
 def admin_list_support_tickets(
     status: Optional[TicketStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
 ):
     """List all admin support tickets. Admin only."""
     tickets = crud_support.list_all_support_tickets(
-        session, status_filter=status
+        session, status_filter=status, skip=skip, limit=limit
     )
     return [SupportTicketRead.model_validate(t) for t in tickets]
 
@@ -326,12 +328,14 @@ def admin_reply_support_ticket(
 )
 def admin_list_trip_support_tickets(
     status: Optional[TicketStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
 ):
     """List all trip support tickets. Admin only."""
     tickets = crud_support.list_all_trip_support_tickets(
-        session, status_filter=status
+        session, status_filter=status, skip=skip, limit=limit
     )
     return [TripSupportTicketRead.model_validate(t) for t in tickets]
 
@@ -368,12 +372,14 @@ def admin_get_trip_support_ticket(
 )
 def provider_list_trip_support_tickets(
     status: Optional[TicketStatus] = None,
+    skip: int = 0,
+    limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
 ):
     """List trip support tickets for the current provider's trips."""
     tickets = crud_support.list_trip_support_tickets_by_provider(
-        session, provider_id=current_user.id, status_filter=status
+        session, provider_id=current_user.id, status_filter=status, skip=skip, limit=limit
     )
     return [TripSupportTicketRead.model_validate(t) for t in tickets]
 

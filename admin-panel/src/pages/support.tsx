@@ -9,6 +9,9 @@ import {
   TripSupportTicketWithMessages,
   TicketMessage,
 } from '../services/supportService';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 50;
 
 const STATUS_OPTIONS = ['open', 'in_progress', 'waiting_on_user', 'resolved', 'closed'];
 const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'];
@@ -35,6 +38,9 @@ const SupportPage = () => {
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [adminTickets, setAdminTickets] = useState<SupportTicket[]>([]);
   const [tripTickets, setTripTickets] = useState<TripSupportTicket[]>([]);
+  const [adminTotal, setAdminTotal] = useState(0);
+  const [tripTotal, setTripTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicketWithMessages | null>(null);
   const [selectedTripTicket, setSelectedTripTicket] = useState<TripSupportTicketWithMessages | null>(null);
   const [replyText, setReplyText] = useState('');
@@ -42,20 +48,29 @@ const SupportPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
+  useEffect(() => { setPage(1); }, [activeTab, statusFilter]);
+
   useEffect(() => {
     loadTickets();
-  }, [activeTab, statusFilter]);
+  }, [activeTab, statusFilter, page]);
 
   const loadTickets = async () => {
     setLoading(true);
     setError(null);
+    const skip = (page - 1) * PAGE_SIZE;
     try {
       if (activeTab === 'admin') {
-        const data = await supportService.listAdminTickets(statusFilter || undefined);
+        const data = await supportService.listAdminTickets(statusFilter || undefined, skip, PAGE_SIZE);
         setAdminTickets(data);
+        if (data.length < PAGE_SIZE && page === 1) setAdminTotal(data.length);
+        else if (data.length < PAGE_SIZE) setAdminTotal((page - 1) * PAGE_SIZE + data.length);
+        else setAdminTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       } else {
-        const data = await supportService.listTripTickets(statusFilter || undefined);
+        const data = await supportService.listTripTickets(statusFilter || undefined, skip, PAGE_SIZE);
         setTripTickets(data);
+        if (data.length < PAGE_SIZE && page === 1) setTripTotal(data.length);
+        else if (data.length < PAGE_SIZE) setTripTotal((page - 1) * PAGE_SIZE + data.length);
+        else setTripTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load tickets');
@@ -300,34 +315,39 @@ const SupportPage = () => {
           {adminTickets.length === 0 ? (
             <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">No admin tickets found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className={thCls}>Subject</th>
-                  <th className={`${thCls} hidden sm:table-cell`}>Category</th>
-                  <th className={`${thCls} hidden md:table-cell`}>Priority</th>
-                  <th className={thCls}>Status</th>
-                  <th className={`${thCls} hidden lg:table-cell`}>Created</th>
-                </tr></thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {adminTickets.map(ticket => (
-                    <tr key={ticket.id} onClick={() => openAdminTicket(ticket.id)}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group">
-                      <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700">{ticket.subject}</td>
-                      <td className="py-3 px-4 hidden sm:table-cell">
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400">{ticket.category}</span>
-                      </td>
-                      <td className="py-3 px-4 hidden md:table-cell">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g,' ')}</span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 dark:text-slate-500 text-xs hidden lg:table-cell">{formatDate(ticket.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <th className={thCls}>Subject</th>
+                    <th className={`${thCls} hidden sm:table-cell`}>Category</th>
+                    <th className={`${thCls} hidden md:table-cell`}>Priority</th>
+                    <th className={thCls}>Status</th>
+                    <th className={`${thCls} hidden lg:table-cell`}>Created</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {adminTickets.map(ticket => (
+                      <tr key={ticket.id} onClick={() => openAdminTicket(ticket.id)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group">
+                        <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700">{ticket.subject}</td>
+                        <td className="py-3 px-4 hidden sm:table-cell">
+                          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400">{ticket.category}</span>
+                        </td>
+                        <td className="py-3 px-4 hidden md:table-cell">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g,' ')}</span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400 dark:text-slate-500 text-xs hidden lg:table-cell">{formatDate(ticket.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 pb-4">
+                <Pagination page={page} pageSize={PAGE_SIZE} total={adminTotal} onPageChange={setPage} />
+              </div>
             </div>
           )}
         </div>
@@ -336,30 +356,35 @@ const SupportPage = () => {
           {tripTickets.length === 0 ? (
             <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">No trip tickets found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className={thCls}>Subject</th>
-                  <th className={`${thCls} hidden md:table-cell`}>Priority</th>
-                  <th className={thCls}>Status</th>
-                  <th className={`${thCls} hidden lg:table-cell`}>Created</th>
-                </tr></thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {tripTickets.map(ticket => (
-                    <tr key={ticket.id} onClick={() => openTripTicket(ticket.id)}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group">
-                      <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700">{ticket.subject}</td>
-                      <td className="py-3 px-4 hidden md:table-cell">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g,' ')}</span>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 dark:text-slate-500 text-xs hidden lg:table-cell">{formatDate(ticket.created_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <th className={thCls}>Subject</th>
+                    <th className={`${thCls} hidden md:table-cell`}>Priority</th>
+                    <th className={thCls}>Status</th>
+                    <th className={`${thCls} hidden lg:table-cell`}>Created</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {tripTickets.map(ticket => (
+                      <tr key={ticket.id} onClick={() => openTripTicket(ticket.id)}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group">
+                        <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700">{ticket.subject}</td>
+                        <td className="py-3 px-4 hidden md:table-cell">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${priorityColors[ticket.priority] || ''}`}>{ticket.priority}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${statusColors[ticket.status] || ''}`}>{ticket.status.replace(/_/g,' ')}</span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-400 dark:text-slate-500 text-xs hidden lg:table-cell">{formatDate(ticket.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 pb-4">
+                <Pagination page={page} pageSize={PAGE_SIZE} total={tripTotal} onPageChange={setPage} />
+              </div>
             </div>
           )}
         </div>

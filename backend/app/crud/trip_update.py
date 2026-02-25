@@ -80,8 +80,11 @@ def list_updates_for_user_trip(
 
 def list_all_updates(
     session: Session,
+    *,
+    skip: int = 0,
+    limit: int = 50,
 ) -> List[TripUpdate]:
-    stmt = select(TripUpdate).order_by(TripUpdate.created_at.desc())
+    stmt = select(TripUpdate).order_by(TripUpdate.created_at.desc()).offset(skip).limit(limit)
     return list(session.exec(stmt).all())
 
 

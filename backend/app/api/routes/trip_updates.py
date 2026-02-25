@@ -228,11 +228,13 @@ def user_mark_update_read(
     response_model=List[TripUpdateReadWithReceipts],
 )
 def admin_list_all_trip_updates(
+    skip: int = 0,
+    limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
 ):
     """List all trip updates across all trips. Admin only."""
-    updates = crud_update.list_all_updates(session)
+    updates = crud_update.list_all_updates(session, skip=skip, limit=limit)
     results = []
     for u in updates:
         read_count = crud_update.get_read_count(session, update_id=u.id)

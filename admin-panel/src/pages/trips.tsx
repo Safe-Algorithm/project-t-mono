@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
-import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 interface Provider {
   id: string;
@@ -53,12 +56,18 @@ const TripsPage = () => {
   const [isActive, setIsActive] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
 
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+
+  const filterDeps = [search, providerName, startDateFrom, startDateTo, minPrice, maxPrice, minParticipants, maxParticipants, minRating, ratingEnabled, isActive];
+  useEffect(() => { setPage(1); }, filterDeps);
+
   useEffect(() => {
     if (!token) return;
 
     const fetchTrips = async () => {
+      setLoading(true);
       try {
-        // Build query params
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (providerName) params.append('provider_name', providerName);
@@ -70,25 +79,23 @@ const TripsPage = () => {
         if (maxParticipants) params.append('max_participants', maxParticipants);
         if (ratingEnabled) params.append('min_rating', minRating.toString());
         if (isActive !== 'all') params.append('is_active', isActive);
+        params.append('skip', ((page - 1) * PAGE_SIZE).toString());
+        params.append('limit', PAGE_SIZE.toString());
 
-        const queryString = params.toString();
-        const url = `/admin/trips${queryString ? `?${queryString}` : ''}`;
-        
-        const data = await api.get<Trip[]>(url);
+        const data = await api.get<Trip[]>(`/admin/trips?${params}`);
         setTrips(data);
+        if (data.length < PAGE_SIZE && page === 1) setTotal(data.length);
+        else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
+        else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unexpected error occurred');
-        }
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
         setLoading(false);
       }
     };
 
     fetchTrips();
-  }, [token, search, providerName, startDateFrom, startDateTo, minPrice, maxPrice, minParticipants, maxParticipants, minRating, ratingEnabled, isActive]);
+  }, [token, page, ...filterDeps]);
 
   const handleClearFilters = () => {
     setSearch('');
@@ -216,6 +223,7 @@ const TripsPage = () => {
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No trips found</p>
           </div>
         ) : (
+          <div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
@@ -259,6 +267,10 @@ const TripsPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="px-4 pb-4">
+            <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+          </div>
           </div>
         )}
       </div>

@@ -21,8 +21,11 @@ def get_user_by_phone_and_source(session: Session, *, phone: str, source: Reques
 def get_user_by_id(session: Session, *, user_id: uuid.UUID) -> User | None:
     return session.get(User, user_id)
 
-def get_users(session: Session, *, skip: int = 0, limit: int = 100) -> list[User]:
-    statement = select(User).offset(skip).limit(limit)
+def get_users(session: Session, *, skip: int = 0, limit: int = 100, source: RequestSource | None = None) -> list[User]:
+    statement = select(User)
+    if source:
+        statement = statement.where(User.source == source)
+    statement = statement.offset(skip).limit(limit)
     return session.exec(statement).all()
 
 def get_users_by_provider_id(

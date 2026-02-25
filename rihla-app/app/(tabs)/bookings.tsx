@@ -1,12 +1,12 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useMyRegistrations, useAllMyTripUpdates } from '../../hooks/useTrips';
+import { useInfiniteRegistrations, useAllMyTripUpdates } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -71,23 +71,43 @@ export default function BookingsScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
-  const { data: registrations, isLoading, refetch, isRefetching } = useMyRegistrations();
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+    isRefetching,
+  } = useInfiniteRegistrations();
+
+  // useMyRegistrations is still used by useAllMyTripUpdates internally
   const { data: allUpdates } = useAllMyTripUpdates();
   const unreadCount = allUpdates?.filter((u) => !u.read).length ?? 0;
 
-  // Refetch every time this tab comes into focus
+  const registrations = useMemo(() => data?.pages.flat() ?? [], [data]);
+
   useFocusEffect(
     useCallback(() => {
       refetch();
     }, [refetch])
   );
 
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const ListFooter = isFetchingNextPage
+    ? <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.primary} />
+    : null;
+
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>{t('bookings.title')}</Text>
         <View style={s.headerRight}>
-          {registrations && registrations.length > 0 && (
+          {registrations.length > 0 && (
             <Text style={s.count}>{registrations.length}</Text>
           )}
           <TouchableOpacity style={s.updatesBtn} onPress={() => router.push('/trip-updates')}>
@@ -112,9 +132,14 @@ export default function BookingsScreen() {
         </View>
       ) : (
         <FlatList
-          data={registrations ?? []} keyExtractor={(r) => r.id}
+          data={registrations}
+          keyExtractor={(r) => r.id}
           renderItem={({ item }) => <BookingCard reg={item} />}
-          contentContainerStyle={s.list} showsVerticalScrollIndicator={false}
+          contentContainerStyle={s.list}
+          showsVerticalScrollIndicator={false}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={ListFooter}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}

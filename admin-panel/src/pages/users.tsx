@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 50;
 
 interface User {
   id: string;
@@ -67,6 +70,8 @@ type UserTab = 'admin' | 'provider' | 'normal';
 const UsersPage = () => {
   const [activeTab, setActiveTab] = useState<UserTab>('admin');
   const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -94,41 +99,37 @@ const UsersPage = () => {
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const { token } = useAuth();
 
+  useEffect(() => { setPage(1); }, [activeTab]);
+
   useEffect(() => {
     if (!token) return;
 
     const fetchUsers = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        const data = await api.get<User[]>(`/admin/users`);
-        
-        // Filter users based on active tab and source
-        let filteredUsers = data;
-        if (activeTab === 'admin') {
-          // Admin tab: only show users from admin_panel source
-          filteredUsers = data.filter(u => u.source === 'admin_panel');
-        } else if (activeTab === 'provider') {
-          // Provider tab: only show users from providers_panel source
-          filteredUsers = data.filter(u => u.source === 'providers_panel');
-        } else if (activeTab === 'normal') {
-          // Normal tab: only show users from mobile_app source
-          filteredUsers = data.filter(u => u.source === 'mobile_app');
-        }
-        
-        setUsers(filteredUsers);
+        const sourceMap: Record<UserTab, string> = {
+          admin: 'admin_panel',
+          provider: 'providers_panel',
+          normal: 'mobile_app',
+        };
+        const params = new URLSearchParams();
+        params.append('source', sourceMap[activeTab]);
+        params.append('skip', ((page - 1) * PAGE_SIZE).toString());
+        params.append('limit', PAGE_SIZE.toString());
+        const data = await api.get<User[]>(`/admin/users?${params}`);
+        setUsers(data);
+        if (data.length < PAGE_SIZE && page === 1) setTotal(data.length);
+        else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
+        else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unexpected error occurred');
-        }
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
         setLoading(false);
       }
     };
 
     fetchUsers();
-  }, [token, activeTab]);
+  }, [token, activeTab, page]);
 
   const handleInviteAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,37 +222,42 @@ const UsersPage = () => {
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No users found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Name</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">Phone</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Role</th>
-                  {activeTab === 'provider' && <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Company</th>}
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {users.map(user => (
-                  <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group" onClick={() => openUserDetail(user.id)}>
-                    <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700">{user.name}</td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{user.email}</td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell">{user.phone || '—'}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${roleCls[user.role] ?? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>{user.role}</span>
-                    </td>
-                    {activeTab === 'provider' && <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">{user.provider_company_name || '—'}</td>}
-                    <td className="py-3 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${user.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
-                        {user.is_active ? 'Active' : 'Pending'}
-                      </span>
-                    </td>
+          <div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Name</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden lg:table-cell">Phone</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Role</th>
+                    {activeTab === 'provider' && <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Company</th>}
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {users.map(user => (
+                    <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group" onClick={() => openUserDetail(user.id)}>
+                      <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700">{user.name}</td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{user.email}</td>
+                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden lg:table-cell">{user.phone || '—'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize ${roleCls[user.role] ?? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>{user.role}</span>
+                      </td>
+                      {activeTab === 'provider' && <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden sm:table-cell">{user.provider_company_name || '—'}</td>}
+                      <td className="py-3 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${user.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'}`}>
+                          {user.is_active ? 'Active' : 'Pending'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 pb-4">
+              <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            </div>
           </div>
         )}
       </div>

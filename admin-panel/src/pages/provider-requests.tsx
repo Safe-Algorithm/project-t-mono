@@ -3,6 +3,9 @@ import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import ProtectedRoute from '../components/ProtectedRoute';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 interface ProviderRequest {
   id: string;
@@ -19,6 +22,8 @@ interface ProviderRequest {
 
 const ProviderRequestsPageContent = () => {
   const [requests, setRequests] = useState<ProviderRequest[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
@@ -26,24 +31,23 @@ const ProviderRequestsPageContent = () => {
 
   useEffect(() => {
     if (!token) return;
-
     const fetchRequests = async () => {
+      setLoading(true);
       try {
-        const data = await api.get<ProviderRequest[]>('/admin/provider-requests');
+        const skip = (page - 1) * PAGE_SIZE;
+        const data = await api.get<ProviderRequest[]>(`/admin/provider-requests?skip=${skip}&limit=${PAGE_SIZE}`);
         setRequests(data);
+        if (data.length < PAGE_SIZE && page === 1) setTotal(data.length);
+        else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
+        else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       } catch (err) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('An unexpected error occurred');
-        }
+        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
       } finally {
         setLoading(false);
       }
     };
-
     fetchRequests();
-  }, [token]);
+  }, [token, page]);
 
   const handleUpdateRequest = async (id: string, status: 'approved' | 'denied') => {
     if (!token) return;
@@ -120,55 +124,60 @@ const ProviderRequestsPageContent = () => {
             <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No applications found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Company</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Applicant</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
-                  <th className="py-3 px-4" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {requests.map(req => {
-                  const sc = statusConfig[req.status] ?? { label: req.status, cls: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' };
-                  return (
-                    <tr
-                      key={req.id}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
-                      onClick={() => router.push(`/providers/${req.provider_id}`)}
-                    >
-                      <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700 dark:group-hover:text-sky-300">{req.company_name}</td>
-                      <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{req.company_email}</td>
-                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 hidden sm:table-cell">{req.user.name}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${sc.cls}`}>{sc.label}</span>
-                      </td>
-                      <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
-                        {req.status === 'pending' && (
-                          <div className="flex items-center gap-2 justify-end">
-                            <button
-                              onClick={() => handleUpdateRequest(req.id, 'approved')}
-                              className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => handleUpdateRequest(req.id, 'denied')}
-                              className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
-                            >
-                              Deny
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Company</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Applicant</th>
+                    <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                    <th className="py-3 px-4" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {requests.map(req => {
+                    const sc = statusConfig[req.status] ?? { label: req.status, cls: 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' };
+                    return (
+                      <tr
+                        key={req.id}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                        onClick={() => router.push(`/providers/${req.provider_id}`)}
+                      >
+                        <td className="py-3 px-4 font-semibold text-sky-600 dark:text-sky-400 group-hover:text-sky-700 dark:group-hover:text-sky-300">{req.company_name}</td>
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{req.company_email}</td>
+                        <td className="py-3 px-4 text-slate-600 dark:text-slate-300 hidden sm:table-cell">{req.user.name}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${sc.cls}`}>{sc.label}</span>
+                        </td>
+                        <td className="py-3 px-4" onClick={e => e.stopPropagation()}>
+                          {req.status === 'pending' && (
+                            <div className="flex items-center gap-2 justify-end">
+                              <button
+                                onClick={() => handleUpdateRequest(req.id, 'approved')}
+                                className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 rounded-xl text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => handleUpdateRequest(req.id, 'denied')}
+                                className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-xl text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                              >
+                                Deny
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="px-4 pb-4">
+              <Pagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
+            </div>
           </div>
         )}
       </div>

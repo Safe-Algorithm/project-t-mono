@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,13 @@ import {
   TextInput,
   TouchableOpacity,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { usePublicTrips, useFavorites, useToggleFavorite, TripFilters } from '../../hooks/useTrips';
+import { useInfinitePublicTrips, useFavorites, useToggleFavorite, TripFilters } from '../../hooks/useTrips';
 import TripCard from '../../components/trips/TripCard';
 import FilterSheet from '../../components/trips/FilterSheet';
 import { TripCardSkeleton } from '../../components/ui/SkeletonLoader';
@@ -29,23 +30,34 @@ export default function ExploreScreen() {
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<TripFilters>({});
   const [filterVisible, setFilterVisible] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const activeFilters = { ...filters, search: search || undefined };
-  const { data: trips, isLoading, refetch } = usePublicTrips(activeFilters);
+  const activeFilters = useMemo(
+    () => ({ ...filters, search: search || undefined }),
+    [filters, search]
+  );
+
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+    isRefetching,
+  } = useInfinitePublicTrips(activeFilters);
+
   const { data: favorites } = useFavorites();
   const toggleFav = useToggleFavorite();
 
+  const trips = useMemo(() => data?.pages.flat() ?? [], [data]);
   const favoriteIds = new Set(favorites?.map((t) => t.id) ?? []);
   const activeFilterCount = Object.values(filters).filter((v) => v !== undefined).length;
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
-  }, [refetch]);
+  const onEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const renderTrip = ({ item }: { item: Trip }) => (
+  const renderTrip = useCallback(({ item }: { item: Trip }) => (
     <TripCard
       trip={item}
       onPress={() => router.push(`/trip/${item.id}`)}
@@ -54,7 +66,11 @@ export default function ExploreScreen() {
         toggleFav.mutate({ tripId: item.id, isFav: favoriteIds.has(item.id) })
       }
     />
-  );
+  ), [favoriteIds, toggleFav]);
+
+  const ListFooter = isFetchingNextPage ? (
+    <ActivityIndicator style={{ paddingVertical: 20 }} color={colors.primary} />
+  ) : null;
 
   return (
     <SafeAreaView style={s.container}>
@@ -98,7 +114,7 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
-      {!isLoading && trips && (
+      {!isLoading && trips.length > 0 && (
         <Text style={s.resultsText}>{t('explore.tripsFound', { count: trips.length })}</Text>
       )}
 
@@ -108,10 +124,21 @@ export default function ExploreScreen() {
           contentContainerStyle={s.list} showsVerticalScrollIndicator={false} />
       ) : (
         <FlatList
-          data={trips ?? []} keyExtractor={(t) => t.id}
-          renderItem={renderTrip} contentContainerStyle={s.list}
+          data={trips}
+          keyExtractor={(t) => t.id}
+          renderItem={renderTrip}
+          contentContainerStyle={s.list}
           showsVerticalScrollIndicator={false}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={0.4}
+          ListFooterComponent={ListFooter}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.primary}
+            />
+          }
           ListEmptyComponent={
             <View style={s.empty}>
               <Ionicons name="search-outline" size={56} color={colors.gray300} />

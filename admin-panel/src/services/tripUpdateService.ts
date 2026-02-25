@@ -15,8 +15,8 @@ export interface TripUpdate {
 }
 
 export const tripUpdateService = {
-  listAll: () => {
-    return api.get<TripUpdate[]>(`/admin/trip-updates`);
+  listAll: (skip = 0, limit = 50) => {
+    return api.get<TripUpdate[]>(`/admin/trip-updates?skip=${skip}&limit=${limit}`);
   },
 
   listForTrip: (tripId: string) => {

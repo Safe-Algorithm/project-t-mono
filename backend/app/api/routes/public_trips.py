@@ -228,6 +228,7 @@ def list_public_trips(
     skip: int = 0,
     limit: int = 100,
     search: Optional[str] = None,
+    provider_id: Optional[uuid.UUID] = None,
     provider_name: Optional[str] = None,
     start_date_from: Optional[str] = None,
     start_date_to: Optional[str] = None,
@@ -246,8 +247,11 @@ def list_public_trips(
     amenities: Optional[List[str]] = Query(default=None),
 ):
     """Retrieve and filter all trips (public endpoint for mobile app).
-    
-    Always returns only active, future trips with open registration, ordered newest first.
+
+    When provider_id is supplied (provider profile view) only inactive trips are
+    excluded — past trips and closed-registration trips are still shown so users
+    can see the provider's full history, reviews, and ratings.
+    Otherwise returns only active, future trips with open registration.
     """
     start_date_from_dt = datetime.fromisoformat(start_date_from) if start_date_from else None
     start_date_to_dt = datetime.fromisoformat(start_date_to) if start_date_to else None
@@ -257,9 +261,14 @@ def list_public_trips(
     min_price_decimal = Decimal(str(min_price)) if min_price is not None else None
     max_price_decimal = Decimal(str(max_price)) if max_price is not None else None
 
+    # When browsing a specific provider's profile we want to show all their
+    # active trips (including past ones) so users can see history and reviews.
+    # For the general explore feed we keep the strict future+open-registration filter.
+    is_provider_profile_view = provider_id is not None
+
     trips = crud.trip.search_and_filter_trips(
         session=session,
-        provider_id=None,
+        provider_id=provider_id,
         provider_name=provider_name,
         search_query=search,
         start_date_from=start_date_from_dt,
@@ -277,8 +286,8 @@ def list_public_trips(
         destination_ids=destination_ids,
         single_destination=single_destination,
         amenities=amenities,
-        only_future=True,
-        only_open_registration=True,
+        only_future=not is_provider_profile_view,
+        only_open_registration=not is_provider_profile_view,
         skip=skip,
         limit=limit,
     )
