@@ -9,6 +9,7 @@ from pydantic import BaseModel
 
 from app import crud
 from app.api.deps import get_current_active_provider, get_session, get_current_active_user
+from app.api.rbac_deps import require_provider_permission
 from app.models.user import User
 from app.utils.localization import get_name, get_description
 from app.schemas.trip import TripCreate, TripRead, TripUpdate
@@ -185,6 +186,7 @@ def create_trip(
     session: Session = Depends(get_session),
     trip_in: TripCreate,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Create a new trip for the current provider."""
     try:
@@ -476,6 +478,7 @@ def update_trip(
     trip_id: uuid.UUID, 
     trip_in: TripUpdate,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Update a trip."""
     db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -510,6 +513,7 @@ def delete_trip(
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Delete a trip."""
     try:
@@ -589,6 +593,7 @@ def create_trip_package(
     trip_id: uuid.UUID,
     package_in: TripPackageCreate,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Create a package for a trip."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -699,6 +704,7 @@ def update_trip_package(
     package_id: uuid.UUID,
     package_in: TripPackageUpdate,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Update a trip package."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -784,6 +790,7 @@ def delete_trip_package(
     trip_id: uuid.UUID,
     package_id: uuid.UUID,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Deactivate a trip package. Blocks if it would leave fewer than 2 active packages."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -827,6 +834,7 @@ def set_package_required_fields(
     package_id: uuid.UUID,
     field_types: List[TripFieldType],
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Set required fields for a trip package (legacy endpoint)."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -879,6 +887,7 @@ def set_package_required_fields_with_validation(
     package_id: uuid.UUID,
     request: TripPackageRequiredFieldsSetWithValidation,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Set required fields with validation configurations for a trip package."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -1194,6 +1203,7 @@ def get_trip_registrations(
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Get all registrations for a trip (provider only), enriched with user info."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -1338,6 +1348,7 @@ async def upload_trip_images(
     files: List[UploadFile] = File(...),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Upload images for a trip.
 
@@ -1416,6 +1427,7 @@ async def delete_trip_image(
     image_url: str,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Delete a specific image from a trip."""
     from app.services.storage import storage_service
@@ -1457,6 +1469,7 @@ def create_trip_extra_fee(
     trip_id: uuid.UUID,
     extra_fee_in: TripExtraFeeCreate,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Create a new extra fee for a trip."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -1496,6 +1509,7 @@ def update_trip_extra_fee(
     fee_id: uuid.UUID,
     extra_fee_in: TripExtraFeeUpdate,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Update an extra fee."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
@@ -1524,6 +1538,7 @@ def delete_trip_extra_fee(
     trip_id: uuid.UUID,
     fee_id: uuid.UUID,
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Delete an extra fee."""
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)

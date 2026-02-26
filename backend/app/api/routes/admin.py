@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session
 
 from app.api.deps import get_current_active_superuser, get_current_active_admin, get_session
+from app.api.rbac_deps import require_admin_permission
 from app.models.user import User, UserRole
 from app.models.source import RequestSource
 from app.crud import provider as provider_crud, user as user_crud
@@ -49,7 +50,8 @@ def list_provider_requests(
     session: Session = Depends(get_session),
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Retrieve all provider requests."""
     requests = provider_crud.get_provider_requests(session, skip=skip, limit=limit)
@@ -78,7 +80,8 @@ def approve_provider_request(
     *, 
     session: Session = Depends(get_session), 
     request_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """
     Approve a provider request.
@@ -127,7 +130,8 @@ def deny_provider_request(
     session: Session = Depends(get_session), 
     request_id: uuid.UUID,
     request_in: ProviderRequestUpdate,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Deny a provider request."""
     db_request = provider_crud.get_provider_request(session=session, id=request_id)
@@ -278,7 +282,9 @@ def list_providers(
     session: Session = Depends(get_session),
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_active_superuser),
+    search: Optional[str] = None,
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Retrieve all providers."""
     providers = provider_crud.get_all_providers(session, skip=skip, limit=limit)
@@ -308,7 +314,8 @@ def list_users(
     skip: int = 0,
     limit: int = 100,
     source: Optional[str] = None,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Retrieve all users with provider company information."""
     from app.models.source import RequestSource
@@ -348,7 +355,8 @@ def list_users(
 def get_user_detail(
     user_id: uuid.UUID,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get full user detail including registrations and payments."""
     from sqlmodel import select as sql_select
@@ -424,7 +432,8 @@ def list_all_trips(
     session: Session = Depends(get_session),
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
     search: Optional[str] = None,
     provider_id: Optional[str] = None,
     provider_name: Optional[str] = None,
@@ -482,7 +491,8 @@ def list_all_trips(
 def get_trip_registrations_admin(
     trip_id: uuid.UUID,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get all registrations for a trip (admin view), enriched with user info."""
     from sqlmodel import select as sql_select
@@ -544,7 +554,8 @@ def get_trip_registrations_admin(
 def get_trip_details(
     trip_id: uuid.UUID,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get detailed trip information by ID."""
     trip = trip_crud.get_trip(session=session, trip_id=trip_id)
@@ -589,7 +600,8 @@ def get_available_package_fields_admin(
 def get_provider_details(
     provider_id: uuid.UUID,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get provider details by ID."""
     provider = provider_crud.get_provider(session=session, provider_id=provider_id)
@@ -616,7 +628,8 @@ def get_provider_details(
 def get_provider_users(
     provider_id: uuid.UUID,
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get all users for a specific provider."""
     users = user_crud.get_users_by_provider_id(session=session, provider_id=provider_id)
@@ -628,7 +641,8 @@ def get_provider_trips(
     session: Session = Depends(get_session),
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get all trips for a specific provider."""
     trips = trip_crud.get_trips_by_provider(session=session, provider_id=provider_id, skip=skip, limit=limit)
@@ -644,7 +658,8 @@ def create_file_definition(
     *,
     session: Session = Depends(get_session),
     file_definition_in: FileDefinitionCreate,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ) -> FileDefinitionPublic:
     """Create a new file definition (Admin only)."""
     file_definition = file_definition_crud.create_file_definition(
@@ -661,7 +676,8 @@ def list_file_definitions(
     skip: int = 0,
     limit: int = 100,
     active_only: bool = False,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ) -> FileDefinitionListResponse:
     """List all file definitions (Admin only)."""
     file_definitions = file_definition_crud.get_file_definitions(
@@ -682,7 +698,8 @@ def get_file_definition(
     *,
     session: Session = Depends(get_session),
     file_definition_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ) -> FileDefinitionPublic:
     """Get a file definition by ID (Admin only)."""
     file_definition = file_definition_crud.get_file_definition(
@@ -700,7 +717,8 @@ def update_file_definition(
     session: Session = Depends(get_session),
     file_definition_id: uuid.UUID,
     file_definition_in: FileDefinitionUpdate,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ) -> FileDefinitionPublic:
     """Update a file definition (Admin only)."""
     file_definition = file_definition_crud.update_file_definition(
@@ -718,7 +736,8 @@ def delete_file_definition(
     *,
     session: Session = Depends(get_session),
     file_definition_id: uuid.UUID,
-    current_user: User = Depends(get_current_active_superuser),
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Delete a file definition (Admin only)."""
     success = file_definition_crud.delete_file_definition(

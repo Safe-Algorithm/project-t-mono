@@ -22,6 +22,13 @@ export class ApiError extends Error {
   }
 }
 
+export class PermissionDeniedError extends Error {
+  constructor(message = 'You do not have permission to perform this action.') {
+    super(message);
+    this.name = 'PermissionDeniedError';
+  }
+}
+
 const handleResponse = async (response: Response, retryCallback?: () => Promise<Response>): Promise<any> => {
   if (response.ok) {
     if (response.status === 204) {
@@ -50,6 +57,10 @@ const handleResponse = async (response: Response, retryCallback?: () => Promise<
   }
 
   const errorData = await response.json().catch(() => ({ detail: 'An unknown error occurred' }));
+
+  if (response.status === 403) {
+    throw new PermissionDeniedError(errorData.detail || 'You do not have permission to perform this action.');
+  }
 
   if (response.status === 422 && errorData.detail && Array.isArray(errorData.detail)) {
     const fieldErrors = errorData.detail.reduce((acc: Record<string, string>, err: { loc: (string | number)[]; msg: string }) => {

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
-import { api } from '@/services/api';
+import { api, PermissionDeniedError } from '@/services/api';
 import { useTranslation } from 'react-i18next';
 import Pagination from '../components/Pagination';
+import PermissionDenied from '@/components/common/PermissionDenied';
 
 const PAGE_SIZE = 20;
 
@@ -23,7 +24,7 @@ const ProvidersPage = () => {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const { token } = useAuth();
   const router = useRouter();
 
@@ -44,7 +45,7 @@ const ProvidersPage = () => {
         else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
         else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+        setError(err instanceof Error ? err : new Error('An unexpected error occurred'));
       } finally {
         setLoading(false);
       }
@@ -65,8 +66,9 @@ const ProvidersPage = () => {
       <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
     </div>
   );
+  if (error instanceof PermissionDeniedError) return <PermissionDenied action="view providers" />;
   if (error) return (
-    <div className="px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">{error}</div>
+    <div className="px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">{error.message}</div>
   );
 
   return (

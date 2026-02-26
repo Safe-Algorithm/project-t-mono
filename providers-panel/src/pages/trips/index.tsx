@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { tripService, TripFilterParams } from '../../services/tripService';
+import { PermissionDeniedError } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import { Trip } from '../../types/trip';
 import Pagination from '../../components/ui/Pagination';
+import PermissionDenied from '../../components/common/PermissionDenied';
 
 const PAGE_SIZE = 20;
 
@@ -30,7 +32,7 @@ const TripsPage = () => {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
 
   const getTripName = (trip: Trip) =>
     (isRTL ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar) || '—';
@@ -66,7 +68,7 @@ const TripsPage = () => {
           setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
         }
       } catch (err: any) {
-        setError(err.message || 'Failed to fetch trips');
+        setError(err instanceof Error ? err : new Error(err?.message || 'Failed to fetch trips'));
       } finally {
         setIsLoading(false);
       }
@@ -140,9 +142,13 @@ const TripsPage = () => {
           <div className="p-12 flex justify-center">
             <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
           </div>
+        ) : error instanceof PermissionDeniedError ? (
+          <div className="p-8">
+            <PermissionDenied action="view trips" />
+          </div>
         ) : error ? (
           <div className="p-8 text-center">
-            <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
+            <p className="text-red-500 dark:text-red-400 text-sm">{error.message}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">

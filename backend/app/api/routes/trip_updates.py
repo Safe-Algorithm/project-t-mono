@@ -20,6 +20,7 @@ from app.api.deps import (
     get_current_active_admin,
     get_current_active_provider,
 )
+from app.api.rbac_deps import require_provider_permission, require_admin_permission
 from app.models.user import User
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
@@ -77,6 +78,7 @@ async def provider_send_update_to_all(
     file: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Send an update to all registered users of a trip."""
     trip = session.get(Trip, trip_id)
@@ -108,6 +110,7 @@ async def provider_send_update_to_registration(
     file: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Send an update to a specific registration (user)."""
     reg = session.get(TripRegistration, registration_id)
@@ -138,6 +141,7 @@ def provider_list_trip_updates(
     trip_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """List all updates the provider has sent for a trip, with read counts."""
     trip = session.get(Trip, trip_id)
@@ -173,6 +177,7 @@ def provider_get_update_receipts(
     update_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Get read receipts for a specific update. Provider only."""
     update = crud_update.get_trip_update(session, update_id=update_id)
@@ -269,6 +274,7 @@ def admin_list_all_trip_updates(
     limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """List all trip updates across all trips. Admin only."""
     updates = crud_update.list_all_updates(session, skip=skip, limit=limit)
@@ -295,6 +301,7 @@ def admin_list_trip_updates(
     trip_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """List all updates for a trip. Admin only."""
     updates = crud_update.list_updates_for_trip(session, trip_id=trip_id)

@@ -9,7 +9,9 @@ import {
   TripSupportTicketWithMessages,
   TicketMessage,
 } from '../services/supportService';
+import { PermissionDeniedError } from '@/services/api';
 import Pagination from '../components/Pagination';
+import PermissionDenied from '@/components/common/PermissionDenied';
 
 const PAGE_SIZE = 50;
 
@@ -45,6 +47,7 @@ const SupportPage = () => {
   const [selectedTripTicket, setSelectedTripTicket] = useState<TripSupportTicketWithMessages | null>(null);
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState<Error | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
@@ -73,7 +76,11 @@ const SupportPage = () => {
         else setTripTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to load tickets');
+      if (err instanceof PermissionDeniedError) {
+        setPageError(err);
+      } else {
+        setError(err.message || 'Failed to load tickets');
+      }
     } finally {
       setLoading(false);
     }
@@ -310,6 +317,8 @@ const SupportPage = () => {
         <div className="flex items-center justify-center h-40">
           <div className="animate-spin w-7 h-7 rounded-full border-4 border-sky-500 border-t-transparent" />
         </div>
+      ) : pageError instanceof PermissionDeniedError ? (
+        <PermissionDenied action="view support tickets" />
       ) : activeTab === 'admin' ? (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {adminTickets.length === 0 ? (

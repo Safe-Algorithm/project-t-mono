@@ -5,7 +5,9 @@ import {
   TripSupportTicket,
   TripSupportTicketWithMessages,
 } from '../services/supportService';
+import { PermissionDeniedError } from '../services/api';
 import Pagination from '../components/ui/Pagination';
+import PermissionDenied from '../components/common/PermissionDenied';
 
 const PAGE_SIZE = 50;
 
@@ -36,6 +38,7 @@ const ProviderSupportPage = () => {
   const [selectedTicket, setSelectedTicket] = useState<TripSupportTicketWithMessages | null>(null);
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pageError, setPageError] = useState<Error | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
@@ -58,7 +61,11 @@ const ProviderSupportPage = () => {
       else if (data.length < PAGE_SIZE) setTotal((page - 1) * PAGE_SIZE + data.length);
       else setTotal(prev => Math.max(prev, page * PAGE_SIZE + 1));
     } catch (err: any) {
-      setError(err.message || 'Failed to load tickets');
+      if (err instanceof PermissionDeniedError) {
+        setPageError(err);
+      } else {
+        setError(err.message || 'Failed to load tickets');
+      }
     } finally {
       setLoading(false);
     }
@@ -234,6 +241,8 @@ const ProviderSupportPage = () => {
         <div className="flex justify-center py-12">
           <div className="animate-spin w-8 h-8 rounded-full border-4 border-sky-500 border-t-transparent" />
         </div>
+      ) : pageError instanceof PermissionDeniedError ? (
+        <PermissionDenied action="view support tickets" />
       ) : (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {tickets.length === 0 ? (

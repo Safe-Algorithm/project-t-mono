@@ -9,6 +9,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from .source import RequestSource
 from .links import TripParticipant
+from .rbac import UserRoleLink
 
 if TYPE_CHECKING:
     from .provider import Provider
@@ -19,6 +20,7 @@ if TYPE_CHECKING:
     from .trip_like import TripLike
     from .trip_bookmark import TripBookmark
     from .provider_rating import ProviderRating
+    from .rbac import Role
 
 
 class UserRole(str, Enum):
@@ -60,3 +62,4 @@ class User(SQLModel, table=True):
     liked_trips: List["TripLike"] = Relationship(back_populates="user")
     bookmarked_trips: List["TripBookmark"] = Relationship(back_populates="user")
     provider_ratings: List["ProviderRating"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    rbac_roles: List["Role"] = Relationship(back_populates="users", link_model=UserRoleLink)

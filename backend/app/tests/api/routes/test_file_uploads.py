@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 from app.core.config import settings
 from app.models.user import UserRole
+from app.models.source import RequestSource
 from app.tests.utils.user import user_authentication_headers, create_provider_with_user
 from unittest.mock import patch, MagicMock
 
@@ -17,7 +18,7 @@ def test_upload_provider_file_success(client: TestClient, session: Session) -> N
     provider_user, provider_headers = create_provider_with_user(client, session)
     
     # Create admin and file definition
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     file_def_data = {
         "key": "upload_test",
@@ -73,7 +74,7 @@ def test_upload_provider_file_success(client: TestClient, session: Session) -> N
 def test_upload_file_invalid_extension(client: TestClient, session: Session) -> None:
     """Test uploading file with invalid extension fails."""
     provider_user, provider_headers = create_provider_with_user(client, session)
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     file_def_data = {
         "key": "extension_test",
@@ -114,7 +115,7 @@ def test_upload_file_invalid_extension(client: TestClient, session: Session) -> 
 def test_upload_file_too_large(client: TestClient, session: Session) -> None:
     """Test uploading file that exceeds size limit fails."""
     provider_user, provider_headers = create_provider_with_user(client, session)
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     file_def_data = {
         "key": "size_test",
@@ -162,7 +163,7 @@ def test_upload_replaces_existing_file(client: TestClient, session: Session) -> 
 def test_get_uploaded_files(client: TestClient, session: Session) -> None:
     """Test getting list of uploaded files."""
     provider_user, provider_headers = create_provider_with_user(client, session)
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Get uploaded files for provider
     response = client.get(
@@ -236,7 +237,7 @@ def test_user_without_provider_cannot_upload(client: TestClient, session: Sessio
 def test_file_default_status_is_processing(client: TestClient, session: Session) -> None:
     """Test that uploaded files default to 'processing' status."""
     provider_user, provider_headers = create_provider_with_user(client, session)
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Get provider files (should be empty initially)
     response = client.get(

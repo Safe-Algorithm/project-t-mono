@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import { tripUpdateService, TripUpdate, TripUpdateCreate, TripUpdateReceipt } from '../services/tripUpdateService';
-import { api } from '../services/api';
+import { api, PermissionDeniedError } from '../services/api';
+import PermissionDenied from '../components/common/PermissionDenied';
 
 interface TripOption {
   id: string;
@@ -37,6 +38,7 @@ const TripUpdatesPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [pageError, setPageError] = useState<Error | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -59,7 +61,11 @@ const TripUpdatesPage = () => {
         setSelectedTripId(data[0].id);
       }
     } catch (err: any) {
-      setError(err.message);
+      if (err instanceof PermissionDeniedError) {
+        setPageError(err);
+      } else {
+        setError(err.message);
+      }
     }
   };
 
@@ -138,6 +144,17 @@ const TripUpdatesPage = () => {
 
   const inputCls = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition text-sm";
   const selectCls = "px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition";
+
+  if (pageError instanceof PermissionDeniedError) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('tripUpdates.title')}</h1>
+        </div>
+        <PermissionDenied action="view trip updates" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">

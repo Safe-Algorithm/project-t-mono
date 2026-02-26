@@ -6,12 +6,13 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 from app.core.config import settings
 from app.models.user import UserRole
+from app.models.source import RequestSource
 from app.tests.utils.user import user_authentication_headers
 
 
 def test_create_file_definition(client: TestClient, session: Session) -> None:
     """Test creating a file definition as admin."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     data = {
         "key": "test_certificate",
@@ -45,7 +46,7 @@ def test_create_file_definition(client: TestClient, session: Session) -> None:
 
 def test_create_file_definition_duplicate_key(client: TestClient, session: Session) -> None:
     """Test creating a file definition with duplicate key fails."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     data = {
         "key": "duplicate_key",
@@ -80,7 +81,7 @@ def test_create_file_definition_duplicate_key(client: TestClient, session: Sessi
 
 def test_list_file_definitions(client: TestClient, session: Session) -> None:
     """Test listing file definitions."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Create a few file definitions
     for i in range(3):
@@ -125,7 +126,7 @@ def test_list_file_definitions(client: TestClient, session: Session) -> None:
 
 def test_get_file_definition(client: TestClient, session: Session) -> None:
     """Test getting a single file definition."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Create
     data = {
@@ -162,7 +163,7 @@ def test_get_file_definition(client: TestClient, session: Session) -> None:
 
 def test_update_file_definition(client: TestClient, session: Session) -> None:
     """Test updating a file definition."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Create
     data = {
@@ -208,7 +209,7 @@ def test_update_file_definition(client: TestClient, session: Session) -> None:
 
 def test_delete_file_definition(client: TestClient, session: Session) -> None:
     """Test deleting a file definition."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Create
     data = {
@@ -249,7 +250,7 @@ def test_delete_file_definition(client: TestClient, session: Session) -> None:
 
 def test_get_provider_registration_requirements_public(client: TestClient, session: Session) -> None:
     """Test getting provider registration requirements without authentication."""
-    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    admin_user, admin_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER, source=RequestSource.ADMIN_PANEL)
     
     # Create active and inactive file definitions
     for i in range(3):
@@ -289,7 +290,7 @@ def test_get_provider_registration_requirements_public(client: TestClient, sessi
 
 def test_non_admin_cannot_create_file_definition(client: TestClient, session: Session) -> None:
     """Test that non-admin users cannot create file definitions."""
-    normal_user, normal_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+    normal_user, normal_headers = user_authentication_headers(client, session, role=UserRole.NORMAL, source=RequestSource.MOBILE_APP)
     
     data = {
         "key": "unauthorized_test",

@@ -20,6 +20,7 @@ from app.api.deps import (
     get_current_active_admin,
     get_current_active_provider,
 )
+from app.api.rbac_deps import require_admin_permission, require_provider_permission
 from app.models.user import User
 from app.models.support_ticket import TicketStatus, SenderType
 from app.models.trip_registration import TripRegistration
@@ -251,6 +252,7 @@ def admin_list_support_tickets(
     limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """List all admin support tickets. Admin only."""
     tickets = crud_support.list_all_support_tickets(
@@ -267,6 +269,7 @@ def admin_get_support_ticket(
     ticket_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get a support ticket with messages. Admin only."""
     ticket = crud_support.get_support_ticket(session, ticket_id=ticket_id)
@@ -288,6 +291,7 @@ def admin_update_support_ticket(
     data: SupportTicketUpdate,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Update a support ticket (status, priority, category). Admin only."""
     ticket = crud_support.get_support_ticket(session, ticket_id=ticket_id)
@@ -306,6 +310,7 @@ def admin_reply_support_ticket(
     data: TicketMessageCreate,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Reply to a support ticket as admin."""
     ticket = crud_support.get_support_ticket(session, ticket_id=ticket_id)
@@ -332,6 +337,7 @@ def admin_list_trip_support_tickets(
     limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """List all trip support tickets. Admin only."""
     tickets = crud_support.list_all_trip_support_tickets(
@@ -348,6 +354,7 @@ def admin_get_trip_support_ticket(
     ticket_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
 ):
     """Get a trip support ticket with messages. Admin only."""
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)
@@ -376,6 +383,7 @@ def provider_list_trip_support_tickets(
     limit: int = 50,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """List trip support tickets for the current provider's trips."""
     tickets = crud_support.list_trip_support_tickets_by_provider(
@@ -392,6 +400,7 @@ def provider_get_trip_support_ticket(
     ticket_id: uuid.UUID,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Get a trip support ticket with messages. Provider only (must own the trip)."""
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)
@@ -416,6 +425,7 @@ def provider_update_trip_support_ticket(
     data: TripSupportTicketUpdate,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Update a trip support ticket (status, priority). Provider only."""
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)
@@ -438,6 +448,7 @@ def provider_reply_trip_support_ticket(
     data: TicketMessageCreate,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Reply to a trip support ticket as provider."""
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)

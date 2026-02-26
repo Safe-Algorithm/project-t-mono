@@ -20,3 +20,4 @@ from .place import Place, PlaceType
 from .trip_destination import TripDestination
 from .support_ticket import SupportTicket, TripSupportTicket, TicketMessage, TicketCategory, TicketPriority, TicketStatus, SenderType
 from .trip_update import TripUpdate, TripUpdateReceipt
+from .rbac import Permission, PermissionRule, Role, RolePermissionLink, UserRoleLink, RoleSource
