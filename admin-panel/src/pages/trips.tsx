@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api } from '@/services/api';
 import { useTranslation } from 'react-i18next';
 import Pagination from '../components/Pagination';
+import { formatDateInTripTz, tzLabel } from '@/utils/tripDate';
 
 const PAGE_SIZE = 20;
 
@@ -33,6 +34,7 @@ interface Trip {
   provider_id: string;
   provider: Provider;
   packages: TripPackage[];
+  timezone?: string;
 }
 
 const TripsPage = () => {
@@ -71,8 +73,8 @@ const TripsPage = () => {
         const params = new URLSearchParams();
         if (search) params.append('search', search);
         if (providerName) params.append('provider_name', providerName);
-        if (startDateFrom) params.append('start_date_from', new Date(startDateFrom).toISOString());
-        if (startDateTo) params.append('start_date_to', new Date(startDateTo).toISOString());
+        if (startDateFrom) params.append('start_date_from', new Date(startDateFrom + 'T00:00:00').toISOString());
+        if (startDateTo) params.append('start_date_to', new Date(startDateTo + 'T23:59:59').toISOString());
         if (minPrice) params.append('min_price', minPrice);
         if (maxPrice) params.append('max_price', maxPrice);
         if (minParticipants) params.append('min_participants', minParticipants);
@@ -250,8 +252,8 @@ const TripsPage = () => {
                       <span className="text-sky-600 dark:text-sky-400 hover:underline cursor-pointer">{trip.provider.company_name}</span>
                     </td>
                     <td className="py-3 px-4 hidden sm:table-cell">
-                      <p className="text-slate-600 dark:text-slate-300 text-xs">{new Date(trip.start_date).toLocaleDateString()}</p>
-                      <p className="text-slate-400 dark:text-slate-500 text-xs">{new Date(trip.end_date).toLocaleDateString()}</p>
+                      <p className="text-slate-600 dark:text-slate-300 text-xs">{formatDateInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')}</p>
+                      <p className="text-slate-400 dark:text-slate-500 text-xs">{formatDateInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh')} <span className="text-slate-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span></p>
                     </td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-300 hidden lg:table-cell">
                       {trip.packages.length > 0

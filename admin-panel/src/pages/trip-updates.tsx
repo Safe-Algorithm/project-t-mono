@@ -92,7 +92,24 @@ const TripUpdatesPage = () => {
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-1">{u.message}</p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-2">{u.message}</p>
+                      {u.attachments && u.attachments.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {u.attachments.map((att: any, i: number) => (
+                            att.content_type?.startsWith('image/') ? (
+                              <a key={i} href={att.url} target="_blank" rel="noreferrer">
+                                <img src={att.url} alt={att.filename} className="h-12 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-cover hover:opacity-80 transition-opacity" />
+                              </a>
+                            ) : (
+                              <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                <span className="truncate max-w-[160px]">{att.filename || 'Attachment'}</span>
+                              </a>
+                            )
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-4 hidden sm:table-cell">
                       {u.registration_id ? (

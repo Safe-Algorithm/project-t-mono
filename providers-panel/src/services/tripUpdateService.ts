@@ -25,17 +25,26 @@ export interface TripUpdateReceipt {
 export interface TripUpdateCreate {
   title: string;
   message: string;
-  attachments?: any[];
   is_important?: boolean;
+  file?: File | null;
+}
+
+function buildUpdateFormData(data: TripUpdateCreate): FormData {
+  const fd = new FormData();
+  fd.append('title', data.title);
+  fd.append('message', data.message);
+  fd.append('is_important', String(data.is_important ?? false));
+  if (data.file) fd.append('file', data.file);
+  return fd;
 }
 
 export const tripUpdateService = {
   sendToAll: (tripId: string, data: TripUpdateCreate) => {
-    return api.post<TripUpdate>(`/provider/trips/${tripId}/updates`, data);
+    return api.postFormData<TripUpdate>(`/provider/trips/${tripId}/updates`, buildUpdateFormData(data));
   },
 
   sendToRegistration: (registrationId: string, data: TripUpdateCreate) => {
-    return api.post<TripUpdate>(`/provider/registrations/${registrationId}/updates`, data);
+    return api.postFormData<TripUpdate>(`/provider/registrations/${registrationId}/updates`, buildUpdateFormData(data));
   },
 
   listForTrip: (tripId: string) => {

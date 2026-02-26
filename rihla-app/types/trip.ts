@@ -67,6 +67,7 @@ export interface Trip {
   end_date: string;
   registration_deadline: string | null;
   max_participants: number;
+  timezone?: string;
   available_spots: number;
   is_active: boolean;
   is_packaged_trip: boolean;
@@ -158,9 +159,17 @@ export interface TripUpdate {
   registration_id: string | null;
   provider_id: string;
   title: string;
-  body: string;
+  message: string;
+  is_important: boolean;
+  attachments?: TripUpdateAttachment[] | null;
   created_at: string;
   read: boolean;
+}
+
+export interface TripUpdateAttachment {
+  url: string;
+  filename: string;
+  content_type: string;
 }
 
 export interface ProviderProfile {

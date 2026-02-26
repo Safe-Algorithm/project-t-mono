@@ -7,6 +7,7 @@ import { tripUpdateService, TripUpdate, TripUpdateCreate } from '../../services/
 import { api } from '../../services/api';
 import { useTranslation } from 'react-i18next';
 import ValidationDisplay from '../ValidationDisplay';
+import { formatInTripTz, tzLabel } from '../../utils/tripDate';
 
 interface RegistrationUser {
   id: string;
@@ -53,6 +54,7 @@ const TripDetailPage: React.FC = () => {
   const [updateTitle, setUpdateTitle] = useState('');
   const [updateMessage, setUpdateMessage] = useState('');
   const [updateImportant, setUpdateImportant] = useState(false);
+  const [updateFile, setUpdateFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
@@ -105,7 +107,7 @@ const TripDetailPage: React.FC = () => {
     setSendError(null);
     setSendSuccess(null);
     try {
-      const payload: TripUpdateCreate = { title: updateTitle, message: updateMessage, is_important: updateImportant };
+      const payload: TripUpdateCreate = { title: updateTitle, message: updateMessage, is_important: updateImportant, file: updateFile };
       if (sendTarget === 'all') {
         await tripUpdateService.sendToAll(tripId as string, payload);
       } else if (selectedBooking) {
@@ -115,6 +117,7 @@ const TripDetailPage: React.FC = () => {
       setUpdateTitle('');
       setUpdateMessage('');
       setUpdateImportant(false);
+      setUpdateFile(null);
       setShowSendForm(false);
       // Refresh updates
       const all = await tripUpdateService.listForTrip(tripId as string);
@@ -203,9 +206,9 @@ const TripDetailPage: React.FC = () => {
         <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Trip Information</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
           {[
-            { label: 'Start Date', value: new Date(trip.start_date).toLocaleString() },
-            { label: 'End Date', value: new Date(trip.end_date).toLocaleString() },
-            { label: 'Registration Deadline', value: trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—' },
+            { label: 'Start Date', value: `${formatInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')} (${tzLabel(trip.timezone ?? 'Asia/Riyadh')})` },
+            { label: 'End Date', value: formatInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh') },
+            { label: 'Registration Deadline', value: trip.registration_deadline ? formatInTripTz(trip.registration_deadline, trip.timezone ?? 'Asia/Riyadh') : '—' },
             { label: 'Max Participants', value: String(trip.max_participants) },
           ].map(({ label, value }) => (
             <div key={label}>
@@ -380,6 +383,14 @@ const TripDetailPage: React.FC = () => {
               {sendSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-sm">{sendSuccess}</p>}
               <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
               <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-sky-400 transition-colors text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-0">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                  <span className="truncate">{updateFile ? updateFile.name : 'Attach file (image/PDF)'}</span>
+                  <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => setUpdateFile(e.target.files?.[0] ?? null)} />
+                </label>
+                {updateFile && <button onClick={() => setUpdateFile(null)} className="text-xs text-red-500 flex-shrink-0">✕</button>}
+              </div>
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-red-600 dark:text-red-400">
                   <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} className="accent-red-500" />
@@ -406,6 +417,23 @@ const TripDetailPage: React.FC = () => {
                     <span className="text-xs text-slate-400 dark:text-slate-500">{new Date(u.created_at).toLocaleString()}</span>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{u.message}</p>
+                  {u.attachments && u.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {u.attachments.map((att: any, i: number) => (
+                        att.content_type?.startsWith('image/') ? (
+                          <a key={i} href={att.url} target="_blank" rel="noreferrer">
+                            <img src={att.url} alt={att.filename} className="h-16 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-cover hover:opacity-80 transition-opacity" />
+                          </a>
+                        ) : (
+                          <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                            {att.filename || 'Attachment'}
+                          </a>
+                        )
+                      ))}
+                    </div>
+                  )}
                   <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Read: {u.read_count ?? 0} / {u.total_recipients ?? '?'}</p>
                 </div>
               ))}
@@ -559,6 +587,14 @@ const TripDetailPage: React.FC = () => {
                     {sendSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-xs">{sendSuccess}</p>}
                     <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
                     <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-sky-400 transition-colors text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-0">
+                        <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        <span className="truncate">{updateFile ? updateFile.name : 'Attach'}</span>
+                        <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => setUpdateFile(e.target.files?.[0] ?? null)} />
+                      </label>
+                      {updateFile && <button onClick={() => setUpdateFile(null)} className="text-xs text-red-500">✕</button>}
+                    </div>
                     <div className="flex items-center justify-between">
                       <label className="flex items-center gap-2 text-xs cursor-pointer font-medium text-red-600 dark:text-red-400">
                         <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} className="accent-red-500" />
@@ -593,6 +629,23 @@ const TripDetailPage: React.FC = () => {
                           <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{new Date(u.created_at).toLocaleString()}</span>
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap leading-relaxed">{u.message}</p>
+                        {u.attachments && u.attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {u.attachments.map((att: any, i: number) => (
+                              att.content_type?.startsWith('image/') ? (
+                                <a key={i} href={att.url} target="_blank" rel="noreferrer">
+                                  <img src={att.url} alt={att.filename} className="h-14 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-cover hover:opacity-80 transition-opacity" />
+                                </a>
+                              ) : (
+                                <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                  <span className="truncate max-w-[140px]">{att.filename || 'Attachment'}</span>
+                                </a>
+                              )
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

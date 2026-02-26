@@ -29,7 +29,13 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
   const statusLabel = t(`bookings.status.${reg.status}` as any, { defaultValue: reg.status });
   const tripName = (i18n.language === 'ar' ? (reg.trip?.name_ar || reg.trip?.name_en) : (reg.trip?.name_en || reg.trip?.name_ar)) || 'Trip';
   const startDate = reg.trip?.start_date
-    ? new Date(reg.trip.start_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    ? (() => {
+        const d = new Date(reg.trip.start_date.endsWith('Z') ? reg.trip.start_date : reg.trip.start_date + 'Z');
+        return d.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+          timeZone: (reg.trip as any).timezone ?? 'Asia/Riyadh',
+        });
+      })()
     : '';
 
   return (

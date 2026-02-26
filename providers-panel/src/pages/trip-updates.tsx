@@ -33,6 +33,7 @@ const TripUpdatesPage = () => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [isImportant, setIsImportant] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -92,7 +93,7 @@ const TripUpdatesPage = () => {
     setError(null);
     setSuccess(null);
     try {
-      const payload: TripUpdateCreate = { title, message, is_important: isImportant };
+      const payload: TripUpdateCreate = { title, message, is_important: isImportant, file: attachedFile };
       if (sendTo === 'all') {
         await tripUpdateService.sendToAll(selectedTripId, payload);
       } else {
@@ -107,6 +108,7 @@ const TripUpdatesPage = () => {
       setTitle('');
       setMessage('');
       setIsImportant(false);
+      setAttachedFile(null);
       setShowForm(false);
       await loadUpdates();
     } catch (err: any) {
@@ -214,6 +216,21 @@ const TripUpdatesPage = () => {
               className={`${inputCls} resize-none`} rows={4} maxLength={5000} />
           </div>
 
+          <div>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">Attachment <span className="text-slate-400">(optional — image or PDF)</span></label>
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-sky-400 dark:hover:border-sky-500 transition-colors text-sm text-slate-600 dark:text-slate-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                {attachedFile ? attachedFile.name : 'Choose file'}
+                <input type="file" accept="image/*,.pdf" className="hidden"
+                  onChange={e => setAttachedFile(e.target.files?.[0] ?? null)} />
+              </label>
+              {attachedFile && (
+                <button onClick={() => setAttachedFile(null)} className="text-xs text-red-500 hover:text-red-700 font-medium">Remove</button>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800">
             <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-red-600 dark:text-red-400">
               <input type="checkbox" checked={isImportant} onChange={e => setIsImportant(e.target.checked)} className="accent-red-500" />
@@ -249,6 +266,23 @@ const TripUpdatesPage = () => {
                 <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{formatDate(u.created_at)}</span>
               </div>
               <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap mb-3 leading-relaxed">{u.message}</p>
+              {u.attachments && u.attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {u.attachments.map((att: any, i: number) => (
+                    /\.(jpg|jpeg|png|gif|webp)$/i.test(att.url) ? (
+                      <a key={i} href={att.url} target="_blank" rel="noreferrer">
+                        <img src={att.url} alt={att.filename} className="h-20 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-cover hover:opacity-80 transition-opacity" />
+                      </a>
+                    ) : (
+                      <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        {att.filename || 'Attachment'}
+                      </a>
+                    )
+                  ))}
+                </div>
+              )}
               <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <span>{t('tripUpdates.recipients')}: {u.total_recipients ?? '—'}</span>
                 <span>{t('tripUpdates.read')}: {u.read_count ?? 0}</span>

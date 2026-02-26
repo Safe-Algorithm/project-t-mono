@@ -81,6 +81,7 @@ export interface Trip {
   price?: number | null;
   simple_trip_required_fields?: string[];
   simple_trip_required_fields_details?: TripPackageRequiredField[];
+  timezone?: string;
 }
 
 export interface TripExtraFee {

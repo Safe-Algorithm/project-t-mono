@@ -246,6 +246,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         starting_city=starting_city_info,
         is_international=trip.is_international,
         is_packaged_trip=is_packaged,
+        timezone=trip.timezone,
         destinations=destinations_info,
         packages=packages_with_fields,
         extra_fees=[],

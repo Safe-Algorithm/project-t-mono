@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import ValidationDisplay from '@/components/ValidationDisplay';
+import { formatInTripTz, formatDateInTripTz, tzLabel } from '@/utils/tripDate';
 
 interface TripPackageRequiredFieldDetail {
   id: string;
@@ -87,6 +88,7 @@ interface Trip {
   images?: string[];
   trip_metadata?: any;
   packages: TripPackage[];
+  timezone?: string;
   is_refundable?: boolean;
   amenities?: string[];
   has_meeting_place?: boolean;
@@ -297,15 +299,15 @@ const TripDetailPage = () => {
           <div><p className={lCls}>{t('tripDetail.provider')}</p>
             <button onClick={() => router.push(`/providers/${trip.provider.id}`)} className="text-sm text-sky-600 dark:text-sky-400 hover:underline font-medium">{trip.provider.company_name}</button>
           </div>
-          <div><p className={lCls}>{t('tripDetail.startDate')}</p><p className="text-sm text-slate-900 dark:text-white">{new Date(trip.start_date).toLocaleDateString()}</p></div>
-          <div><p className={lCls}>{t('tripDetail.endDate')}</p><p className="text-sm text-slate-900 dark:text-white">{new Date(trip.end_date).toLocaleDateString()}</p></div>
+          <div><p className={lCls}>{t('tripDetail.startDate')}</p><p className="text-sm text-slate-900 dark:text-white">{formatInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')}</p></div>
+          <div><p className={lCls}>{t('tripDetail.endDate')}</p><p className="text-sm text-slate-900 dark:text-white">{formatInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh')} <span className="text-xs text-slate-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span></p></div>
           <div><p className={lCls}>{t('tripDetail.maxParticipants')}</p><p className="text-sm text-slate-900 dark:text-white">{trip.max_participants}</p></div>
           {!trip.is_packaged_trip && (
             <div><p className={lCls}>{t('tripDetail.refundable')}</p>
               <span className={`text-xs font-semibold ${trip.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>{trip.is_refundable ? t('common.yes') : t('common.no')}</span>
             </div>
           )}
-          <div><p className={lCls}>Reg. Deadline</p><p className="text-sm text-slate-900 dark:text-white">{trip.registration_deadline ? new Date(trip.registration_deadline).toLocaleString() : '—'}</p></div>
+          <div><p className={lCls}>Reg. Deadline</p><p className="text-sm text-slate-900 dark:text-white">{trip.registration_deadline ? formatInTripTz(trip.registration_deadline, trip.timezone ?? 'Asia/Riyadh') : '—'}</p></div>
           {trip.starting_city && <div><p className={lCls}>Starting City</p><p className="text-sm text-slate-900 dark:text-white">{trip.starting_city.name_en}</p></div>}
           {trip.trip_reference && <div><p className={lCls}>Reference</p><p className="text-sm font-mono text-slate-900 dark:text-white">{trip.trip_reference}</p></div>}
           <div><p className={lCls}>Type</p><p className="text-sm text-slate-900 dark:text-white">{trip.is_international ? 'International' : 'Domestic'}</p></div>
@@ -399,6 +401,23 @@ const TripDetailPage = () => {
                   <span className="text-xs text-slate-400 flex-shrink-0">{new Date(u.created_at).toLocaleString()}</span>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-slate-400 whitespace-pre-wrap mb-1.5">{u.message}</p>
+                {u.attachments && u.attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-1.5">
+                    {u.attachments.map((att: any, i: number) => (
+                      att.content_type?.startsWith('image/') ? (
+                        <a key={i} href={att.url} target="_blank" rel="noreferrer">
+                          <img src={att.url} alt={att.filename} className="h-16 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-cover hover:opacity-80 transition-opacity" />
+                        </a>
+                      ) : (
+                        <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                          <span className="truncate max-w-[160px]">{att.filename || 'Attachment'}</span>
+                        </a>
+                      )
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-slate-400 dark:text-slate-500">{t('tripUpdates.readCol')}: {u.read_count} / {u.total_recipients}</p>
               </div>
             ))}
@@ -523,6 +542,23 @@ const TripDetailPage = () => {
                           <span className="text-xs text-slate-400 flex-shrink-0">{new Date(u.created_at).toLocaleString()}</span>
                         </div>
                         <p className="text-xs text-slate-600 dark:text-slate-400 whitespace-pre-wrap">{u.message}</p>
+                        {u.attachments && u.attachments.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {u.attachments.map((att: any, i: number) => (
+                              att.content_type?.startsWith('image/') ? (
+                                <a key={i} href={att.url} target="_blank" rel="noreferrer">
+                                  <img src={att.url} alt={att.filename} className="h-16 w-auto rounded-lg border border-slate-200 dark:border-slate-700 object-cover hover:opacity-80 transition-opacity" />
+                                </a>
+                              ) : (
+                                <a key={i} href={att.url} target="_blank" rel="noreferrer"
+                                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                  <span className="truncate max-w-[140px]">{att.filename || 'Attachment'}</span>
+                                </a>
+                              )
+                            ))}
+                          </div>
+                        )}
                         <p className="text-xs text-slate-400 mt-1">Read: {u.read_count} / {u.total_recipients}</p>
                       </div>
                     ))}

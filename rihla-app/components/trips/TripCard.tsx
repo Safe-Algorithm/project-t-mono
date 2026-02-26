@@ -47,9 +47,13 @@ function getDestLabel(trip: Trip, lang: string): string | null {
   return to;
 }
 
-function formatDate(dateStr: string, lang: string): string {
+function formatDate(dateStr: string, lang: string, tz?: string): string {
   const locale = lang === 'ar' ? 'ar-SA' : 'en-US';
-  return new Date(dateStr).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+  const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
+  return d.toLocaleDateString(locale, {
+    month: 'short', day: 'numeric', year: 'numeric',
+    timeZone: tz ?? 'Asia/Riyadh',
+  });
 }
 
 function getMinPrice(trip: Trip): number | null {
@@ -159,7 +163,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
         <View style={s.metaRow}>
           <View style={s.metaItem}>
             <Ionicons name="calendar-outline" size={13} color={colors.primary} />
-            <Text style={s.metaText}>{formatDate(trip.start_date, i18n.language)}</Text>
+            <Text style={s.metaText}>{formatDate(trip.start_date, i18n.language, trip.timezone)}</Text>
           </View>
           <View style={s.metaDivider} />
           <View style={s.metaItem}>

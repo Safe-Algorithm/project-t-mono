@@ -10,8 +10,9 @@ Sections:
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlmodel import Session, select
+from app.services.storage import storage_service
 
 from app.api.deps import (
     get_session,
@@ -38,13 +39,42 @@ router = APIRouter()
 # =====================================================================
 
 
+ALLOWED_CONTENT_TYPES = {
+    "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp",
+    "application/pdf",
+}
+
+
+async def _save_attachment(file: UploadFile) -> dict:
+    """Upload file to Backblaze, return attachment dict."""
+    if file.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"File type '{file.content_type}' not allowed. Use JPEG, PNG, GIF, WEBP, or PDF."
+        )
+    file_data = await file.read()
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "bin"
+    unique_name = f"{uuid.uuid4()}.{ext}"
+    upload_result = await storage_service.upload_file(
+        file_data=file_data,
+        file_name=unique_name,
+        content_type=file.content_type,
+        folder="trip-updates"
+    )
+    url = upload_result.get("downloadUrl") or upload_result.get("file_url")
+    return {"url": url, "filename": file.filename or unique_name, "content_type": file.content_type}
+
+
 @router.post(
     "/provider/trips/{trip_id}/updates",
     response_model=TripUpdateRead,
 )
-def provider_send_update_to_all(
+async def provider_send_update_to_all(
     trip_id: uuid.UUID,
-    data: TripUpdateCreate,
+    title: str = Form(...),
+    message: str = Form(...),
+    is_important: str = Form("false"),
+    file: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
 ):
@@ -55,6 +85,8 @@ def provider_send_update_to_all(
     if trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not your trip")
 
+    attachments = [await _save_attachment(file)] if file and file.filename else None
+    data = TripUpdateCreate(title=title, message=message, is_important=is_important.lower() == "true", attachments=attachments)
     update = crud_update.create_trip_update(
         session,
         trip_id=trip_id,
@@ -68,9 +100,12 @@ def provider_send_update_to_all(
     "/provider/registrations/{registration_id}/updates",
     response_model=TripUpdateRead,
 )
-def provider_send_update_to_registration(
+async def provider_send_update_to_registration(
     registration_id: uuid.UUID,
-    data: TripUpdateCreate,
+    title: str = Form(...),
+    message: str = Form(...),
+    is_important: str = Form("false"),
+    file: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
 ):
@@ -83,6 +118,8 @@ def provider_send_update_to_registration(
     if not trip or trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not your trip")
 
+    attachments = [await _save_attachment(file)] if file and file.filename else None
+    data = TripUpdateCreate(title=title, message=message, is_important=is_important.lower() == "true", attachments=attachments)
     update = crud_update.create_trip_update(
         session,
         trip_id=reg.trip_id,

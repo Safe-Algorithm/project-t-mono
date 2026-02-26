@@ -171,6 +171,7 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         starting_city_id=trip.starting_city_id,
         starting_city=_get_starting_city_info(session, trip),
         is_international=trip.is_international, is_packaged_trip=trip.is_packaged_trip,
+        timezone=trip.timezone,
         packages=packages_with_fields, extra_fees=extra_fees,
         available_spots=max(0, trip.max_participants - booked),
         simple_trip_required_fields=simple_required_fields,
@@ -231,14 +232,23 @@ def read_trips(
     is_active: Optional[bool] = None,
 ):
     """Retrieve and filter trips for the current provider."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     from decimal import Decimal
-    
-    # Parse date strings to datetime objects
-    start_date_from_dt = datetime.fromisoformat(start_date_from) if start_date_from else None
-    start_date_to_dt = datetime.fromisoformat(start_date_to) if start_date_to else None
-    end_date_from_dt = datetime.fromisoformat(end_date_from) if end_date_from else None
-    end_date_to_dt = datetime.fromisoformat(end_date_to) if end_date_to else None
+
+    def _parse_search_date(s: str) -> datetime:
+        """Parse an ISO date string from the client and return naive UTC.
+        Offset-aware strings are converted to UTC then stripped.
+        Naive strings are assumed to already be UTC (client sent toISOString())."""
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+
+    # Parse date strings to naive UTC datetime objects
+    start_date_from_dt = _parse_search_date(start_date_from) if start_date_from else None
+    start_date_to_dt = _parse_search_date(start_date_to) if start_date_to else None
+    end_date_from_dt = _parse_search_date(end_date_from) if end_date_from else None
+    end_date_to_dt = _parse_search_date(end_date_to) if end_date_to else None
     
     # Convert price to Decimal
     min_price_decimal = Decimal(str(min_price)) if min_price is not None else None
@@ -391,14 +401,20 @@ def list_all_trips(
     is_active: Optional[bool] = True,
 ):
     """Retrieve and filter all trips (public endpoint for mobile app)."""
-    from datetime import datetime
+    from datetime import datetime, timezone
     from decimal import Decimal
-    
-    # Parse date strings to datetime objects
-    start_date_from_dt = datetime.fromisoformat(start_date_from) if start_date_from else None
-    start_date_to_dt = datetime.fromisoformat(start_date_to) if start_date_to else None
-    end_date_from_dt = datetime.fromisoformat(end_date_from) if end_date_from else None
-    end_date_to_dt = datetime.fromisoformat(end_date_to) if end_date_to else None
+
+    def _parse_search_date(s: str) -> datetime:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+
+    # Parse date strings to naive UTC datetime objects
+    start_date_from_dt = _parse_search_date(start_date_from) if start_date_from else None
+    start_date_to_dt = _parse_search_date(start_date_to) if start_date_to else None
+    end_date_from_dt = _parse_search_date(end_date_from) if end_date_from else None
+    end_date_to_dt = _parse_search_date(end_date_to) if end_date_to else None
     
     # Convert price to Decimal
     min_price_decimal = Decimal(str(min_price)) if min_price is not None else None
@@ -972,7 +988,7 @@ async def register_for_trip(
     accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
 ):
     """Register for a trip with multiple participants."""
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     _reg_lang = "ar" if (accept_language or "en").startswith("ar") else "en"
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not trip:
@@ -983,7 +999,7 @@ async def register_for_trip(
         raise HTTPException(status_code=400, detail="This trip is no longer available for booking")
 
     # Guard: trip must not have started yet
-    if trip.start_date <= datetime.utcnow():
+    if trip.start_date <= datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=400, detail="This trip has already started or passed")
 
     # Guard: user must not already have an active registration for this trip

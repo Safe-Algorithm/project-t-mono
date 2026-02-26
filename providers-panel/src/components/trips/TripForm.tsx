@@ -24,6 +24,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const [isPackagedTrip, setIsPackagedTrip] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
 
+  const [timezone, setTimezone] = useState('Asia/Riyadh');
+
   const [formData, setFormData] = useState({
     name_en: '',
     name_ar: '',
@@ -141,20 +143,29 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     if (trip) {
       setIsPackagedTrip(trip.is_packaged_trip ?? false);
       // Populate trip form data
+      const tz = trip.timezone ?? 'Asia/Riyadh';
+      setTimezone(tz);
+      // Convert UTC datetimes from DB into local wall-clock time for the trip's timezone
+      // so the provider sees the time they originally entered, not browser-local time.
+      const toTzLocal = (utcStr: string) => {
+        const d = new Date(utcStr + (utcStr.endsWith('Z') ? '' : 'Z'));
+        // Format as YYYY-MM-DDTHH:mm in the trip's timezone
+        return d.toLocaleString('sv-SE', { timeZone: tz }).substring(0, 16);
+      };
       setFormData({
         name_en: trip.name_en ?? '',
         name_ar: trip.name_ar ?? '',
         description_en: trip.description_en ?? '',
         description_ar: trip.description_ar ?? '',
-        start_date: new Date(trip.start_date).toISOString().substring(0, 16),
-        end_date: new Date(trip.end_date).toISOString().substring(0, 16),
-        registration_deadline: trip.registration_deadline ? new Date(trip.registration_deadline).toISOString().substring(0, 16) : '',
+        start_date: toTzLocal(trip.start_date),
+        end_date: toTzLocal(trip.end_date),
+        registration_deadline: trip.registration_deadline ? toTzLocal(trip.registration_deadline) : '',
         max_participants: trip.max_participants.toString(),
         is_active: trip.is_active,
         is_refundable: trip.is_refundable ?? true,
         has_meeting_place: trip.has_meeting_place ?? false,
         meeting_location: trip.meeting_location ?? '',
-        meeting_time: trip.meeting_time ? new Date(trip.meeting_time).toISOString().substring(0, 16) : '',
+        meeting_time: trip.meeting_time ? toTzLocal(trip.meeting_time) : '',
       });
       if (trip.starting_city_id) {
         setStartingCityId(trip.starting_city_id);
@@ -421,19 +432,43 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       return;
     }
 
+    // Convert a datetime-local string (wall clock in trip's timezone) to a UTC ISO string.
+    // We append the UTC offset for the trip's timezone at that moment, then let
+    // the backend's UTC normaliser handle it.
+    const localToUtcIso = (localStr: string): string => {
+      if (!localStr) return localStr;
+      // Get UTC offset in minutes for the selected timezone at the given wall-clock time.
+      // We use Intl.DateTimeFormat to figure out what UTC time corresponds to this local time.
+      // Strategy: interpret the string as UTC, then measure the offset, then correct.
+      const naive = new Date(localStr + ':00Z'); // treat as UTC first
+      const tzOffset = (() => {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: timezone,
+          year: 'numeric', month: '2-digit', day: '2-digit',
+          hour: '2-digit', minute: '2-digit', second: '2-digit',
+          hour12: false,
+        }).formatToParts(naive);
+        const get = (t: string) => parseInt(parts.find(p => p.type === t)?.value ?? '0');
+        const tzDate = new Date(Date.UTC(get('year'), get('month') - 1, get('day'), get('hour') % 24, get('minute'), get('second')));
+        return (naive.getTime() - tzDate.getTime()) / 60000; // offset in minutes
+      })();
+      return new Date(naive.getTime() + tzOffset * 60000).toISOString();
+    };
+
     const payload = {
         ...formData,
         is_packaged_trip: isPackagedTrip,
+        timezone,
         max_participants: parseInt(formData.max_participants, 10),
-        start_date: new Date(formData.start_date).toISOString(),
-        end_date: new Date(formData.end_date).toISOString(),
+        start_date: localToUtcIso(formData.start_date),
+        end_date: localToUtcIso(formData.end_date),
         registration_deadline: formData.registration_deadline
-          ? new Date(formData.registration_deadline).toISOString()
+          ? localToUtcIso(formData.registration_deadline)
           : undefined,
         starting_city_id: startingCityId || undefined,
         amenities: !isPackagedTrip && selectedAmenities.length > 0 ? selectedAmenities : undefined,
         meeting_time: formData.has_meeting_place && formData.meeting_time 
-          ? new Date(formData.meeting_time).toISOString() 
+          ? localToUtcIso(formData.meeting_time)
           : undefined,
     };
     
@@ -507,6 +542,55 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {/* ── Dates ── */}
       <div className={sectionCls}>
         <p className={sectionTitleCls}>{t('trip.datesCapacity')}</p>
+        <div className="mb-4">
+          <label className={labelCls}>
+            {t('trip.timezone', 'Trip Timezone')}
+            <span className="font-normal text-slate-400 ml-1">({t('trip.timezoneHint', 'dates are entered in this timezone')})</span>
+          </label>
+          <select className={inputCls} value={timezone} onChange={e => setTimezone(e.target.value)}>
+            <optgroup label="Middle East">
+              <option value="Asia/Riyadh">Saudi Arabia, Kuwait, Qatar (UTC+3)</option>
+              <option value="Asia/Dubai">UAE, Oman (UTC+4)</option>
+              <option value="Asia/Bahrain">Bahrain (UTC+3)</option>
+              <option value="Asia/Baghdad">Iraq (UTC+3)</option>
+              <option value="Asia/Beirut">Lebanon, Syria (UTC+2/+3)</option>
+              <option value="Asia/Amman">Jordan (UTC+2/+3)</option>
+              <option value="Asia/Jerusalem">Israel, Palestine (UTC+2/+3)</option>
+              <option value="Asia/Aden">Yemen (UTC+3)</option>
+            </optgroup>
+            <optgroup label="Africa">
+              <option value="Africa/Cairo">Egypt (UTC+2/+3)</option>
+              <option value="Africa/Casablanca">Morocco (UTC+0/+1)</option>
+              <option value="Africa/Tunis">Tunisia (UTC+1)</option>
+              <option value="Africa/Algiers">Algeria (UTC+1)</option>
+              <option value="Africa/Tripoli">Libya (UTC+2)</option>
+              <option value="Africa/Khartoum">Sudan (UTC+3)</option>
+            </optgroup>
+            <optgroup label="Europe">
+              <option value="Europe/London">UK (UTC+0/+1)</option>
+              <option value="Europe/Paris">France, Germany, Italy, Spain (UTC+1/+2)</option>
+              <option value="Europe/Istanbul">Turkey (UTC+3)</option>
+              <option value="Europe/Moscow">Russia/Moscow (UTC+3)</option>
+            </optgroup>
+            <optgroup label="Asia">
+              <option value="Asia/Kolkata">India (UTC+5:30)</option>
+              <option value="Asia/Karachi">Pakistan (UTC+5)</option>
+              <option value="Asia/Dhaka">Bangladesh (UTC+6)</option>
+              <option value="Asia/Bangkok">Thailand, Indonesia (UTC+7)</option>
+              <option value="Asia/Singapore">Singapore, Malaysia (UTC+8)</option>
+              <option value="Asia/Tokyo">Japan, Korea (UTC+9)</option>
+            </optgroup>
+            <optgroup label="Americas">
+              <option value="America/New_York">US Eastern (UTC-5/-4)</option>
+              <option value="America/Chicago">US Central (UTC-6/-5)</option>
+              <option value="America/Denver">US Mountain (UTC-7/-6)</option>
+              <option value="America/Los_Angeles">US Pacific (UTC-8/-7)</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="UTC">UTC (UTC+0)</option>
+            </optgroup>
+          </select>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>{t('trip.startDateTime')}</label>

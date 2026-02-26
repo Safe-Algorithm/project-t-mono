@@ -1,11 +1,20 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 from .trip_package import TripPackageWithRequiredFields
 from .trip_extra_fee import TripExtraFeeResponse
 from app.models.trip_amenity import TripAmenity
+
+
+def _to_utc(dt: datetime) -> datetime:
+    """Normalise a datetime to naive UTC for storage in TIMESTAMP WITHOUT TIME ZONE columns.
+    Offset-aware datetimes are converted to UTC then stripped.
+    Naive datetimes are assumed to already be UTC and returned as-is."""
+    if dt.tzinfo is None:
+        return dt
+    return dt.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 class TripBase(BaseModel):
@@ -25,6 +34,26 @@ class TripBase(BaseModel):
     starting_city_id: Optional[uuid.UUID] = None
     is_international: bool = False
     is_packaged_trip: bool = False
+    # IANA timezone string — defaults to Saudi Arabia since that is the primary market.
+    # Clients must display all trip datetimes in this timezone.
+    timezone: str = "Asia/Riyadh"
+
+    @field_validator("start_date", "end_date", "meeting_time", "registration_deadline", mode="before")
+    @classmethod
+    def normalise_to_utc(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            from datetime import datetime as _dt
+            # Parse ISO string; fromisoformat handles offset suffixes in Python 3.11+
+            # For older Python use dateutil or manual parsing
+            try:
+                v = _dt.fromisoformat(v.replace("Z", "+00:00"))
+            except ValueError:
+                return v
+        if isinstance(v, datetime):
+            return _to_utc(v)
+        return v
 
 
 class TripCreate(TripBase):
@@ -62,10 +91,26 @@ class TripUpdate(BaseModel):
     starting_city_id: Optional[uuid.UUID] = None
     is_international: Optional[bool] = None
     is_packaged_trip: Optional[bool] = None
+    timezone: Optional[str] = None
     # For non-packaged trips: these update the hidden package
     price: Optional[float] = None
     is_refundable: Optional[bool] = None
     amenities: Optional[List[TripAmenity]] = None
+
+    @field_validator("start_date", "end_date", "meeting_time", "registration_deadline", mode="before")
+    @classmethod
+    def normalise_to_utc(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            from datetime import datetime as _dt
+            try:
+                v = _dt.fromisoformat(v.replace("Z", "+00:00"))
+            except ValueError:
+                return v
+        if isinstance(v, datetime):
+            return _to_utc(v)
+        return v
 
     @model_validator(mode='after')
     def validate_deadline(self):

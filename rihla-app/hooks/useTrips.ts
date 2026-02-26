@@ -386,31 +386,44 @@ export function useMarkUpdateRead() {
     mutationFn: async (updateId: string) => {
       await apiClient.post(`/updates/${updateId}/mark-read`, {});
     },
-    onSuccess: (_data, updateId) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trip-updates'] });
+      qc.invalidateQueries({ queryKey: ['all-trip-updates'] });
     },
   });
 }
 
 export function useAllMyTripUpdates() {
   const { data: registrations } = useMyRegistrations();
+  const regList = registrations ?? [];
   return useQuery<TripUpdate[]>({
-    queryKey: ['all-trip-updates', registrations?.map((r) => r.trip_id)],
+    queryKey: ['all-trip-updates', regList.map((r) => r.id).join(',')],
     queryFn: async () => {
-      if (!registrations?.length) return [];
-      const results = await Promise.all(
-        registrations
-          .filter((r) => r.status === 'confirmed' || r.status === 'pending_payment')
-          .map((r) =>
-            apiClient
-              .get<TripUpdate[]>(`/trips/${r.trip_id}/updates`)
-              .then((res) => res.data)
-              .catch(() => [] as TripUpdate[])
-          )
+      if (!regList.length) return [];
+      const activeRegs = regList.filter(
+        (r) => r.status === 'confirmed' || r.status === 'pending_payment'
       );
-      return results.flat().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const results = await Promise.all(
+        activeRegs.map((r) =>
+          apiClient
+            .get<TripUpdate[]>(`/trips/${r.trip_id}/updates`)
+            .then((res) =>
+              res.data.map((u) => ({
+                ...u,
+                // Attach the user's own registration_id to broadcast updates
+                // so navigation always leads to the correct booking detail.
+                _registration_id: r.id,
+              }))
+            )
+            .catch(() => [] as (TripUpdate & { _registration_id: string })[])
+        )
+      );
+      return results
+        .flat()
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     },
-    enabled: !!registrations?.length,
+    enabled: !!regList.length,
     staleTime: 1000 * 30,
+    refetchOnMount: 'always',
   });
 }

@@ -8,7 +8,7 @@ This module defines all scheduled tasks for the application including:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from sqlmodel import Session, select
@@ -37,7 +37,7 @@ async def send_trip_reminders():
             notification_service = NotificationService()
             
             # Get trips starting in 24 hours
-            tomorrow = datetime.utcnow() + timedelta(days=1)
+            tomorrow = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=1)
             tomorrow_start = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
             tomorrow_end = tomorrow.replace(hour=23, minute=59, second=59, microsecond=999999)
             
@@ -94,7 +94,7 @@ async def send_review_reminders():
     try:
         with Session(engine) as session:
             # Get trips that ended yesterday
-            yesterday = datetime.utcnow() - timedelta(days=1)
+            yesterday = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=1)
             yesterday_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0)
             yesterday_end = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999)
             
@@ -193,7 +193,7 @@ async def cancel_expired_spot_reservations():
         from app.services.moyasar import payment_service
 
         with Session(engine) as session:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
             statement = select(TripRegistration).where(
                 TripRegistration.status == "pending_payment",
                 TripRegistration.spot_reserved_until != None,

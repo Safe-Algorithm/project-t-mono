@@ -16,6 +16,31 @@ import { useTheme } from '../../hooks/useTheme';
 import Button from '../ui/Button';
 import { TripFilters, useDestinations, DestinationOption } from '../../hooks/useTrips';
 
+/**
+ * Convert a YYYY-MM-DD string to a UTC ISO string representing the start (00:00)
+ * or end (23:59:59) of that day in the device's local timezone.
+ * This matches the user's intent: "trips starting on June 1" means June 1 in
+ * their local time, regardless of what timezone they are in.
+ */
+function localDateToUtcIso(dateStr: string, endOfDay = false): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const local = endOfDay
+    ? new Date(y, m - 1, d, 23, 59, 59, 999)
+    : new Date(y, m - 1, d, 0, 0, 0, 0);
+  return local.toISOString();
+}
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function offsetDays(base: Date, days: number): string {
+  const d = new Date(base);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 interface FilterSheetProps {
   visible: boolean;
   onClose: () => void;
@@ -46,6 +71,10 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
   const [local, setLocal] = useState<TripFilters>(filters);
   const { data: destinationTree = [] } = useDestinations();
 
+  // Local YYYY-MM-DD strings for the date inputs (display only; converted to UTC ISO on apply)
+  const [startDateStr, setStartDateStr] = useState('');
+  const [endDateStr, setEndDateStr] = useState('');
+
   // Flatten all cities from the destination tree for the picker
   const allCities: DestinationOption[] = destinationTree.flatMap(
     (country) => country.children?.filter((c) => c.type === 'city') ?? []
@@ -67,13 +96,46 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
     update('amenities', next.length ? next : undefined);
   };
 
+  // Quick-select date presets
+  const applyDatePreset = (from: string, to: string) => {
+    setStartDateStr(from);
+    setEndDateStr(to);
+  };
+
+  const today = new Date();
+  const DATE_PRESETS = [
+    { labelKey: 'filters.dateToday',     from: todayStr(),                   to: todayStr() },
+    { labelKey: 'filters.dateTomorrow',  from: offsetDays(today, 1),         to: offsetDays(today, 1) },
+    { labelKey: 'filters.dateThisWeek',  from: todayStr(),                   to: offsetDays(today, 6) },
+    { labelKey: 'filters.dateNextMonth', from: offsetDays(today, 1),         to: offsetDays(today, 30) },
+  ];
+
+  const isDatePresetActive = (from: string, to: string) =>
+    startDateStr === from && endDateStr === to;
+
+  // Validate YYYY-MM-DD format
+  const isValidDate = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+
   const handleApply = () => {
-    onApply(local);
+    const applied = { ...local };
+    if (startDateStr && isValidDate(startDateStr)) {
+      applied.start_date_from = localDateToUtcIso(startDateStr, false);
+    } else {
+      delete applied.start_date_from;
+    }
+    if (endDateStr && isValidDate(endDateStr)) {
+      applied.start_date_to = localDateToUtcIso(endDateStr, true);
+    } else {
+      delete applied.start_date_to;
+    }
+    onApply(applied);
     onClose();
   };
 
   const handleReset = () => {
     setLocal({});
+    setStartDateStr('');
+    setEndDateStr('');
     onApply({});
     onClose();
   };
@@ -146,6 +208,60 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
                   </Text>
                 </TouchableOpacity>
               ))}
+            </View>
+
+            {/* Date Range */}
+            <Text style={s.sectionLabel}>{t('filters.dateRange', 'Trip Start Date')}</Text>
+            <Text style={s.sectionHint}>{t('filters.dateRangeHint', 'Filter trips by when they start')}</Text>
+
+            {/* Quick-select presets */}
+            <View style={[s.chipWrap, { marginBottom: 12 }]}>
+              {DATE_PRESETS.map((preset) => {
+                const active = isDatePresetActive(preset.from, preset.to);
+                return (
+                  <TouchableOpacity
+                    key={preset.labelKey}
+                    style={[s.ratingChip, active && s.ratingChipActive]}
+                    onPress={() => active
+                      ? (setStartDateStr(''), setEndDateStr(''))
+                      : applyDatePreset(preset.from, preset.to)
+                    }
+                  >
+                    <Text style={[s.ratingChipText, active && s.ratingChipTextActive]}>
+                      {t(preset.labelKey as any, preset.labelKey.split('.')[1])}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* Manual date inputs */}
+            <View style={s.row}>
+              <View style={s.priceInput}>
+                <Text style={s.inputLabel}>{t('filters.dateFrom', 'From')}</Text>
+                <TextInput
+                  style={[s.input, startDateStr && !isValidDate(startDateStr) && s.inputError]}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textTertiary}
+                  value={startDateStr}
+                  onChangeText={setStartDateStr}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+              </View>
+              <View style={s.priceDash}><Text style={s.dashText}>—</Text></View>
+              <View style={s.priceInput}>
+                <Text style={s.inputLabel}>{t('filters.dateTo', 'To')}</Text>
+                <TextInput
+                  style={[s.input, endDateStr && !isValidDate(endDateStr) && s.inputError]}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={colors.textTertiary}
+                  value={endDateStr}
+                  onChangeText={setEndDateStr}
+                  keyboardType="numeric"
+                  maxLength={10}
+                />
+              </View>
             </View>
 
             {/* Price */}
@@ -248,6 +364,7 @@ function makeStyles(c: ThemeColors) {
     priceInput: { flex: 1 },
     inputLabel: { fontSize: FontSize.xs, color: c.textTertiary, marginBottom: 4 },
     input: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.gray50 },
+    inputError: { borderColor: c.error },
     priceDash: { paddingTop: 18 },
     dashText: { color: c.textTertiary, fontSize: FontSize.lg },
     sectionHint: { fontSize: FontSize.xs, color: c.textTertiary, marginBottom: 10, marginTop: -6 },

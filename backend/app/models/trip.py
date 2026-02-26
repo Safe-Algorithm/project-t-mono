@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, List
 
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
@@ -57,13 +57,18 @@ class Trip(SQLModel, table=True):
     # Using JSONB for flexible metadata like itinerary, inclusions, exclusions
     trip_metadata: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     
+    # IANA timezone of the trip's departure location (e.g. 'Asia/Riyadh', 'Europe/Paris').
+    # All datetimes (start_date, end_date, etc.) are stored as UTC; this field
+    # tells clients how to display them in the correct local wall-clock time.
+    timezone: str = Field(default="Asia/Riyadh", max_length=64)
+
     # Meeting Place
     has_meeting_place: bool = Field(default=False)
     meeting_location: Optional[str] = Field(default=None, max_length=500)
     meeting_time: Optional[datetime] = Field(default=None)
     
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     provider_id: uuid.UUID = Field(foreign_key="provider.id")
     provider: "Provider" = Relationship(back_populates="trips")

@@ -31,8 +31,9 @@ const AMENITY_ICONS: Record<string, string> = {
   omra_assistance: 'moon-outline',
 };
 
-function formatDate(d: string, locale = 'en-US') {
-  return new Date(d).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
+function formatDate(d: string, locale = 'en-US', tz = 'Asia/Riyadh') {
+  const dt = new Date(d.endsWith('Z') ? d : d + 'Z');
+  return dt.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: tz });
 }
 
 export default function TripDetailScreen() {
@@ -179,8 +180,8 @@ export default function TripDetailScreen() {
 
           {/* Key info */}
           <View style={s.infoGrid}>
-            <InfoChip icon="calendar-outline" label={t('trip.start')} value={formatDate(trip.start_date, locale)} colors={colors} s={s} />
-            <InfoChip icon="calendar" label={t('trip.end')} value={formatDate(trip.end_date, locale)} colors={colors} s={s} />
+            <InfoChip icon="calendar-outline" label={t('trip.start')} value={formatDate(trip.start_date, locale, trip.timezone)} colors={colors} s={s} />
+            <InfoChip icon="calendar" label={t('trip.end')} value={formatDate(trip.end_date, locale, trip.timezone)} colors={colors} s={s} />
             <InfoChip
               icon="people-outline"
               label={t('trip.availableSpots')}

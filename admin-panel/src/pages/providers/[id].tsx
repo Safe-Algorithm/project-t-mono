@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/AuthContext';
+import { formatDateInTripTz, tzLabel } from '@/utils/tripDate';
 
 interface Provider {
   id: string;
@@ -30,6 +31,7 @@ interface Trip {
   is_active: boolean;
   provider_id: string;
   packages: TripPackage[];
+  timezone?: string;
 }
 
 interface User {
@@ -322,7 +324,7 @@ const ProviderDetailPage = () => {
                       <p className="font-semibold text-sky-600 dark:text-sky-400">{trip.name}</p>
                       <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 line-clamp-1">{trip.description}</p>
                     </td>
-                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-xs hidden sm:table-cell">{new Date(trip.start_date).toLocaleDateString()} – {new Date(trip.end_date).toLocaleDateString()}</td>
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-xs hidden sm:table-cell">{formatDateInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')} – {formatDateInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh')} <span className="text-slate-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span></td>
                     <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{trip.packages.length > 0 ? trip.packages.map(p => `${p.price} ${p.currency || 'SAR'}`).join(', ') : '—'}</td>
                     <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{trip.max_participants}</td>
                     <td className="py-3 px-4">

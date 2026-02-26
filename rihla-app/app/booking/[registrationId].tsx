@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Clipboard, Linking, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable,
+  Clipboard, Linking, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,14 +35,16 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-function UpdateBubble({ update, onRead }: { update: TripUpdate; onRead: (id: string) => void }) {
+function UpdateBubble({ update, onRead, highlighted }: { update: TripUpdate; onRead: (id: string) => void; highlighted?: boolean }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const isTargeted = !!update.registration_id;
+  const isImage = (att: { url: string; content_type?: string }) => att.content_type?.startsWith('image/') ?? /\.(jpg|jpeg|png|gif|webp)$/i.test(att.url);
 
   return (
     <TouchableOpacity
-      style={[s.bubble, !update.read && s.bubbleUnread]}
+      style={[s.bubble, !update.read && s.bubbleUnread, highlighted && s.bubbleHighlighted]}
       onPress={() => { if (!update.read) onRead(update.id); }}
       activeOpacity={0.85}
     >
@@ -62,7 +64,29 @@ function UpdateBubble({ update, onRead }: { update: TripUpdate; onRead: (id: str
           {!update.read && <View style={s.unreadDot} />}
         </View>
       </View>
-      <Text style={s.bubbleBody}>{update.body}</Text>
+      {update.is_important && (
+        <View style={s.importantBadge}>
+          <Text style={s.importantBadgeText}>{t('trip.important')}</Text>
+        </View>
+      )}
+      <Text style={s.bubbleBody}>{update.message}</Text>
+      {update.attachments && update.attachments.length > 0 && (
+        <View style={s.attachments}>
+          {update.attachments.map((att, i) => (
+            isImage(att) ? (
+              <TouchableOpacity key={i} onPress={() => Linking.openURL(att.url)} activeOpacity={0.85}>
+                <Image source={{ uri: att.url }} style={s.attachImage} resizeMode="cover" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity key={i} style={s.attachFile} onPress={() => Linking.openURL(att.url)} activeOpacity={0.85}>
+                <Ionicons name="document-outline" size={18} color={colors.primary} />
+                <Text style={s.attachFileName} numberOfLines={1}>{att.filename || 'Attachment'}</Text>
+                <Ionicons name="download-outline" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            )
+          ))}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
@@ -71,7 +95,7 @@ export default function BookingDetailScreen() {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
-  const { registrationId, autoPayment } = useLocalSearchParams<{ registrationId: string; autoPayment?: string }>();
+  const { registrationId, autoPayment, focusUpdateId } = useLocalSearchParams<{ registrationId: string; autoPayment?: string; focusUpdateId?: string }>();
   const { data: registration, isLoading } = useRegistration(registrationId ?? null);
   const { data: updates } = useTripUpdates(registration?.trip_id ?? null);
   const { data: tripDetail } = useTrip(registration?.trip_id ?? null);
@@ -85,6 +109,8 @@ export default function BookingDetailScreen() {
   const confirmPayment = useConfirmPayment();
   const autoPaymentTriggered = useRef(false);
   const [spotSecondsLeft, setSpotSecondsLeft] = useState<number | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const updateSectionRef = useRef<View>(null);
 
   // Auto-open card modal when arriving from the booking flow (one-tap pay)
   useEffect(() => {
@@ -116,6 +142,19 @@ export default function BookingDetailScreen() {
   }, [registration?.status, registration?.spot_reserved_until]);
 
   const bookingRef = registration?.booking_reference ?? `BOOK-${registrationId?.slice(0, 8).toUpperCase()}`;
+
+  // Scroll to updates section when arriving from bell with a focusUpdateId
+  useEffect(() => {
+    if (focusUpdateId && updates && updates.length > 0) {
+      setTimeout(() => {
+        updateSectionRef.current?.measureLayout(
+          scrollViewRef.current as any,
+          (_x, y) => { scrollViewRef.current?.scrollTo({ y, animated: true }); },
+          () => {}
+        );
+      }, 400);
+    }
+  }, [focusUpdateId, updates]);
 
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current); }, []);
@@ -254,7 +293,7 @@ export default function BookingDetailScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollViewRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {/* Status + Ref */}
         <View style={s.card}>
           <View style={s.cardTopRow}>
@@ -442,7 +481,7 @@ export default function BookingDetailScreen() {
         )}
 
         {/* Trip Updates */}
-        <View style={s.section}>
+        <View style={s.section} ref={updateSectionRef}>
           <View style={s.sectionTitleRow}>
             <Text style={s.sectionTitle}>{t('trip.updates') ?? 'Trip Updates'}</Text>
             {unreadCount > 0 && (
@@ -459,7 +498,7 @@ export default function BookingDetailScreen() {
           ) : (
             <View style={s.updatesList}>
               {updates.map((u) => (
-                <UpdateBubble key={u.id} update={u} onRead={handleMarkRead} />
+                <UpdateBubble key={u.id} update={u} onRead={handleMarkRead} highlighted={u.id === focusUpdateId} />
               ))}
             </View>
           )}
@@ -503,6 +542,13 @@ function makeStyles(c: ThemeColors) {
     updatesList: { gap: 10 },
     bubble: { backgroundColor: c.surface, borderRadius: Radius.xl, padding: 14, ...Shadow.sm, borderLeftWidth: 3, borderLeftColor: c.border },
     bubbleUnread: { borderLeftColor: c.primary, backgroundColor: c.primarySurface },
+    bubbleHighlighted: { borderWidth: 2, borderColor: c.primary },
+    importantBadge: { alignSelf: 'flex-start', backgroundColor: '#FEE2E2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full, marginBottom: 6 },
+    importantBadgeText: { fontSize: FontSize.xs, color: '#DC2626', fontWeight: '700' },
+    attachments: { marginTop: 10, gap: 8 },
+    attachImage: { width: '100%', height: 180, borderRadius: Radius.lg },
+    attachFile: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: c.background, borderRadius: Radius.lg, padding: 10, borderWidth: 1, borderColor: c.border },
+    attachFileName: { flex: 1, fontSize: FontSize.sm, color: c.primary, fontWeight: '600' },
     bubbleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
     bubbleTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
     bubbleTitle: { fontSize: FontSize.md, fontWeight: '700', color: c.textPrimary, flex: 1 },

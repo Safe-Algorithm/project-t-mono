@@ -22,8 +22,10 @@ const TripFilters: React.FC<TripFiltersProps> = ({ onFilterChange }) => {
     const filters: TripFilterParams = {};
     
     if (search) filters.search = search;
-    if (startDateFrom) filters.start_date_from = new Date(startDateFrom).toISOString();
-    if (startDateTo) filters.start_date_to = new Date(startDateTo).toISOString();
+    // Append T00:00:00 (no Z) so JS interprets the date as local midnight, not UTC midnight.
+    // toISOString() then converts local midnight → UTC for the backend.
+    if (startDateFrom) filters.start_date_from = new Date(startDateFrom + 'T00:00:00').toISOString();
+    if (startDateTo) filters.start_date_to = new Date(startDateTo + 'T23:59:59').toISOString();
     if (minPrice) filters.min_price = parseFloat(minPrice);
     if (maxPrice) filters.max_price = parseFloat(maxPrice);
     if (minParticipants) filters.min_participants = parseInt(minParticipants);

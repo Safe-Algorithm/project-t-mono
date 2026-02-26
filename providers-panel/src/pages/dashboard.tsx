@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
 import { useTrips } from '@/hooks/useTrips';
 import { Trip } from '@/types/trip';
+import { formatDateInTripTz, tzLabel } from '@/utils/tripDate';
 
 function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
   return (
@@ -54,8 +55,8 @@ const DashboardPage = () => {
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
     .slice(0, 5);
 
-  const formatDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const formatDate = (dateStr: string, tz?: string) =>
+    formatDateInTripTz(dateStr, tz ?? 'Asia/Riyadh');
 
   const getTripName = (trip: Trip) =>
     (isRTL ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar) || '—';
@@ -158,7 +159,7 @@ const DashboardPage = () => {
                       {getTripName(trip)}
                     </td>
                     <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400">
-                      {formatDate(trip.start_date)}
+                      {formatDate(trip.start_date, trip.timezone)} <span className="text-xs text-slate-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span>
                     </td>
                     <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400">
                       {trip.max_participants}

@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone as _tz
 from decimal import Decimal
 
 from sqlmodel import Session, select, or_, and_, func
@@ -92,7 +92,7 @@ def search_and_filter_trips(
     newest (created_at desc). Public feed uses only_future=True and
     only_open_registration=True to exclude past/closed trips.
     """
-    now = datetime.utcnow()
+    now = datetime.now(_tz.utc).replace(tzinfo=None)
 
     statement = select(Trip)
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Trip } from '../../types/trip';
+import { formatDateInTripTz, tzLabel } from '../../utils/tripDate';
 
 interface TripListItemProps {
   trip: Trip;
@@ -18,7 +19,7 @@ const TripListItem: React.FC<TripListItemProps> = ({ trip }) => {
           <p className="text-sm text-gray-500" dir="rtl">{trip.name_ar}</p>
         )}
         <p className="text-gray-600 dark:text-gray-400">
-          Dates: {new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}
+          Dates: {formatDateInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')} – {formatDateInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh')} <span className="text-xs text-gray-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span>
         </p>
         <div className="flex items-center gap-4 mt-2">
           <p className={`text-sm font-medium ${trip.is_active ? 'text-green-600' : 'text-red-600'}`}>
