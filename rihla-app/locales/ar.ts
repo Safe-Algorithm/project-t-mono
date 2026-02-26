@@ -294,6 +294,8 @@ export default {
     meals: 'وجبات',
     insurance: 'تأمين',
     visa_assistance: 'مساعدة في التأشيرة',
+    international_drivers_license: 'مساعدة في رخصة القيادة الدولية',
+    omra_assistance: 'مساعدة في العمرة',
   },
 
 } as const;

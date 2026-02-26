@@ -294,6 +294,8 @@ export default {
     meals: 'Meals',
     insurance: 'Insurance',
     visa_assistance: 'Visa Assistance',
+    international_drivers_license: 'International Driver\'s License Assistance',
+    omra_assistance: 'Omra Assistance',
   },
 
 } as const;

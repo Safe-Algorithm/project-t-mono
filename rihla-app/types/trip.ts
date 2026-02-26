@@ -113,12 +113,16 @@ export interface RegistrationParticipant {
   is_registration_user: boolean;
   name: string | null;
   passport_number: string | null;
-  national_id: string | null;
+  id_iqama_number: string | null;
   date_of_birth: string | null;
   gender: string | null;
   phone: string | null;
   email: string | null;
+  address: string | null;
+  nationality: string | null;
+  disability: string | null;
   medical_conditions: string | null;
+  allergies: string | null;
   [key: string]: any;
 }
 

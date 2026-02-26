@@ -43,6 +43,7 @@ const mockUseTripUpdates = jest.fn();
 const mockUseMarkUpdateRead = jest.fn();
 const mockUsePreparePayment = jest.fn();
 const mockUseConfirmPayment = jest.fn();
+const mockUseTrip = jest.fn();
 
 jest.mock('../../hooks/useTrips', () => ({
   useRegistration: (...args: any[]) => mockUseRegistration(...args),
@@ -50,6 +51,7 @@ jest.mock('../../hooks/useTrips', () => ({
   useMarkUpdateRead: () => mockUseMarkUpdateRead(),
   usePreparePayment: () => mockUsePreparePayment(),
   useConfirmPayment: () => mockUseConfirmPayment(),
+  useTrip: (...args: any[]) => mockUseTrip(...args),
 }));
 
 jest.mock('react-i18next', () => ({
@@ -167,6 +169,7 @@ beforeEach(() => {
   mockUseMarkUpdateRead.mockReturnValue({ mutate });
   mockUsePreparePayment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false });
   mockUseConfirmPayment.mockReturnValue({ mutateAsync: jest.fn(), isPending: false });
+  mockUseTrip.mockReturnValue({ data: undefined, isLoading: false });
 });
 
 function setupHooks(overrides: { registration?: any; updates?: any } = {}) {

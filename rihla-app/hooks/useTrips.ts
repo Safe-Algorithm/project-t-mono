@@ -33,6 +33,24 @@ export function useFieldMetadata() {
   });
 }
 
+export interface NationalityOption {
+  code: string;
+  name: string;
+  name_en: string;
+  name_ar: string;
+}
+
+export function useNationalities() {
+  return useQuery<NationalityOption[]>({
+    queryKey: ['nationalities', i18n.language],
+    queryFn: async () => {
+      const { data } = await apiClient.get<{ nationalities: NationalityOption[] }>('/public-trips/nationalities');
+      return data.nationalities;
+    },
+    staleTime: 1000 * 60 * 60 * 24,
+  });
+}
+
 export interface TripFilters {
   search?: string;
   start_date_from?: string;

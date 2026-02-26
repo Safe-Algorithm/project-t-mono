@@ -26,6 +26,7 @@ interface FilterSheetProps {
 const ALL_AMENITIES = [
   'flight_tickets', 'bus', 'tour_guide', 'tours',
   'hotel', 'meals', 'insurance', 'visa_assistance',
+  'international_drivers_license', 'omra_assistance',
 ] as const;
 
 const RATING_STAR_OPTIONS = [

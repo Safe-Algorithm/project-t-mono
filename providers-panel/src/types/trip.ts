@@ -11,7 +11,22 @@ export interface ValidationMetadata {
     description: string;
     required: boolean;
     default?: any;
+    options?: Array<{ value: string; label: string; label_ar?: string }>;
   }>;
+}
+
+export interface PhoneCountry {
+  dial_code: string;
+  code: string;
+  name: string;
+  name_ar: string;
+  flag: string;
+}
+
+export interface NationalityOption {
+  code: string;
+  name: string;
+  name_ar: string;
 }
 
 export interface TripPackageRequiredField {
@@ -64,6 +79,8 @@ export interface Trip {
   meeting_time?: string;
   extra_fees?: TripExtraFee[];
   price?: number | null;
+  simple_trip_required_fields?: string[];
+  simple_trip_required_fields_details?: TripPackageRequiredField[];
 }
 
 export interface TripExtraFee {
@@ -99,6 +116,8 @@ export enum TripAmenity {
   MEALS = 'meals',
   INSURANCE = 'insurance',
   VISA_ASSISTANCE = 'visa_assistance',
+  INTERNATIONAL_DRIVERS_LICENSE = 'international_drivers_license',
+  OMRA_ASSISTANCE = 'omra_assistance',
 }
 
 export interface CreateTripPackage {
@@ -131,9 +150,11 @@ export interface PackageRequiredField {
 export interface FieldMetadata {
   field_name: string;
   display_name: string;
+  display_name_ar?: string;
   ui_type: string;
   placeholder?: string;
+  placeholder_ar?: string;
   required?: boolean;
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string; label_ar?: string }>;
   available_validations?: string[];
 }

@@ -151,7 +151,7 @@ const RegisterPage = () => {
 
     // Check email verification
     if (!emailVerified) {
-      setError('Please verify your email before submitting');
+      setError(t('register.errorVerifyEmail'));
       return;
     }
 
@@ -164,7 +164,7 @@ const RegisterPage = () => {
     const missingFiles = requiredFiles.filter(def => !uploadedFiles[def.id]);
     
     if (missingFiles.length > 0) {
-      setError(`Please upload all required files: ${missingFiles.map(f => f.name_en).join(', ')}`);
+      setError(t('register.missingFiles', { files: missingFiles.map(f => f.name_en).join(', ') }));
       setLoading(false);
       return;
     }
@@ -219,7 +219,7 @@ const RegisterPage = () => {
         await Promise.all(uploadPromises);
       }
       
-      setSuccess('Registration successful! Your documents are being processed.');
+      setSuccess(t('register.successMsg'));
       
       // Redirect to login page after brief delay
       setTimeout(() => {
@@ -257,13 +257,13 @@ const RegisterPage = () => {
           <h1 className="text-5xl font-bold mb-2">رحلة</h1>
           <p className="text-xl font-light opacity-90 mb-1">Rihla</p>
           <p className="text-sm opacity-75 mt-4 max-w-xs leading-relaxed">
-            {isRTL ? 'منصة إدارة الرحلات للمزودين' : 'The travel management platform for trip providers'}
+            {t('register.subtitle')}
           </p>
           <div className="mt-8 space-y-3 text-start">
             {[
-              isRTL ? 'إنشاء وإدارة الرحلات' : 'Create & manage trips',
-              isRTL ? 'تتبع الحجوزات' : 'Track bookings',
-              isRTL ? 'التواصل مع المسافرين' : 'Communicate with travelers',
+              t('register.feature1'),
+              t('register.feature2'),
+              t('register.feature3'),
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-3 text-white/90 text-sm">
                 <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
@@ -299,24 +299,24 @@ const RegisterPage = () => {
             </div>
 
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-              {isRTL ? 'إنشاء حساب مزود' : 'Create provider account'}
+              {t('register.title')}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-              {isRTL ? 'أدخل بياناتك لبدء تقديم الرحلات' : 'Fill in your details to start offering trips'}
+              {t('register.subtitle')}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* ── User Details ── */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
-                <p className={sectionTitleCls}>{isRTL ? 'بيانات المستخدم' : 'User Details'}</p>
+                <p className={sectionTitleCls}>{t('register.userDetails')}</p>
 
                 <div>
-                  <label className={labelCls}>{isRTL ? 'الاسم الكامل' : 'Full Name'}</label>
-                  <input type="text" name="name" placeholder={isRTL ? 'محمد أحمد' : 'John Doe'} value={formData.name} onChange={handleChange} required className={inputCls} />
+                  <label className={labelCls}>{t('register.fullName')}</label>
+                  <input type="text" name="name" placeholder={t('register.fullNamePlaceholder')} value={formData.name} onChange={handleChange} required className={inputCls} />
                 </div>
 
                 <div>
-                  <label className={labelCls}>{isRTL ? 'البريد الإلكتروني' : 'Email Address'}</label>
+                  <label className={labelCls}>{t('register.emailAddress')}</label>
                   <div className="flex gap-2">
                     <input
                       type="email" name="email" placeholder="you@company.com"
@@ -328,34 +328,34 @@ const RegisterPage = () => {
                       <button type="button" onClick={handleSendOTP} disabled={sendingOtp || !formData.email}
                         className="px-4 py-2.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
                         {sendingOtp
-                          ? <span className="flex items-center gap-1.5"><svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{isRTL ? 'إرسال...' : 'Sending...'}</span>
-                          : (isRTL ? 'تحقق' : 'Verify')}
+                          ? <span className="flex items-center gap-1.5"><svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>{t('register.sending')}</span>
+                          : t('register.verify')}
                       </button>
                     )}
                     {emailVerified && (
                       <button type="button" onClick={handleEditEmail}
                         className="px-4 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-medium rounded-xl transition-colors whitespace-nowrap">
-                        {isRTL ? 'تعديل' : 'Edit'}
+                        {t('register.edit')}
                       </button>
                     )}
                   </div>
 
                   {otpSent && !emailVerified && (
                     <div className="mt-3 p-3 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl space-y-2">
-                      <p className="text-xs text-sky-700 dark:text-sky-400">{isRTL ? 'تم إرسال رمز التحقق إلى بريدك الإلكتروني' : 'A verification code was sent to your email'}</p>
+                      <p className="text-xs text-sky-700 dark:text-sky-400">{t('register.otpSentHint')}</p>
                       <div className="flex gap-2">
-                        <input type="text" placeholder={isRTL ? 'أدخل الرمز المكون من 6 أرقام' : 'Enter 6-digit code'}
+                        <input type="text" placeholder={t('register.enterOtp')}
                           value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} maxLength={6}
                           className={`${inputCls} flex-1 tracking-widest font-mono`} />
                         <button type="button" onClick={handleVerifyOTP} disabled={verifyingOtp || otp.length !== 6}
                           className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
                           {verifyingOtp
                             ? <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                            : (isRTL ? 'تأكيد' : 'Confirm')}
+                            : t('register.confirm')}
                         </button>
                         <button type="button" onClick={handleSendOTP} disabled={sendingOtp}
                           className="px-3 py-2.5 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm rounded-xl transition-colors whitespace-nowrap">
-                          {isRTL ? 'إعادة إرسال' : 'Resend'}
+                          {t('register.resend')}
                         </button>
                       </div>
                     </div>
@@ -366,38 +366,38 @@ const RegisterPage = () => {
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
-                      {isRTL ? 'تم التحقق من البريد الإلكتروني' : 'Email verified'}
+                      {t('register.emailVerified')}
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className={labelCls}>{isRTL ? 'رقم الهاتف' : 'Phone Number'}</label>
+                  <label className={labelCls}>{t('register.phone')}</label>
                   <input type="text" name="phone" placeholder="+966 50 123 4567" value={formData.phone} onChange={handleChange} required className={inputCls} />
                 </div>
 
                 <div>
-                  <label className={labelCls}>{isRTL ? 'كلمة المرور' : 'Password'}</label>
+                  <label className={labelCls}>{t('register.password')}</label>
                   <input type="password" name="password" placeholder="••••••••" value={formData.password} onChange={handleChange} required className={inputCls} />
                 </div>
               </div>
             
               {/* ── Company Details ── */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
-                <p className={sectionTitleCls}>{isRTL ? 'بيانات الشركة' : 'Company Details'}</p>
+                <p className={sectionTitleCls}>{t('register.companyDetails')}</p>
 
                 <div>
-                  <label className={labelCls}>{isRTL ? 'اسم الشركة' : 'Company Name'}</label>
-                  <input type="text" name="companyName" placeholder={isRTL ? 'شركة السفر المتحدة' : 'ABC Travel Company'} value={formData.companyName} onChange={handleChange} required className={inputCls} />
+                  <label className={labelCls}>{t('register.companyName')}</label>
+                  <input type="text" name="companyName" placeholder={t('register.companyNamePlaceholder')} value={formData.companyName} onChange={handleChange} required className={inputCls} />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={labelCls}>{isRTL ? 'البريد الإلكتروني للشركة' : 'Company Email'}</label>
+                    <label className={labelCls}>{t('register.companyEmail')}</label>
                     <input type="email" name="companyEmail" placeholder="info@company.com" value={formData.companyEmail} onChange={handleChange} required className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>{isRTL ? 'هاتف الشركة' : 'Company Phone'}</label>
+                    <label className={labelCls}>{t('register.companyPhone')}</label>
                     <input type="text" name="companyPhone" placeholder="+966 11 123 4567" value={formData.companyPhone} onChange={handleChange} required className={inputCls} />
                   </div>
                 </div>
@@ -405,11 +405,11 @@ const RegisterPage = () => {
 
               {/* ── Required Documents ── */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-                <p className={sectionTitleCls}>{isRTL ? 'المستندات المطلوبة' : 'Required Documents'}</p>
+                <p className={sectionTitleCls}>{t('register.requiredDocs')}</p>
                 {loadingFiles ? (
                   <div className="flex items-center justify-center gap-3 py-8">
                     <div className="w-5 h-5 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{isRTL ? 'جاري تحميل المتطلبات...' : 'Loading requirements...'}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('register.loadingRequirements')}</p>
                   </div>
                 ) : fileDefinitions.length > 0 ? (
                   <div className="space-y-3">
@@ -425,7 +425,7 @@ const RegisterPage = () => {
                   </div>
                 ) : (
                   <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
-                    {isRTL ? 'لا توجد متطلبات مستندات.' : 'No document requirements configured.'}
+                    {t('register.noDocRequirements')}
                   </p>
                 )}
               </div>
@@ -461,17 +461,17 @@ const RegisterPage = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    {isRTL ? 'جاري التسجيل...' : 'Registering...'}
+                    {t('register.registering')}
                   </span>
                 ) : emailVerified
-                  ? (isRTL ? 'إتمام التسجيل' : 'Complete Registration')
-                  : (isRTL ? 'تحقق من البريد الإلكتروني أولاً' : 'Verify Email First')}
+                  ? t('register.completeRegistration')
+                  : t('register.verifyEmailFirst')}
               </button>
 
               <p className="text-center text-sm text-slate-500 dark:text-slate-400 pb-6">
-                {isRTL ? 'لديك حساب بالفعل؟ ' : 'Already have an account? '}
+                {t('register.alreadyHaveAccount')}{' '}
                 <a href="/login" className="text-sky-500 hover:text-sky-600 font-semibold">
-                  {isRTL ? 'سجّل دخولك' : 'Sign in'}
+                  {t('register.signIn')}
                 </a>
               </p>
             </form>

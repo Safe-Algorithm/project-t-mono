@@ -11,8 +11,7 @@ class TripFieldType(str, Enum):
     PHONE = "phone"
     EMAIL = "email"
     ADDRESS = "address"
-    CITY = "city"
-    COUNTRY = "country"
+    NATIONALITY = "nationality"
     DATE_OF_BIRTH = "date_of_birth"
     GENDER = "gender"
     DISABILITY = "disability"
@@ -24,8 +23,6 @@ class GenderType(str, Enum):
     """Enum for gender field"""
     MALE = "male"
     FEMALE = "female"
-    OTHER = "other"
-    PREFER_NOT_TO_SAY = "prefer_not_to_say"
 
 
 class DisabilityType(str, Enum):
@@ -59,7 +56,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Enter full name",
         "placeholder_ar": "أدخل الاسم الكامل",
         "required": True,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
+        "available_validations": []
     },
     TripFieldType.EMAIL: {
         "display_name": "Email Address",
@@ -68,7 +65,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Enter email address",
         "placeholder_ar": "أدخل البريد الإلكتروني",
         "required": True,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
+        "available_validations": []
     },
     TripFieldType.PHONE: {
         "display_name": "Phone Number",
@@ -77,7 +74,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Enter phone number",
         "placeholder_ar": "أدخل رقم الهاتف",
         "required": True,
-        "available_validations": ["phone_country_codes", "phone_min_length", "phone_max_length", "regex_pattern"]
+        "available_validations": ["phone_country_codes"]
     },
     TripFieldType.ID_IQAMA_NUMBER: {
         "display_name": "ID/Iqama Number",
@@ -86,7 +83,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Enter ID or Iqama number",
         "placeholder_ar": "أدخل رقم الهوية أو الإقامة",
         "required": True,
-        "available_validations": ["saudi_id_format", "iqama_format", "regex_pattern", "min_length", "max_length"]
+        "available_validations": []
     },
     TripFieldType.PASSPORT_NUMBER: {
         "display_name": "Passport Number",
@@ -95,7 +92,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Enter passport number",
         "placeholder_ar": "أدخل رقم جواز السفر",
         "required": True,
-        "available_validations": ["passport_format", "regex_pattern", "min_length", "max_length"]
+        "available_validations": []
     },
     TripFieldType.DATE_OF_BIRTH: {
         "display_name": "Date of Birth",
@@ -112,8 +109,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "ui_type": UIFieldType.SELECT,
         "options": [
             {"value": GenderType.MALE.value, "label": "Male", "label_ar": "ذكر"},
-            {"value": GenderType.FEMALE.value, "label": "Female", "label_ar": "أنثى"},
-            {"value": GenderType.PREFER_NOT_TO_SAY.value, "label": "Prefer not to say", "label_ar": "أفضل عدم الإفصاح"}
+            {"value": GenderType.FEMALE.value, "label": "Female", "label_ar": "أنثى"}
         ],
         "required": False,
         "available_validations": ["gender_restrictions"]
@@ -125,25 +121,16 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Enter full address",
         "placeholder_ar": "أدخل العنوان الكامل",
         "required": False,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
+        "available_validations": []
     },
-    TripFieldType.CITY: {
-        "display_name": "City",
-        "display_name_ar": "المدينة",
-        "ui_type": UIFieldType.TEXT,
-        "placeholder": "Enter city",
-        "placeholder_ar": "أدخل المدينة",
+    TripFieldType.NATIONALITY: {
+        "display_name": "Nationality",
+        "display_name_ar": "الجنسية",
+        "ui_type": UIFieldType.SELECT,
+        "placeholder": "Select nationality",
+        "placeholder_ar": "اختر الجنسية",
         "required": False,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
-    },
-    TripFieldType.COUNTRY: {
-        "display_name": "Country",
-        "display_name_ar": "الدولة",
-        "ui_type": UIFieldType.TEXT,
-        "placeholder": "Enter country",
-        "placeholder_ar": "أدخل الدولة",
-        "required": False,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
+        "available_validations": ["nationality_restriction"]
     },
     TripFieldType.DISABILITY: {
         "display_name": "Disability",
@@ -167,7 +154,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "Describe any medical conditions",
         "placeholder_ar": "صف أي حالات طبية",
         "required": False,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
+        "available_validations": []
     },
     TripFieldType.ALLERGIES: {
         "display_name": "Allergies",
@@ -176,7 +163,7 @@ FIELD_METADATA: Dict[TripFieldType, Dict[str, Any]] = {
         "placeholder": "List any allergies",
         "placeholder_ar": "اذكر أي حساسية",
         "required": False,
-        "available_validations": ["min_length", "max_length", "regex_pattern"]
+        "available_validations": []
     }
 }
 

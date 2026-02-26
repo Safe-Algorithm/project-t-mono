@@ -7,15 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
-import { FieldMetadata } from '../../hooks/useTrips';
+import { FieldMetadata, NationalityOption } from '../../hooks/useTrips';
 
 // ─── Field type constants (mirrors backend TripFieldType) ────────────────────
 export type FieldType =
   | 'name' | 'email' | 'phone' | 'id_iqama_number' | 'passport_number'
-  | 'date_of_birth' | 'gender' | 'address' | 'city' | 'country'
+  | 'date_of_birth' | 'gender' | 'address' | 'nationality'
   | 'disability' | 'medical_conditions' | 'allergies';
 
-interface BackendOption { value: string; label: string; }
+interface BackendOption { value: string; label: string; labelAlt?: string; }
 
 interface Props {
   fieldType: FieldType;
@@ -26,9 +26,11 @@ interface Props {
   metadata?: FieldMetadata;
   /** Optional allowed_genders from validation_config — filters select options */
   allowedGenders?: string[];
+  /** Nationality options fetched from /public-trips/nationalities */
+  nationalityOptions?: NationalityOption[];
 }
 
-export default function ParticipantField({ fieldType, value, onChange, isRequired, metadata, allowedGenders }: Props) {
+export default function ParticipantField({ fieldType, value, onChange, isRequired, metadata, allowedGenders, nationalityOptions }: Props) {
   const { colors } = useTheme();
   const s = makeStyles(colors);
 
@@ -37,6 +39,16 @@ export default function ParticipantField({ fieldType, value, onChange, isRequire
 
   if (uiType === 'date') {
     return <DateField label={label} value={value} onChange={onChange} isRequired={isRequired} colors={colors} s={s} />;
+  }
+
+  // Nationality — searchable select from dynamic list
+  if (fieldType === 'nationality' && nationalityOptions) {
+    const natOptions: BackendOption[] = nationalityOptions.map((n) => ({
+      value: n.code,
+      label: n.name,
+      labelAlt: n.name_ar ?? n.name_en,
+    }));
+    return <SearchableSelectField label={label} value={value} onChange={onChange} options={natOptions} isRequired={isRequired} colors={colors} s={s} />;
   }
 
   if (uiType === 'select' && metadata?.options) {
@@ -266,6 +278,73 @@ function SelectField({ label, value, onChange, options, isRequired, colors, s }:
                   </TouchableOpacity>
                 );
               }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+// ─── Searchable select (nationality) ─────────────────────────────────────────
+function SearchableSelectField({ label, value, onChange, options, isRequired, colors, s }: any) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+
+  const filtered = search.trim()
+    ? options.filter((o: BackendOption) =>
+        o.label.toLowerCase().includes(search.toLowerCase()) ||
+        (o.labelAlt ?? '').toLowerCase().includes(search.toLowerCase())
+      )
+    : options;
+
+  const selected = options.find((o: BackendOption) => o.value === value);
+
+  return (
+    <View style={s.fieldWrap}>
+      <FieldLabel label={label} isRequired={isRequired} s={s} />
+      <TouchableOpacity style={s.selectBtn} onPress={() => { setSearch(''); setOpen(true); }} activeOpacity={0.7}>
+        <Ionicons name="earth-outline" size={18} color={selected ? colors.textPrimary : colors.textTertiary} />
+        <Text style={[s.selectBtnText, !selected && s.selectBtnPlaceholder]}>
+          {selected?.label ?? label}
+        </Text>
+        <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade">
+        <Pressable style={s.modalOverlay} onPress={() => setOpen(false)}>
+          <Pressable style={[s.selectSheet, { maxHeight: '75%' }]} onPress={(e) => e.stopPropagation()}>
+            <View style={s.selectSheetHandle} />
+            <Text style={s.selectSheetTitle}>{label}</Text>
+            <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+              <TextInput
+                style={[s.input, { marginBottom: 0 }]}
+                value={search}
+                onChangeText={setSearch}
+                placeholder={t('common.search', 'Search...')}
+                placeholderTextColor={colors.textTertiary}
+                autoFocus
+              />
+            </View>
+            <FlatList
+              data={filtered}
+              keyExtractor={(item: BackendOption) => item.value}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }: { item: BackendOption }) => {
+                const isSelected = item.value === value;
+                return (
+                  <TouchableOpacity
+                    style={[s.selectOption, isSelected && s.selectOptionActive]}
+                    onPress={() => { onChange(item.value); setOpen(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive]}>{item.label}</Text>
+                    {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={<Text style={{ padding: 16, color: colors.textTertiary }}>{t('common.noResults', 'No results')}</Text>}
             />
           </Pressable>
         </Pressable>

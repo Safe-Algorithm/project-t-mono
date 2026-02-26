@@ -75,7 +75,9 @@ def prepare_payment(
     if already_paid:
         raise HTTPException(status_code=400, detail="Payment already completed")
 
-    # Cancel any stale INITIATED payments so the user can retry cleanly
+    # Cancel any stale INITIATED payments so the user can retry cleanly.
+    # Also attempt to void them at Moyasar so a dangling authorisation can't
+    # later complete and charge the card a second time.
     stale = session.exec(
         select(Payment).where(
             Payment.registration_id == payment_in.registration_id,
@@ -83,6 +85,15 @@ def prepare_payment(
         )
     ).all()
     for p in stale:
+        if p.moyasar_payment_id:
+            import threading, asyncio
+            moyasar_id = p.moyasar_payment_id
+            def _void(mid: str) -> None:
+                try:
+                    asyncio.run(payment_service.void_payment(mid))
+                except Exception:
+                    pass  # best-effort; DB record is marked FAILED regardless
+            threading.Thread(target=_void, args=(moyasar_id,), daemon=True).start()
         p.status = PaymentStatus.FAILED
         session.add(p)
 
@@ -189,24 +200,30 @@ async def payment_callback(
 
         registration = None
         if moyasar_payment["status"] == "paid":
-            payment.status = PaymentStatus.PAID
-            payment.paid_at = datetime.utcnow()
-            if moyasar_payment.get("fee"):
-                payment.fee = Decimal(moyasar_payment["fee"]) / 100
+            if payment.status != PaymentStatus.PAID:
+                payment.status = PaymentStatus.PAID
+                payment.paid_at = datetime.utcnow()
+                if moyasar_payment.get("fee"):
+                    payment.fee = Decimal(moyasar_payment["fee"]) / 100
 
-            registration = session.get(TripRegistration, payment.registration_id)
-            if registration:
-                registration.status = "confirmed"
-                session.add(registration)
+                registration = session.get(TripRegistration, payment.registration_id)
+                if registration and registration.status == "pending_payment":
+                    registration.status = "confirmed"
+                    session.add(registration)
+
+                payment.updated_at = datetime.utcnow()
+                session.add(payment)
+                session.commit()
+            # Already PAID — idempotent, skip DB write
 
         elif moyasar_payment["status"] == "failed":
-            payment.status = PaymentStatus.FAILED
-            payment.failed_at = datetime.utcnow()
-            payment.failure_reason = "Payment failed"
-
-        payment.updated_at = datetime.utcnow()
-        session.add(payment)
-        session.commit()
+            if payment.status not in (PaymentStatus.PAID, PaymentStatus.FAILED):
+                payment.status = PaymentStatus.FAILED
+                payment.failed_at = datetime.utcnow()
+                payment.failure_reason = "Payment failed"
+                payment.updated_at = datetime.utcnow()
+                session.add(payment)
+                session.commit()
 
         # Send confirmation email after successful payment
         if registration and registration.status == "confirmed":

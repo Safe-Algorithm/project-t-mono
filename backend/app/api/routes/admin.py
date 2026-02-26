@@ -500,22 +500,42 @@ def get_trip_registrations_admin(
     result = []
     for reg in registrations:
         user = session.get(User, reg.user_id)
-        reg_dict = TripRegistrationSchema(
-            id=reg.id,
-            trip_id=reg.trip_id,
-            user_id=reg.user_id,
-            total_participants=reg.total_participants,
-            total_amount=reg.total_amount,
-            status=reg.status,
-            registration_date=reg.registration_date,
-            spot_reserved_until=reg.spot_reserved_until,
-            booking_reference=reg.booking_reference,
-            participants=list(reg.participants or []),
-        ).model_dump()
-        reg_dict["user_name"] = user.name if user else None
-        reg_dict["user_email"] = user.email if user else None
-        reg_dict["user_phone"] = user.phone if user else None
-        result.append(reg_dict)
+        participants_out = []
+        for p in (reg.participants or []):
+            participants_out.append({
+                "id": str(p.id),
+                "registration_id": str(p.registration_id),
+                "registration_user_id": str(p.registration_user_id),
+                "package_id": str(p.package_id) if p.package_id else None,
+                "is_registration_user": p.is_registration_user,
+                "name": p.name,
+                "phone": p.phone,
+                "email": p.email,
+                "address": p.address,
+                "date_of_birth": str(p.date_of_birth) if p.date_of_birth else None,
+                "gender": p.gender.value if p.gender else None,
+                "id_iqama_number": p.id_iqama_number,
+                "passport_number": p.passport_number,
+                "nationality": p.nationality if hasattr(p, "nationality") else None,
+                "disability": p.disability.value if p.disability else None,
+                "medical_conditions": p.medical_conditions,
+                "allergies": p.allergies,
+            })
+        result.append({
+            "id": str(reg.id),
+            "trip_id": str(reg.trip_id),
+            "user_id": str(reg.user_id),
+            "total_participants": reg.total_participants,
+            "total_amount": str(reg.total_amount),
+            "status": reg.status,
+            "registration_date": reg.registration_date.isoformat(),
+            "spot_reserved_until": reg.spot_reserved_until.isoformat() if reg.spot_reserved_until else None,
+            "booking_reference": reg.booking_reference,
+            "participants": participants_out,
+            "user_name": user.name if user else None,
+            "user_email": user.email if user else None,
+            "user_phone": user.phone if user else None,
+        })
 
     return result
 

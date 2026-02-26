@@ -7,7 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip, useFieldMetadata } from '../../hooks/useTrips';
+import { useTrip, useFieldMetadata, useNationalities } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
@@ -33,6 +33,7 @@ export default function BookingScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const { data: trip, isLoading: tripLoading } = useTrip(tripId);
   const { data: fieldMetadata } = useFieldMetadata();
+  const { data: nationalities } = useNationalities();
   const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
@@ -121,11 +122,14 @@ export default function BookingScreen() {
   };
 
   const validateFields = () => {
+    const fieldLabel = (ft: string) =>
+      fieldMetadata?.[ft]?.display_name ?? ft.replace(/_/g, ' ');
+
     if (!isPackaged) {
       for (let i = 0; i < simpleCount; i++) {
         for (const field of simpleRequiredFields) {
           if (!simpleParticipants[i]?.[field.field_type]?.trim()) {
-            Alert.alert(t('common.error'), `${field.field_type.replace(/_/g, ' ')} — ${t('booking.participant', { number: i + 1 })}`);
+            Alert.alert(t('common.error'), `${fieldLabel(field.field_type)} — ${t('booking.participant', { number: i + 1 })}`);
             return false;
           }
         }
@@ -134,7 +138,7 @@ export default function BookingScreen() {
       for (const { participant, pkg, globalIndex } of pkgFlatList) {
         for (const ft of (pkg.required_fields ?? [])) {
           if (!participant[ft]?.trim()) {
-            Alert.alert(t('common.error'), `${ft.replace(/_/g, ' ')} — ${t('booking.participant', { number: globalIndex + 1 })}`);
+            Alert.alert(t('common.error'), `${fieldLabel(ft)} — ${t('booking.participant', { number: globalIndex + 1 })}`);
             return false;
           }
         }
@@ -332,6 +336,7 @@ export default function BookingScreen() {
                         onChange={v => updateSimpleParticipant(i, field.field_type, v)}
                         isRequired={field.is_required}
                         metadata={fieldMetadata?.[field.field_type]}
+                        nationalityOptions={nationalities}
                       />
                     ))}
                   </View>
@@ -359,6 +364,7 @@ export default function BookingScreen() {
                           isRequired={field.is_required}
                           metadata={fieldMetadata?.[field.field_type]}
                           allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
+                          nationalityOptions={nationalities}
                         />
                       ))}
                     </View>

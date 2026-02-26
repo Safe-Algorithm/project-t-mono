@@ -20,7 +20,7 @@ interface TripFormProps {
 }
 
 const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [isPackagedTrip, setIsPackagedTrip] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
 
@@ -116,7 +116,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         setAvailableFields(response.fields || []);
       } catch (err) {
         console.error('Failed to load available fields:', err);
-        setAvailableFields([]); // Ensure it's always an array
+        setAvailableFields([]);
       }
     };
     
@@ -213,6 +213,12 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     }
   }, [trip]);
 
+  useEffect(() => {
+    tripService.getAvailableFields()
+      .then(r => setAvailableFields(r.fields || []))
+      .catch(() => {});
+  }, [i18n.language]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
@@ -234,16 +240,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     );
   };
 
-  const amenityLabels: Record<string, string> = {
-    [TripAmenity.FLIGHT_TICKETS]: 'Flight Tickets',
-    [TripAmenity.BUS]: 'Bus Transportation',
-    [TripAmenity.TOUR_GUIDE]: 'Tour Guide',
-    [TripAmenity.TOURS]: 'Tours',
-    [TripAmenity.HOTEL]: 'Hotel Accommodation',
-    [TripAmenity.MEALS]: 'Meals',
-    [TripAmenity.INSURANCE]: 'Travel Insurance',
-    [TripAmenity.VISA_ASSISTANCE]: 'Visa Assistance',
-  };
+  const amenityKeys = Object.values(TripAmenity) as string[];
 
   const addPackage = () => {
     const newIndex = packages.length;
@@ -603,13 +600,16 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           <div className="mb-4">
             <p className={labelCls}>{t('trip.amenities')}</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {Object.entries(amenityLabels).map(([value, label]) => (
+              {amenityKeys.map(value => (
                 <label key={value} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-sm font-medium transition ${selectedAmenities.includes(value) ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
                   <input type="checkbox" checked={selectedAmenities.includes(value)} onChange={() => toggleAmenity(value)} className="accent-sky-500 flex-shrink-0" />
-                  {label}
+                  {t(`amenity.${value}`)}
                 </label>
               ))}
             </div>
+            {selectedAmenities.includes('omra_assistance') && !destinationSelections.some(d => d._destinationName.toLowerCase().includes('makkah') || d._destinationName.includes('مكة') || d._destinationName.includes('مكه')) && (
+              <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">⚠ Omra Assistance is typically for trips to Makkah. Make sure the destination is set accordingly.</p>
+            )}
           </div>
           <div>
             <p className={labelCls}>{t('trip.requiredParticipantFields')}</p>
@@ -778,12 +778,12 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                 <div className="mb-3">
                   <p className={labelCls}>{t('trip.amenities')}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {Object.entries(amenityLabels).map(([value, label]) => {
+                    {amenityKeys.map(value => {
                       const pkgAmenities = pkg.amenities ?? [];
                       return (
                         <label key={value} className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer text-xs font-medium transition ${pkgAmenities.includes(value) ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-sky-300 dark:hover:border-sky-700 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}>
                           <input type="checkbox" checked={pkgAmenities.includes(value)} onChange={() => { const updated = pkgAmenities.includes(value) ? pkgAmenities.filter(a => a !== value) : [...pkgAmenities, value]; updatePackage(index, 'amenities', updated as any); }} className="accent-sky-500 flex-shrink-0" />
-                          {label}
+                          {t(`amenity.${value}`)}
                         </label>
                       );
                     })}
@@ -803,7 +803,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                           <div className="flex items-center justify-between gap-2">
                             <label className={`flex items-center gap-2 text-sm flex-1 min-w-0 ${isMandatory ? 'opacity-60' : 'cursor-pointer'}`}>
                               <input type="checkbox" checked={isChecked} disabled={isMandatory} onChange={() => toggleRequiredField(index, field.field_name)} className="accent-sky-500 flex-shrink-0" />
-                              <span className="font-semibold text-slate-800 dark:text-slate-200">{field.display_name}</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-200">{i18n.language === 'ar' && field.display_name_ar ? field.display_name_ar : field.display_name}</span>
                               <span className="text-slate-400 dark:text-slate-500 text-xs">({field.ui_type})</span>
                               {isMandatory && <span className="text-red-400 dark:text-red-500 text-xs font-bold">({t('common.required')})</span>}
                             </label>

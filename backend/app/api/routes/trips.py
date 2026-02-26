@@ -3,7 +3,7 @@ import uuid
 import logging
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
+from fastapi import APIRouter, Depends, Header, HTTPException, BackgroundTasks, UploadFile, File
 from sqlmodel import Session
 from pydantic import BaseModel
 
@@ -14,7 +14,7 @@ from app.utils.localization import get_name, get_description
 from app.schemas.trip import TripCreate, TripRead, TripUpdate
 from app.schemas.trip_package_field import TripPackageRequiredFieldsResponse, PackageRequiredFieldWithValidation, TripPackageRequiredFieldsSet, TripPackageRequiredFieldsSetWithValidation
 from app.models.trip_field import TripFieldType, FIELD_METADATA
-from app.models.field_validation import get_available_validations_for_field, validate_field_value, validate_validation_config, VALIDATION_METADATA
+from app.models.field_validation import get_available_validations_for_field, validate_field_value, validate_validation_config, VALIDATION_METADATA, PHONE_COUNTRY_METADATA, NATIONALITY_LIST
 from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
 from app.schemas.trip_package import TripPackageCreate, TripPackage, TripPackageUpdate, TripPackageWithRequiredFields
 from app.schemas.trip_registration import TripRegistrationCreate, TripRegistration
@@ -127,6 +127,8 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
     resp_price = None
     resp_is_refundable = None
     resp_amenities = None
+    simple_required_fields: list = []
+    simple_required_fields_details: list = []
     if trip.is_packaged_trip:
         packages_with_fields = [_build_package_with_fields(session, p) for p in all_packages]
     else:
@@ -138,6 +140,16 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
             resp_price = float(hp.price) if hp.price is not None else None
             resp_is_refundable = hp.is_refundable
             resp_amenities = hp.amenities
+            from app.models.trip_package_field import TripPackageRequiredField
+            hp_fields = session.query(TripPackageRequiredField).filter(
+                TripPackageRequiredField.package_id == hp.id
+            ).all()
+            simple_required_fields = [rf.field_type.value for rf in hp_fields]
+            simple_required_fields_details = [
+                {"id": str(rf.id), "package_id": str(rf.package_id), "field_type": rf.field_type.value,
+                 "is_required": rf.is_required, "validation_config": rf.validation_config}
+                for rf in hp_fields
+            ]
     active_regs = session.exec(
         sql_select(TripRegistrationModel).where(
             TripRegistrationModel.trip_id == trip.id,
@@ -161,6 +173,8 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         is_international=trip.is_international, is_packaged_trip=trip.is_packaged_trip,
         packages=packages_with_fields, extra_fees=extra_fees,
         available_spots=max(0, trip.max_participants - booked),
+        simple_trip_required_fields=simple_required_fields,
+        simple_trip_required_fields_details=simple_required_fields_details,
     )
 
 
@@ -261,34 +275,49 @@ def read_trips(
 @router.get("/available-fields", response_model=AvailableFieldsResponse)
 def get_available_package_fields(
     current_user: User = Depends(get_current_active_provider),
+    accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
 ):
     """Get all available field types with metadata for trip package creation."""
+    lang = "ar" if (accept_language or "en").startswith("ar") else "en"
     fields = []
-    
+
     for field_type in TripFieldType:
         metadata = FIELD_METADATA.get(field_type, {})
-        
+
         # Convert options if they exist
         options = None
         if "options" in metadata:
             options = [
-                FieldOption(value=opt["value"], label=opt["label"], label_ar=opt.get("label_ar"))
+                FieldOption(
+                    value=opt["value"],
+                    label=opt["label_ar"] if lang == "ar" and opt.get("label_ar") else opt["label"],
+                    label_ar=opt.get("label_ar"),
+                )
                 for opt in metadata["options"]
             ]
-        
+
+        display_name = (
+            metadata.get("display_name_ar") if lang == "ar" and metadata.get("display_name_ar")
+            else metadata.get("display_name", field_type.value.replace("_", " ").title())
+        )
+        placeholder = (
+            metadata.get("placeholder_ar") if lang == "ar" and metadata.get("placeholder_ar")
+            else metadata.get("placeholder")
+        )
+
         field_metadata = FieldMetadata(
             field_name=field_type,
-            display_name=metadata.get("display_name", field_type.value.replace("_", " ").title()),
+            display_name=display_name,
             display_name_ar=metadata.get("display_name_ar"),
             ui_type=metadata.get("ui_type", "text"),
-            placeholder=metadata.get("placeholder"),
+            placeholder=placeholder,
             placeholder_ar=metadata.get("placeholder_ar"),
             required=metadata.get("required", True),
             options=options,
             available_validations=metadata.get("available_validations", [])
         )
         fields.append(field_metadata)
-    
+
     return AvailableFieldsResponse(fields=fields)
 
 
@@ -940,9 +969,11 @@ async def register_for_trip(
     trip_id: uuid.UUID,
     registration_in: TripRegistrationCreate,
     current_user: User = Depends(get_current_active_user),
+    accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
 ):
     """Register for a trip with multiple participants."""
     from datetime import datetime, timedelta
+    _reg_lang = "ar" if (accept_language or "en").startswith("ar") else "en"
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not trip:
         raise HTTPException(status_code=404, detail="Trip not found")
@@ -1069,9 +1100,9 @@ async def register_for_trip(
                         detail=f"Required field '{field_type.value}' is missing for participant with package '{get_name(package)}'"
                     )
                 
-                # Validate field value against validation config if present
-                if field_value and required_field.validation_config:
-                    validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config)
+                # Validate field value: always for passport (auto format), config-driven otherwise
+                if field_value and (required_field.validation_config or field_type == TripFieldType.PASSPORT_NUMBER):
+                    validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config, lang=_reg_lang)
                     if validation_errors:
                         raise HTTPException(
                             status_code=400,
@@ -1205,6 +1236,22 @@ def get_trip_registrations(
 # Field Validation Endpoints
 
 
+@router.get("/validation/phone-countries")
+def get_phone_countries(
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Get the list of countries with dial codes for the phone field picker."""
+    return {"countries": PHONE_COUNTRY_METADATA}
+
+
+@router.get("/validation/nationalities")
+def get_nationalities(
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Get the list of nationalities for the nationality field picker."""
+    return {"nationalities": NATIONALITY_LIST}
+
+
 @router.get("/validation/available/{field_type}")
 def get_available_validations(
     field_type: TripFieldType,
@@ -1255,9 +1302,11 @@ def validate_field_value_endpoint(
     *,
     request: ValidationValueRequest,
     current_user: User = Depends(get_current_active_provider),
+    accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
 ):
     """Validate a field value against validation configuration."""
-    errors = validate_field_value(request.field_type, request.value, request.validation_config)
+    lang = "ar" if (accept_language or "en").startswith("ar") else "en"
+    errors = validate_field_value(request.field_type, request.value, request.validation_config, lang=lang)
     return {
         "field_type": request.field_type,
         "value": request.value,

@@ -92,6 +92,8 @@ interface Trip {
   has_meeting_place?: boolean;
   meeting_location?: string;
   meeting_time?: string;
+  simple_trip_required_fields?: string[];
+  simple_trip_required_fields_details?: TripPackageRequiredFieldDetail[];
 }
 
 interface TripRegistration {
@@ -529,6 +531,36 @@ const TripDetailPage = () => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Required Fields — simple (non-packaged) trips only */}
+      {!trip.is_packaged_trip && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">{t('tripDetail.requiredFields')} <span className="text-slate-400 font-normal">({(trip.simple_trip_required_fields ?? []).length})</span></h2>
+          {(trip.simple_trip_required_fields ?? []).length === 0 ? (
+            <p className="text-sm text-slate-400 dark:text-slate-500">{t('tripDetail.noRequiredFields')}</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {(trip.simple_trip_required_fields ?? []).map((fieldType) => {
+                const metadata = fieldMetadata[fieldType];
+                const fieldDetail = (trip.simple_trip_required_fields_details ?? []).find(d => d.field_type === fieldType);
+                return (
+                  <div key={fieldType} className="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 border border-slate-200 dark:border-slate-700">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{metadata?.display_name || fieldType}</p>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">Type: {metadata?.ui_type || 'text'}</p>
+                    {fieldDetail && (
+                      <ValidationDisplay
+                        fieldType={fieldType}
+                        fieldDisplayName={metadata?.display_name || fieldType}
+                        validationConfig={fieldDetail.validation_config}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

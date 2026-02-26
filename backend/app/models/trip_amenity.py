@@ -18,6 +18,8 @@ class TripAmenity(str, Enum):
     MEALS = "meals"
     INSURANCE = "insurance"
     VISA_ASSISTANCE = "visa_assistance"
+    INTERNATIONAL_DRIVERS_LICENSE = "international_drivers_license"
+    OMRA_ASSISTANCE = "omra_assistance"
 
 
 class TripExtraFee(SQLModel, table=True):

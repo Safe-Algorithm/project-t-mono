@@ -1,5 +1,6 @@
 import { api } from './api';
-import { Trip, TripPackage, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata, ValidationMetadata, ValidationConfig } from '../types/trip';
+import i18n from '../i18n';
+import { Trip, TripPackage, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata, ValidationMetadata, ValidationConfig, PhoneCountry, NationalityOption } from '../types/trip';
 
 export interface TripCreatePayload {
   name_en: string;
@@ -109,8 +110,19 @@ export const tripService = {
   },
 
   // Get available field metadata
-  getAvailableFields: (): Promise<{ fields: FieldMetadata[] }> => {
-    return api.get<{ fields: FieldMetadata[] }>('/trips/available-fields');
+  getAvailableFields: async (): Promise<{ fields: FieldMetadata[] }> => {
+    const token = localStorage.getItem('provider_access_token');
+    const BASE_URL = `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1`;
+    const response = await fetch(`${BASE_URL}/trips/available-fields`, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Source': 'providers_panel',
+        'Accept-Language': i18n.language === 'ar' ? 'ar' : 'en',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!response.ok) throw new Error('Failed to load available fields');
+    return response.json();
   },
 
   // Validation management
@@ -135,6 +147,14 @@ export const tripService = {
       value: value,
       validation_config: validationConfig
     });
+  },
+
+  getPhoneCountries: (): Promise<{ countries: PhoneCountry[] }> => {
+    return api.get<{ countries: PhoneCountry[] }>('/trips/validation/phone-countries');
+  },
+
+  getNationalities: (): Promise<{ nationalities: NationalityOption[] }> => {
+    return api.get<{ nationalities: NationalityOption[] }>('/trips/validation/nationalities');
   },
 
   uploadImages: async (tripId: string, images: File[]): Promise<{ message: string; uploaded_urls: string[]; total_images: number }> => {

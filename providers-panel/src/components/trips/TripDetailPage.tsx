@@ -6,6 +6,7 @@ import { destinationService, TripDestination } from '../../services/destinationS
 import { tripUpdateService, TripUpdate, TripUpdateCreate } from '../../services/tripUpdateService';
 import { api } from '../../services/api';
 import { useTranslation } from 'react-i18next';
+import ValidationDisplay from '../ValidationDisplay';
 
 interface RegistrationUser {
   id: string;
@@ -31,7 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const TripDetailPage: React.FC = () => {
   const router = useRouter();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id: tripId } = router.query;
   const [trip, setTrip] = useState<Trip | null>(null);
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
@@ -130,18 +131,8 @@ const TripDetailPage: React.FC = () => {
 
   const getFieldDisplayName = (fieldType: string): string => {
     const field = availableFields.find(f => f.field_name === fieldType);
-    return field ? field.display_name : fieldType;
-  };
-
-  const amenityLabels: Record<string, string> = {
-    [TripAmenity.FLIGHT_TICKETS]: 'Flight Tickets',
-    [TripAmenity.BUS]: 'Bus Transportation',
-    [TripAmenity.TOUR_GUIDE]: 'Tour Guide',
-    [TripAmenity.TOURS]: 'Tours',
-    [TripAmenity.HOTEL]: 'Hotel Accommodation',
-    [TripAmenity.MEALS]: 'Meals',
-    [TripAmenity.INSURANCE]: 'Travel Insurance',
-    [TripAmenity.VISA_ASSISTANCE]: 'Visa Assistance',
+    if (!field) return fieldType;
+    return i18n.language === 'ar' && field.display_name_ar ? field.display_name_ar : field.display_name;
   };
 
   const confirmedCount = registrations.filter(r => r.status === 'confirmed').length;
@@ -270,7 +261,7 @@ const TripDetailPage: React.FC = () => {
               <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Amenities</h3>
               <div className="flex flex-wrap gap-2">
                 {trip.amenities.map(a => (
-                  <span key={a} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-sm text-emerald-700 dark:text-emerald-400">✓ {amenityLabels[a] || a}</span>
+                  <span key={a} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-sm text-emerald-700 dark:text-emerald-400">✓ {t(`amenity.${a}`, a)}</span>
                 ))}
               </div>
             </div>
@@ -286,6 +277,43 @@ const TripDetailPage: React.FC = () => {
             {trip.images.map((url, i) => (
               <img key={i} src={url} alt="" className="w-full h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(url, '_blank')} />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Required Fields — simple (non-packaged) trips only */}
+      {!trip.is_packaged_trip && (
+        <div className={cardCls}>
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+              Required Fields ({(trip.simple_trip_required_fields ?? []).length})
+            </h2>
+          </div>
+          <div className="p-6">
+            {(trip.simple_trip_required_fields ?? []).length === 0 ? (
+              <p className="text-sm text-slate-400 dark:text-slate-500">No required fields configured.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(trip.simple_trip_required_fields ?? []).map((fieldType) => {
+                  const fieldDetail = (trip.simple_trip_required_fields_details ?? []).find(d => d.field_type === fieldType);
+                  return (
+                    <div key={fieldType} className="rounded-xl border border-slate-200 dark:border-slate-700 p-3">
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {getFieldDisplayName(fieldType)}
+                      </p>
+                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                        {availableFields.find(f => f.field_name === fieldType)?.ui_type || 'text'}
+                      </p>
+                      <ValidationDisplay
+                        fieldType={fieldType}
+                        fieldDisplayName={getFieldDisplayName(fieldType)}
+                        validationConfig={fieldDetail?.validation_config ?? null}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -315,7 +343,7 @@ const TripDetailPage: React.FC = () => {
                         {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{pkg.is_refundable ? '✓ Refundable' : '✗ Non-refundable'}</span></p>}
                         {pkg.amenities && pkg.amenities.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {pkg.amenities.map(a => <span key={a} className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-xs text-emerald-700 dark:text-emerald-400">{amenityLabels[a] || a}</span>)}
+                            {pkg.amenities.map(a => <span key={a} className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-xs text-emerald-700 dark:text-emerald-400">{t(`amenity.${a}`, a)}</span>)}
                           </div>
                         )}
                       </div>

@@ -61,7 +61,7 @@ const LoginPage = () => {
           <h1 className="text-5xl font-bold mb-2">رحلة</h1>
           <p className="text-xl font-light opacity-90 mb-1">Rihla</p>
           <p className="text-sm opacity-75 mt-4 max-w-xs leading-relaxed">
-            {isRTL ? 'منصة إدارة الرحلات للمزودين' : 'The travel management platform for trip providers'}
+            {t('login.platformTagline')}
           </p>
         </div>
       </div>
@@ -87,16 +87,16 @@ const LoginPage = () => {
             </div>
 
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1">
-              {isRTL ? 'مرحباً بعودتك' : 'Welcome back'}
+              {t('login.welcomeBack')}
             </h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mb-8">
-              {isRTL ? 'سجّل دخولك للمتابعة' : 'Sign in to your provider account'}
+              {t('login.signInSubtitle')}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5" htmlFor="email">
-                  {isRTL ? 'البريد الإلكتروني' : 'Email address'}
+                  {t('login.email')}
                 </label>
                 <input
                   id="email"
@@ -105,7 +105,7 @@ const LoginPage = () => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={isRTL ? 'example@company.com' : 'you@company.com'}
+                  placeholder={t('login.emailPlaceholder')}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition text-sm"
                 />
               </div>
@@ -113,10 +113,10 @@ const LoginPage = () => {
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-sm font-medium text-slate-700 dark:text-slate-300" htmlFor="password">
-                    {isRTL ? 'كلمة المرور' : 'Password'}
+                    {t('login.password')}
                   </label>
                   <a href="/forgot-password" className="text-xs text-sky-500 hover:text-sky-600 font-medium">
-                    {isRTL ? 'نسيت كلمة المرور؟' : 'Forgot password?'}
+                    {t('login.forgotPassword')}
                   </a>
                 </div>
                 <div className="relative">
@@ -169,16 +169,16 @@ const LoginPage = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    {isRTL ? 'جارٍ تسجيل الدخول...' : 'Signing in...'}
+                    {t('login.signingIn')}
                   </span>
-                ) : (isRTL ? 'تسجيل الدخول' : 'Sign in')}
+                ) : t('login.signIn')}
               </button>
             </form>
 
             <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-6">
-              {isRTL ? 'ليس لديك حساب؟ ' : "Don't have an account? "}
+              {t('login.noAccount')}{' '}
               <a href="/register" className="text-sky-500 hover:text-sky-600 font-semibold">
-                {isRTL ? 'سجّل الآن' : 'Register here'}
+                {t('login.registerHere')}
               </a>
             </p>
           </div>

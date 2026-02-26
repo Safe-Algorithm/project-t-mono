@@ -121,6 +121,9 @@ class TripRead(TripBase):
     price: Optional[float] = None
     is_refundable: Optional[bool] = None
     amenities: Optional[List[TripAmenity]] = None
+    # Required fields for non-packaged trips (from hidden package), empty for packaged trips
+    simple_trip_required_fields: List[str] = []
+    simple_trip_required_fields_details: List = []
 
     class Config:
         from_attributes = True

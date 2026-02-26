@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ValidationConfig, ValidationMetadata, FieldMetadata } from '../../types/trip';
+import { ValidationConfig, FieldMetadata, PhoneCountry, NationalityOption } from '../../types/trip';
 import { tripService } from '../../services/tripService';
 
 interface ValidationConfigProps {
@@ -10,293 +10,162 @@ interface ValidationConfigProps {
   onValidate?: (isValid: boolean, errors: string[]) => void;
 }
 
+const inputCls = "w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition placeholder:text-slate-400 dark:placeholder:text-slate-500";
+
+const AgeInput: React.FC<{ vt: 'min_age'|'max_age'; paramKey: 'min_value'|'max_value'; labelKey: string; descKey: string; config: ValidationConfig; onChange:(vt:string,pk:string,v:any)=>void; onToggle:(vt:string)=>void }> = ({ vt, paramKey, labelKey, descKey, config, onChange, onToggle }) => {
+  const { t } = useTranslation();
+  const enabled = !!config[vt];
+  const value = config[vt]?.[paramKey] ?? '';
+  return (
+    <div className={`rounded-xl border p-3 transition-colors ${enabled ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'}`}>
+      <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={enabled} onChange={() => onToggle(vt)} className="accent-sky-500" /><span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t(labelKey)}</span></label>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ms-5">{t(descKey)}</p>
+      {enabled && <div className="mt-2 ms-5"><input type="number" min={0} max={120} value={value} onChange={e => onChange(vt, paramKey, parseInt(e.target.value)||0)} placeholder={t('validation.ageInYears')} className={inputCls} /></div>}
+    </div>
+  );
+};
+
+const PhoneCountryPicker: React.FC<{ config: ValidationConfig; onChange:(vt:string,pk:string,v:any)=>void; onToggle:(vt:string)=>void }> = ({ config, onChange, onToggle }) => {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
+  const [countries, setCountries] = useState<PhoneCountry[]>([]);
+  const [search, setSearch] = useState('');
+  const enabled = !!config['phone_country_codes'];
+  const selected: string[] = config['phone_country_codes']?.allowed_codes ?? [];
+  useEffect(() => { tripService.getPhoneCountries().then(r => setCountries(r.countries)).catch(() => {}); }, []);
+  const getCountryName = (c: PhoneCountry) => isAr && c.name_ar ? c.name_ar : c.name;
+  const filtered = countries.filter(c => c.name.toLowerCase().includes(search.toLowerCase()) || c.name_ar.includes(search) || c.dial_code.includes(search));
+  const toggle = (code: string) => { const next = selected.includes(code) ? selected.filter(x=>x!==code) : [...selected, code]; onChange('phone_country_codes','allowed_codes',next); };
+  return (
+    <div className={`rounded-xl border p-3 transition-colors ${enabled ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'}`}>
+      <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={enabled} onChange={() => onToggle('phone_country_codes')} className="accent-sky-500" /><span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('validation.phoneCountries.label')}</span></label>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ms-5">{t('validation.phoneCountries.desc')}</p>
+      {enabled && (
+        <div className="mt-2 ms-5 space-y-2">
+          {selected.length > 0 && <div className="flex flex-wrap gap-1">{selected.map(code => { const c = countries.find(x=>x.dial_code===code); return <span key={code} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-medium">{c?.flag} {c ? getCountryName(c) : ''} +{code}<button onClick={()=>toggle(code)} className="ms-1 hover:text-red-500">×</button></span>; })}</div>}
+          <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('validation.phoneCountries.search')} className={inputCls} />
+          <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 divide-y divide-slate-100 dark:divide-slate-700">
+            {filtered.map(c => <label key={`${c.code}-${c.dial_code}`} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40"><input type="checkbox" checked={selected.includes(c.dial_code)} onChange={()=>toggle(c.dial_code)} className="accent-sky-500 flex-shrink-0" /><span className="text-lg leading-none">{c.flag}</span><span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{getCountryName(c)}</span><span className="text-xs text-slate-400 dark:text-slate-500">+{c.dial_code}</span></label>)}
+            {filtered.length===0 && <p className="px-3 py-2 text-xs text-slate-400">{t('validation.phoneCountries.noResults')}</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const GenderPicker: React.FC<{ config: ValidationConfig; onChange:(vt:string,pk:string,v:any)=>void; onToggle:(vt:string)=>void }> = ({ config, onChange, onToggle }) => {
+  const { t } = useTranslation();
+  const enabled = !!config['gender_restrictions'];
+  const selected: string = config['gender_restrictions']?.allowed_genders?.[0] ?? 'male';
+  const pick = (v: string) => onChange('gender_restrictions', 'allowed_genders', [v]);
+  return (
+    <div className={`rounded-xl border p-3 transition-colors ${enabled ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'}`}>
+      <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={enabled} onChange={() => onToggle('gender_restrictions')} className="accent-sky-500" /><span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('validation.gender.label')}</span></label>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ms-5">{t('validation.gender.desc')}</p>
+      {enabled && (
+        <div className="mt-2 ms-5 flex gap-3">
+          {[{value:'male',labelKey:'validation.gender.malesOnly',icon:'♂'},{value:'female',labelKey:'validation.gender.femalesOnly',icon:'♀'}].map(o => (
+            <label key={o.value} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm font-medium transition ${selected === o.value ? 'border-sky-400 bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300' : 'border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:border-sky-300'}`}>
+              <input type="radio" name="gender_restriction" checked={selected === o.value} onChange={() => pick(o.value)} className="accent-sky-500" />{o.icon} {t(o.labelKey)}
+            </label>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
+const NationalityPicker: React.FC<{ config: ValidationConfig; onChange:(vt:string,pk:string,v:any)=>void; onToggle:(vt:string)=>void }> = ({ config, onChange, onToggle }) => {
+  const { t, i18n } = useTranslation();
+  const isAr = i18n.language === 'ar';
+  const [nationalities, setNationalities] = useState<NationalityOption[]>([]);
+  const [search, setSearch] = useState('');
+  const enabled = !!config['nationality_restriction'];
+  const selected: string[] = config['nationality_restriction']?.allowed_nationalities ?? [];
+  useEffect(() => { tripService.getNationalities().then(r => setNationalities(r.nationalities)).catch(() => {}); }, []);
+  const getNationalityName = (n: NationalityOption) => isAr ? n.name_ar : n.name;
+  const filtered = nationalities.filter(n => n.name.toLowerCase().includes(search.toLowerCase()) || n.name_ar.includes(search));
+  const toggle = (code: string) => { const next = selected.includes(code) ? selected.filter(c=>c!==code) : [...selected, code]; onChange('nationality_restriction','allowed_nationalities',next); };
+  return (
+    <div className={`rounded-xl border p-3 transition-colors ${enabled ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'}`}>
+      <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={enabled} onChange={() => onToggle('nationality_restriction')} className="accent-sky-500" /><span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('validation.nationality.label')}</span></label>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 ms-5">{t('validation.nationality.desc')}</p>
+      {enabled && (
+        <div className="mt-2 ms-5 space-y-2">
+          {selected.length > 0 && <div className="flex flex-wrap gap-1">{selected.map(code => { const n = nationalities.find(x=>x.code===code); return <span key={code} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-medium">{n ? getNationalityName(n) : code}<button onClick={()=>toggle(code)} className="ms-1 hover:text-red-500">×</button></span>; })}</div>}
+          <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('validation.nationality.search')} className={inputCls} />
+          <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-600 divide-y divide-slate-100 dark:divide-slate-700">
+            {filtered.map(n => <label key={n.code} className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/40"><input type="checkbox" checked={selected.includes(n.code)} onChange={()=>toggle(n.code)} className="accent-sky-500 flex-shrink-0" /><span className="text-sm text-slate-700 dark:text-slate-300 flex-1">{getNationalityName(n)}</span><span className="text-xs text-slate-400 dark:text-slate-500">{isAr ? n.name : n.name_ar}</span></label>)}
+            {filtered.length===0 && <p className="px-3 py-2 text-xs text-slate-400">{t('validation.nationality.noResults')}</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ValidationConfigComponent: React.FC<ValidationConfigProps> = ({
   fieldMetadata,
   currentConfig,
   onConfigChange,
-  onValidate
 }) => {
-  const [availableValidations, setAvailableValidations] = useState<Record<string, ValidationMetadata>>({});
-  const [validationMetadata, setValidationMetadata] = useState<Record<string, ValidationMetadata>>({});
-  const [loading, setLoading] = useState(true);
-  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const { t } = useTranslation();
+  const available: string[] = fieldMetadata.available_validations ?? [];
 
-  useEffect(() => {
-    const loadValidationData = async () => {
-      try {
-        setLoading(true);
-        console.log('Loading validation data for field:', fieldMetadata.field_name);
-        console.log('Field available_validations:', fieldMetadata.available_validations);
-        
-        // Load all validation metadata
-        const metadataResponse = await tripService.getAllValidationMetadata();
-        console.log('Loaded validation metadata response:', Object.keys(metadataResponse));
-        
-        // The API returns data nested under 'validation_metadata' key
-        const metadata = (metadataResponse as any).validation_metadata || metadataResponse;
-        console.log('Actual validation metadata:', Object.keys(metadata));
-        setValidationMetadata(metadata);
-        
-        // Filter available validations for this field type from the field metadata
-        const available: Record<string, ValidationMetadata> = {};
-        if (fieldMetadata.available_validations && fieldMetadata.available_validations.length > 0) {
-          fieldMetadata.available_validations.forEach(validationType => {
-            console.log(`Checking validation type: ${validationType}`);
-            if ((metadata as any)[validationType]) {
-              available[validationType] = (metadata as any)[validationType];
-              console.log(`Added validation ${validationType}:`, (metadata as any)[validationType]);
-            } else {
-              console.warn(`Validation type ${validationType} not found in metadata. Available keys:`, Object.keys(metadata));
-            }
-          });
-        } else {
-          console.warn('No available_validations found in field metadata');
-        }
-        console.log('Final available validations:', available);
-        setAvailableValidations(available);
-      } catch (error) {
-        console.error('Failed to load validation data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleChange = useCallback((vt: string, pk: string, v: any) => {
+    const next = { ...currentConfig };
+    if (!next[vt]) next[vt] = {};
+    next[vt][pk] = v;
+    onConfigChange(next);
+  }, [currentConfig, onConfigChange]);
 
-    loadValidationData();
-  }, [fieldMetadata.field_name, fieldMetadata.available_validations]);
-
-  useEffect(() => {
-    // Validate config whenever it changes
-    const validateConfig = async () => {
-      if (Object.keys(currentConfig).length === 0) {
-        setValidationErrors([]);
-        onValidate?.(true, []);
-        return;
-      }
-
-      try {
-        const result = await tripService.validateConfig(fieldMetadata.field_name, currentConfig);
-        setValidationErrors(result.errors);
-        onValidate?.(result.is_valid, result.errors);
-      } catch (error) {
-        console.error('Failed to validate config:', error);
-        setValidationErrors(['Failed to validate configuration']);
-        onValidate?.(false, ['Failed to validate configuration']);
-      }
-    };
-
-    validateConfig();
-  }, [currentConfig, fieldMetadata.field_name, onValidate]);
-
-  const handleValidationToggle = (validationType: string) => {
-    const newConfig = { ...currentConfig };
-    
-    if (newConfig[validationType]) {
-      delete newConfig[validationType];
+  const handleToggle = useCallback((vt: string) => {
+    const next = { ...currentConfig };
+    if (next[vt]) {
+      delete next[vt];
     } else {
-      // Initialize with default values
-      const metadata = validationMetadata[validationType];
-      const defaultConfig: Record<string, any> = {};
-      
-      if (metadata?.parameters) {
-        Object.entries(metadata.parameters).forEach(([paramName, paramInfo]) => {
-          if (paramInfo.default !== undefined) {
-            defaultConfig[paramName] = paramInfo.default;
-          } else if (paramInfo.type === 'number') {
-            defaultConfig[paramName] = 0;
-          } else if (paramInfo.type === 'string') {
-            defaultConfig[paramName] = '';
-          } else if (paramInfo.type === 'array') {
-            defaultConfig[paramName] = [];
-          }
-        });
-      }
-      
-      newConfig[validationType] = defaultConfig;
+      if (vt === 'min_age') next[vt] = { min_value: 18 };
+      else if (vt === 'max_age') next[vt] = { max_value: 65 };
+      else if (vt === 'phone_country_codes') next[vt] = { allowed_codes: [] };
+      else if (vt === 'gender_restrictions') next[vt] = { allowed_genders: ['male'] };
+      else if (vt === 'nationality_restriction') next[vt] = { allowed_nationalities: [] };
+      else next[vt] = {};
     }
-    
-    onConfigChange(newConfig);
-  };
+    onConfigChange(next);
+  }, [currentConfig, onConfigChange]);
 
-  const handleParameterChange = (validationType: string, paramName: string, value: any) => {
-    const newConfig = { ...currentConfig };
-    if (!newConfig[validationType]) {
-      newConfig[validationType] = {};
-    }
-    newConfig[validationType][paramName] = value;
-    onConfigChange(newConfig);
-  };
-
-  const inputCls = "w-full rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition placeholder:text-slate-400 dark:placeholder:text-slate-500";
-
-  const renderParameterInput = (validationType: string, paramName: string, paramInfo: any) => {
-    const currentValue = currentConfig[validationType]?.[paramName] || '';
-
-    if (paramInfo.type === 'number') {
-      return (
-        <input
-          type="number"
-          value={currentValue}
-          onChange={(e) => handleParameterChange(validationType, paramName, parseFloat(e.target.value) || 0)}
-          placeholder={paramInfo.description}
-          className={inputCls}
-        />
-      );
-    } else if (paramInfo.type === 'array' && validationType === 'gender_restrictions' && paramName === 'allowed_genders') {
-      const genderOptions = [
-        { value: 'male', label: 'Male' },
-        { value: 'female', label: 'Female' },
-        { value: 'prefer_not_to_say', label: 'Prefer not to say' }
-      ];
-      const selectedValues = Array.isArray(currentValue) ? currentValue : [];
-      return (
-        <div className="flex flex-col gap-2 mt-1">
-          {genderOptions.map((option) => (
-            <label key={option.value} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 dark:text-slate-300">
-              <input
-                type="checkbox"
-                checked={selectedValues.includes(option.value)}
-                onChange={(e) => {
-                  const newValues = e.target.checked
-                    ? [...selectedValues, option.value]
-                    : selectedValues.filter(v => v !== option.value);
-                  handleParameterChange(validationType, paramName, newValues);
-                }}
-                className="accent-sky-500"
-              />
-              {option.label}
-            </label>
-          ))}
-        </div>
-      );
-    } else if (paramInfo.type === 'array') {
-      return (
-        <input
-          type="text"
-          value={Array.isArray(currentValue) ? currentValue.join(', ') : currentValue}
-          onChange={(e) => {
-            const arrayValue = e.target.value.split(',').map(v => v.trim()).filter(v => v);
-            handleParameterChange(validationType, paramName, arrayValue);
-          }}
-          placeholder={`${paramInfo.description} (comma-separated)`}
-          className={inputCls}
-        />
-      );
-    } else {
-      return (
-        <input
-          type="text"
-          value={currentValue}
-          onChange={(e) => handleParameterChange(validationType, paramName, e.target.value)}
-          placeholder={paramInfo.description}
-          className={inputCls}
-        />
-      );
-    }
-  };
-
-  if (loading) {
+  if (available.length === 0) {
     return (
-      <div className="flex items-center gap-2 mt-3 py-2 text-sm text-slate-400 dark:text-slate-500">
-        <div className="w-4 h-4 rounded-full border-2 border-sky-500 border-t-transparent animate-spin flex-shrink-0" />
-        {t('validation.loading')}
+      <div className="mt-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+        <p className="text-xs italic text-slate-400 dark:text-slate-500">{t('validation.noRules')}</p>
       </div>
     );
   }
 
-  const availableValidationKeys = Object.keys(availableValidations);
-  const hasAvailableValidations = availableValidationKeys.length > 0;
-
   return (
     <div className="mt-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 space-y-3">
       <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-        {t('validation.rulesFor', { field: fieldMetadata.display_name })}
+        {t('validation.rulesForField', { field: fieldMetadata.display_name })}
       </p>
-
-      {!hasAvailableValidations ? (
-        <p className="text-sm italic text-slate-400 dark:text-slate-500">
-          {t('validation.noOptions')}
-        </p>
-      ) : (
-        <>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            {t('validation.configureHint')}
-          </p>
-
-          {validationErrors.length > 0 && (
-            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-400">
-              <p className="font-semibold mb-1">{t('validation.errors')}</p>
-              <ul className="list-disc list-inside space-y-0.5">
-                {validationErrors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-3">
-            {availableValidationKeys.map((validationType) => {
-              const metadata = availableValidations[validationType] || validationMetadata[validationType];
-              const isEnabled = !!currentConfig[validationType];
-
-              if (!metadata) return null;
-
-              return (
-                <div
-                  key={validationType}
-                  className={`rounded-xl border p-3 transition-colors ${
-                    isEnabled
-                      ? 'border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20'
-                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800/40'
-                  }`}
-                >
-                  <label className="flex items-center gap-2 cursor-pointer mb-1">
-                    <input
-                      type="checkbox"
-                      checked={isEnabled}
-                      onChange={() => handleValidationToggle(validationType)}
-                      className="accent-sky-500"
-                    />
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-                      {metadata.display_name}
-                    </span>
-                  </label>
-
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 ml-5">
-                    {metadata.description}
-                  </p>
-
-                  {isEnabled && metadata.parameters && (
-                    <div className="ml-5 flex flex-col gap-3 pt-2 border-t border-slate-200 dark:border-slate-700">
-                      {Object.entries(metadata.parameters).map(([paramName, paramInfo]) => (
-                        <div key={paramName}>
-                          <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
-                            {paramName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            {(paramInfo as any).required && <span className="text-red-500 dark:text-red-400"> *</span>}
-                          </label>
-                          {renderParameterInput(validationType, paramName, paramInfo)}
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                            {(paramInfo as any).description}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {Object.keys(currentConfig).length > 0 && (
-            <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700">
-              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('validation.currentConfig')}</p>
-              <pre className="text-xs text-slate-700 dark:text-slate-300 overflow-x-auto">
-                {JSON.stringify(currentConfig, null, 2)}
-              </pre>
-            </div>
-          )}
-        </>
-      )}
+      <div className="flex flex-col gap-3">
+        {available.includes('min_age') && (
+          <AgeInput vt="min_age" paramKey="min_value" labelKey="validation.minAge.label" descKey="validation.minAge.desc" config={currentConfig} onChange={handleChange} onToggle={handleToggle} />
+        )}
+        {available.includes('max_age') && (
+          <AgeInput vt="max_age" paramKey="max_value" labelKey="validation.maxAge.label" descKey="validation.maxAge.desc" config={currentConfig} onChange={handleChange} onToggle={handleToggle} />
+        )}
+        {available.includes('phone_country_codes') && (
+          <PhoneCountryPicker config={currentConfig} onChange={handleChange} onToggle={handleToggle} />
+        )}
+        {available.includes('gender_restrictions') && (
+          <GenderPicker config={currentConfig} onChange={handleChange} onToggle={handleToggle} />
+        )}
+        {available.includes('nationality_restriction') && (
+          <NationalityPicker config={currentConfig} onChange={handleChange} onToggle={handleToggle} />
+        )}
+      </div>
     </div>
   );
 };

@@ -302,8 +302,9 @@ export default function BookingDetailScreen() {
             </View>
             <Button
               title={t('booking.payNow')}
-              onPress={() => setShowCardModal(true)}
+              onPress={() => { if (!payLoading) setShowCardModal(true); }}
               loading={payLoading}
+              disabled={payLoading}
               fullWidth
               size="lg"
             />
@@ -377,7 +378,7 @@ export default function BookingDetailScreen() {
                     </View>
                   </View>
                 </View>
-                <Button title={t('booking.payNow')} onPress={handlePayNow} loading={payLoading} fullWidth size="lg" />
+                <Button title={t('booking.payNow')} onPress={handlePayNow} loading={payLoading} disabled={payLoading} fullWidth size="lg" />
               </Pressable>
             </Pressable>
           </KeyboardAvoidingView>

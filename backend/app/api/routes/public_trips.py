@@ -16,6 +16,7 @@ from app.api.deps import get_session
 from app.schemas.trip import TripRead
 from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
 from app.models.trip_field import TripFieldType, FIELD_METADATA
+from app.models.field_validation import NATIONALITY_LIST
 import app.crud as crud
 from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.models.trip_package import TripPackage as TripPackageModel
@@ -23,6 +24,25 @@ from app.models.trip_package_field import TripPackageRequiredField
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+@router.get("/nationalities")
+def get_public_nationalities(
+    accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
+):
+    """Get nationality list for the nationality field (public, no auth required)."""
+    lang = "ar" if (accept_language or "en").startswith("ar") else "en"
+    return {
+        "nationalities": [
+            {
+                "code": n["code"],
+                "name": n["name_ar"] if lang == "ar" else n["name"],
+                "name_en": n["name"],
+                "name_ar": n["name_ar"],
+            }
+            for n in NATIONALITY_LIST
+        ]
+    }
 
 
 @router.get("/field-metadata", response_model=AvailableFieldsResponse)
@@ -85,6 +105,8 @@ def build_trip_read(trip, session: Session) -> TripRead:
     resp_price = None
     resp_is_refundable = None
     resp_amenities = None
+    simple_required_fields: list = []
+    simple_required_fields_details: list = []
 
     if is_packaged:
         from app.models.trip_registration import TripRegistration as TripRegistrationModel, TripRegistrationParticipant as TripParticipantModel
@@ -138,6 +160,15 @@ def build_trip_read(trip, session: Session) -> TripRead:
             resp_price = float(hp.price) if hp.price is not None else None
             resp_is_refundable = hp.is_refundable
             resp_amenities = hp.amenities
+            hp_fields = session.query(TripPackageRequiredField).filter(
+                TripPackageRequiredField.package_id == hp.id
+            ).all()
+            simple_required_fields = [rf.field_type.value for rf in hp_fields]
+            simple_required_fields_details = [
+                {"id": str(rf.id), "package_id": str(rf.package_id), "field_type": rf.field_type.value,
+                 "is_required": rf.is_required, "validation_config": rf.validation_config}
+                for rf in hp_fields
+            ]
 
     from app.crud import provider as provider_crud
     provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
@@ -219,6 +250,8 @@ def build_trip_read(trip, session: Session) -> TripRead:
         packages=packages_with_fields,
         extra_fees=[],
         available_spots=available_spots,
+        simple_trip_required_fields=simple_required_fields if not is_packaged else [],
+        simple_trip_required_fields_details=simple_required_fields_details if not is_packaged else [],
     )
 
 

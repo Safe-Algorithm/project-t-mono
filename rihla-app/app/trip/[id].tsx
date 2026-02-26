@@ -27,6 +27,8 @@ const AMENITY_ICONS: Record<string, string> = {
   meals: 'restaurant-outline',
   insurance: 'shield-checkmark-outline',
   visa_assistance: 'document-text-outline',
+  international_drivers_license: 'car-outline',
+  omra_assistance: 'moon-outline',
 };
 
 function formatDate(d: string, locale = 'en-US') {
