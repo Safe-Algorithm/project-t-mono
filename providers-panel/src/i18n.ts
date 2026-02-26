@@ -143,6 +143,7 @@ const resources = {
       // Nav extras
       "nav.supportTickets": "Support Tickets",
       "nav.tripUpdates": "Trip Updates",
+      "nav.roles": "Roles & Permissions",
       "nav.team": "Team",
       "nav.welcome": "Welcome",
 
@@ -611,6 +612,7 @@ const resources = {
       // Nav extras
       "nav.supportTickets": "تذاكر الدعم",
       "nav.tripUpdates": "تحديثات الرحلات",
+      "nav.roles": "الأدوار والصلاحيات",
       "nav.team": "الفريق",
       "nav.welcome": "مرحباً",
 

@@ -71,6 +71,12 @@ def _ensure_super_admin_role(session: Session):
     return role
 
 
+def _ensure_destinations(session: Session) -> None:
+    """Seed countries + cities from offline data (idempotent)."""
+    from scripts.seed_destinations import seed_destinations
+    seed_destinations(session)
+
+
 def init_db(session: Session) -> None:
     # 1. Seed RBAC permissions
     _ensure_rbac_seed(session)
@@ -102,6 +108,9 @@ def init_db(session: Session) -> None:
     from app.crud import rbac as rbac_crud
     rbac_crud.assign_role_to_user(session, user.id, super_admin_role.id)
     logger.info(f"Assigned '{SUPER_ADMIN_ROLE_NAME}' role to {user.email}")
+
+    # 5. Seed destinations (countries + cities, fully offline)
+    _ensure_destinations(session)
 
 
 def main() -> None:

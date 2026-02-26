@@ -57,6 +57,7 @@ const resources = {
       "nav.supportTickets": "Support Tickets",
       "nav.tripUpdates": "Trip Updates",
       "nav.providerRequests": "Provider Requests",
+      "nav.roles": "Roles & Permissions",
 
       // Support Tickets
       "support.title": "Support Tickets",
@@ -314,6 +315,7 @@ const resources = {
       "nav.supportTickets": "تذاكر الدعم",
       "nav.tripUpdates": "تحديثات الرحلات",
       "nav.providerRequests": "طلبات مقدمي الخدمات",
+      "nav.roles": "الأدوار والصلاحيات",
 
       // Support Tickets
       "support.title": "تذاكر الدعم",

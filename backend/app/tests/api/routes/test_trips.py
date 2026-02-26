@@ -3096,3 +3096,117 @@ def test_public_trip_detail_includes_available_spots(
     data = response.json()
     assert "available_spots" in data
     assert data["available_spots"] == 20
+
+
+# ── Timezone validation tests ──────────────────────────────────────────────────
+
+def test_create_trip_default_timezone(client: TestClient, session: Session) -> None:
+    """Trip created without a timezone defaults to Asia/Riyadh."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    data = {
+        "name_en": "No TZ Trip",
+        "description_en": "desc",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+        "max_participants": 5,
+    }
+    response = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=data)
+    assert response.status_code == 200
+    assert response.json()["timezone"] == "Asia/Riyadh"
+
+
+def test_create_trip_valid_timezone(client: TestClient, session: Session) -> None:
+    """Trip created with a valid IANA timezone outside the frontend dropdown is accepted."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    data = {
+        "name_en": "India Trip",
+        "description_en": "desc",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+        "max_participants": 5,
+        "timezone": "Asia/Kolkata",
+    }
+    response = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=data)
+    assert response.status_code == 200
+    assert response.json()["timezone"] == "Asia/Kolkata"
+
+
+def test_create_trip_invalid_timezone_rejected(client: TestClient, session: Session) -> None:
+    """Trip created with an invalid timezone string is rejected with 422."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    data = {
+        "name_en": "Bad TZ Trip",
+        "description_en": "desc",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+        "max_participants": 5,
+        "timezone": "UTC+3",
+    }
+    response = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=data)
+    assert response.status_code == 422
+
+
+def test_create_trip_garbage_timezone_rejected(client: TestClient, session: Session) -> None:
+    """Trip created with a garbage timezone string is rejected with 422."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    data = {
+        "name_en": "Garbage TZ Trip",
+        "description_en": "desc",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+        "max_participants": 5,
+        "timezone": "not_a_timezone",
+    }
+    response = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=data)
+    assert response.status_code == 422
+
+
+def test_update_trip_valid_timezone(client: TestClient, session: Session) -> None:
+    """Updating a trip's timezone to a valid IANA string is accepted."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Update TZ Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 5,
+        },
+    )
+    assert create_resp.status_code == 200
+    trip_id = create_resp.json()["id"]
+
+    response = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"timezone": "Europe/Istanbul"},
+    )
+    assert response.status_code == 200
+    assert response.json()["timezone"] == "Europe/Istanbul"
+
+
+def test_update_trip_invalid_timezone_rejected(client: TestClient, session: Session) -> None:
+    """Updating a trip's timezone to an invalid string is rejected with 422."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Invalid TZ Update Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 5,
+        },
+    )
+    assert create_resp.status_code == 200
+    trip_id = create_resp.json()["id"]
+
+    response = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"timezone": "garbage/tz"},
+    )
+    assert response.status_code == 422

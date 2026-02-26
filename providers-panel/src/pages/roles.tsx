@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Layout from '@/components/layout/Layout';
 import { useAuth } from '@/context/UserContext';
 import { UserRole } from '@/types/user';
 import { rolesService, Role, RoleWithPermissions, Permission, UserRoleLink } from '@/services/rolesService';
@@ -209,17 +208,14 @@ export default function RolesPage() {
 
   if (!isSuperProvider) {
     return (
-      <Layout>
-        <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-          Only the workspace owner can manage roles and permissions.
-        </div>
-      </Layout>
+      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
+        Only the workspace owner can manage roles and permissions.
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -372,7 +368,6 @@ export default function RolesPage() {
             ))}
           </div>
         )}
-      </div>
 
       {/* Create Role Modal */}
       {showCreateRole && (
@@ -536,6 +531,6 @@ export default function RolesPage() {
           </div>
         </Modal>
       )}
-    </Layout>
+    </div>
   );
 }

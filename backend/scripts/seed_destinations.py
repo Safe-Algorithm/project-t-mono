@@ -1,100 +1,30 @@
 """
-Seed worldwide destinations (countries) into the database.
+Seed worldwide destinations (countries + cities) into the database.
 
-Uses the REST Countries API to fetch country data with ISO codes, timezones, and currencies.
-All countries are seeded as inactive — admin activates them as needed.
+All data is fully offline — no external API calls.
+- Countries: loaded from scripts/countries_data.json (snapshotted 2026-02-26).
+- Cities: hardcoded in CITIES_BY_COUNTRY below.
 
-Usage:
+To add a country or city: edit the source data and open a PR.
+
+Usage (standalone):
     docker compose exec backend python -m scripts.seed_destinations
+
+Called automatically from app/initial_data.py on startup.
 """
 
+import json
 import re
 import sys
 import os
 
-# Add the backend directory to the path so we can import app modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import requests
 from sqlmodel import Session, select
 
-from app.core.db import engine
 from app.models.destination import Destination, DestinationType
 
-
-# Arabic name mapping for countries that have Arabic native names
-# The REST Countries API provides translations, but we also check nativeName for Arabic
-ARABIC_COUNTRY_NAMES = {
-    "SA": "المملكة العربية السعودية",
-    "AE": "الإمارات العربية المتحدة",
-    "EG": "مصر",
-    "JO": "الأردن",
-    "LB": "لبنان",
-    "IQ": "العراق",
-    "SY": "سوريا",
-    "PS": "فلسطين",
-    "KW": "الكويت",
-    "BH": "البحرين",
-    "QA": "قطر",
-    "OM": "عمان",
-    "YE": "اليمن",
-    "LY": "ليبيا",
-    "TN": "تونس",
-    "DZ": "الجزائر",
-    "MA": "المغرب",
-    "SD": "السودان",
-    "SO": "الصومال",
-    "DJ": "جيبوتي",
-    "MR": "موريتانيا",
-    "TR": "تركيا",
-    "MY": "ماليزيا",
-    "ID": "إندونيسيا",
-    "GB": "المملكة المتحدة",
-    "US": "الولايات المتحدة",
-    "FR": "فرنسا",
-    "DE": "ألمانيا",
-    "IT": "إيطاليا",
-    "ES": "إسبانيا",
-    "JP": "اليابان",
-    "CN": "الصين",
-    "IN": "الهند",
-    "BR": "البرازيل",
-    "AU": "أستراليا",
-    "CA": "كندا",
-    "RU": "روسيا",
-    "KR": "كوريا الجنوبية",
-    "TH": "تايلاند",
-    "PH": "الفلبين",
-    "PK": "باكستان",
-    "BD": "بنغلاديش",
-    "NG": "نيجيريا",
-    "ZA": "جنوب أفريقيا",
-    "KE": "كينيا",
-    "ET": "إثيوبيا",
-    "GH": "غانا",
-    "TZ": "تنزانيا",
-    "MX": "المكسيك",
-    "AR": "الأرجنتين",
-    "CO": "كولومبيا",
-    "CL": "تشيلي",
-    "PE": "بيرو",
-    "NZ": "نيوزيلندا",
-    "SG": "سنغافورة",
-    "HK": "هونغ كونغ",
-    "SE": "السويد",
-    "NO": "النرويج",
-    "DK": "الدنمارك",
-    "FI": "فنلندا",
-    "NL": "هولندا",
-    "BE": "بلجيكا",
-    "CH": "سويسرا",
-    "AT": "النمسا",
-    "PT": "البرتغال",
-    "GR": "اليونان",
-    "PL": "بولندا",
-    "CZ": "التشيك",
-    "IE": "أيرلندا",
-}
+_COUNTRIES_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "countries_data.json")
 
 
 def slugify(text: str) -> str:
@@ -106,129 +36,43 @@ def slugify(text: str) -> str:
     return text.strip('-')
 
 
-def get_arabic_name(country_data: dict, country_code: str) -> str:
-    """Extract Arabic name from country data, API translations, or fallback mapping."""
-    # 1. Check API translations (most reliable for all countries)
-    translations = country_data.get("translations", {})
-    if "ara" in translations:
-        return translations["ara"].get("official", translations["ara"].get("common", ""))
+def seed_countries(session: Session) -> None:
+    """Seed countries from the local countries_data.json snapshot (fully offline)."""
+    with open(_COUNTRIES_JSON, "r", encoding="utf-8") as f:
+        data = json.load(f)
 
-    # 2. Check our manual mapping for well-known countries
-    if country_code in ARABIC_COUNTRY_NAMES:
-        return ARABIC_COUNTRY_NAMES[country_code]
+    existing = session.exec(
+        select(Destination).where(Destination.type == DestinationType.COUNTRY)
+    ).all()
+    existing_codes = {d.country_code for d in existing}
 
-    # 3. Try nativeName (for Arab countries)
-    native_names = country_data.get("name", {}).get("nativeName", {})
-    if "ara" in native_names:
-        return native_names["ara"].get("official", native_names["ara"].get("common", ""))
-
-    # 4. Fallback to English name
-    return country_data["name"]["common"]
-
-
-def seed_countries_from_api():
-    """Fetch countries from REST Countries API and seed the database."""
-    print("Fetching countries from REST Countries API...")
-    try:
-        response = requests.get(
-            "https://restcountries.com/v3.1/all?fields=name,cca2,timezones,currencies,translations",
-            timeout=30,
+    created = 0
+    for c in data:
+        code = c["code"]
+        if code in existing_codes:
+            continue
+        slug = c["slug"] or slugify(c["name_en"])
+        if not slug:
+            continue
+        destination = Destination(
+            type=DestinationType.COUNTRY,
+            parent_id=None,
+            country_code=code,
+            slug=slug,
+            full_slug=slug,
+            name_en=c["name_en"],
+            name_ar=c["name_ar"],
+            timezone=c.get("tz"),
+            currency_code=c.get("cur"),
+            is_active=False,
+            display_order=0,
         )
-        response.raise_for_status()
-        countries = response.json()
-    except Exception as e:
-        print(f"Failed to fetch from API: {e}")
-        print("Falling back to local countries.json...")
-        seed_countries_from_local()
-        return
+        session.add(destination)
+        existing_codes.add(code)
+        created += 1
 
-    print(f"Fetched {len(countries)} countries from API")
-    _seed_countries(countries, source="api")
-
-
-def seed_countries_from_local():
-    """Seed countries from local countries.json file (names only)."""
-    import json
-
-    json_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "..",
-        "countries.json",
-    )
-    if not os.path.exists(json_path):
-        print(f"Local countries.json not found at {json_path}")
-        return
-
-    with open(json_path, "r", encoding="utf-8") as f:
-        countries = json.load(f)
-
-    print(f"Loaded {len(countries)} countries from local file")
-    _seed_countries(countries, source="local")
-
-
-def _seed_countries(countries: list, source: str):
-    """Insert countries into the database."""
-    with Session(engine) as session:
-        # Check how many already exist
-        existing = session.exec(
-            select(Destination).where(Destination.type == DestinationType.COUNTRY)
-        ).all()
-        existing_codes = {d.country_code for d in existing}
-
-        created = 0
-        skipped = 0
-
-        for country in countries:
-            name_en = country["name"]["common"]
-
-            if source == "api":
-                country_code = country.get("cca2", "")
-                timezones = country.get("timezones", [])
-                timezone = timezones[0] if timezones else None
-                currencies = country.get("currencies", {})
-                currency_code = list(currencies.keys())[0] if currencies else None
-                name_ar = get_arabic_name(country, country_code)
-            else:
-                # Local file has no codes — skip entries without enough data
-                country_code = ""
-                timezone = None
-                currency_code = None
-                name_ar = get_arabic_name(country, "")
-
-            if not country_code or len(country_code) != 2:
-                skipped += 1
-                continue
-
-            if country_code in existing_codes:
-                skipped += 1
-                continue
-
-            slug = slugify(name_en)
-            if not slug:
-                skipped += 1
-                continue
-
-            destination = Destination(
-                type=DestinationType.COUNTRY,
-                parent_id=None,
-                country_code=country_code.upper(),
-                slug=slug,
-                full_slug=slug,
-                name_en=name_en,
-                name_ar=name_ar,
-                timezone=timezone,
-                currency_code=currency_code,
-                is_active=False,
-                display_order=0,
-            )
-
-            session.add(destination)
-            created += 1
-            existing_codes.add(country_code)
-
-        session.commit()
-        print(f"Seeded {created} countries, skipped {skipped}")
-        print("All countries are inactive by default. Use admin panel to activate.")
+    session.commit()
+    print(f"Countries: seeded {created} new, {len(existing_codes) - created} already existed.")
 
 
 # Major cities per country code: list of (name_en, name_ar, timezone_override, currency_override)
@@ -559,60 +403,60 @@ CITIES_BY_COUNTRY = {
 }
 
 
-def seed_cities():
+def seed_cities(session: Session) -> None:
     """Seed major cities into existing countries."""
-    print("Seeding cities...")
+    countries = session.exec(
+        select(Destination).where(Destination.type == DestinationType.COUNTRY)
+    ).all()
+    country_map = {c.country_code: c for c in countries}
 
-    with Session(engine) as session:
-        # Get all countries
-        countries = session.exec(
-            select(Destination).where(Destination.type == DestinationType.COUNTRY)
-        ).all()
-        country_map = {c.country_code: c for c in countries}
+    existing_cities = session.exec(
+        select(Destination).where(Destination.type == DestinationType.CITY)
+    ).all()
+    existing_slugs = {(c.parent_id, c.slug) for c in existing_cities}
 
-        # Get existing cities to avoid duplicates
-        existing_cities = session.exec(
-            select(Destination).where(Destination.type == DestinationType.CITY)
-        ).all()
-        existing_slugs = {(c.parent_id, c.slug) for c in existing_cities}
+    created = 0
+    skipped = 0
 
-        created = 0
-        skipped = 0
+    for country_code, cities in CITIES_BY_COUNTRY.items():
+        country = country_map.get(country_code)
+        if not country:
+            skipped += len(cities)
+            continue
 
-        for country_code, cities in CITIES_BY_COUNTRY.items():
-            country = country_map.get(country_code)
-            if not country:
-                print(f"  Country {country_code} not found, skipping its cities")
-                skipped += len(cities)
+        for name_en, name_ar, tz_override, cur_override in cities:
+            city_slug = slugify(name_en)
+            if (country.id, city_slug) in existing_slugs:
+                skipped += 1
                 continue
 
-            for name_en, name_ar, tz_override, cur_override in cities:
-                city_slug = slugify(name_en)
-                if (country.id, city_slug) in existing_slugs:
-                    skipped += 1
-                    continue
+            city = Destination(
+                type=DestinationType.CITY,
+                parent_id=country.id,
+                country_code=country_code,
+                slug=city_slug,
+                full_slug=f"{country.slug}/{city_slug}",
+                name_en=name_en,
+                name_ar=name_ar,
+                timezone=tz_override or country.timezone,
+                currency_code=cur_override or country.currency_code,
+                is_active=country.is_active,
+                display_order=0,
+            )
+            session.add(city)
+            created += 1
+            existing_slugs.add((country.id, city_slug))
 
-                city = Destination(
-                    type=DestinationType.CITY,
-                    parent_id=country.id,
-                    country_code=country_code,
-                    slug=city_slug,
-                    full_slug=f"{country.slug}/{city_slug}",
-                    name_en=name_en,
-                    name_ar=name_ar,
-                    timezone=tz_override or country.timezone,
-                    currency_code=cur_override or country.currency_code,
-                    is_active=country.is_active,  # Inherit active status from country
-                    display_order=0,
-                )
-                session.add(city)
-                created += 1
-                existing_slugs.add((country.id, city_slug))
+    session.commit()
+    print(f"Cities: seeded {created} new, skipped {skipped} already existing.")
 
-        session.commit()
-        print(f"Seeded {created} cities, skipped {skipped}")
+
+def seed_destinations(session: Session) -> None:
+    """Seed countries then cities. Called from initial_data.py on startup."""
+    seed_countries(session)
+    seed_cities(session)
 
 
 if __name__ == "__main__":
-    seed_countries_from_api()
-    seed_cities()
+    with Session(engine) as session:
+        seed_destinations(session)

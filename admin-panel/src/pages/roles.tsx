@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Layout from '@/components/Layout';
 import { rolesService, Role, RoleWithPermissions, Permission, UserRoleLink } from '@/services/rolesService';
 import { PermissionDeniedError } from '@/services/api';
 import PermissionDenied from '@/components/common/PermissionDenied';
@@ -187,8 +186,7 @@ export default function AdminRolesPage() {
   const permGroups = groupByGroup(allPerms);
 
   return (
-    <Layout>
-      <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Roles & Permissions</h1>
@@ -330,8 +328,6 @@ export default function AdminRolesPage() {
             ))}
           </div>
         )}
-      </div>
-
       {/* Create Role Modal */}
       {showCreateRole && (
         <Modal title="Create New Admin Role" onClose={() => setShowCreateRole(false)}>
@@ -490,6 +486,6 @@ export default function AdminRolesPage() {
           </div>
         </Modal>
       )}
-    </Layout>
+    </div>
   );
 }

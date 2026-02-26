@@ -38,6 +38,18 @@ class TripBase(BaseModel):
     # Clients must display all trip datetimes in this timezone.
     timezone: str = "Asia/Riyadh"
 
+    @field_validator("timezone", mode="before")
+    @classmethod
+    def validate_timezone(cls, v):
+        if v is None:
+            return "Asia/Riyadh"
+        try:
+            import zoneinfo
+            zoneinfo.ZoneInfo(str(v))
+        except (KeyError, Exception):
+            raise ValueError(f"Invalid IANA timezone: '{v}'")
+        return v
+
     @field_validator("start_date", "end_date", "meeting_time", "registration_deadline", mode="before")
     @classmethod
     def normalise_to_utc(cls, v):
@@ -96,6 +108,18 @@ class TripUpdate(BaseModel):
     price: Optional[float] = None
     is_refundable: Optional[bool] = None
     amenities: Optional[List[TripAmenity]] = None
+
+    @field_validator("timezone", mode="before")
+    @classmethod
+    def validate_timezone(cls, v):
+        if v is None:
+            return v
+        try:
+            import zoneinfo
+            zoneinfo.ZoneInfo(str(v))
+        except (KeyError, Exception):
+            raise ValueError(f"Invalid IANA timezone: '{v}'")
+        return v
 
     @field_validator("start_date", "end_date", "meeting_time", "registration_deadline", mode="before")
     @classmethod
