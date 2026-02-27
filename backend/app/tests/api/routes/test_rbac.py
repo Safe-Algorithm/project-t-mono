@@ -90,12 +90,12 @@ class TestProviderPermissionsCatalogue:
         assert "Create Trips" in names
         assert "Send Trip Updates" in names
 
-    def test_list_permissions_requires_super_provider(
+    def test_list_permissions_accessible_to_any_provider(
         self, client: TestClient, session: Session, seeded, normal_provider
     ):
         _, headers = normal_provider
         r = client.get(f"{API}/provider/roles/permissions", headers=headers)
-        assert r.status_code == 403
+        assert r.status_code == 200
 
     def test_permission_has_rules(
         self, client: TestClient, session: Session, seeded, super_provider

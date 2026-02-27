@@ -12,7 +12,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from app.api.deps import get_current_active_super_provider, get_session
+from app.api.deps import get_current_active_provider, get_current_active_super_provider, get_session
 from app.crud import rbac as rbac_crud
 from app.models.rbac import RoleSource
 from app.models.user import User
@@ -30,12 +30,23 @@ from app.schemas.rbac import (
 router = APIRouter()
 
 
+# ── Current user's own roles (any authenticated provider) ─────────────────────
+
+@router.get("/me", response_model=List[RoleRead])
+def get_my_roles(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+):
+    """Return the roles assigned to the currently authenticated provider user."""
+    return rbac_crud.get_user_roles(session, current_user.id, source=RoleSource.PROVIDER)
+
+
 # ── Permissions catalogue ─────────────────────────────────────────────────────
 
 @router.get("/permissions", response_model=List[PermissionRead])
 def list_provider_permissions(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_super_provider),
+    current_user: User = Depends(get_current_active_provider),
 ):
     """List all available provider permissions (system-seeded)."""
     perms = rbac_crud.get_permissions(session, source=RoleSource.PROVIDER)
@@ -59,7 +70,7 @@ def list_provider_permissions(
 @router.get("", response_model=List[RoleReadWithPermissions])
 def list_roles(
     session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_active_super_provider),
+    current_user: User = Depends(get_current_active_provider),
 ):
     """List all roles for this provider."""
     roles = rbac_crud.get_roles(session, source=RoleSource.PROVIDER, provider_id=current_user.provider_id)

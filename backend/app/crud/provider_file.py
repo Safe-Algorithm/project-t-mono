@@ -122,21 +122,42 @@ def are_all_files_accepted(
     session: Session,
     provider_id: uuid.UUID
 ) -> bool:
-    """Check if all provider files are accepted (none processing or rejected)"""
-    statement = select(ProviderFile).where(
-        ProviderFile.provider_id == provider_id
-    )
-    files = list(session.exec(statement).all())
-    
-    # If no files, return False (can't approve without files)
-    if not files:
-        return False
-    
-    # All files must be accepted
-    return all(
-        file.file_verification_status == FileVerificationStatus.ACCEPTED 
-        for file in files
-    )
+    """Check if all required provider files are accepted.
+
+    Returns True if there are no active required file definitions (nothing to upload).
+    Returns True if all uploaded files for required definitions are accepted.
+    Returns False if any required file is missing or not yet accepted.
+    """
+    from app.models.file_definition import FileDefinition
+
+    # Get all active required file definitions
+    required_defs = list(session.exec(
+        select(FileDefinition).where(
+            FileDefinition.is_required == True,
+            FileDefinition.is_active == True,
+        )
+    ).all())
+
+    # No required definitions → nothing to check, approval is fine
+    if not required_defs:
+        return True
+
+    # Get all uploaded files for this provider
+    uploaded = {
+        f.file_definition_id: f
+        for f in session.exec(
+            select(ProviderFile).where(ProviderFile.provider_id == provider_id)
+        ).all()
+    }
+
+    for defn in required_defs:
+        file = uploaded.get(defn.id)
+        if file is None:
+            return False  # required file not uploaded at all
+        if file.file_verification_status != FileVerificationStatus.ACCEPTED:
+            return False  # uploaded but not yet accepted
+
+    return True
 
 
 def count_required_files(

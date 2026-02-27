@@ -187,8 +187,9 @@ PROVIDER_PERMISSIONS: List[Tuple] = [
         "Profile",
         RoleSource.PROVIDER,
         [
-            ("PUT", "/providers/*"),
-            ("PATCH", "/providers/*"),
+            ("PUT", "/providers/profile"),
+            ("POST", "/providers/upload-avatar"),
+            ("POST", "/providers/upload-cover"),
         ],
     ),
     # ── Payments / Dashboard ──────────────────────────────────────────────────
@@ -247,7 +248,9 @@ ADMIN_PERMISSIONS: List[Tuple] = [
         RoleSource.ADMIN,
         [
             ("POST", "/admin/invite-admin"),
-            ("GET", "/admin/users/by-role"),
+            ("GET", "/admin/users/admin"),
+            ("GET", "/admin/users/provider"),
+            ("GET", "/admin/users/normal"),
         ],
     ),
     (
@@ -303,9 +306,6 @@ ADMIN_PERMISSIONS: List[Tuple] = [
         [
             ("GET", "/admin/trip-updates"),
             ("GET", "/admin/trips/*/updates"),
-            ("GET", "/admin/trips"),
-            ("GET", "/admin/trips/*"),
-            ("GET", "/admin/trips/*/registrations"),
         ],
     ),
     # ── File Definitions ─────────────────────────────────────────────────────

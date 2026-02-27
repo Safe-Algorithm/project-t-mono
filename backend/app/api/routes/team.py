@@ -137,7 +137,7 @@ def accept_team_invitation(
 def get_team_members(
     *, 
     session: Session = Depends(deps.get_session), 
-    current_user: User = Depends(deps.get_current_active_super_provider)
+    current_user: User = Depends(deps.get_current_active_provider)
 ):
     """
     Get all team members for the provider.
@@ -170,6 +170,11 @@ def delete_team_member(
             status_code=400, detail="Cannot delete yourself"
         )
 
+    if user_to_delete.role == UserRole.SUPER_USER:
+        raise HTTPException(
+            status_code=403, detail="Cannot delete a workspace owner"
+        )
+
     crud.user.delete_user(session, db_user=user_to_delete)
     return
 
@@ -194,6 +199,12 @@ def update_team_member_role(
 
     if user_to_update.id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot change your own role")
+
+    if user_to_update.role == UserRole.SUPER_USER:
+        raise HTTPException(status_code=403, detail="Cannot demote a workspace owner")
+
+    if role_in.role == UserRole.SUPER_USER:
+        raise HTTPException(status_code=403, detail="Cannot promote a user to workspace owner")
 
     # Ensure only provider-related roles can be assigned
     if role_in.role not in [UserRole.NORMAL, UserRole.SUPER_USER]:

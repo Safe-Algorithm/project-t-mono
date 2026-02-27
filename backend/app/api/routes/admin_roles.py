@@ -12,7 +12,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session
 
-from app.api.deps import get_current_active_admin, get_session
+from app.api.deps import get_current_active_admin, get_current_active_superuser, get_session
 from app.crud import rbac as rbac_crud
 from app.models.rbac import RoleSource
 from app.models.user import User, UserRole
@@ -28,6 +28,17 @@ from app.schemas.rbac import (
 )
 
 router = APIRouter()
+
+
+# ── Current user's own roles (any authenticated admin) ───────────────────────
+
+@router.get("/me", response_model=List[RoleRead])
+def get_my_admin_roles(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_superuser),
+):
+    """Return the roles assigned to the currently authenticated admin user."""
+    return rbac_crud.get_user_roles(session, current_user.id, source=RoleSource.ADMIN)
 
 
 # ── Permissions catalogue ─────────────────────────────────────────────────────

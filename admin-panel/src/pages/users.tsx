@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { api, PermissionDeniedError } from '@/services/api';
 import Pagination from '../components/Pagination';
 import PermissionDenied from '@/components/common/PermissionDenied';
+import { rolesService, Role } from '@/services/rolesService';
 
 const PAGE_SIZE = 50;
 
@@ -78,13 +79,23 @@ const UsersPage = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [userDetailLoading, setUserDetailLoading] = useState(false);
+  const [selectedUserRoles, setSelectedUserRoles] = useState<Role[]>([]);
+  const [selectedUserRolesLoading, setSelectedUserRolesLoading] = useState(false);
 
   const openUserDetail = async (userId: string) => {
     setUserDetailLoading(true);
     setSelectedUser(null);
+    setSelectedUserRoles([]);
     try {
       const detail = await api.get<UserDetail>(`/admin/users/${userId}`);
       setSelectedUser(detail);
+      if (detail.source === 'admin_panel') {
+        setSelectedUserRolesLoading(true);
+        rolesService.getUserRoles(userId)
+          .then(setSelectedUserRoles)
+          .catch(() => setSelectedUserRoles([]))
+          .finally(() => setSelectedUserRolesLoading(false));
+      }
     } catch (err) {
       console.error('Failed to load user detail:', err);
     } finally {
@@ -315,6 +326,28 @@ const UsersPage = () => {
                       </div>
                     )}
                   </div>
+                  {selectedUser.source === 'admin_panel' && (
+                    <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                      <span className="text-xs text-slate-400 dark:text-slate-500 block mb-2">Roles</span>
+                      {selectedUserRolesLoading ? (
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <div className="w-3 h-3 rounded-full border-2 border-slate-300 border-t-transparent animate-spin" />
+                          Loading...
+                        </div>
+                      ) : selectedUserRoles.length === 0 ? (
+                        <span className="text-xs text-slate-400 dark:text-slate-500">No roles assigned</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedUserRoles.map(role => (
+                            <span key={role.id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400 text-xs font-medium">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                              {role.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>

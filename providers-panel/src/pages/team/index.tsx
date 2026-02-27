@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import TeamList from '@/components/team/TeamList';
 import { teamService } from '@/services/teamService';
+import { rolesService, Role } from '@/services/rolesService';
 import withAuth from '@/components/auth/withAuth';
 
 const TeamManagementPage = () => {
@@ -11,6 +12,20 @@ const TeamManagementPage = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [memberRoles, setMemberRoles] = useState<Record<string, Role[]>>({});
+
+  useEffect(() => {
+    if (members.length === 0) return;
+    const fetchAllRoles = async () => {
+      const results = await Promise.allSettled(
+        members.map(m => rolesService.getUserRoles(m.id).then(roles => ({ id: m.id, roles })))
+      );
+      const map: Record<string, Role[]> = {};
+      results.forEach(r => { if (r.status === 'fulfilled') map[r.value.id] = r.value.roles; });
+      setMemberRoles(map);
+    };
+    fetchAllRoles();
+  }, [members]);
 
   const handleDelete = async (userId: string) => {
     setIsDeleting(userId);
@@ -75,6 +90,7 @@ const TeamManagementPage = () => {
             isDeleting={isDeleting}
             onUpdateRole={handleUpdateRole}
             isUpdating={isUpdating}
+            memberRoles={memberRoles}
           />
         )}
       </div>

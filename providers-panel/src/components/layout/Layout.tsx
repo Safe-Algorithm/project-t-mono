@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { useAuth } from '@/context/UserContext';
-import { UserRole } from '@/types/user';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 import { api } from '@/services/api';
@@ -153,12 +152,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavLink href="/trips" icon={NAV_ICON_TRIPS} label={t('nav.trips')} />
               <NavLink href="/support" icon={NAV_ICON_SUPPORT} label={t('nav.supportTickets')} />
               <NavLink href="/trip-updates" icon={NAV_ICON_UPDATES} label={t('nav.tripUpdates')} />
-              {user?.role === UserRole.SUPER_USER && (
-                <>
-                  <NavLink href="/team" icon={NAV_ICON_TEAM} label={t('nav.team')} />
-                  <NavLink href="/roles" icon={NAV_ICON_ROLES} label="Roles & Permissions" />
-                </>
-              )}
+              <NavLink href="/team" icon={NAV_ICON_TEAM} label={t('nav.team')} />
+              <NavLink href="/roles" icon={NAV_ICON_ROLES} label="Roles & Permissions" />
             </>
           )}
           {!statusLoading && !isApproved && user && (

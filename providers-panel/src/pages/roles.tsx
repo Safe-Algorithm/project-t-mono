@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/UserContext';
-import { UserRole } from '@/types/user';
 import { rolesService, Role, RoleWithPermissions, Permission, UserRoleLink } from '@/services/rolesService';
 import { PermissionDeniedError } from '@/services/api';
 import { teamService } from '@/services/teamService';
@@ -43,7 +42,6 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
 
 export default function RolesPage() {
   const { user } = useAuth();
-  const isSuperProvider = user?.role === UserRole.SUPER_USER;
 
   const [tab, setTab] = useState<Tab>('roles');
   const [roles, setRoles] = useState<RoleWithPermissions[]>([]);
@@ -205,14 +203,6 @@ export default function RolesPage() {
   const permGroups = groupByGroup(allPerms);
 
   // ── Render ──────────────────────────────────────────────────────────────────
-
-  if (!isSuperProvider) {
-    return (
-      <div className="flex items-center justify-center h-64 text-gray-500 dark:text-gray-400">
-        Only the workspace owner can manage roles and permissions.
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">

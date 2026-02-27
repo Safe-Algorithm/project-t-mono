@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { api } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { rolesService, Role } from '@/services/rolesService';
 
 interface User {
   id: string;
@@ -22,6 +23,8 @@ const Profile: React.FC = () => {
   const router = useRouter();
   const { logout } = useAuth();
   const [user, setUser] = useState<User | null>(null);
+  const [myRoles, setMyRoles] = useState<Role[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(true);
   const [profileData, setProfileData] = useState<ProfileData>({
     name: '',
     email: '',
@@ -44,6 +47,10 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     fetchUser();
+    rolesService.getMyRoles()
+      .then(setMyRoles)
+      .catch(() => setMyRoles([]))
+      .finally(() => setRolesLoading(false));
   }, []);
 
   const fetchUser = async () => {
@@ -312,6 +319,29 @@ const Profile: React.FC = () => {
             {loading ? 'Saving…' : 'Save Changes'}
           </button>
         </form>
+      </div>
+
+      {/* My Roles */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+        <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-1">My Roles</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Roles assigned to your account</p>
+        {rolesLoading ? (
+          <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
+            <div className="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-transparent animate-spin" />
+            Loading...
+          </div>
+        ) : myRoles.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500">No roles assigned to your account.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {myRoles.map(role => (
+              <span key={role.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400 text-sm font-medium">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                {role.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Change Password */}

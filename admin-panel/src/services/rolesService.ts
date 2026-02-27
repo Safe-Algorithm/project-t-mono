@@ -82,6 +82,10 @@ const removeUserFromRole = async (roleId: string, userId: string): Promise<void>
   await api.del(`/admin/roles/${roleId}/users/${userId}`);
 };
 
+const getMyRoles = async (): Promise<Role[]> => {
+  return api.get<Role[]>('/admin/roles/me');
+};
+
 const getUserRoles = async (userId: string): Promise<Role[]> => {
   return api.get<Role[]>(`/admin/roles/users/${userId}/roles`);
 };
@@ -98,5 +102,6 @@ export const rolesService = {
   listRoleUsers,
   assignUsersToRole,
   removeUserFromRole,
+  getMyRoles,
   getUserRoles,
 };

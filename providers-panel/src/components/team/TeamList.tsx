@@ -1,5 +1,6 @@
 import React from 'react';
 import { User } from '@/types/user';
+import { Role } from '@/services/rolesService';
 
 interface TeamListProps {
   members: User[];
@@ -7,6 +8,7 @@ interface TeamListProps {
   isDeleting: string | null;
   onUpdateRole: (userId: string, role: string) => void;
   isUpdating: string | null;
+  memberRoles?: Record<string, Role[]>;
 }
 
 const getInitials = (name: string) =>
@@ -17,7 +19,7 @@ const AVATAR_COLORS = [
   'bg-rose-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500',
 ];
 
-const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUpdateRole, isUpdating }) => {
+const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUpdateRole, isUpdating, memberRoles = {} }) => {
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -63,6 +65,15 @@ const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUp
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">{member.email}</p>
               {member.phone && (
                 <p className="text-xs text-slate-400 dark:text-slate-500">{member.phone}</p>
+              )}
+              {!isPending && memberRoles[member.id] && memberRoles[member.id].length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {memberRoles[member.id].map(role => (
+                    <span key={role.id} className="px-2 py-0.5 rounded-lg bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-400 text-xs font-medium">
+                      {role.name}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
 

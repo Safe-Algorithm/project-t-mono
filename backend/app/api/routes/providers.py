@@ -6,6 +6,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 from app.api import deps
+from app.api.rbac_deps import require_provider_permission
 from app.models.user import User, UserRole
 from app.crud import user as user_crud
 from app.crud import provider as provider_crud
@@ -141,7 +142,8 @@ def get_provider_request_status(
 def update_provider_profile(
     *,
     session: Session = Depends(deps.get_session),
-    current_user: User = Depends(deps.get_current_active_super_provider),
+    current_user: User = Depends(deps.get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
     provider_in: ProviderUpdate,
 ):
     """
@@ -163,7 +165,8 @@ def update_provider_profile(
 async def upload_company_avatar(
     file: UploadFile = File(...),
     session: Session = Depends(deps.get_session),
-    current_user: User = Depends(deps.get_current_active_super_provider),
+    current_user: User = Depends(deps.get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Upload company avatar for the provider."""
     from app.services.storage import storage_service
@@ -234,7 +237,8 @@ async def upload_company_avatar(
 async def upload_company_cover(
     file: UploadFile = File(...),
     session: Session = Depends(deps.get_session),
-    current_user: User = Depends(deps.get_current_active_super_provider),
+    current_user: User = Depends(deps.get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
 ):
     """Upload company cover image for the provider.
 
