@@ -44,6 +44,7 @@ export default function TripDetailScreen() {
   const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [imageIndex, setImageIndex] = useState(0);
+  const [showTripTypeInfo, setShowTripTypeInfo] = useState(false);
   const isRTL = i18n.language === 'ar';
 
   const { data: trip, isLoading } = useTrip(id);
@@ -167,6 +168,44 @@ export default function TripDetailScreen() {
             </View>
             {!trip.is_active && <Badge label={t('trip.inactive')} variant="error" />}
           </View>
+
+          {/* Trip Type Badge */}
+          {trip.trip_type && (
+            <View style={s.tripTypeBadgeRow}>
+              <TouchableOpacity
+                style={[
+                  s.tripTypeBadge,
+                  trip.trip_type === 'guided' ? s.tripTypeBadgeGuided : s.tripTypeBadgePackage,
+                ]}
+                onPress={() => setShowTripTypeInfo((v) => !v)}
+                activeOpacity={0.8}
+              >
+                <Ionicons
+                  name={trip.trip_type === 'guided' ? 'compass-outline' : 'gift-outline'}
+                  size={13}
+                  color={trip.trip_type === 'guided' ? '#92400e' : '#6b21a8'}
+                />
+                <Text style={[
+                  s.tripTypeBadgeText,
+                  trip.trip_type === 'guided' ? s.tripTypeBadgeTextGuided : s.tripTypeBadgeTextPackage,
+                ]}>
+                  {trip.trip_type === 'guided' ? t('trip.guidedTripBadge') : t('trip.tourismPackageBadge')}
+                </Text>
+                <Ionicons
+                  name="information-circle-outline"
+                  size={13}
+                  color={trip.trip_type === 'guided' ? '#92400e' : '#6b21a8'}
+                />
+              </TouchableOpacity>
+              {showTripTypeInfo && (
+                <View style={s.tripTypeInfoBox}>
+                  <Text style={s.tripTypeInfoText}>
+                    {trip.trip_type === 'guided' ? t('trip.guidedTripInfo') : t('trip.tourismPackageInfo')}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Rating */}
           {rating && rating.total_reviews > 0 && (
@@ -313,12 +352,12 @@ export default function TripDetailScreen() {
             </View>
           )}
 
-          {/* Packages — only shown for packaged trips */}
+          {/* Tiers — only shown for packaged trips */}
           {trip.is_packaged_trip && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>{t('trip.choosePackage')}</Text>
+              <Text style={s.sectionTitle}>{t('trip.chooseTier')}</Text>
               {activePackages.length === 0 ? (
-                <Text style={s.noPackages}>{t('trip.noPackages')}</Text>
+                <Text style={s.noPackages}>{t('trip.noTiers')}</Text>
               ) : (
                 <View style={s.packages}>
                   {activePackages.map((pkg) => {
@@ -427,7 +466,7 @@ export default function TripDetailScreen() {
         ) : trip.available_spots === 0 ? (
           <Text style={s.selectHint}>{t('trip.soldOut')}</Text>
         ) : !trip.is_packaged_trip ? (
-          // Simple trip: show price + direct Book Now
+          // Simple trip: show price + direct Book/Buy button
           <View style={s.bottomContent}>
             {trip.price != null && (
               <View>
@@ -438,7 +477,7 @@ export default function TripDetailScreen() {
               </View>
             )}
             <Button
-              title={t('trip.bookNow')}
+              title={trip.trip_type === 'self_arranged' ? t('trip.buyNow') : t('trip.bookNow')}
               onPress={() => router.push(`/book/${id}`)}
               style={trip.price != null ? s.bookBtn : undefined}
               fullWidth={trip.price == null}
@@ -446,9 +485,9 @@ export default function TripDetailScreen() {
             />
           </View>
         ) : (
-          // Packaged trip: go directly to booking (package selection happens in booking flow)
+          // Packaged / multi-tier trip: go directly to booking
           <Button
-            title={t('trip.bookNow')}
+            title={trip.trip_type === 'self_arranged' ? t('trip.buyNow') : t('trip.bookNow')}
             onPress={() => router.push(`/book/${id}`)}
             fullWidth size="lg"
           />
@@ -584,6 +623,26 @@ function makeStyles(c: ThemeColors) {
   fieldsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   fieldsText: { fontSize: FontSize.xs, color: c.textTertiary },
   noPackages: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
+
+  tripTypeBadgeRow: { marginBottom: 12 },
+  tripTypeBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: Radius.full, borderWidth: 1,
+  },
+  tripTypeBadgeGuided: { backgroundColor: '#fef3c7', borderColor: '#fcd34d' },
+  tripTypeBadgePackage: { backgroundColor: '#f3e8ff', borderColor: '#d8b4fe' },
+  tripTypeBadgeText: { fontSize: FontSize.xs, fontWeight: '700' },
+  tripTypeBadgeTextGuided: { color: '#92400e' },
+  tripTypeBadgeTextPackage: { color: '#6b21a8' },
+  tripTypeInfoBox: {
+    marginTop: 6, padding: 10,
+    backgroundColor: c.surface, borderRadius: Radius.lg,
+    borderWidth: 1, borderColor: c.border,
+    ...Shadow.sm,
+  },
+  tripTypeInfoText: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20 },
   pkgAmenitiesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8, marginBottom: 4 },
   pkgAmenityChip: {
     flexDirection: 'row', alignItems: 'center', gap: 4,

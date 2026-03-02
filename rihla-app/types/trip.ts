@@ -77,6 +77,7 @@ export interface Trip {
   starting_city_id: string | null;
   starting_city: StartingCity | null;
   destinations: DestinationInfo[];
+  trip_type: string;
   amenities?: string[] | null;
   has_meeting_place: boolean;
   meeting_location: string | null;

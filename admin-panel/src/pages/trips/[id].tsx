@@ -91,6 +91,7 @@ interface Trip {
   timezone?: string;
   is_refundable?: boolean;
   amenities?: string[];
+  trip_type?: string;
   has_meeting_place?: boolean;
   meeting_location?: string;
   meeting_time?: string;
@@ -277,8 +278,17 @@ const TripDetailPage = () => {
               {trip.is_active ? t('tripDetail.active') : t('tripDetail.cancelled')}
             </span>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-              {trip.is_packaged_trip ? 'Packaged' : 'Simple'}
+              {trip.is_packaged_trip ? 'Multi-Tier' : 'Single Price'}
             </span>
+            {trip.trip_type && (
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                trip.trip_type === 'guided'
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                  : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+              }`}>
+                {trip.trip_type === 'guided' ? 'Guided Trip' : 'Tourism Package'}
+              </span>
+            )}
             {trip.is_international && (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">International</span>
             )}
@@ -600,13 +610,13 @@ const TripDetailPage = () => {
         </div>
       )}
 
-      {/* Trip Packages */}
+      {/* Booking Tiers */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h2 className="text-sm font-bold text-slate-900 dark:text-white">{t('tripDetail.tripPackages')} <span className="text-slate-400 font-normal">({trip.packages.length})</span></h2>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Booking Tiers <span className="text-slate-400 font-normal">({trip.packages.length})</span></h2>
         </div>
         {trip.packages.length === 0 ? (
-          <div className="py-12 text-center"><p className="text-slate-400 dark:text-slate-500 text-sm">{t('tripDetail.noPackages')}</p></div>
+          <div className="py-12 text-center"><p className="text-slate-400 dark:text-slate-500 text-sm">No tiers configured.</p></div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-800">
             {trip.packages.map((pkg) => (

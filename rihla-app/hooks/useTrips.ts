@@ -65,6 +65,7 @@ export interface TripFilters {
   destination_ids?: string[];
   single_destination?: boolean;
   amenities?: string[];
+  trip_type?: string;
   skip?: number;
   limit?: number;
 }

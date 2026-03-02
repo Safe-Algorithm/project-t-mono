@@ -12,6 +12,7 @@ export interface TripCreatePayload {
   registration_deadline?: string;
   max_participants: number;
   is_packaged_trip?: boolean;
+  trip_type?: string;
   trip_metadata?: Record<string, any>;
   price?: number;
   is_refundable?: boolean;

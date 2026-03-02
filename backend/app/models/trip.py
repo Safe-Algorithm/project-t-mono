@@ -1,9 +1,16 @@
 import uuid
+import enum
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional, List
 
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
+from sqlalchemy import Enum as SAEnum
 from sqlalchemy.ext.mutable import MutableList
+
+
+class TripType(str, enum.Enum):
+    GUIDED = "guided"
+    SELF_ARRANGED = "self_arranged"
 
 
 def _generate_trip_ref() -> str:
@@ -62,7 +69,13 @@ class Trip(SQLModel, table=True):
     # tells clients how to display them in the correct local wall-clock time.
     timezone: str = Field(default="Asia/Riyadh", max_length=64)
 
-    # Meeting Place
+    # Trip type: guided (provider-managed, has meeting point) or self_arranged (tourism package)
+    trip_type: TripType = Field(
+        default=TripType.GUIDED,
+        sa_column=Column(SAEnum(TripType, name="triptype"), nullable=False, server_default=TripType.GUIDED.value)
+    )
+
+    # Meeting Place (only for guided trips)
     has_meeting_place: bool = Field(default=False)
     meeting_location: Optional[str] = Field(default=None, max_length=500)
     meeting_time: Optional[datetime] = Field(default=None)

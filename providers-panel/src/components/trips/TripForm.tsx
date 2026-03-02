@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
-import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig, TripAmenity } from '../../types/trip';
+import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig, TripAmenity, TripType } from '../../types/trip';
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
 import ValidationConfigComponent from './ValidationConfig';
 import DestinationSelector, { DestinationSelection } from './DestinationSelector';
@@ -22,6 +22,9 @@ interface TripFormProps {
 const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => {
   const { t, i18n } = useTranslation();
   const [isPackagedTrip, setIsPackagedTrip] = useState(false);
+  const [tripTypeSelection, setTripTypeSelection] = useState<TripType>(TripType.GUIDED);
+  const [showGuidedTooltip, setShowGuidedTooltip] = useState(false);
+  const [showPackageTooltip, setShowPackageTooltip] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
 
   const [timezone, setTimezone] = useState('Asia/Riyadh');
@@ -142,6 +145,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
     if (trip) {
       setIsPackagedTrip(trip.is_packaged_trip ?? false);
+      setTripTypeSelection((trip.trip_type as TripType) ?? TripType.GUIDED);
       // Populate trip form data
       const tz = trip.timezone ?? 'Asia/Riyadh';
       setTimezone(tz);
@@ -458,6 +462,12 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     const payload = {
         ...formData,
         is_packaged_trip: isPackagedTrip,
+        trip_type: tripTypeSelection,
+        has_meeting_place: tripTypeSelection === TripType.GUIDED ? formData.has_meeting_place : false,
+        meeting_location: tripTypeSelection === TripType.GUIDED ? formData.meeting_location : undefined,
+        meeting_time: tripTypeSelection === TripType.GUIDED && formData.has_meeting_place && formData.meeting_time
+          ? localToUtcIso(formData.meeting_time)
+          : undefined,
         timezone,
         max_participants: parseInt(formData.max_participants, 10),
         start_date: localToUtcIso(formData.start_date),
@@ -467,9 +477,6 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           : undefined,
         starting_city_id: startingCityId || undefined,
         amenities: !isPackagedTrip && selectedAmenities.length > 0 ? selectedAmenities : undefined,
-        meeting_time: formData.has_meeting_place && formData.meeting_time 
-          ? localToUtcIso(formData.meeting_time)
-          : undefined,
     };
     
     const imageData = {
@@ -647,23 +654,79 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         )}
       </div>
 
-      {/* ── Trip Type Toggle ── */}
+      {/* ── Trip Nature (Guided vs Tourism Package) ── */}
+      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-700 p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-base font-bold text-purple-800 dark:text-purple-300">{t('trip.tripNature')}</p>
+        </div>
+        <p className="text-xs text-purple-600 dark:text-purple-400 mb-4">{t('trip.tripNatureHint')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {/* Guided Trip */}
+          <label className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${tripTypeSelection === TripType.GUIDED ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
+            <input type="radio" name="trip_nature" checked={tripTypeSelection === TripType.GUIDED} onChange={() => setTripTypeSelection(TripType.GUIDED)} className="accent-purple-500 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.guidedTrip')}</span>
+                <button
+                  type="button"
+                  onClick={e => { e.preventDefault(); setShowGuidedTooltip(v => !v); setShowPackageTooltip(false); }}
+                  className="text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition"
+                  title={t('trip.whatIsThis')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" /></svg>
+                </button>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('trip.guidedTripSubtitle')}</div>
+              {showGuidedTooltip && (
+                <div className="mt-2 p-2.5 bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-lg text-xs text-slate-700 dark:text-slate-300 shadow-md">
+                  {t('trip.guidedTripTooltip')}
+                </div>
+              )}
+            </div>
+          </label>
+          {/* Tourism Package */}
+          <label className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${tripTypeSelection === TripType.SELF_ARRANGED ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
+            <input type="radio" name="trip_nature" checked={tripTypeSelection === TripType.SELF_ARRANGED} onChange={() => { setTripTypeSelection(TripType.SELF_ARRANGED); setFormData(prev => ({ ...prev, has_meeting_place: false, meeting_location: '', meeting_time: '' })); }} className="accent-purple-500 mt-0.5" />
+            <div className="flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.tourismPackage')}</span>
+                <button
+                  type="button"
+                  onClick={e => { e.preventDefault(); setShowPackageTooltip(v => !v); setShowGuidedTooltip(false); }}
+                  className="text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition"
+                  title={t('trip.whatIsThis')}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0Zm-7-4a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM9 9a.75.75 0 0 0 0 1.5h.253a.25.25 0 0 1 .244.304l-.459 2.066A1.75 1.75 0 0 0 10.747 15H11a.75.75 0 0 0 0-1.5h-.253a.25.25 0 0 1-.244-.304l.459-2.066A1.75 1.75 0 0 0 9.253 9H9Z" clipRule="evenodd" /></svg>
+                </button>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('trip.tourismPackageSubtitle')}</div>
+              {showPackageTooltip && (
+                <div className="mt-2 p-2.5 bg-white dark:bg-slate-700 border border-purple-200 dark:border-purple-600 rounded-lg text-xs text-slate-700 dark:text-slate-300 shadow-md">
+                  {t('trip.tourismPackageTooltip')}
+                </div>
+              )}
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* ── Booking Tiers Toggle (single price vs multiple tiers) ── */}
       <div className="bg-sky-50 dark:bg-sky-900/20 rounded-xl border-2 border-sky-200 dark:border-sky-700 p-5">
-        <p className="text-base font-bold text-sky-800 dark:text-sky-300 mb-1">{t('trip.tripType')}</p>
-        <p className="text-xs text-sky-600 dark:text-sky-400 mb-4">{t('trip.tripTypeHint')}</p>
+        <p className="text-base font-bold text-sky-800 dark:text-sky-300 mb-1">{t('trip.tierStructure')}</p>
+        <p className="text-xs text-sky-600 dark:text-sky-400 mb-4">{t('trip.tierStructureHint')}</p>
         <div className="grid grid-cols-2 gap-3">
           <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${!isPackagedTrip ? 'border-sky-500 bg-sky-100 dark:bg-sky-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
-            <input type="radio" name="trip_type" checked={!isPackagedTrip} onChange={() => setIsPackagedTrip(false)} className="accent-sky-500" />
+            <input type="radio" name="tier_structure" checked={!isPackagedTrip} onChange={() => setIsPackagedTrip(false)} className="accent-sky-500" />
             <div>
-              <div className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.simpleTrip')}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">{t('trip.simpleTripDesc')}</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.singlePrice')}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{t('trip.singlePriceDesc')}</div>
             </div>
           </label>
           <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${isPackagedTrip ? 'border-sky-500 bg-sky-100 dark:bg-sky-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
-            <input type="radio" name="trip_type" checked={isPackagedTrip} onChange={() => setIsPackagedTrip(true)} className="accent-sky-500" />
+            <input type="radio" name="tier_structure" checked={isPackagedTrip} onChange={() => setIsPackagedTrip(true)} className="accent-sky-500" />
             <div>
-              <div className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.packagedTrip')}</div>
-              <div className="text-xs text-slate-500 dark:text-slate-400">{t('trip.packagedTripDesc')}</div>
+              <div className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.multipleTiers')}</div>
+              <div className="text-xs text-slate-500 dark:text-slate-400">{t('trip.multipleTiersDesc')}</div>
             </div>
           </label>
         </div>
@@ -730,8 +793,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         </div>
       )}
 
-      {/* ── Meeting Place ── */}
-      <div className={sectionCls}>
+      {/* ── Meeting Place (guided trips only) ── */}
+      {tripTypeSelection === TripType.GUIDED && <div className={sectionCls}>
         <p className={sectionTitleCls}>{t('trip.meetingPlace')}</p>
         <label className="flex items-center gap-2 mb-4 cursor-pointer">
           <input type="checkbox" name="has_meeting_place" checked={formData.has_meeting_place} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
@@ -749,7 +812,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Images ── */}
       <div className={sectionCls}>
@@ -815,44 +878,44 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {isPackagedTrip && (
         <div className={sectionCls}>
           <div className="flex items-center justify-between mb-1">
-            <p className={sectionTitleCls + ' mb-0'}>{t('package.packageNumber', { number: '' }).replace(' ', '')} <span className="text-sm font-normal text-slate-400">({t('package.minRequired')})</span></p>
+            <p className={sectionTitleCls + ' mb-0'}>{t('tier.tiers')} <span className="text-sm font-normal text-slate-400">({t('tier.minRequired')})</span></p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('package.provideOneLanguage')}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('tier.provideOneLanguage')}</p>
           <div className="flex flex-col gap-4">
             {packages.map((pkg, index) => (
               <div key={index} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/30">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{t('package.packageNumber', { number: index + 1 })}</p>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-200">{t('tier.tierNumber', { number: index + 1 })}</p>
                   {packages.length > 2 ? (
-                    <button type="button" onClick={() => removePackage(index)} className="text-xs text-red-600 hover:text-red-700 font-semibold">{t('form.removePackage')}</button>
+                    <button type="button" onClick={() => removePackage(index)} className="text-xs text-red-600 hover:text-red-700 font-semibold">{t('form.removeTier')}</button>
                   ) : (
                     <span className="text-xs text-slate-400">(min 2 {t('common.required')})</span>
                   )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className={labelCls}>{t('package.nameEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <input className={inputCls} value={pkg.name_en} onChange={(e) => updatePackage(index, 'name_en', e.target.value)} placeholder={t('package.nameEn')} />
+                    <label className={labelCls}>{t('tier.nameEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
+                    <input className={inputCls} value={pkg.name_en} onChange={(e) => updatePackage(index, 'name_en', e.target.value)} placeholder={t('tier.nameEn')} />
                   </div>
                   <div>
-                    <label className={labelCls}>{t('package.nameAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <input className={inputCls} value={pkg.name_ar} onChange={(e) => updatePackage(index, 'name_ar', e.target.value)} placeholder={t('package.nameAr')} dir="rtl" />
+                    <label className={labelCls}>{t('tier.nameAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
+                    <input className={inputCls} value={pkg.name_ar} onChange={(e) => updatePackage(index, 'name_ar', e.target.value)} placeholder={t('tier.nameAr')} dir="rtl" />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelCls}>{t('package.descriptionEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <textarea className={inputCls} rows={2} value={pkg.description_en} onChange={(e) => updatePackage(index, 'description_en', e.target.value)} placeholder={t('package.descriptionEn')} />
+                    <label className={labelCls}>{t('tier.descriptionEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
+                    <textarea className={inputCls} rows={2} value={pkg.description_en} onChange={(e) => updatePackage(index, 'description_en', e.target.value)} placeholder={t('tier.descriptionEn')} />
                   </div>
                   <div className="sm:col-span-2">
-                    <label className={labelCls}>{t('package.descriptionAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <textarea className={inputCls} rows={2} value={pkg.description_ar} onChange={(e) => updatePackage(index, 'description_ar', e.target.value)} placeholder={t('package.descriptionAr')} dir="rtl" />
+                    <label className={labelCls}>{t('tier.descriptionAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
+                    <textarea className={inputCls} rows={2} value={pkg.description_ar} onChange={(e) => updatePackage(index, 'description_ar', e.target.value)} placeholder={t('tier.descriptionAr')} dir="rtl" />
                   </div>
                   <div>
-                    <label className={labelCls}>{t('package.price')} (SAR)</label>
+                    <label className={labelCls}>{t('tier.price')} (SAR)</label>
                     <input className={inputCls} type="number" value={pkg.price} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder={t('package.pricePlaceholder')} min="0.01" step="0.01" required />
                   </div>
                   <div>
-                    <label className={labelCls}>{t('package.maxParticipants')}</label>
-                    <input className={inputCls} type="number" value={pkg.max_participants ?? ''} onChange={(e) => updatePackage(index, 'max_participants', parseInt(e.target.value) || 0)} placeholder={t('package.maxParticipantsPlaceholder')} min="1" />
+                    <label className={labelCls}>{t('tier.maxParticipants')}</label>
+                    <input className={inputCls} type="number" value={pkg.max_participants ?? ''} onChange={(e) => updatePackage(index, 'max_participants', parseInt(e.target.value) || 0)} placeholder={t('tier.maxParticipantsPlaceholder')} min="1" />
                   </div>
                 </div>
                 <label className="flex items-center gap-2 mb-3 cursor-pointer">
@@ -874,8 +937,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                   </div>
                 </div>
                 <div>
-                  <p className={labelCls}>{t('package.requiredFields')}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('package.nameDOBAlwaysRequired')}</p>
+                  <p className={labelCls}>{t('tier.requiredFields')}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{t('tier.nameDOBAlwaysRequired')}</p>
                   <div className="flex flex-col gap-2">
                     {availableFields.map((field) => {
                       const isMandatory = ['name', 'date_of_birth'].includes(field.field_name);
@@ -909,7 +972,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             ))}
           </div>
           <button type="button" onClick={addPackage} className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition">
-            + {t('form.addPackage')}
+            + {t('form.addTier')}
           </button>
         </div>
       )}

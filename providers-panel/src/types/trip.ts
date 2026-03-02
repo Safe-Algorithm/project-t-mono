@@ -74,6 +74,7 @@ export interface Trip {
   packages: TripPackage[];
   is_refundable?: boolean;
   amenities?: string[];
+  trip_type?: TripType;
   has_meeting_place?: boolean;
   meeting_location?: string;
   meeting_time?: string;
@@ -106,6 +107,11 @@ export interface CreateTripExtraFee {
   amount: number;
   currency?: string;
   is_mandatory?: boolean;
+}
+
+export enum TripType {
+  GUIDED = 'guided',
+  SELF_ARRANGED = 'self_arranged',
 }
 
 export enum TripAmenity {

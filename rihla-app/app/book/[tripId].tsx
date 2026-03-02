@@ -261,7 +261,7 @@ export default function BookingScreen() {
         {/* Summary */}
         <View style={s.summaryCard}>
           <Text style={s.summaryTrip} numberOfLines={1}>{tripName}</Text>
-          <Text style={s.summaryPkg}>{isPackaged ? t('booking.selectPackages', { defaultValue: 'Select Packages' }) : t('booking.simpleTrip', { defaultValue: 'Simple Trip' })}</Text>
+          <Text style={s.summaryPkg}>{isPackaged ? t('booking.selectTiers', { defaultValue: 'Select Tiers' }) : t('booking.simpleTrip', { defaultValue: 'Simple Trip' })}</Text>
         </View>
 
         {/* ── STEP 1: Count / Package Selection ── */}
@@ -282,12 +282,12 @@ export default function BookingScreen() {
               </View>
             ) : (
               <View style={s.section}>
-                <Text style={s.sectionTitle}>{t('booking.selectPackages', { defaultValue: 'Select Packages' })}</Text>
-                <Text style={s.sectionSubtitle}>{t('booking.selectPackagesHint', { defaultValue: 'Choose how many participants per package' })}</Text>
+                <Text style={s.sectionTitle}>{t('booking.selectTiers', { defaultValue: 'Select Tiers' })}</Text>
+                <Text style={s.sectionSubtitle}>{t('booking.selectTiersHint', { defaultValue: 'Choose how many participants per tier' })}</Text>
                 {activePackages.map(pkg => {
                   const sel = pkgSelections.find(s => s.package.id === pkg.id);
                   const count = sel?.count ?? 0;
-                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
+                  const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
                   return (
                     <View key={pkg.id} style={s.pkgCard}>
                       <View style={s.pkgInfo}>
@@ -344,7 +344,7 @@ export default function BookingScreen() {
               ))
             ) : (
               pkgFlatList.map(({ participant, pkg, globalIndex }) => {
-                const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Package';
+                const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
                 const fields = (pkg.required_fields ?? []).map(ft => ({
                   field_type: ft as FieldType,
                   is_required: true,
@@ -388,7 +388,7 @@ export default function BookingScreen() {
                 <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
                 <ConfirmRow label={t('booking.participants')} value={String(totalParticipants)} s={s} />
                 {isPackaged && pkgSelections.map(sel => {
-                  const pName = (i18n.language === 'ar' ? (sel.package.name_ar || sel.package.name_en) : (sel.package.name_en || sel.package.name_ar)) || 'Package';
+                  const pName = (i18n.language === 'ar' ? (sel.package.name_ar || sel.package.name_en) : (sel.package.name_en || sel.package.name_ar)) || 'Tier';
                   return <ConfirmRow key={sel.package.id} label={pName} value={`${sel.count} × ${Number(sel.package.price).toLocaleString()} SAR`} s={s} />;
                 })}
                 {isPackaged && (

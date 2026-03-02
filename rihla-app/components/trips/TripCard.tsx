@@ -154,6 +154,24 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           <Ionicons name="business-outline" size={13} color={colors.textTertiary} />
           <Text style={s.provider} numberOfLines={1}>{trip.provider?.company_name}</Text>
         </View>
+        {trip.trip_type && (
+          <View style={[
+            s.tripTypeBadge,
+            trip.trip_type === 'guided' ? s.tripTypeBadgeGuided : s.tripTypeBadgePackage,
+          ]}>
+            <Ionicons
+              name={trip.trip_type === 'guided' ? 'compass-outline' : 'gift-outline'}
+              size={11}
+              color={trip.trip_type === 'guided' ? '#92400e' : '#6b21a8'}
+            />
+            <Text style={[
+              s.tripTypeBadgeText,
+              trip.trip_type === 'guided' ? s.tripTypeBadgeTextGuided : s.tripTypeBadgeTextPackage,
+            ]}>
+              {trip.trip_type === 'guided' ? t('trip.guidedTripBadge') : t('trip.tourismPackageBadge')}
+            </Text>
+          </View>
+        )}
         {routeLabel && (
           <View style={s.routeRow}>
             <Ionicons name="navigate-outline" size={13} color={colors.primary} />
@@ -232,5 +250,11 @@ function makeStyles(c: ThemeColors) {
     compactContent: { padding: 10, gap: 4 },
     compactName: { fontSize: FontSize.sm, fontWeight: '700', color: c.textPrimary },
     compactProvider: { fontSize: FontSize.xs, color: c.textTertiary },
+    tripTypeBadge: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4, alignSelf: 'flex-start' as const, paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full, borderWidth: 1 },
+    tripTypeBadgeGuided: { backgroundColor: '#fef3c7', borderColor: '#fcd34d' },
+    tripTypeBadgePackage: { backgroundColor: '#f3e8ff', borderColor: '#d8b4fe' },
+    tripTypeBadgeText: { fontSize: FontSize.xs, fontWeight: '700' as const },
+    tripTypeBadgeTextGuided: { color: '#92400e' },
+    tripTypeBadgeTextPackage: { color: '#6b21a8' },
   });
 }

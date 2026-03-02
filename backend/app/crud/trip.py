@@ -6,7 +6,7 @@ from decimal import Decimal
 from sqlmodel import Session, select, or_, and_, func
 from sqlalchemy.orm import selectinload
 
-from app.models.trip import Trip, TripRating
+from app.models.trip import Trip, TripRating, TripType
 from app.schemas.trip import TripCreate, TripUpdate, TripRatingCreate
 from app.models.provider import Provider
 from app.models.user import User
@@ -79,6 +79,7 @@ def search_and_filter_trips(
     # New filters
     starting_city_id: Optional[uuid.UUID] = None,
     is_international: Optional[bool] = None,
+    trip_type: Optional[TripType] = None,
     destination_ids: Optional[List[uuid.UUID]] = None,
     single_destination: Optional[bool] = None,
     amenities: Optional[List[str]] = None,
@@ -133,6 +134,9 @@ def search_and_filter_trips(
 
     if is_international is not None:
         conditions.append(Trip.is_international == is_international)
+
+    if trip_type is not None:
+        conditions.append(Trip.trip_type == trip_type)
 
     # Filter by destination_ids (OR: trip must have at least one of these destinations)
     if destination_ids:

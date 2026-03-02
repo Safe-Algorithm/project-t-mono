@@ -285,13 +285,30 @@ const resources = {
       // Trip form — settings & destinations
       "trip.settingsDestinations": "Settings & Destinations",
 
-      // Trip form — trip type
+      // Trip form — trip nature (guided vs tourism package)
+      "trip.tripNature": "Trip Nature",
+      "trip.tripNatureHint": "Select whether you are running a guided trip with a meeting point, or selling a tourism package (flights, hotels, tours, etc.).",
+      "trip.guidedTrip": "Guided Trip",
+      "trip.guidedTripSubtitle": "You manage the trip with a meeting point",
+      "trip.guidedTripTooltip": "A Guided Trip is one where you directly lead participants. You set a meeting location, accompany them, and manage the full experience on the ground.",
+      "trip.tourismPackage": "Tourism Package",
+      "trip.tourismPackageSubtitle": "You sell tickets, flights, hotels, or tours",
+      "trip.tourismPackageTooltip": "A Tourism Package is where you sell bundled travel services (e.g. flight + hotel + tours). Participants purchase and arrange logistics themselves — no meeting point required.",
+      "trip.whatIsThis": "What is this?",
+      // Trip form — booking tier structure
+      "trip.tierStructure": "Booking Tiers",
+      "trip.tierStructureHint": "Choose whether this trip has a single price or multiple tiers with different prices.",
+      "trip.singlePrice": "Single Price",
+      "trip.singlePriceDesc": "One price for all participants",
+      "trip.multipleTiers": "Multiple Tiers",
+      "trip.multipleTiersDesc": "Different tiers, each with its own price",
+      // Legacy keys kept for backwards-compat
       "trip.tripType": "Trip Type",
-      "trip.tripTypeHint": "Choose whether this trip has multiple selectable packages or a single price.",
-      "trip.simpleTrip": "Simple Trip",
+      "trip.tripTypeHint": "Choose whether this trip has multiple selectable tiers or a single price.",
+      "trip.simpleTrip": "Single Price",
       "trip.simpleTripDesc": "One price for all participants",
-      "trip.packagedTrip": "Packaged Trip",
-      "trip.packagedTripDesc": "Multiple packages, each with its own price",
+      "trip.packagedTrip": "Multiple Tiers",
+      "trip.packagedTripDesc": "Different tiers, each with its own price",
 
       // Trip form — price/policy section
       "trip.pricePolicyFields": "Price, Policy & Fields",
@@ -307,7 +324,23 @@ const resources = {
       "form.fixFollowing": "Please fix the following:",
       "form.uploadingImages": "Uploading images, please wait…",
 
-      // Trip form — packages section
+      // Trip form — tier section (renamed from package)
+      "tier.tiers": "Booking Tiers",
+      "tier.minRequired": "minimum 2 required",
+      "tier.provideOneLanguage": "Provide info in at least one language (English or Arabic)",
+      "tier.tierNumber": "Tier {{number}}",
+      "tier.nameEn": "Tier Name (English)",
+      "tier.nameAr": "Tier Name (Arabic)",
+      "tier.descriptionEn": "Description (English)",
+      "tier.descriptionAr": "Description (Arabic)",
+      "tier.price": "Price",
+      "tier.maxParticipants": "Max Participants",
+      "tier.maxParticipantsPlaceholder": "e.g. 10",
+      "tier.requiredFields": "Required Fields",
+      "tier.nameDOBAlwaysRequired": "Name & DOB always required.",
+      "form.removeTier": "Remove Tier",
+      "form.addTier": "Add Tier",
+      // Trip form — packages section (kept for backwards-compat)
       "package.minRequired": "minimum 2 required",
       "package.provideOneLanguage": "Provide info in at least one language (English or Arabic)",
       "package.nameEnOptional": "optional",
@@ -754,13 +787,30 @@ const resources = {
       // Trip form — settings & destinations
       "trip.settingsDestinations": "الإعدادات والوجهات",
 
-      // Trip form — trip type
+      // Trip form — trip nature (guided vs tourism package)
+      "trip.tripNature": "طبيعة الرحلة",
+      "trip.tripNatureHint": "اختر ما إذا كنت تقود رحلة منظمة بنقطة التجمع، أو تبيع باقة سياحية (تذاكر، فنادق، جولات، إلخ).",
+      "trip.guidedTrip": "رحلة منظمة",
+      "trip.guidedTripSubtitle": "أنت تقود الرحلة مع نقطة تجمع",
+      "trip.guidedTripTooltip": "الرحلة المنظمة هي التي تقودها بنفسك وتتواجد مع المشاركين. تحدد نقطة التجمع وتشرف على التجربة كاملة.",
+      "trip.tourismPackage": "باقة سياحية",
+      "trip.tourismPackageSubtitle": "أنت تبيع تذاكر أو فنادق أو رحلات أو جولات",
+      "trip.tourismPackageTooltip": "الباقة السياحية هي خدمات سفر مجمّعة (مثل: طيران + فندق + جولات). يقوم المشاركون بتنظيم لوجستياتهم بأنفسهم — لا تحتاج لنقطة تجمع.",
+      "trip.whatIsThis": "ما هذا؟",
+      // Trip form — booking tier structure
+      "trip.tierStructure": "فئات الحجز",
+      "trip.tierStructureHint": "اختر ما إذا كانت الرحلة بسعر واحد أو فئات متعددة بأسعار مختلفة.",
+      "trip.singlePrice": "سعر واحد",
+      "trip.singlePriceDesc": "سعر موحد لجميع المشاركين",
+      "trip.multipleTiers": "فئات متعددة",
+      "trip.multipleTiersDesc": "فئات مختلفة، كل منها بسعرها الخاص",
+      // Legacy keys
       "trip.tripType": "نوع الرحلة",
-      "trip.tripTypeHint": "اختر ما إذا كانت الرحلة تحتوي على باقات متعددة أو سعر واحد.",
-      "trip.simpleTrip": "رحلة عادية",
-      "trip.simpleTripDesc": "سعر واحد لجميع المشاركين",
-      "trip.packagedTrip": "رحلة بباقات",
-      "trip.packagedTripDesc": "باقات متعددة، كل منها بسعرها الخاص",
+      "trip.tripTypeHint": "اختر ما إذا كانت الرحلة تحتوي على فئات متعددة أو سعر واحد.",
+      "trip.simpleTrip": "سعر واحد",
+      "trip.simpleTripDesc": "سعر موحد لجميع المشاركين",
+      "trip.packagedTrip": "فئات متعددة",
+      "trip.packagedTripDesc": "فئات مختلفة، كل منها بسعرها الخاص",
 
       // Trip form — price/policy section
       "trip.pricePolicyFields": "السعر والسياسة والحقول",
@@ -776,7 +826,23 @@ const resources = {
       "form.fixFollowing": "يرجى تصحيح ما يلي:",
       "form.uploadingImages": "جاري رفع الصور، يرجى الانتظار…",
 
-      // Trip form — packages section
+      // Trip form — tier section (renamed from package)
+      "tier.tiers": "فئات الحجز",
+      "tier.minRequired": "الحد الأدنى 2 مطلوب",
+      "tier.provideOneLanguage": "أدخل المعلومات بلغة واحدة على الأقل (إنجليزي أو عربي)",
+      "tier.tierNumber": "الفئة {{number}}",
+      "tier.nameEn": "اسم الفئة (إنجليزي)",
+      "tier.nameAr": "اسم الفئة (عربي)",
+      "tier.descriptionEn": "الوصف (إنجليزي)",
+      "tier.descriptionAr": "الوصف (عربي)",
+      "tier.price": "السعر",
+      "tier.maxParticipants": "الحد الأقصى للمشاركين",
+      "tier.maxParticipantsPlaceholder": "مثال: 10",
+      "tier.requiredFields": "الحقول المطلوبة",
+      "tier.nameDOBAlwaysRequired": "الاسم وتاريخ الميلاد مطلوبان دائماً.",
+      "form.removeTier": "إزالة الفئة",
+      "form.addTier": "إضافة فئة",
+      // Trip form — packages section (kept for backwards-compat)
       "package.minRequired": "الحد الأدنى 2 مطلوب",
       "package.provideOneLanguage": "أدخل المعلومات بلغة واحدة على الأقل (إنجليزي أو عربي)",
       "package.nameEnOptional": "اختياري",

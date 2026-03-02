@@ -220,6 +220,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
     booked = sum(r.total_participants for r in active_regs)
     available_spots = max(0, trip.max_participants - booked)
 
+    from app.models.trip import TripType
     return TripRead(
         id=trip.id,
         provider_id=trip.provider_id,
@@ -234,6 +235,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         images=trip.images,
         trip_metadata=trip.trip_metadata,
         is_active=trip.is_active,
+        trip_type=getattr(trip, 'trip_type', TripType.GUIDED),
         price=resp_price,
         is_refundable=resp_is_refundable,
         amenities=resp_amenities,
@@ -276,6 +278,7 @@ def list_public_trips(
     is_active: Optional[bool] = True,
     starting_city_id: Optional[uuid.UUID] = None,
     is_international: Optional[bool] = None,
+    trip_type: Optional[str] = None,
     destination_ids: Optional[List[uuid.UUID]] = Query(default=None),
     single_destination: Optional[bool] = None,
     amenities: Optional[List[str]] = Query(default=None),
@@ -300,6 +303,14 @@ def list_public_trips(
     # For the general explore feed we keep the strict future+open-registration filter.
     is_provider_profile_view = provider_id is not None
 
+    from app.models.trip import TripType
+    trip_type_filter = None
+    if trip_type:
+        try:
+            trip_type_filter = TripType(trip_type)
+        except ValueError:
+            pass
+
     trips = crud.trip.search_and_filter_trips(
         session=session,
         provider_id=provider_id,
@@ -317,6 +328,7 @@ def list_public_trips(
         is_active=is_active,
         starting_city_id=starting_city_id,
         is_international=is_international,
+        trip_type=trip_type_filter,
         destination_ids=destination_ids,
         single_destination=single_destination,
         amenities=amenities,

@@ -172,6 +172,15 @@ const TripDetailPage: React.FC = () => {
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
               {trip.is_packaged_trip ? 'Packaged' : 'Simple'}
             </span>
+            {(trip as any).trip_type && (
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                (trip as any).trip_type === 'guided'
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                  : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
+              }`}>
+                {(trip as any).trip_type === 'guided' ? '🧭 Guided Trip' : '🎁 Tourism Package'}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex gap-2 flex-shrink-0">
@@ -325,12 +334,12 @@ const TripDetailPage: React.FC = () => {
       {trip.is_packaged_trip && (
         <div className={cardCls}>
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Packages ({trip.packages.length})</h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Booking Tiers ({trip.packages.length})</h2>
           </div>
           <div className="p-6">
             {trip.packages.length === 0 ? (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
-                No packages yet. Add at least 2 packages for a packaged trip.
+                No tiers yet. Add at least 2 tiers for a packaged trip.
               </div>
             ) : (
               <div className="space-y-3">

@@ -210,6 +210,25 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
               ))}
             </View>
 
+            {/* Trip Nature */}
+            <Text style={s.sectionLabel}>{t('filters.tripNature')}</Text>
+            <Text style={s.sectionHint}>{t('filters.tripNatureHint')}</Text>
+            <View style={s.ratingRow}>
+              {([
+                { labelKey: 'filters.allNatures', value: undefined },
+                { labelKey: 'filters.guidedTrip', value: 'guided' },
+                { labelKey: 'filters.tourismPackage', value: 'self_arranged' },
+              ] as { labelKey: string; value: string | undefined }[]).map((opt) => (
+                <TouchableOpacity key={String(opt.value)}
+                  style={[s.ratingChip, local.trip_type === opt.value && s.ratingChipActive]}
+                  onPress={() => update('trip_type', opt.value)}>
+                  <Text style={[s.ratingChipText, local.trip_type === opt.value && s.ratingChipTextActive]}>
+                    {t(opt.labelKey as any)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             {/* Date Range */}
             <Text style={s.sectionLabel}>{t('filters.dateRange', 'Trip Start Date')}</Text>
             <Text style={s.sectionHint}>{t('filters.dateRangeHint', 'Filter trips by when they start')}</Text>

@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator, model_validator
 from .trip_package import TripPackageWithRequiredFields
 from .trip_extra_fee import TripExtraFeeResponse
 from app.models.trip_amenity import TripAmenity
+from app.models.trip import TripType
 
 
 def _to_utc(dt: datetime) -> datetime:
@@ -27,6 +28,7 @@ class TripBase(BaseModel):
     max_participants: int
     images: Optional[List[str]] = None
     trip_metadata: Optional[dict] = None
+    trip_type: TripType = TripType.GUIDED
     has_meeting_place: bool = False
     meeting_location: Optional[str] = None
     meeting_time: Optional[datetime] = None
@@ -82,6 +84,10 @@ class TripCreate(TripBase):
             raise ValueError('At least one of description_en or description_ar must be provided')
         if self.registration_deadline and self.registration_deadline > self.start_date:
             raise ValueError('registration_deadline must be on or before start_date')
+        if self.trip_type == TripType.GUIDED and self.has_meeting_place and not self.meeting_location:
+            raise ValueError('meeting_location is required when has_meeting_place is True')
+        if self.trip_type == TripType.SELF_ARRANGED and self.has_meeting_place:
+            raise ValueError('Tourism packages (self_arranged) cannot have a meeting place')
         return self
 
 
@@ -96,6 +102,7 @@ class TripUpdate(BaseModel):
     is_active: Optional[bool] = None
     images: Optional[List[str]] = None
     trip_metadata: Optional[dict] = None
+    trip_type: Optional[TripType] = None
     has_meeting_place: Optional[bool] = None
     meeting_location: Optional[str] = None
     meeting_time: Optional[datetime] = None
@@ -180,6 +187,7 @@ class TripRead(TripBase):
     provider: ProviderInfo
     is_active: bool
     trip_reference: str
+    trip_type: TripType = TripType.GUIDED
     available_spots: int = 0
     starting_city: Optional[StartingCityInfo] = None
     destinations: List[DestinationInfo] = []

@@ -172,6 +172,7 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         starting_city_id=trip.starting_city_id,
         starting_city=_get_starting_city_info(session, trip),
         is_international=trip.is_international, is_packaged_trip=trip.is_packaged_trip,
+        trip_type=trip.trip_type,
         timezone=trip.timezone,
         packages=packages_with_fields, extra_fees=extra_fees,
         available_spots=max(0, trip.max_participants - booked),

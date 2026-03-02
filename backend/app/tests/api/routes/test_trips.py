@@ -3210,3 +3210,188 @@ def test_update_trip_invalid_timezone_rejected(client: TestClient, session: Sess
         json={"timezone": "garbage/tz"},
     )
     assert response.status_code == 422
+
+
+# ── trip_type tests ──────────────────────────────────────────────────────────
+
+def test_trip_type_defaults_to_guided(client: TestClient, session: Session) -> None:
+    """A trip created without trip_type should default to 'guided'."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Default Type Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 10,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["trip_type"] == "guided"
+
+
+def test_create_guided_trip_with_meeting_place(client: TestClient, session: Session) -> None:
+    """A guided trip with has_meeting_place=True and a meeting_location is accepted."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Guided Trip With Meeting",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 10,
+            "trip_type": "guided",
+            "has_meeting_place": True,
+            "meeting_location": "Riyadh Gate, Entrance A",
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["trip_type"] == "guided"
+    assert data["has_meeting_place"] is True
+    assert data["meeting_location"] == "Riyadh Gate, Entrance A"
+
+
+def test_guided_trip_meeting_place_requires_location(client: TestClient, session: Session) -> None:
+    """A guided trip with has_meeting_place=True but no meeting_location is rejected."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Guided No Location",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 10,
+            "trip_type": "guided",
+            "has_meeting_place": True,
+            "meeting_location": "",
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_create_self_arranged_trip(client: TestClient, session: Session) -> None:
+    """A self_arranged (tourism package) trip is created correctly."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Tourism Package Trip",
+            "description_en": "Flights, hotel, tours included",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "max_participants": 50,
+            "trip_type": "self_arranged",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["trip_type"] == "self_arranged"
+
+
+def test_self_arranged_trip_cannot_have_meeting_place(client: TestClient, session: Session) -> None:
+    """A self_arranged trip with has_meeting_place=True is rejected."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Bad Self-Arranged Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 10,
+            "trip_type": "self_arranged",
+            "has_meeting_place": True,
+            "meeting_location": "Some place",
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_filter_trips_by_trip_type(client: TestClient, session: Session) -> None:
+    """Public endpoint returns only trips matching the requested trip_type."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    # Create one guided and one self_arranged trip
+    for trip_type, name in [("guided", "Guided Filter Trip"), ("self_arranged", "Package Filter Trip")]:
+        resp = client.post(
+            f"{settings.API_V1_STR}/trips",
+            headers=headers,
+            json={
+                "name_en": name,
+                "description_en": "desc",
+                "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+                "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+                "max_participants": 10,
+                "trip_type": trip_type,
+                "price": 100,
+            },
+        )
+        assert resp.status_code == 200
+
+    guided_resp = client.get(f"{settings.API_V1_STR}/public-trips?trip_type=guided&is_active=true")
+    assert guided_resp.status_code == 200
+    guided_types = {t["trip_type"] for t in guided_resp.json()}
+    assert guided_types == {"guided"} or "self_arranged" not in guided_types
+
+    pkg_resp = client.get(f"{settings.API_V1_STR}/public-trips?trip_type=self_arranged&is_active=true")
+    assert pkg_resp.status_code == 200
+    pkg_types = {t["trip_type"] for t in pkg_resp.json()}
+    assert pkg_types == {"self_arranged"} or "guided" not in pkg_types
+
+
+def test_update_trip_type(client: TestClient, session: Session) -> None:
+    """Updating a trip's trip_type via PUT is reflected in the response."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Type Update Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 10,
+            "trip_type": "guided",
+        },
+    )
+    assert create_resp.status_code == 200
+    trip_id = create_resp.json()["id"]
+
+    update_resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"trip_type": "self_arranged"},
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["trip_type"] == "self_arranged"
+
+
+def test_trip_type_in_public_trip_response(client: TestClient, session: Session) -> None:
+    """trip_type is present in the public GET /public-trips/{id} response."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Public Type Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 10,
+            "trip_type": "self_arranged",
+            "price": 200,
+        },
+    )
+    assert create_resp.status_code == 200
+    trip_id = create_resp.json()["id"]
+
+    public_resp = client.get(f"{settings.API_V1_STR}/public-trips/{trip_id}")
+    assert public_resp.status_code == 200
+    assert public_resp.json()["trip_type"] == "self_arranged"
