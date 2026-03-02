@@ -268,6 +268,99 @@ def remove_user_from_trip(*, session: Session, db_trip: Trip, user: User) -> Tri
     return db_trip
 
 
+def duplicate_trip(*, session: Session, source_trip: Trip) -> Trip:
+    """Clone a trip (without dates, resetting reference).
+
+    Clones:
+    - All Trip scalar fields (bilingual names, descriptions, images, metadata,
+      timezone, trip_type, max_participants, starting_city_id, is_international,
+      is_packaged_trip, has_meeting_place, meeting_location)
+    - All TripPackage rows (with their required fields)
+    - All TripDestination links
+
+    NOT cloned: registration_deadline, meeting_time
+    start_date and end_date are copied as-is (column is NOT NULL); the provider
+    is expected to update them before re-publishing.
+    """
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from app.models.trip_package_field import TripPackageRequiredField
+    from app.models.trip_destination import TripDestination
+
+    new_trip = Trip(
+        name_en=source_trip.name_en,
+        name_ar=source_trip.name_ar,
+        description_en=source_trip.description_en,
+        description_ar=source_trip.description_ar,
+        start_date=source_trip.start_date,
+        end_date=source_trip.end_date,
+        max_participants=source_trip.max_participants,
+        is_active=False,  # draft until provider sets dates & activates
+        images=list(source_trip.images) if source_trip.images else None,
+        registration_deadline=None,
+        starting_city_id=source_trip.starting_city_id,
+        is_international=source_trip.is_international,
+        is_packaged_trip=source_trip.is_packaged_trip,
+        trip_metadata=dict(source_trip.trip_metadata) if source_trip.trip_metadata else None,
+        timezone=source_trip.timezone,
+        trip_type=source_trip.trip_type,
+        has_meeting_place=source_trip.has_meeting_place,
+        meeting_location=source_trip.meeting_location,
+        meeting_time=None,
+        provider_id=source_trip.provider_id,
+    )
+    session.add(new_trip)
+    session.flush()  # get new_trip.id before cloning children
+
+    # Clone packages
+    source_packages = session.exec(
+        select(TripPackageModel).where(TripPackageModel.trip_id == source_trip.id)
+    ).all()
+    for pkg in source_packages:
+        new_pkg = TripPackageModel(
+            trip_id=new_trip.id,
+            name_en=pkg.name_en,
+            name_ar=pkg.name_ar,
+            description_en=pkg.description_en,
+            description_ar=pkg.description_ar,
+            price=pkg.price,
+            currency=pkg.currency,
+            is_active=pkg.is_active,
+            max_participants=pkg.max_participants,
+            is_refundable=pkg.is_refundable,
+            amenities=list(pkg.amenities) if pkg.amenities else None,
+        )
+        session.add(new_pkg)
+        session.flush()
+
+        # Clone required fields for this package
+        source_fields = session.exec(
+            select(TripPackageRequiredField).where(TripPackageRequiredField.package_id == pkg.id)
+        ).all()
+        for field in source_fields:
+            new_field = TripPackageRequiredField(
+                package_id=new_pkg.id,
+                field_type=field.field_type,
+                is_required=field.is_required,
+                validation_config=dict(field.validation_config) if field.validation_config else None,
+            )
+            session.add(new_field)
+
+    # Clone destinations
+    source_dests = session.exec(
+        select(TripDestination).where(TripDestination.trip_id == source_trip.id)
+    ).all()
+    for dest_link in source_dests:
+        new_dest = TripDestination(
+            trip_id=new_trip.id,
+            destination_id=dest_link.destination_id,
+        )
+        session.add(new_dest)
+
+    session.commit()
+    session.refresh(new_trip)
+    return new_trip
+
+
 def rate_trip(*, session: Session, db_trip: Trip, rating_in: TripRatingCreate, user: User) -> Trip:
     rating_data = rating_in.model_dump()
     rating = TripRating(**rating_data, user_id=user.id, trip_id=db_trip.id)

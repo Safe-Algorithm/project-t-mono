@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.routes import admin, admin_roles, auth, dashboard, destinations, favorites, file_definitions, files, otp, payments, providers, provider_profiles, provider_ratings, provider_roles, public_trips, reviews, support, team, trip_updates, trips, users, users_by_role
+from app.api.routes import admin, admin_roles, auth, dashboard, destinations, favorites, file_definitions, files, otp, payments, providers, provider_profiles, provider_ratings, provider_roles, provider_images, public_trips, reviews, support, team, trip_updates, trips, users, users_by_role
 
 api_router = APIRouter()
 
@@ -26,3 +26,4 @@ api_router.include_router(support.router, tags=["support"])
 api_router.include_router(trip_updates.router, tags=["trip-updates"])
 api_router.include_router(provider_roles.router, prefix="/provider/roles", tags=["provider-roles"])
 api_router.include_router(admin_roles.router, prefix="/admin/roles", tags=["admin-roles"])
+api_router.include_router(provider_images.router, tags=["provider-images"])

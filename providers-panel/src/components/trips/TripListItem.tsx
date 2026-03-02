@@ -1,13 +1,35 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { Trip } from '../../types/trip';
 import { formatDateInTripTz, tzLabel } from '../../utils/tripDate';
+import { tripService } from '../../services/tripService';
 
 interface TripListItemProps {
   trip: Trip;
+  onDuplicated?: (newTrip: Trip) => void;
 }
 
-const TripListItem: React.FC<TripListItemProps> = ({ trip }) => {
+const TripListItem: React.FC<TripListItemProps> = ({ trip, onDuplicated }) => {
+  const router = useRouter();
+  const [duplicating, setDuplicating] = useState(false);
+
+  const handleDuplicate = async () => {
+    if (!confirm(`Duplicate "${trip.name_en || trip.name_ar}"? A draft copy will be created.`)) return;
+    setDuplicating(true);
+    try {
+      const newTrip = await tripService.duplicate(trip.id);
+      if (onDuplicated) {
+        onDuplicated(newTrip);
+      } else {
+        router.push(`/trips/${newTrip.id}`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to duplicate trip');
+    } finally {
+      setDuplicating(false);
+    }
+  };
   const hasPackages = trip.packages && trip.packages.length > 0;
   const isPackaged = trip.is_packaged_trip;
 
@@ -47,6 +69,13 @@ const TripListItem: React.FC<TripListItemProps> = ({ trip }) => {
             View Details
           </a>
         </Link>
+        <button
+          onClick={handleDuplicate}
+          disabled={duplicating}
+          className="bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-medium py-2 px-4 rounded text-center text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {duplicating ? 'Duplicating…' : 'Duplicate'}
+        </button>
         {isPackaged && !hasPackages && (
           <span className="text-xs text-orange-600 text-center">Add packages</span>
         )}

@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .provider_rating import ProviderRating
     from .rbac import Role
     from .provider_file_group import ProviderFileGroup
+    from .provider_image import ProviderImage
 
 class Provider(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -39,6 +40,7 @@ class Provider(SQLModel, table=True):
     files: List["ProviderFile"] = Relationship(back_populates="provider")
     ratings: List["ProviderRating"] = Relationship(back_populates="provider", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     roles: List["Role"] = Relationship(back_populates="provider")
+    images: List["ProviderImage"] = Relationship(back_populates="provider", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
 
 
 class ProviderRequest(SQLModel, table=True):

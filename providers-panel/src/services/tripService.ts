@@ -181,6 +181,10 @@ export const tripService = {
     return response.json();
   },
 
+  duplicate: (tripId: string): Promise<Trip> => {
+    return api.post<Trip>(`/trips/${tripId}/duplicate`, {});
+  },
+
   deleteImage: async (tripId: string, imageUrl: string): Promise<{ message: string; remaining_images: number }> => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/${tripId}/images?image_url=${encodeURIComponent(imageUrl)}`, {
       method: 'DELETE',

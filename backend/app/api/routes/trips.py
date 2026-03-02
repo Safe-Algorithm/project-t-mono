@@ -1403,7 +1403,21 @@ async def upload_trip_images(
                 content_type=processed.content_type,
                 folder="trip_images"
             )
-            uploaded_urls.append(file_info["downloadUrl"])
+            url = file_info["downloadUrl"]
+            uploaded_urls.append(url)
+
+            # Save to provider's image collection
+            crud.provider_image.add_image(
+                session=session,
+                provider_id=current_user.provider_id,
+                url=url,
+                b2_file_id=file_info.get("fileId", ""),
+                b2_file_name=file_info.get("fileName", file.filename or ""),
+                original_filename=file.filename,
+                width=processed.width,
+                height=processed.height,
+                size_bytes=len(processed.data),
+            )
         except Exception as e:
             logger.error(f"Error uploading file {file.filename}: {e}")
             raise HTTPException(status_code=500, detail=f"Failed to upload '{file.filename}'")
@@ -1555,3 +1569,34 @@ def delete_trip_extra_fee(
     
     trip_extra_fee.delete_extra_fee(session=session, extra_fee=extra_fee)
     return {"message": "Extra fee deleted successfully"}
+
+
+@router.post("/{trip_id}/duplicate")
+def duplicate_trip(
+    trip_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """Duplicate a trip.
+
+    Creates a full copy of the trip (packages, required fields, destinations,
+    images) owned by the same provider. The new trip starts as inactive (draft)
+    with no dates set so the provider can fill them in before publishing.
+    """
+    source = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if source.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not authorised to duplicate this trip")
+
+    new_trip = crud.trip.duplicate_trip(session=session, source_trip=source)
+
+    provider_obj = crud.provider.get_provider_by_id(
+        session=session, id=new_trip.provider_id
+    )
+    provider_info = {"id": provider_obj.id, "company_name": provider_obj.company_name}
+
+    extra_fees = trip_extra_fee.get_trip_extra_fees(session=session, trip_id=new_trip.id)
+
+    return _build_trip_read(session, new_trip, provider_info, extra_fees)
