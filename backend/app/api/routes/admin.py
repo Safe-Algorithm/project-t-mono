@@ -16,13 +16,17 @@ from app.schemas.trip import TripRead
 from app.schemas.trip_package import TripPackageWithRequiredFields
 from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, FieldOption
 from app.models.trip_field import TripFieldType, FIELD_METADATA
-from app.crud import trip as trip_crud, file_definition as file_definition_crud
+from app.crud import trip as trip_crud, file_definition as file_definition_crud, provider_file_group as file_group_crud
 from app.schemas.admin import ProviderRequestUpdate
 from app.schemas.file_definition import (
     FileDefinitionCreate,
     FileDefinitionUpdate,
     FileDefinitionPublic,
-    FileDefinitionListResponse
+    FileDefinitionListResponse,
+    ProviderFileGroupCreate,
+    ProviderFileGroupUpdate,
+    ProviderFileGroupPublic,
+    ProviderFileGroupListResponse,
 )
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
@@ -746,4 +750,80 @@ def delete_file_definition(
     )
     if not success:
         raise HTTPException(status_code=404, detail="File definition not found")
+    return None
+
+
+# ── File Group Settings Endpoints ─────────────────────────────────────────────
+
+@router.post("/settings/file-groups", response_model=ProviderFileGroupPublic, status_code=201)
+def create_file_group(
+    *,
+    session: Session = Depends(get_session),
+    group_in: ProviderFileGroupCreate,
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
+) -> ProviderFileGroupPublic:
+    """Create a new provider file group (Admin only)."""
+    return file_group_crud.create_group(session=session, group_in=group_in)
+
+
+@router.get("/settings/file-groups", response_model=ProviderFileGroupListResponse)
+def list_file_groups(
+    *,
+    session: Session = Depends(get_session),
+    skip: int = 0,
+    limit: int = 100,
+    active_only: bool = False,
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
+) -> ProviderFileGroupListResponse:
+    """List all provider file groups (Admin only)."""
+    groups = file_group_crud.get_groups(session=session, skip=skip, limit=limit, active_only=active_only)
+    total = file_group_crud.count_groups(session=session, active_only=active_only)
+    return ProviderFileGroupListResponse(items=groups, total=total)
+
+
+@router.get("/settings/file-groups/{group_id}", response_model=ProviderFileGroupPublic)
+def get_file_group(
+    *,
+    session: Session = Depends(get_session),
+    group_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
+) -> ProviderFileGroupPublic:
+    """Get a file group by ID (Admin only)."""
+    group = file_group_crud.get_group(session=session, group_id=group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="File group not found")
+    return group
+
+
+@router.put("/settings/file-groups/{group_id}", response_model=ProviderFileGroupPublic)
+def update_file_group(
+    *,
+    session: Session = Depends(get_session),
+    group_id: uuid.UUID,
+    group_in: ProviderFileGroupUpdate,
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
+) -> ProviderFileGroupPublic:
+    """Update a file group (Admin only)."""
+    group = file_group_crud.update_group(session=session, group_id=group_id, group_in=group_in)
+    if not group:
+        raise HTTPException(status_code=404, detail="File group not found")
+    return group
+
+
+@router.delete("/settings/file-groups/{group_id}", status_code=204)
+def delete_file_group(
+    *,
+    session: Session = Depends(get_session),
+    group_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_admin),
+    _rbac: None = Depends(require_admin_permission),
+):
+    """Delete a file group (Admin only). Blocked if definitions are linked."""
+    success = file_group_crud.delete_group(session=session, group_id=group_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="File group not found")
     return None

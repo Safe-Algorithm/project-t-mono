@@ -1,5 +1,22 @@
 import { api } from './api';
 
+export interface ProviderFileGroup {
+  id: string;
+  key: string;
+  name_en: string;
+  name_ar: string;
+  description_en: string | null;
+  description_ar: string | null;
+  is_active: boolean;
+  display_order: number;
+  file_definitions: FileDefinition[];
+}
+
+export interface ProviderFileGroupListResponse {
+  items: ProviderFileGroup[];
+  total: number;
+}
+
 export interface FileDefinition {
   id: string;
   key: string;
@@ -12,6 +29,7 @@ export interface FileDefinition {
   is_required: boolean;
   is_active: boolean;
   display_order: number;
+  file_group_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,16 +71,29 @@ export interface FileUploadResponse {
 }
 
 export const fileDefinitionsService = {
-  // Get provider registration requirements (public endpoint - no auth needed)
   async getProviderRegistrationRequirements(): Promise<FileDefinition[]> {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/file-definitions/provider-registration`
     );
-    if (!response.ok) {
-      throw new Error('Failed to fetch file requirements');
-    }
+    if (!response.ok) throw new Error('Failed to fetch file requirements');
     return response.json();
-  }
+  },
+
+  async getFileGroups(): Promise<ProviderFileGroupListResponse> {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/file-definitions/groups`
+    );
+    if (!response.ok) throw new Error('Failed to fetch file groups');
+    return response.json();
+  },
+
+  async getFileGroupById(groupId: string): Promise<ProviderFileGroup> {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/file-definitions/groups/${groupId}`
+    );
+    if (!response.ok) throw new Error('Failed to fetch file group');
+    return response.json();
+  },
 };
 
 export const providerFilesService = {

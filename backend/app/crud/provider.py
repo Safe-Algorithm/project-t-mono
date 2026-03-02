@@ -14,6 +14,7 @@ def create_provider_from_request(session: Session, *, request_in: ProviderReques
         company_email=request_in.company_email,
         company_phone=request_in.company_phone,
         company_metadata=request_in.company_metadata,
+        file_group_id=request_in.file_group_id,
         provider_request_id=None  # Will be set when request is created
     )
     session.add(provider)
@@ -23,7 +24,8 @@ def create_provider_from_request(session: Session, *, request_in: ProviderReques
 
 def create_provider_request(session: Session, *, request_in: ProviderRequestCreate, user: User, provider: Provider = None) -> ProviderRequest:
     db_request = ProviderRequest(
-        user_id=user.id
+        user_id=user.id,
+        file_group_id=request_in.file_group_id,
     )
     session.add(db_request)
     session.commit()

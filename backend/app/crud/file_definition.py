@@ -75,11 +75,17 @@ def get_file_definitions(
 def get_active_file_definitions_for_provider_registration(
     session: Session
 ) -> List[FileDefinition]:
-    """Get active file definitions for provider registration"""
+    """Get active ungrouped file definitions for provider registration.
+
+    Only returns definitions that have no group assigned (file_group_id IS NULL).
+    Grouped definitions are served via the /file-definitions/groups/{id} endpoint.
+    """
+    from sqlmodel import col
     statement = select(FileDefinition).where(
-        FileDefinition.is_active == True
+        FileDefinition.is_active == True,
+        col(FileDefinition.file_group_id).is_(None),
     ).order_by(FileDefinition.display_order, FileDefinition.created_at)
-    
+
     return list(session.exec(statement).all())
 
 

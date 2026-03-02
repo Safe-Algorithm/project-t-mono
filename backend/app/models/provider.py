@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .provider_file import ProviderFile
     from .provider_rating import ProviderRating
     from .rbac import Role
+    from .provider_file_group import ProviderFileGroup
 
 class Provider(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -24,6 +25,10 @@ class Provider(SQLModel, table=True):
     bio_ar: Optional[str] = Field(default=None, max_length=1000)
     
     company_metadata: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+
+    # The file group this provider registered under (set at registration, immutable after approval)
+    file_group_id: Optional[uuid.UUID] = Field(default=None, foreign_key="providerfilegroup.id", index=True)
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -40,6 +45,10 @@ class ProviderRequest(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     status: str = Field(default="pending", index=True)  # Values: pending, approved, denied
     denial_reason: Optional[str] = Field(default=None)
+
+    # The file group chosen by the provider at registration time
+    file_group_id: Optional[uuid.UUID] = Field(default=None, foreign_key="providerfilegroup.id", index=True)
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     

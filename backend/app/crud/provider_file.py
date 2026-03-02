@@ -118,31 +118,58 @@ def count_accepted_files(
     return len(list(session.exec(statement).all()))
 
 
+def _get_provider_file_group_id(
+    session: Session,
+    provider_id: uuid.UUID,
+) -> Optional[uuid.UUID]:
+    """Return the file_group_id stored on the Provider row (may be None)."""
+    from app.models.provider import Provider as ProviderModel
+    provider = session.get(ProviderModel, provider_id)
+    return provider.file_group_id if provider else None
+
+
+def _build_required_defs_query(
+    file_group_id: Optional[uuid.UUID],
+):
+    """Build a select statement for active required FileDefinitions scoped to a group.
+
+    Rules:
+    - If the provider has a file_group_id → only definitions belonging to that group.
+    - If no group → only ungrouped definitions (file_group_id IS NULL).
+    """
+    from app.models.file_definition import FileDefinition
+    from sqlmodel import col
+
+    stmt = select(FileDefinition).where(
+        FileDefinition.is_required == True,
+        FileDefinition.is_active == True,
+    )
+    if file_group_id is not None:
+        stmt = stmt.where(FileDefinition.file_group_id == file_group_id)
+    else:
+        stmt = stmt.where(col(FileDefinition.file_group_id).is_(None))
+    return stmt
+
+
 def are_all_files_accepted(
     session: Session,
     provider_id: uuid.UUID
 ) -> bool:
     """Check if all required provider files are accepted.
 
-    Returns True if there are no active required file definitions (nothing to upload).
+    Only checks definitions that belong to the provider's file group (or
+    ungrouped definitions if the provider has no group set).
+
+    Returns True if there are no active required file definitions.
     Returns True if all uploaded files for required definitions are accepted.
     Returns False if any required file is missing or not yet accepted.
     """
-    from app.models.file_definition import FileDefinition
+    file_group_id = _get_provider_file_group_id(session, provider_id)
+    required_defs = list(session.exec(_build_required_defs_query(file_group_id)).all())
 
-    # Get all active required file definitions
-    required_defs = list(session.exec(
-        select(FileDefinition).where(
-            FileDefinition.is_required == True,
-            FileDefinition.is_active == True,
-        )
-    ).all())
-
-    # No required definitions → nothing to check, approval is fine
     if not required_defs:
         return True
 
-    # Get all uploaded files for this provider
     uploaded = {
         f.file_definition_id: f
         for f in session.exec(
@@ -153,9 +180,9 @@ def are_all_files_accepted(
     for defn in required_defs:
         file = uploaded.get(defn.id)
         if file is None:
-            return False  # required file not uploaded at all
+            return False
         if file.file_verification_status != FileVerificationStatus.ACCEPTED:
-            return False  # uploaded but not yet accepted
+            return False
 
     return True
 
@@ -164,14 +191,9 @@ def count_required_files(
     session: Session,
     provider_id: uuid.UUID
 ) -> int:
-    """Count total required files for a provider based on active file definitions"""
-    from app.models.file_definition import FileDefinition
-    
-    statement = select(FileDefinition).where(
-        FileDefinition.is_active == True,
-        FileDefinition.is_required == True
-    )
-    return len(list(session.exec(statement).all()))
+    """Count total required files for a provider scoped to their file group."""
+    file_group_id = _get_provider_file_group_id(session, provider_id)
+    return len(list(session.exec(_build_required_defs_query(file_group_id)).all()))
 
 
 def get_missing_file_definitions(
@@ -179,30 +201,27 @@ def get_missing_file_definitions(
     provider_id: uuid.UUID
 ) -> List["FileDefinition"]:
     """
-    Get all active file definitions that the provider hasn't uploaded yet.
-    Returns file definitions that are active but have no corresponding provider file.
+    Get active file definitions the provider hasn't uploaded yet, scoped to their group.
     """
     from app.models.file_definition import FileDefinition
-    
-    # Get all active file definitions
-    all_definitions_stmt = select(FileDefinition).where(
-        FileDefinition.is_active == True
+    from sqlmodel import col
+
+    file_group_id = _get_provider_file_group_id(session, provider_id)
+
+    stmt = select(FileDefinition).where(FileDefinition.is_active == True)
+    if file_group_id is not None:
+        stmt = stmt.where(FileDefinition.file_group_id == file_group_id)
+    else:
+        stmt = stmt.where(col(FileDefinition.file_group_id).is_(None))
+    all_definitions = list(session.exec(stmt).all())
+
+    uploaded_ids = set(
+        session.exec(
+            select(ProviderFile.file_definition_id).where(ProviderFile.provider_id == provider_id)
+        ).all()
     )
-    all_definitions = list(session.exec(all_definitions_stmt).all())
-    
-    # Get file definition IDs that the provider has already uploaded
-    uploaded_definitions_stmt = select(ProviderFile.file_definition_id).where(
-        ProviderFile.provider_id == provider_id
-    )
-    uploaded_definition_ids = set(session.exec(uploaded_definitions_stmt).all())
-    
-    # Filter out definitions that have already been uploaded
-    missing_definitions = [
-        definition for definition in all_definitions
-        if definition.id not in uploaded_definition_ids
-    ]
-    
-    return missing_definitions
+
+    return [d for d in all_definitions if d.id not in uploaded_ids]
 
 
 def can_replace_file(

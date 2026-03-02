@@ -10,6 +10,68 @@ from datetime import datetime
 import uuid
 
 
+# ── File Group Schemas ─────────────────────────────────────────────────────────
+
+class ProviderFileGroupBase(BaseModel):
+    key: str = Field(max_length=100)
+    name_en: str = Field(max_length=200)
+    name_ar: str = Field(max_length=200)
+    description_en: Optional[str] = Field(default=None, max_length=500)
+    description_ar: Optional[str] = Field(default=None, max_length=500)
+    is_active: bool = Field(default=True)
+    display_order: int = Field(default=0, ge=0)
+
+    @field_validator('key')
+    @classmethod
+    def validate_key(cls, v: str) -> str:
+        if not v:
+            raise ValueError("Key cannot be empty")
+        if not v.replace('_', '').isalnum():
+            raise ValueError("Key must contain only alphanumeric characters and underscores")
+        return v.lower()
+
+
+class ProviderFileGroupCreate(ProviderFileGroupBase):
+    pass
+
+
+class ProviderFileGroupUpdate(BaseModel):
+    name_en: Optional[str] = Field(default=None, max_length=200)
+    name_ar: Optional[str] = Field(default=None, max_length=200)
+    description_en: Optional[str] = Field(default=None, max_length=500)
+    description_ar: Optional[str] = Field(default=None, max_length=500)
+    is_active: Optional[bool] = None
+    display_order: Optional[int] = Field(default=None, ge=0)
+
+
+class ProviderFileGroupPublic(ProviderFileGroupBase):
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+    file_definitions: List["FileDefinitionPublic"] = []
+
+    class Config:
+        from_attributes = True
+
+
+class ProviderFileGroupSummary(BaseModel):
+    """Lightweight group info returned in file definition list responses."""
+    id: uuid.UUID
+    key: str
+    name_en: str
+    name_ar: str
+
+    class Config:
+        from_attributes = True
+
+
+class ProviderFileGroupListResponse(BaseModel):
+    items: List[ProviderFileGroupPublic]
+    total: int
+
+
+# ── File Definition Schemas ───────────────────────────────────────────────────
+
 class FileDefinitionBase(BaseModel):
     """Base schema for file definition"""
     key: str = Field(max_length=100, description="Unique key for the file definition")
@@ -22,6 +84,7 @@ class FileDefinitionBase(BaseModel):
     is_required: bool = Field(default=True, description="Whether this file is mandatory")
     is_active: bool = Field(default=True, description="Whether this file definition is active")
     display_order: int = Field(default=0, ge=0, description="Display order in forms")
+    file_group_id: Optional[uuid.UUID] = Field(default=None, description="File group this definition belongs to (None = ungrouped)")
     
     @field_validator('allowed_extensions')
     @classmethod
@@ -59,6 +122,8 @@ class FileDefinitionCreate(FileDefinitionBase):
     pass
 
 
+
+
 class FileDefinitionUpdate(BaseModel):
     """Schema for updating a file definition"""
     name_en: Optional[str] = Field(None, max_length=200)
@@ -70,6 +135,7 @@ class FileDefinitionUpdate(BaseModel):
     is_required: Optional[bool] = None
     is_active: Optional[bool] = None
     display_order: Optional[int] = Field(None, ge=0)
+    file_group_id: Optional[uuid.UUID] = None
     
     @field_validator('allowed_extensions')
     @classmethod
@@ -99,7 +165,8 @@ class FileDefinitionPublic(FileDefinitionBase):
     id: uuid.UUID
     created_at: datetime
     updated_at: datetime
-    
+    file_group: Optional[ProviderFileGroupSummary] = None
+
     class Config:
         from_attributes = True
 
@@ -108,3 +175,7 @@ class FileDefinitionListResponse(BaseModel):
     """Response schema for listing file definitions"""
     items: List[FileDefinitionPublic]
     total: int
+
+
+# Resolve forward reference
+ProviderFileGroupPublic.model_rebuild()

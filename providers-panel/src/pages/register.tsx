@@ -1,7 +1,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { providerService } from '../services/providerService';
 import { FullRegistrationPayload } from '../types/user';
-import { fileDefinitionsService, FileDefinition } from '../services/fileDefinitions';
+import { fileDefinitionsService, FileDefinition, ProviderFileGroup } from '../services/fileDefinitions';
 import FileSelector from '../components/registration/FileSelector';
 import { useTranslation } from 'react-i18next';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -28,29 +28,65 @@ const RegisterPage = () => {
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [verificationToken, setVerificationToken] = useState('');
 
+  // File groups
+  const [fileGroups, setFileGroups] = useState<ProviderFileGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [loadingGroups, setLoadingGroups] = useState(true);
+
+  // File definitions (from the selected group, or global if no groups exist)
   const [fileDefinitions, setFileDefinitions] = useState<FileDefinition[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: File | null }>({});
-  const [loadingFiles, setLoadingFiles] = useState(true);
+  const [loadingFiles, setLoadingFiles] = useState(false);
 
+  // 1. Load available file groups on mount
   useEffect(() => {
-    const fetchFileRequirements = async () => {
+    const fetchGroups = async () => {
       try {
-        const definitions = await fileDefinitionsService.getProviderRegistrationRequirements();
-        setFileDefinitions(definitions);
-        // Initialize uploadedFiles state
+        const resp = await fileDefinitionsService.getFileGroups();
+        setFileGroups(resp.items);
+        // If no groups configured, fall back to global definitions
+        if (resp.items.length === 0) {
+          setLoadingFiles(true);
+          const defs = await fileDefinitionsService.getProviderRegistrationRequirements();
+          setFileDefinitions(defs);
+          const initialFiles: { [key: string]: File | null } = {};
+          defs.forEach(d => { initialFiles[d.id] = null; });
+          setUploadedFiles(initialFiles);
+          setLoadingFiles(false);
+        }
+      } catch (err) {
+        console.error('Failed to fetch file groups:', err);
+      } finally {
+        setLoadingGroups(false);
+      }
+    };
+    fetchGroups();
+  }, []);
+
+  // 2. When provider selects a group, load its definitions
+  useEffect(() => {
+    if (!selectedGroupId) {
+      setFileDefinitions([]);
+      setUploadedFiles({});
+      return;
+    }
+    const fetchGroupDefs = async () => {
+      setLoadingFiles(true);
+      try {
+        const group = await fileDefinitionsService.getFileGroupById(selectedGroupId);
+        const defs = group.file_definitions.filter(d => d.is_active);
+        setFileDefinitions(defs);
         const initialFiles: { [key: string]: File | null } = {};
-        definitions.forEach(def => {
-          initialFiles[def.id] = null;
-        });
+        defs.forEach(d => { initialFiles[d.id] = null; });
         setUploadedFiles(initialFiles);
       } catch (err) {
-        console.error('Failed to fetch file requirements:', err);
+        console.error('Failed to fetch group definitions:', err);
       } finally {
         setLoadingFiles(false);
       }
     };
-    fetchFileRequirements();
-  }, []);
+    fetchGroupDefs();
+  }, [selectedGroupId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -180,6 +216,7 @@ const RegisterPage = () => {
         company_name: formData.companyName,
         company_email: formData.companyEmail,
         company_phone: formData.companyPhone,
+        ...(selectedGroupId ? { file_group_id: selectedGroupId } : {}),
       },
     };
 
@@ -403,32 +440,92 @@ const RegisterPage = () => {
                 </div>
               </div>
 
+              {/* ── Registration Category (File Group) ── */}
+              {fileGroups.length > 0 && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+                  <p className={sectionTitleCls}>{t('register.registrationCategory') || 'Registration Category'}</p>
+                  {loadingGroups ? (
+                    <div className="flex items-center gap-3 py-4">
+                      <div className="w-4 h-4 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+                      <p className="text-sm text-slate-500 dark:text-slate-400">Loading categories...</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {t('register.selectGroupHint') || 'Select the category that matches your company type. The required documents will update accordingly.'}
+                      </p>
+                      <div className="grid grid-cols-1 gap-3">
+                        {fileGroups.map((group) => (
+                          <label
+                            key={group.id}
+                            className={`flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                              selectedGroupId === group.id
+                                ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20'
+                                : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="file_group"
+                              value={group.id}
+                              checked={selectedGroupId === group.id}
+                              onChange={() => setSelectedGroupId(group.id)}
+                              className="mt-1 accent-sky-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-slate-900 dark:text-white text-sm">
+                                {isRTL ? group.name_ar : group.name_en}
+                              </p>
+                              {(isRTL ? group.description_ar : group.description_en) && (
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                  {isRTL ? group.description_ar : group.description_en}
+                                </p>
+                              )}
+                              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                                {group.file_definitions.length} document{group.file_definitions.length !== 1 ? 's' : ''} required
+                              </p>
+                            </div>
+                            {selectedGroupId === group.id && (
+                              <svg className="w-5 h-5 text-sky-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
               {/* ── Required Documents ── */}
-              <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
-                <p className={sectionTitleCls}>{t('register.requiredDocs')}</p>
-                {loadingFiles ? (
-                  <div className="flex items-center justify-center gap-3 py-8">
-                    <div className="w-5 h-5 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
-                    <p className="text-sm text-slate-500 dark:text-slate-400">{t('register.loadingRequirements')}</p>
-                  </div>
-                ) : fileDefinitions.length > 0 ? (
-                  <div className="space-y-3">
-                    {fileDefinitions.map(definition => (
-                      <FileSelector
-                        key={definition.id}
-                        definition={definition}
-                        onFileChange={handleFileChange(definition.id)}
-                        currentFile={uploadedFiles[definition.id]}
-                        language={isRTL ? 'ar' : 'en'}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
-                    {t('register.noDocRequirements')}
-                  </p>
-                )}
-              </div>
+              {(fileGroups.length === 0 || selectedGroupId) && (
+                <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+                  <p className={sectionTitleCls}>{t('register.requiredDocs')}</p>
+                  {loadingFiles ? (
+                    <div className="flex items-center justify-center gap-3 py-8">
+                      <div className="w-5 h-5 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{t('register.loadingRequirements')}</p>
+                    </div>
+                  ) : fileDefinitions.length > 0 ? (
+                    <div className="space-y-3">
+                      {fileDefinitions.map(definition => (
+                        <FileSelector
+                          key={definition.id}
+                          definition={definition}
+                          onFileChange={handleFileChange(definition.id)}
+                          currentFile={uploadedFiles[definition.id]}
+                          language={isRTL ? 'ar' : 'en'}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
+                      {t('register.noDocRequirements')}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* ── Alerts ── */}
               {success && (

@@ -1,7 +1,8 @@
-from .provider import Provider, ProviderRequest
 from .source import RequestSource
 from .trip_field import TripFieldType, GenderType, DisabilityType
+from .provider_file_group import ProviderFileGroup
 from .file_definition import FileDefinition
+from .provider import Provider, ProviderRequest
 from .user import User
 from .trip import Trip
 from .trip_package import TripPackage

@@ -12,6 +12,7 @@ export interface ProviderRegistrationPayload {
   company_name: string;
   company_email: string;
   company_phone: string;
+  file_group_id?: string;
 }
 
 export interface ProviderUpdatePayload {

@@ -5,11 +5,14 @@ Defines required files for provider registration with localization support.
 Managed by admins through the admin panel.
 """
 
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 import uuid
 
-from sqlmodel import Field, SQLModel, Column, JSON
+from sqlmodel import Field, SQLModel, Column, JSON, Relationship
+
+if TYPE_CHECKING:
+    from .provider_file_group import ProviderFileGroup
 
 
 class FileDefinition(SQLModel, table=True):
@@ -42,7 +45,11 @@ class FileDefinition(SQLModel, table=True):
     
     # Display order
     display_order: int = Field(default=0)  # Order in which to display in forms
-    
+
+    # File group (nullable — None means "ungrouped / global")
+    file_group_id: Optional[uuid.UUID] = Field(default=None, foreign_key="providerfilegroup.id", index=True)
+    file_group: Optional["ProviderFileGroup"] = Relationship(back_populates="file_definitions")
+
     # Metadata
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)

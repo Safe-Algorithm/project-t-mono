@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { FileDefinition, FileDefinitionCreate, FileDefinitionUpdate } from '@/services/fileDefinitions';
+import { FileDefinition, FileDefinitionCreate, FileDefinitionUpdate, ProviderFileGroup, fileGroupsService } from '@/services/fileDefinitions';
 
 interface FileDefinitionModalProps {
   definition: FileDefinition | null;
   onClose: () => void;
   onSave: (data: FileDefinitionCreate | FileDefinitionUpdate) => Promise<void>;
+  defaultGroupId?: string | null;
 }
 
 const COMMON_EXTENSIONS = [
@@ -18,11 +19,13 @@ const COMMON_EXTENSIONS = [
   { value: 'xlsx', label: 'XLSX' },
 ];
 
-export default function FileDefinitionModal({ definition, onClose, onSave }: FileDefinitionModalProps) {
+export default function FileDefinitionModal({ definition, onClose, onSave, defaultGroupId }: FileDefinitionModalProps) {
   const [activeTab, setActiveTab] = useState<'en' | 'ar'>('en');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
+  const [groups, setGroups] = useState<ProviderFileGroup[]>([]);
+
   const [formData, setFormData] = useState({
     key: '',
     name_en: '',
@@ -34,7 +37,12 @@ export default function FileDefinitionModal({ definition, onClose, onSave }: Fil
     is_required: true,
     is_active: true,
     display_order: 0,
+    file_group_id: defaultGroupId ?? null,
   });
+
+  useEffect(() => {
+    fileGroupsService.getAll(true).then((r) => setGroups(r.items)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (definition) {
@@ -49,9 +57,12 @@ export default function FileDefinitionModal({ definition, onClose, onSave }: Fil
         is_required: definition.is_required,
         is_active: definition.is_active,
         display_order: definition.display_order,
+        file_group_id: definition.file_group_id ?? null,
       });
+    } else {
+      setFormData((prev) => ({ ...prev, file_group_id: defaultGroupId ?? null }));
     }
-  }, [definition]);
+  }, [definition, defaultGroupId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,6 +215,31 @@ export default function FileDefinitionModal({ definition, onClose, onSave }: Fil
             <div className="flex justify-between text-xs text-slate-400 dark:text-slate-500 mt-1">
               <span>1 MB</span><span>500 MB</span>
             </div>
+          </div>
+
+          {/* File Group */}
+          <div>
+            <label className={labelCls}>File Group</label>
+            {defaultGroupId && !definition ? (
+              <p className="text-sm text-slate-600 dark:text-slate-400 px-3 py-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                {groups.find((g) => g.id === defaultGroupId)?.name_en ?? 'Selected group'}
+                <span className="text-xs text-slate-400 ml-2">(set by context)</span>
+              </p>
+            ) : (
+              <select
+                value={formData.file_group_id ?? ''}
+                onChange={(e) => setFormData({ ...formData, file_group_id: e.target.value || null })}
+                className={inputCls}
+              >
+                <option value="">— No group (ungrouped / global) —</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name_en} ({g.name_ar})</option>
+                ))}
+              </select>
+            )}
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              Providers who select this group will be required to upload this document.
+            </p>
           </div>
 
           {/* Display Order */}

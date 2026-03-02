@@ -58,6 +58,7 @@ const resources = {
       "nav.tripUpdates": "Trip Updates",
       "nav.providerRequests": "Provider Requests",
       "nav.roles": "Roles & Permissions",
+      "nav.fileGroups": "File Groups",
 
       // Support Tickets
       "support.title": "Support Tickets",
@@ -316,6 +317,7 @@ const resources = {
       "nav.tripUpdates": "تحديثات الرحلات",
       "nav.providerRequests": "طلبات مقدمي الخدمات",
       "nav.roles": "الأدوار والصلاحيات",
+      "nav.fileGroups": "مجموعات الملفات",
 
       // Support Tickets
       "support.title": "تذاكر الدعم",

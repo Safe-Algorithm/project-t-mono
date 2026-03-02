@@ -9,6 +9,7 @@ class ProviderRequestCreate(SQLModel):
     company_email: str
     company_phone: str
     company_metadata: Optional[Dict[str, Any]] = None
+    file_group_id: Optional[uuid.UUID] = None  # File group chosen at registration
 
 # Combined schema for the registration endpoint
 class ProviderRegistrationRequest(SQLModel):
