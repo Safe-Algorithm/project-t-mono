@@ -43,11 +43,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     is_refundable: true,
     has_meeting_place: false,
     meeting_location: '',
-    meeting_time: '',
   });
 
   // Non-packaged trip: trip-level price and required fields (stored on hidden package)
-  const [tripPrice, setTripPrice] = useState<number>(0);
+  const [tripPrice, setTripPrice] = useState<string>('');
   const [tripRequiredFields, setTripRequiredFields] = useState<string[]>(['name', 'date_of_birth']);
   const [tripValidationConfigs, setTripValidationConfigs] = useState<{ [fieldName: string]: ValidationConfig }>({});
   const [showTripFieldValidation, setShowTripFieldValidation] = useState<{ [fieldName: string]: boolean }>({});
@@ -170,7 +169,6 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         is_refundable: trip.is_refundable ?? true,
         has_meeting_place: trip.has_meeting_place ?? false,
         meeting_location: trip.meeting_location ?? '',
-        meeting_time: trip.meeting_time ? toTzLocal(trip.meeting_time) : '',
       });
       if (trip.starting_city_id) {
         setStartingCityId(trip.starting_city_id);
@@ -190,7 +188,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
       if (!trip.is_packaged_trip) {
         // Non-packaged: price comes from the hidden package and is exposed via trip.price
-        setTripPrice(trip.price ?? 0);
+        setTripPrice(trip.price != null ? String(trip.price) : '');
         setTripRequiredFields(['name', 'date_of_birth']);
       } else if (trip.packages && trip.packages.length > 0) {
         // Packaged: populate packages
@@ -239,13 +237,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
     
-    // For datetime inputs, ensure seconds are always set to 00
-    if ((name === 'start_date' || name === 'end_date' || name === 'meeting_time' || name === 'registration_deadline') && value) {
-      const dateValue = value + ':00';
-      setFormData((prev) => ({ ...prev, [name]: dateValue }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
-    }
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const toggleAmenity = (amenity: string) => {
@@ -435,26 +427,50 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const validateForm = (): boolean => {
     const newErrors: string[] = [];
 
+    // ── Date logic validation ──
+    if (formData.start_date && formData.end_date) {
+      const start = new Date(formData.start_date);
+      const end = new Date(formData.end_date);
+      if (end <= start) {
+        newErrors.push(t('trip.validation.endAfterStart', 'End date/time must be after start date/time'));
+      }
+    }
+    if (formData.registration_deadline && formData.start_date) {
+      const deadline = new Date(formData.registration_deadline);
+      const start = new Date(formData.start_date);
+      if (deadline > start) {
+        newErrors.push(t('trip.validation.deadlineBeforeStart', 'Registration deadline must be on or before the start date/time'));
+      }
+    }
+
+    // ── Meeting location must be a Google Maps URL ──
+    if (formData.has_meeting_place && formData.meeting_location) {
+      const GMAPS_RE = /^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i;
+      if (!GMAPS_RE.test(formData.meeting_location)) {
+        newErrors.push(t('trip.validation.invalidMapsUrl', 'Meeting location must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)'));
+      }
+    }
+
     if (isPackagedTrip) {
       // Packaged: require at least 2 packages
       if (packages.length < 2) {
-        newErrors.push('Packaged trips require at least 2 packages');
+        newErrors.push(t('trip.validation.minTwoPackages', 'Packaged trips require at least 2 tiers'));
       }
       packages.forEach((pkg, index) => {
         if (!pkg.name_en.trim() && !pkg.name_ar.trim()) {
-          newErrors.push(`Package ${index + 1}: Name in at least one language (EN or AR) is required`);
+          newErrors.push(t('trip.validation.packageNeedsName', 'Tier {{n}}: Name in at least one language is required', { n: index + 1 }));
         }
         if (!pkg.description_en.trim() && !pkg.description_ar.trim()) {
-          newErrors.push(`Package ${index + 1}: Description in at least one language (EN or AR) is required`);
+          newErrors.push(t('trip.validation.packageNeedsDesc', 'Tier {{n}}: Description in at least one language is required', { n: index + 1 }));
         }
-        if (pkg.price <= 0) {
-          newErrors.push(`Package ${index + 1}: Price must be greater than 0`);
+        if (!pkg.price || Number(pkg.price) < 1) {
+          newErrors.push(t('trip.validation.packageMinPrice', 'Tier {{n}}: Price must be at least 1', { n: index + 1 }));
         }
       });
     } else {
       // Non-packaged: validate trip-level price
-      if (tripPrice <= 0) {
-        newErrors.push('Price must be greater than 0');
+      if (!tripPrice || Number(tripPrice) < 1) {
+        newErrors.push(t('trip.validation.minPrice', 'Price must be at least 1'));
       }
     }
 
@@ -477,10 +493,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     // the backend's UTC normaliser handle it.
     const localToUtcIso = (localStr: string): string => {
       if (!localStr) return localStr;
-      // Get UTC offset in minutes for the selected timezone at the given wall-clock time.
-      // We use Intl.DateTimeFormat to figure out what UTC time corresponds to this local time.
-      // Strategy: interpret the string as UTC, then measure the offset, then correct.
-      const naive = new Date(localStr + ':00Z'); // treat as UTC first
+      // Normalise: strip any existing seconds to keep precision at the minute level,
+      // then re-add :00 seconds before treating as UTC for offset calculation.
+      const normalised = localStr.length === 16 ? localStr : localStr.substring(0, 16);
+      const naive = new Date(normalised + ':00Z'); // treat as UTC first
       const tzOffset = (() => {
         const parts = new Intl.DateTimeFormat('en-US', {
           timeZone: timezone,
@@ -501,9 +517,6 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         trip_type: tripTypeSelection,
         has_meeting_place: tripTypeSelection === TripType.GUIDED ? formData.has_meeting_place : false,
         meeting_location: tripTypeSelection === TripType.GUIDED ? formData.meeting_location : undefined,
-        meeting_time: tripTypeSelection === TripType.GUIDED && formData.has_meeting_place && formData.meeting_time
-          ? localToUtcIso(formData.meeting_time)
-          : undefined,
         timezone,
         max_participants: parseInt(formData.max_participants, 10),
         start_date: localToUtcIso(formData.start_date),
@@ -527,7 +540,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       // Backend auto-creates/syncs the hidden package from these fields
       const nonPackagedPayload = {
         ...payload,
-        price: tripPrice,
+        price: parseFloat(tripPrice as string) || 0,
         is_refundable: formData.is_refundable,
         amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
       };
@@ -565,19 +578,19 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>{t('trip.nameEn')} <span className="font-normal text-slate-400">({t('trip.optionalIfArabic')})</span></label>
-            <input className={inputCls} name="name_en" value={formData.name_en} onChange={handleChange} placeholder={t('trip.nameEn')} />
+            <input className={inputCls} name="name_en" value={formData.name_en} onChange={handleChange} placeholder={t('trip.nameEn')} maxLength={100} />
           </div>
           <div>
             <label className={labelCls}>{t('trip.nameAr')} <span className="font-normal text-slate-400">({t('trip.optionalIfEnglish')})</span></label>
-            <input className={inputCls} name="name_ar" value={formData.name_ar} onChange={handleChange} placeholder={t('trip.nameAr')} dir="rtl" />
+            <input className={inputCls} name="name_ar" value={formData.name_ar} onChange={handleChange} placeholder={t('trip.nameAr')} dir="rtl" maxLength={100} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelCls}>{t('trip.descriptionEn')} <span className="font-normal text-slate-400">({t('trip.optionalIfArabic')})</span></label>
-            <textarea className={inputCls} rows={3} name="description_en" value={formData.description_en} onChange={handleChange} placeholder={t('trip.descriptionEn')} />
+            <textarea className={inputCls} rows={3} name="description_en" value={formData.description_en} onChange={handleChange} placeholder={t('trip.descriptionEn')} maxLength={2000} />
           </div>
           <div className="sm:col-span-2">
             <label className={labelCls}>{t('trip.descriptionAr')} <span className="font-normal text-slate-400">({t('trip.optionalIfEnglish')})</span></label>
-            <textarea className={inputCls} rows={3} name="description_ar" value={formData.description_ar} onChange={handleChange} placeholder={t('trip.descriptionAr')} dir="rtl" />
+            <textarea className={inputCls} rows={3} name="description_ar" value={formData.description_ar} onChange={handleChange} placeholder={t('trip.descriptionAr')} dir="rtl" maxLength={2000} />
           </div>
         </div>
       </div>
@@ -722,7 +735,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           </label>
           {/* Tourism Package */}
           <label className={`relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition ${tripTypeSelection === TripType.SELF_ARRANGED ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/40' : 'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
-            <input type="radio" name="trip_nature" checked={tripTypeSelection === TripType.SELF_ARRANGED} onChange={() => { setTripTypeSelection(TripType.SELF_ARRANGED); setFormData(prev => ({ ...prev, has_meeting_place: false, meeting_location: '', meeting_time: '' })); }} className="accent-purple-500 mt-0.5" />
+            <input type="radio" name="trip_nature" checked={tripTypeSelection === TripType.SELF_ARRANGED} onChange={() => { setTripTypeSelection(TripType.SELF_ARRANGED); setFormData(prev => ({ ...prev, has_meeting_place: false, meeting_location: '' })); }} className="accent-purple-500 mt-0.5" />
             <div className="flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-bold text-slate-900 dark:text-white">{t('trip.tourismPackage')}</span>
@@ -774,7 +787,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           <p className={sectionTitleCls}>{t('trip.pricePolicyFields')}</p>
           <div className="mb-4">
             <label className={labelCls}>{t('trip.pricePerPerson')}</label>
-            <input className={inputCls} type="number" value={tripPrice} onChange={e => setTripPrice(parseFloat(e.target.value) || 0)} placeholder={t('trip.pricePlaceholder')} min="0.01" step="0.01" />
+            <input className={inputCls} type="number" value={tripPrice} onChange={e => setTripPrice(e.target.value)} placeholder={t('trip.pricePlaceholder')} min="1" step="0.01" />
           </div>
           <label className="flex items-center gap-2 mb-4 cursor-pointer">
             <input type="checkbox" name="is_refundable" checked={formData.is_refundable} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
@@ -837,15 +850,35 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('trip.meetingPlaceDescription')}</span>
         </label>
         {formData.has_meeting_place && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 ml-6">
-            <div>
-              <label className={labelCls}>{t('trip.meetingLocation')}</label>
-              <input className={inputCls} type="text" name="meeting_location" value={formData.meeting_location} onChange={handleChange} placeholder={t('trip.meetingLocationPlaceholder')} />
-            </div>
-            <div>
-              <label className={labelCls}>{t('trip.meetingTime')}</label>
-              <input className={inputCls} type="datetime-local" name="meeting_time" value={formData.meeting_time} onChange={handleChange} />
-            </div>
+          <div className="ml-6">
+            <label className={labelCls}>{t('trip.meetingLocation')}</label>
+            <input
+              className={`${inputCls} ${
+                formData.meeting_location &&
+                !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location)
+                  ? 'border-red-400 focus:ring-red-400'
+                  : ''
+              }`}
+              type="text"
+              name="meeting_location"
+              value={formData.meeting_location}
+              onChange={handleChange}
+              placeholder="https://maps.app.goo.gl/..."
+              maxLength={500}
+            />
+            {formData.meeting_location &&
+              !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location) ? (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                {t('trip.validation.invalidMapsUrl', 'Must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)')}
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                {t('trip.meetingLocationHint', 'Paste a Google Maps link. Users in the app can tap it to open the location.')}
+              </p>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              {t('trip.meetingTimeNote', 'Meeting time is set to the trip start time.')}
+            </p>
           </div>
         )}
       </div>}
@@ -894,7 +927,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            Upload new
+            {t('trip.images.uploadNew', 'Upload new')}
           </button>
           <button
             type="button"
@@ -905,7 +938,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
-            Reuse from collection
+            {t('trip.images.reuseCollection', 'Reuse from collection')}
           </button>
         </div>
 
@@ -929,18 +962,18 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             {collectionLoading && (
               <div className="flex items-center gap-2 py-4 text-sm text-slate-500 dark:text-slate-400">
                 <div className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
-                Loading collection…
+                {t('trip.images.loadingCollection', 'Loading collection…')}
               </div>
             )}
             {!collectionLoading && collectionImages.length === 0 && (
               <p className="text-sm text-slate-400 dark:text-slate-500 py-4">
-                Your collection is empty. Upload images to a trip first and they will appear here.
+                {t('trip.images.collectionEmpty', 'Your collection is empty. Upload images to a trip first and they will appear here.')}
               </p>
             )}
             {!collectionLoading && collectionImages.length > 0 && (
               <>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  Click an image to add it to this trip. Click again to remove it.
+                  {t('trip.images.collectionHint', 'Click an image to add it to this trip. Click again to remove it.')}
                 </p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-72 overflow-y-auto pr-1">
                   {collectionImages.map((img) => {
@@ -1016,23 +1049,23 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className={labelCls}>{t('tier.nameEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <input className={inputCls} value={pkg.name_en} onChange={(e) => updatePackage(index, 'name_en', e.target.value)} placeholder={t('tier.nameEn')} />
+                    <input className={inputCls} value={pkg.name_en} onChange={(e) => updatePackage(index, 'name_en', e.target.value)} placeholder={t('tier.nameEn')} maxLength={100} />
                   </div>
                   <div>
                     <label className={labelCls}>{t('tier.nameAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <input className={inputCls} value={pkg.name_ar} onChange={(e) => updatePackage(index, 'name_ar', e.target.value)} placeholder={t('tier.nameAr')} dir="rtl" />
+                    <input className={inputCls} value={pkg.name_ar} onChange={(e) => updatePackage(index, 'name_ar', e.target.value)} placeholder={t('tier.nameAr')} dir="rtl" maxLength={100} />
                   </div>
                   <div className="sm:col-span-2">
                     <label className={labelCls}>{t('tier.descriptionEn')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <textarea className={inputCls} rows={2} value={pkg.description_en} onChange={(e) => updatePackage(index, 'description_en', e.target.value)} placeholder={t('tier.descriptionEn')} />
+                    <textarea className={inputCls} rows={2} value={pkg.description_en} onChange={(e) => updatePackage(index, 'description_en', e.target.value)} placeholder={t('tier.descriptionEn')} maxLength={1000} />
                   </div>
                   <div className="sm:col-span-2">
                     <label className={labelCls}>{t('tier.descriptionAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
-                    <textarea className={inputCls} rows={2} value={pkg.description_ar} onChange={(e) => updatePackage(index, 'description_ar', e.target.value)} placeholder={t('tier.descriptionAr')} dir="rtl" />
+                    <textarea className={inputCls} rows={2} value={pkg.description_ar} onChange={(e) => updatePackage(index, 'description_ar', e.target.value)} placeholder={t('tier.descriptionAr')} dir="rtl" maxLength={1000} />
                   </div>
                   <div>
                     <label className={labelCls}>{t('tier.price')} (SAR)</label>
-                    <input className={inputCls} type="number" value={pkg.price} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder={t('package.pricePlaceholder')} min="0.01" step="0.01" required />
+                    <input className={inputCls} type="number" value={pkg.price || ''} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder={t('package.pricePlaceholder')} min="1" step="0.01" required />
                   </div>
                   <div>
                     <label className={labelCls}>{t('tier.maxParticipants')}</label>

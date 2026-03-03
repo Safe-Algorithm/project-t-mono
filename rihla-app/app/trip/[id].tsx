@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Dimensions, FlatList, Alert,
+  Image, Dimensions, FlatList, Alert, Linking,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -291,7 +291,15 @@ export default function TripDetailScreen() {
               <Ionicons name="location-outline" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={s.meetingLabel}>{t('trip.meetingPoint')}</Text>
-                <Text style={s.meetingValue}>{trip.meeting_location}</Text>
+                <TouchableOpacity
+                  onPress={() => Linking.openURL(trip.meeting_location!)}
+                  activeOpacity={0.7}
+                  style={s.meetingLinkBtn}
+                >
+                  <Ionicons name="map-outline" size={14} color="#fff" />
+                  <Text style={s.meetingLinkText} numberOfLines={1}>{t('trip.openInMaps')}</Text>
+                  <Ionicons name="open-outline" size={13} color="#fff" />
+                </TouchableOpacity>
                 {trip.meeting_time && (
                   <Text style={s.meetingTime}>
                     {new Date(trip.meeting_time).toLocaleString(locale, {
@@ -585,6 +593,14 @@ function makeStyles(c: ThemeColors) {
   meetingLabel: { fontSize: FontSize.xs, color: c.primary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   meetingValue: { fontSize: FontSize.md, color: c.textPrimary, fontWeight: '600', marginTop: 2 },
   meetingTime: { fontSize: FontSize.sm, color: c.textSecondary, marginTop: 2 },
+  meetingLinkBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: c.primary,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: Radius.full,
+  },
+  meetingLinkText: { fontSize: FontSize.sm, color: '#fff', fontWeight: '600', flexShrink: 1 },
 
   section: { marginBottom: 24 },
   sectionTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary, marginBottom: 12 },

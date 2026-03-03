@@ -320,6 +320,41 @@ const resources = {
       "trip.optionalIfArabic": "optional if Arabic provided",
       "trip.optionalIfEnglish": "optional if English provided",
 
+      // Trip form — meeting location
+      "trip.meetingLocationHint": "Paste a Google Maps link (e.g. https://maps.google.com/?q=…). Users in the app can tap it to open the location.",
+      "trip.meetingTimeNote": "Meeting time is set to the trip start time.",
+
+      // Trip form — image tabs
+      "trip.images.uploadNew": "Upload new",
+      "trip.images.reuseCollection": "Reuse from collection",
+      "trip.images.loadingCollection": "Loading collection…",
+      "trip.images.collectionEmpty": "Your collection is empty. Upload images to a trip first and they will appear here.",
+      "trip.images.collectionHint": "Click an image to add it to this trip. Click again to remove it.",
+
+      // Image Collection page
+      "imageCollection.title": "Image Collection",
+      "imageCollection.subtitle": "All images you have uploaded across your trips.",
+      "imageCollection.loading": "Loading your image collection…",
+      "imageCollection.empty": "Your image collection is empty.",
+      "imageCollection.emptyHint": "Images you upload to trips will automatically appear here.",
+      "imageCollection.preview": "Preview",
+      "imageCollection.delete": "Delete",
+      "imageCollection.deleting": "Deleting…",
+      "imageCollection.deleteConfirm": "Remove this image from your collection? It will not be removed from trips it was already added to.",
+      "imageCollection.totalImages": "{{count}} image",
+      "imageCollection.totalImages_other": "{{count}} images",
+      "imageCollection.errorLoad": "Failed to load image collection.",
+      "imageCollection.errorDelete": "Failed to delete image.",
+
+      // Trip form — date validation messages
+      "trip.validation.endAfterStart": "End date/time must be after start date/time",
+      "trip.validation.deadlineBeforeStart": "Registration deadline must be on or before the start date/time",
+      "trip.validation.minTwoPackages": "Packaged trips require at least 2 tiers",
+      "trip.validation.packageNeedsName": "Tier {{n}}: Name in at least one language is required",
+      "trip.validation.packageNeedsDesc": "Tier {{n}}: Description in at least one language is required",
+      "trip.validation.packageMinPrice": "Tier {{n}}: Price must be at least 1",
+      "trip.validation.minPrice": "Price must be at least 1",
+
       // Trip form — error banner
       "form.fixFollowing": "Please fix the following:",
       "form.uploadingImages": "Uploading images, please wait…",
@@ -821,6 +856,41 @@ const resources = {
       "trip.provideOneLanguage": "أدخل المعلومات بلغة واحدة على الأقل (إنجليزي أو عربي)",
       "trip.optionalIfArabic": "اختياري إذا تم إدخال العربي",
       "trip.optionalIfEnglish": "اختياري إذا تم إدخال الإنجليزي",
+
+      // Trip form — meeting location
+      "trip.meetingLocationHint": "الصق رابط خرائط جوجل (مثال: https://maps.google.com/?q=…). يمكن للمستخدمين في التطبيق النقر عليه لفتح الموقع.",
+      "trip.meetingTimeNote": "وقت الاجتماع مُعيَّن على وقت بدء الرحلة.",
+
+      // Trip form — image tabs
+      "trip.images.uploadNew": "رفع صورة جديدة",
+      "trip.images.reuseCollection": "استخدام من المجموعة",
+      "trip.images.loadingCollection": "جاري تحميل المجموعة…",
+      "trip.images.collectionEmpty": "مجموعتك فارغة. ارفع صوراً لرحلة ما وستظهر هنا.",
+      "trip.images.collectionHint": "انقر على صورة لإضافتها إلى هذه الرحلة. انقر مرة أخرى لإزالتها.",
+
+      // Image Collection page
+      "imageCollection.title": "مجموعة الصور",
+      "imageCollection.subtitle": "جميع الصور التي رفعتها عبر رحلاتك.",
+      "imageCollection.loading": "جاري تحميل مجموعة الصور…",
+      "imageCollection.empty": "مجموعة صورك فارغة.",
+      "imageCollection.emptyHint": "ستظهر الصور التي ترفعها للرحلات هنا تلقائياً.",
+      "imageCollection.preview": "معاينة",
+      "imageCollection.delete": "حذف",
+      "imageCollection.deleting": "جاري الحذف…",
+      "imageCollection.deleteConfirm": "إزالة هذه الصورة من مجموعتك؟ لن تُحذف من الرحلات التي أُضيفت إليها.",
+      "imageCollection.totalImages": "{{count}} صورة",
+      "imageCollection.totalImages_other": "{{count}} صور",
+      "imageCollection.errorLoad": "فشل تحميل مجموعة الصور.",
+      "imageCollection.errorDelete": "فشل حذف الصورة.",
+
+      // Trip form — date validation messages
+      "trip.validation.endAfterStart": "تاريخ/وقت الانتهاء يجب أن يكون بعد تاريخ/وقت البدء",
+      "trip.validation.deadlineBeforeStart": "آخر موعد للتسجيل يجب أن يكون في تاريخ البدء أو قبله",
+      "trip.validation.minTwoPackages": "الرحلات المجزأة تتطلب فئتين على الأقل",
+      "trip.validation.packageNeedsName": "الفئة {{n}}: الاسم بلغة واحدة على الأقل مطلوب",
+      "trip.validation.packageNeedsDesc": "الفئة {{n}}: الوصف بلغة واحدة على الأقل مطلوب",
+      "trip.validation.packageMinPrice": "الفئة {{n}}: السعر يجب أن يكون 1 على الأقل",
+      "trip.validation.minPrice": "السعر يجب أن يكون 1 على الأقل",
 
       // Trip form — error banner
       "form.fixFollowing": "يرجى تصحيح ما يلي:",

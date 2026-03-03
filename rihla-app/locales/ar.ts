@@ -113,6 +113,7 @@ export default {
     refundable: 'قابل للاسترداد',
     nonRefundable: 'غير قابل للاسترداد',
     meetingPoint: 'نقطة التجمع',
+    openInMaps: 'فتح في الخرائط',
     guidedTripBadge: 'رحلة منظمة',
     tourismPackageBadge: 'باقة سياحية',
     guidedTripInfo: 'هذه رحلة منظمة. سيتم توفير نقطة التجمع.',

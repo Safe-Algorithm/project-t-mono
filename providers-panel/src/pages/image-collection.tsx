@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { imageCollectionService, ProviderImage } from '../services/imageCollectionService';
 
 function formatBytes(bytes: number | null): string {
@@ -13,6 +14,7 @@ function formatDate(iso: string): string {
 }
 
 export default function ImageCollectionPage() {
+  const { t } = useTranslation();
   const [images, setImages] = useState<ProviderImage[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -28,24 +30,24 @@ export default function ImageCollectionPage() {
       setImages(res.items);
       setTotal(res.total);
     } catch (err: any) {
-      setError(err.message || 'Failed to load images');
+      setError(err.message || t('imageCollection.errorLoad'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleDelete = async (img: ProviderImage) => {
-    if (!confirm(`Delete "${img.original_filename || 'this image'}" from your collection? This cannot be undone.`)) return;
+    if (!confirm(t('imageCollection.deleteConfirm'))) return;
     setDeleting(img.id);
     try {
       await imageCollectionService.delete(img.id);
       setImages((prev) => prev.filter((i) => i.id !== img.id));
-      setTotal((t) => t - 1);
+      setTotal((tv) => tv - 1);
       if (preview?.id === img.id) setPreview(null);
     } catch (err: any) {
-      alert(err.message || 'Failed to delete image');
+      alert(err.message || t('imageCollection.errorDelete'));
     } finally {
       setDeleting(null);
     }
@@ -56,10 +58,14 @@ export default function ImageCollectionPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Image Collection</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('imageCollection.title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Every image you upload to a trip is saved here so you can reuse it without re-uploading.
-            {total > 0 && <span className="ml-2 font-medium text-slate-700 dark:text-slate-300">{total} image{total !== 1 ? 's' : ''}</span>}
+            {t('imageCollection.subtitle')}
+            {total > 0 && (
+              <span className="ml-2 font-medium text-slate-700 dark:text-slate-300">
+                {t('imageCollection.totalImages', { count: total })}
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -69,14 +75,15 @@ export default function ImageCollectionPage() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Refresh
+          {t('common.refresh', 'Refresh')}
         </button>
       </div>
 
       {/* States */}
       {loading && (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center gap-3 py-20">
           <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-slate-500 dark:text-slate-400">{t('imageCollection.loading')}</p>
         </div>
       )}
 
@@ -91,8 +98,8 @@ export default function ImageCollectionPage() {
           <svg className="w-14 h-14 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <p className="text-base font-medium">No images yet</p>
-          <p className="text-sm mt-1">Upload images to a trip and they'll appear here automatically.</p>
+          <p className="text-base font-medium">{t('imageCollection.empty')}</p>
+          <p className="text-sm mt-1">{t('imageCollection.emptyHint')}</p>
         </div>
       )}
 
@@ -107,7 +114,7 @@ export default function ImageCollectionPage() {
               {/* Thumbnail */}
               <img
                 src={img.url}
-                alt={img.original_filename || 'Image'}
+                alt={img.original_filename || t('imageCollection.preview')}
                 className="w-full h-full object-cover cursor-pointer"
                 onClick={() => setPreview(img)}
               />
@@ -120,7 +127,7 @@ export default function ImageCollectionPage() {
                 onClick={(e) => { e.stopPropagation(); handleDelete(img); }}
                 disabled={deleting === img.id}
                 className="absolute top-1.5 right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 z-10"
-                title="Delete from collection"
+                title={t('imageCollection.delete')}
               >
                 {deleting === img.id ? (
                   <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -154,11 +161,11 @@ export default function ImageCollectionPage() {
           >
             <img src={preview.url} alt={preview.original_filename || ''} className="w-full max-h-[60vh] object-contain bg-slate-100 dark:bg-slate-800" />
             <div className="px-5 py-4 space-y-2">
-              <p className="font-medium text-slate-900 dark:text-white truncate">{preview.original_filename || 'Untitled'}</p>
+              <p className="font-medium text-slate-900 dark:text-white truncate">{preview.original_filename || t('imageCollection.preview')}</p>
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
                 {preview.width && preview.height && <span>{preview.width} × {preview.height} px</span>}
                 {preview.size_bytes && <span>{formatBytes(preview.size_bytes)}</span>}
-                <span>Added {formatDate(preview.created_at)}</span>
+                <span>{formatDate(preview.created_at)}</span>
               </div>
               <div className="flex gap-2 pt-2">
                 <button
@@ -166,13 +173,13 @@ export default function ImageCollectionPage() {
                   onClick={() => handleDelete(preview)}
                   disabled={deleting === preview.id}
                 >
-                  Delete from collection
+                  {deleting === preview.id ? t('imageCollection.deleting') : t('imageCollection.delete')}
                 </button>
                 <button
                   className="flex-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-medium py-2 px-4 rounded-xl"
                   onClick={() => setPreview(null)}
                 >
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </div>

@@ -151,20 +151,18 @@ def test_trip_default_no_meeting_place(client: TestClient, session: Session):
 
 def test_create_trip_with_meeting_place(client: TestClient, session: Session):
     """Test creating a trip with meeting place info."""
-    meeting_time = (datetime.datetime.utcnow() + datetime.timedelta(days=5)).isoformat()
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip = _create_trip_via_api(
         client, headers,
         has_meeting_place=True,
-        meeting_location="Riyadh Airport Terminal 1",
-        meeting_time=meeting_time,
+        meeting_location="https://maps.app.goo.gl/RiyadhAirport1",
     )
 
     resp = client.get(f"{settings.API_V1_STR}/trips/{trip['id']}", headers=headers)
     assert resp.status_code == 200
     data = resp.json()
     assert data["has_meeting_place"] is True
-    assert data["meeting_location"] == "Riyadh Airport Terminal 1"
+    assert data["meeting_location"] == "https://maps.app.goo.gl/RiyadhAirport1"
     assert data["meeting_time"] is not None
 
 
@@ -173,20 +171,18 @@ def test_update_trip_meeting_place(client: TestClient, session: Session):
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip = _create_trip_via_api(client, headers)
 
-    meeting_time = (datetime.datetime.utcnow() + datetime.timedelta(days=3)).isoformat()
     resp = client.put(
         f"{settings.API_V1_STR}/trips/{trip['id']}",
         headers=headers,
         json={
             "has_meeting_place": True,
-            "meeting_location": "Jeddah Bus Station",
-            "meeting_time": meeting_time,
+            "meeting_location": "https://maps.app.goo.gl/JeddahBusStation",
         },
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["has_meeting_place"] is True
-    assert data["meeting_location"] == "Jeddah Bus Station"
+    assert data["meeting_location"] == "https://maps.app.goo.gl/JeddahBusStation"
     assert data["meeting_time"] is not None
 
 
@@ -195,15 +191,13 @@ def test_update_trip_meeting_place(client: TestClient, session: Session):
 
 def test_create_trip_with_all_additional_fields(client: TestClient, session: Session):
     """Test creating a trip with all additional fields at once."""
-    meeting_time = (datetime.datetime.utcnow() + datetime.timedelta(days=7)).isoformat()
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip = _create_trip_via_api(
         client, headers,
         is_refundable=False,
         amenities=["visa_assistance", "tours"],
         has_meeting_place=True,
-        meeting_location="Hotel Lobby",
-        meeting_time=meeting_time,
+        meeting_location="https://maps.app.goo.gl/HotelLobby",
     )
 
     resp = client.get(f"{settings.API_V1_STR}/trips/{trip['id']}", headers=headers)
@@ -212,5 +206,5 @@ def test_create_trip_with_all_additional_fields(client: TestClient, session: Ses
     assert data["is_refundable"] is False
     assert set(data["amenities"]) == {"visa_assistance", "tours"}
     assert data["has_meeting_place"] is True
-    assert data["meeting_location"] == "Hotel Lobby"
+    assert data["meeting_location"] == "https://maps.app.goo.gl/HotelLobby"
     assert data["meeting_time"] is not None

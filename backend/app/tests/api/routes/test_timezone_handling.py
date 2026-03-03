@@ -164,9 +164,12 @@ class TestTripSchemaDateNormalization:
 
     def test_end_date_also_normalised(self):
         riyadh = tz(datetime.timedelta(hours=3))
-        aware_end = datetime.datetime(2025, 8, 6, 23, 59, 0, tzinfo=riyadh)
-        schema = TripCreate(**self._base_data(end_date=aware_end))
-        assert schema.end_date == datetime.datetime(2025, 8, 6, 20, 59, 0)
+        # Use a start_date that is clearly before the end_date in UTC so the
+        # model_validator (end > start) never trips regardless of when the test runs.
+        aware_start = datetime.datetime(2027, 8, 5, 12, 0, 0, tzinfo=riyadh)   # 09:00 UTC
+        aware_end   = datetime.datetime(2027, 8, 6, 23, 59, 0, tzinfo=riyadh)  # 20:59 UTC
+        schema = TripCreate(**self._base_data(start_date=aware_start, end_date=aware_end))
+        assert schema.end_date == datetime.datetime(2027, 8, 6, 20, 59, 0)
         assert schema.end_date.tzinfo is None
 
     def test_registration_deadline_normalised(self):

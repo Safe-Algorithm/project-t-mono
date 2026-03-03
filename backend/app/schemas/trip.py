@@ -23,6 +23,47 @@ class TripBase(BaseModel):
     name_ar: Optional[str] = None
     description_en: Optional[str] = None
     description_ar: Optional[str] = None
+
+    @field_validator("name_en", "name_ar", mode="before")
+    @classmethod
+    def validate_name_length(cls, v):
+        if v is not None and len(str(v)) > 100:
+            raise ValueError("Name must be 100 characters or fewer")
+        return v
+
+    @field_validator("description_en", "description_ar", mode="before")
+    @classmethod
+    def validate_description_length(cls, v):
+        if v is not None and len(str(v)) > 2000:
+            raise ValueError("Description must be 2000 characters or fewer")
+        return v
+
+    @field_validator("meeting_location", mode="before")
+    @classmethod
+    def validate_meeting_location(cls, v):
+        if v is None:
+            return v
+        s = str(v)
+        if len(s) > 500:
+            raise ValueError("Meeting location must be 500 characters or fewer")
+        import re
+        _GMAPS_RE = re.compile(
+            r'^https://'
+            r'(?:'
+            r'maps\.google\.com/'
+            r'|www\.google\.com/maps/'
+            r'|goo\.gl/maps/'
+            r'|maps\.app\.goo\.gl/'
+            r')',
+            re.IGNORECASE,
+        )
+        if not _GMAPS_RE.match(s):
+            raise ValueError(
+                "Meeting location must be a Google Maps URL "
+                "(e.g. https://maps.app.goo.gl/... or https://www.google.com/maps/...)"
+            )
+        return s
+
     start_date: datetime
     end_date: datetime
     max_participants: int
@@ -31,7 +72,6 @@ class TripBase(BaseModel):
     trip_type: TripType = TripType.GUIDED
     has_meeting_place: bool = False
     meeting_location: Optional[str] = None
-    meeting_time: Optional[datetime] = None
     registration_deadline: Optional[datetime] = None
     starting_city_id: Optional[uuid.UUID] = None
     is_international: bool = False
@@ -52,7 +92,7 @@ class TripBase(BaseModel):
             raise ValueError(f"Invalid IANA timezone: '{v}'")
         return v
 
-    @field_validator("start_date", "end_date", "meeting_time", "registration_deadline", mode="before")
+    @field_validator("start_date", "end_date", "registration_deadline", mode="before")
     @classmethod
     def normalise_to_utc(cls, v):
         if v is None:
@@ -82,6 +122,8 @@ class TripCreate(TripBase):
             raise ValueError('At least one of name_en or name_ar must be provided')
         if not self.description_en and not self.description_ar:
             raise ValueError('At least one of description_en or description_ar must be provided')
+        if self.end_date <= self.start_date:
+            raise ValueError('end_date must be after start_date')
         if self.registration_deadline and self.registration_deadline > self.start_date:
             raise ValueError('registration_deadline must be on or before start_date')
         if self.trip_type == TripType.GUIDED and self.has_meeting_place and not self.meeting_location:
@@ -105,7 +147,6 @@ class TripUpdate(BaseModel):
     trip_type: Optional[TripType] = None
     has_meeting_place: Optional[bool] = None
     meeting_location: Optional[str] = None
-    meeting_time: Optional[datetime] = None
     registration_deadline: Optional[datetime] = None
     starting_city_id: Optional[uuid.UUID] = None
     is_international: Optional[bool] = None
@@ -128,7 +169,7 @@ class TripUpdate(BaseModel):
             raise ValueError(f"Invalid IANA timezone: '{v}'")
         return v
 
-    @field_validator("start_date", "end_date", "meeting_time", "registration_deadline", mode="before")
+    @field_validator("start_date", "end_date", "registration_deadline", mode="before")
     @classmethod
     def normalise_to_utc(cls, v):
         if v is None:
@@ -145,6 +186,8 @@ class TripUpdate(BaseModel):
 
     @model_validator(mode='after')
     def validate_deadline(self):
+        if self.start_date and self.end_date and self.end_date <= self.start_date:
+            raise ValueError('end_date must be after start_date')
         if self.registration_deadline and self.start_date and self.registration_deadline > self.start_date:
             raise ValueError('registration_deadline must be on or before start_date')
         return self
@@ -189,6 +232,8 @@ class TripRead(TripBase):
     trip_reference: str
     trip_type: TripType = TripType.GUIDED
     available_spots: int = 0
+    # Read-only: derived from start_date on the backend whenever has_meeting_place=True
+    meeting_time: Optional[datetime] = None
     starting_city: Optional[StartingCityInfo] = None
     destinations: List[DestinationInfo] = []
     packages: List[TripPackageWithRequiredFields] = []

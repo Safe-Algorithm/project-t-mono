@@ -3246,14 +3246,14 @@ def test_create_guided_trip_with_meeting_place(client: TestClient, session: Sess
             "max_participants": 10,
             "trip_type": "guided",
             "has_meeting_place": True,
-            "meeting_location": "Riyadh Gate, Entrance A",
+            "meeting_location": "https://maps.app.goo.gl/RiyadhGateEntranceA",
         },
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["trip_type"] == "guided"
     assert data["has_meeting_place"] is True
-    assert data["meeting_location"] == "Riyadh Gate, Entrance A"
+    assert data["meeting_location"] == "https://maps.app.goo.gl/RiyadhGateEntranceA"
 
 
 def test_guided_trip_meeting_place_requires_location(client: TestClient, session: Session) -> None:

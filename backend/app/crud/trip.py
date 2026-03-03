@@ -40,6 +40,11 @@ _PACKAGE_ONLY_FIELDS = {"price", "is_refundable", "amenities"}
 
 def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) -> Trip:
     trip_data = {k: v for k, v in trip_in.model_dump().items() if k not in _PACKAGE_ONLY_FIELDS}
+    # Derive meeting_time from start_date when a meeting place is configured
+    if trip_data.get("has_meeting_place"):
+        trip_data["meeting_time"] = trip_data.get("start_date")
+    else:
+        trip_data["meeting_time"] = None
     trip = Trip(**trip_data, provider_id=provider.id)
     session.add(trip)
     session.commit()
@@ -241,6 +246,13 @@ def update_trip(*, session: Session, db_trip: Trip, trip_in: TripUpdate) -> Trip
         if key in _PACKAGE_ONLY_FIELDS:
             continue  # handled by _sync_hidden_package in the route layer
         setattr(db_trip, key, value)
+    # Re-derive meeting_time from start_date whenever either start_date or
+    # has_meeting_place is touched, so the column stays in sync automatically.
+    if "start_date" in trip_data or "has_meeting_place" in trip_data:
+        if db_trip.has_meeting_place:
+            db_trip.meeting_time = db_trip.start_date
+        else:
+            db_trip.meeting_time = None
     session.add(db_trip)
     session.commit()
     session.refresh(db_trip)

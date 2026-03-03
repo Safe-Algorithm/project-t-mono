@@ -113,6 +113,7 @@ export default {
     refundable: 'Refundable',
     nonRefundable: 'Non-refundable',
     meetingPoint: 'Meeting Point',
+    openInMaps: 'Open in Maps',
     guidedTripBadge: 'Guided Trip',
     tourismPackageBadge: 'Tourism Package',
     guidedTripInfo: 'This is a guided trip. A meeting point will be provided.',

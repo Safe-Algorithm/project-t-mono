@@ -3,6 +3,7 @@ import { providerService } from '../services/providerService';
 import { FullRegistrationPayload } from '../types/user';
 import { fileDefinitionsService, FileDefinition, ProviderFileGroup } from '../services/fileDefinitions';
 import FileSelector from '../components/registration/FileSelector';
+import PhoneInput from '../components/registration/PhoneInput';
 import { useTranslation } from 'react-i18next';
 import ThemeToggle from '@/components/ThemeToggle';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -409,8 +410,15 @@ const RegisterPage = () => {
                 </div>
 
                 <div>
-                  <label className={labelCls}>{t('register.phone')}</label>
-                  <input type="text" name="phone" placeholder="+966 50 123 4567" value={formData.phone} onChange={handleChange} required className={inputCls} />
+                  <PhoneInput
+                    label={t('register.phone')}
+                    name="phone"
+                    value={formData.phone}
+                    onChange={(val) => setFormData(prev => ({ ...prev, phone: val }))}
+                    required
+                    inputCls={inputCls}
+                    labelCls={labelCls}
+                  />
                 </div>
 
                 <div>
@@ -434,8 +442,15 @@ const RegisterPage = () => {
                     <input type="email" name="companyEmail" placeholder="info@company.com" value={formData.companyEmail} onChange={handleChange} required className={inputCls} />
                   </div>
                   <div>
-                    <label className={labelCls}>{t('register.companyPhone')}</label>
-                    <input type="text" name="companyPhone" placeholder="+966 11 123 4567" value={formData.companyPhone} onChange={handleChange} required className={inputCls} />
+                    <PhoneInput
+                      label={t('register.companyPhone')}
+                      name="companyPhone"
+                      value={formData.companyPhone}
+                      onChange={(val) => setFormData(prev => ({ ...prev, companyPhone: val }))}
+                      required
+                      inputCls={inputCls}
+                      labelCls={labelCls}
+                    />
                   </div>
                 </div>
               </div>
