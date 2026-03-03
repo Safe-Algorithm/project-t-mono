@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
-import { Trip, CreateTripPackage, FieldMetadata, ValidationConfig, TripAmenity, TripType } from '../../types/trip';
+import { Trip, CreateTripPackage, CreateTripExtraFee, FieldMetadata, ValidationConfig, TripAmenity, TripType } from '../../types/trip';
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
 import ValidationConfigComponent from './ValidationConfig';
 import DestinationSelector, { DestinationSelection } from './DestinationSelector';
@@ -15,7 +15,8 @@ interface TripFormProps {
     packageFields?: { [index: number]: string[] }, 
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
     imageData?: { newImages: File[], imagesToDelete: string[] },
-    destinationSelections?: DestinationSelection[]
+    destinationSelections?: DestinationSelection[],
+    extraFees?: CreateTripExtraFee[]
   ) => void;
   isSubmitting: boolean;
 }
@@ -80,6 +81,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
   // Destination selections (form-state mode for new trips)
   const [destinationSelections, setDestinationSelections] = useState<DestinationSelection[]>([]);
+
+  // Extra fees (draft rows)
+  const [extraFees, setExtraFees] = useState<CreateTripExtraFee[]>([]);
 
   useEffect(() => {
     const loadCountries = async () => {
@@ -186,6 +190,19 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         setTripImages(trip.images);
       }
 
+      // Populate extra fees (read-only snapshot for display; deletions handled on submit)
+      if (trip.extra_fees && trip.extra_fees.length > 0) {
+        setExtraFees(trip.extra_fees.map(f => ({
+          name_en: f.name_en,
+          name_ar: f.name_ar,
+          description_en: f.description_en ?? '',
+          description_ar: f.description_ar ?? '',
+          amount: f.amount,
+          currency: f.currency,
+          is_mandatory: f.is_mandatory,
+        })));
+      }
+
       if (!trip.is_packaged_trip) {
         // Non-packaged: price comes from the hidden package and is exposed via trip.price
         setTripPrice(trip.price != null ? String(trip.price) : '');
@@ -249,6 +266,18 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   };
 
   const amenityKeys = Object.values(TripAmenity) as string[];
+
+  const addExtraFee = () => {
+    setExtraFees(prev => [...prev, { name_en: '', name_ar: '', description_en: '', description_ar: '', amount: 0, currency: 'SAR', is_mandatory: true }]);
+  };
+
+  const removeExtraFee = (index: number) => {
+    setExtraFees(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateExtraFee = (index: number, field: keyof CreateTripExtraFee, value: string | number | boolean) => {
+    setExtraFees(prev => prev.map((fee, i) => i === index ? { ...fee, [field]: value } : fee));
+  };
 
   const addPackage = () => {
     const newIndex = packages.length;
@@ -538,7 +567,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     };
 
     if (isPackagedTrip) {
-      onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs, imageData, destinationSelections);
+      onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs, imageData, destinationSelections, extraFees);
     } else {
       // Non-packaged: include price/is_refundable/amenities in the trip payload
       // Backend auto-creates/syncs the hidden package from these fields
@@ -551,7 +580,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       // Pass required fields as index 0 so new.tsx/edit.tsx can update the hidden package's fields
       const hiddenFields = { 0: tripRequiredFields };
       const hiddenValidations = { 0: tripValidationConfigs };
-      onSubmit(nonPackagedPayload, null, hiddenFields, hiddenValidations, imageData, destinationSelections);
+      onSubmit(nonPackagedPayload, null, hiddenFields, hiddenValidations, imageData, destinationSelections, extraFees);
     }
   };
 
@@ -889,6 +918,99 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           </div>
         )}
       </div>}
+
+      {/* ── Extra Fees ── */}
+      <div className={sectionCls}>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className={sectionTitleCls}>{t('trip.extraFees', 'Additional Fees')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2">{t('trip.extraFeesHint', 'Optional fees participants should be aware of (e.g. visa fees, airport taxes).')}</p>
+          </div>
+          <button
+            type="button"
+            onClick={addExtraFee}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800 rounded-xl hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+            {t('trip.addFee', 'Add Fee')}
+          </button>
+        </div>
+
+        {extraFees.length === 0 ? (
+          <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4 border border-dashed border-slate-200 dark:border-slate-700 rounded-xl">
+            {t('trip.noExtraFees', 'No additional fees. Click "Add Fee" to add one.')}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {extraFees.map((fee, index) => (
+              <div key={index} className="relative border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50 dark:bg-slate-800/50">
+                <button
+                  type="button"
+                  onClick={() => removeExtraFee(index)}
+                  className="absolute top-3 right-3 p-1 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  title={t('trip.removeFee', 'Remove fee')}
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pr-6">
+                  <div>
+                    <label className={labelCls}>{t('trip.feeNameEn', 'Fee Name (EN)')}</label>
+                    <input className={inputCls} value={fee.name_en} onChange={e => updateExtraFee(index, 'name_en', e.target.value)} placeholder="e.g. Airport Tax" maxLength={100} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t('trip.feeNameAr', 'Fee Name (AR)')}</label>
+                    <input className={inputCls} value={fee.name_ar} onChange={e => updateExtraFee(index, 'name_ar', e.target.value)} placeholder="مثال: ضريبة المطار" dir="rtl" maxLength={100} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t('trip.feeDescEn', 'Description (EN)')}</label>
+                    <input className={inputCls} value={fee.description_en ?? ''} onChange={e => updateExtraFee(index, 'description_en', e.target.value)} placeholder={t('trip.optional', 'Optional')} maxLength={500} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t('trip.feeDescAr', 'Description (AR)')}</label>
+                    <input className={inputCls} value={fee.description_ar ?? ''} onChange={e => updateExtraFee(index, 'description_ar', e.target.value)} placeholder={t('trip.optional', 'Optional')} dir="rtl" maxLength={500} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>{t('trip.feeAmount', 'Amount')} <span className="text-red-500">*</span></label>
+                    <div className="flex gap-2">
+                      <input
+                        className={`${inputCls} flex-1`}
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={fee.amount || ''}
+                        onChange={e => updateExtraFee(index, 'amount', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                      <select
+                        className={`${inputCls} w-24`}
+                        value={fee.currency}
+                        onChange={e => updateExtraFee(index, 'currency', e.target.value)}
+                      >
+                        <option value="SAR">SAR</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="AED">AED</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-end pb-2.5">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={fee.is_mandatory ?? true}
+                        onChange={e => updateExtraFee(index, 'is_mandatory', e.target.checked)}
+                        className="w-4 h-4 accent-sky-500"
+                      />
+                      <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('trip.feeMandatory', 'Mandatory fee')}</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* ── Images ── */}
       <div className={sectionCls}>

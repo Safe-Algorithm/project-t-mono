@@ -3,7 +3,8 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import TripForm from '../../../components/trips/TripForm';
 import { tripService, TripUpdatePayload } from '../../../services/tripService';
-import { Trip, CreateTripPackage, PackageRequiredField, ValidationConfig } from '../../../types/trip';
+import { Trip, CreateTripPackage, CreateTripExtraFee, PackageRequiredField, ValidationConfig } from '../../../types/trip';
+import { DestinationSelection } from '../../../components/trips/DestinationSelector';
 
 const TripEditPage = () => {
   const router = useRouter();
@@ -40,7 +41,9 @@ const TripEditPage = () => {
     packages?: CreateTripPackage[] | null, 
     packageFields?: { [index: number]: string[] },
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
-    imageData?: { newImages: File[], imagesToDelete: string[] }
+    imageData?: { newImages: File[], imagesToDelete: string[] },
+    destinationSelections?: DestinationSelection[],
+    extraFees?: CreateTripExtraFee[]
   ) => {
     if (!id || typeof id !== 'string') return;
     setIsSubmitting(true);
@@ -131,6 +134,20 @@ const TripEditPage = () => {
         }
       }
       
+      // Sync extra fees: delete existing then recreate from form state
+      if (extraFees !== undefined) {
+        const existing = trip?.extra_fees ?? [];
+        for (const fee of existing) {
+          try { await tripService.deleteExtraFee(id, fee.id); } catch {}
+        }
+        for (const fee of extraFees) {
+          if (!fee.name_en.trim() && !fee.name_ar.trim()) continue;
+          try { await tripService.createExtraFee(id, fee); } catch (err) {
+            console.error('Failed to create extra fee:', err);
+          }
+        }
+      }
+
       router.push(`/trips/${id}`);
     } catch (err) {
       if (err instanceof Error) {

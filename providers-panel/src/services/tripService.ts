@@ -1,6 +1,6 @@
 import { api } from './api';
 import i18n from '../i18n';
-import { Trip, TripPackage, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata, ValidationMetadata, ValidationConfig, PhoneCountry, NationalityOption } from '../types/trip';
+import { Trip, TripPackage, TripExtraFee, CreateTripExtraFee, CreateTripPackage, UpdateTripPackage, PackageRequiredField, FieldMetadata, ValidationMetadata, ValidationConfig, PhoneCountry, NationalityOption } from '../types/trip';
 
 export interface TripCreatePayload {
   name_en: string;
@@ -179,6 +179,19 @@ export const tripService = {
     }
 
     return response.json();
+  },
+
+  // Extra fees management
+  createExtraFee: (tripId: string, payload: CreateTripExtraFee): Promise<TripExtraFee> => {
+    return api.post<TripExtraFee>(`/trips/${tripId}/extra-fees`, payload);
+  },
+
+  getExtraFees: (tripId: string): Promise<TripExtraFee[]> => {
+    return api.get<TripExtraFee[]>(`/trips/${tripId}/extra-fees`);
+  },
+
+  deleteExtraFee: (tripId: string, feeId: string): Promise<void> => {
+    return api.del<void>(`/trips/${tripId}/extra-fees/${feeId}`);
   },
 
   duplicate: (tripId: string): Promise<Trip> => {

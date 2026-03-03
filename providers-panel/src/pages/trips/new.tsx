@@ -5,7 +5,7 @@ import TripForm from '../../components/trips/TripForm';
 import { tripService, TripCreatePayload, TripUpdatePayload } from '../../services/tripService';
 import { destinationService } from '../../services/destinationService';
 import { DestinationSelection } from '../../components/trips/DestinationSelector';
-import { CreateTripPackage, PackageRequiredField, ValidationConfig } from '../../types/trip';
+import { CreateTripPackage, CreateTripExtraFee, PackageRequiredField, ValidationConfig } from '../../types/trip';
 
 const NewTripPage = () => {
   const router = useRouter();
@@ -19,7 +19,8 @@ const NewTripPage = () => {
     packageFields?: { [index: number]: string[] },
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
     imageData?: { newImages: File[], imagesToDelete: string[] },
-    destinationSelections?: DestinationSelection[]
+    destinationSelections?: DestinationSelection[],
+    extraFees?: CreateTripExtraFee[]
   ) => {
     setIsSubmitting(true);
     setError(null);
@@ -92,6 +93,18 @@ const NewTripPage = () => {
             );
           } catch (err) {
             console.error('Failed to add destination:', err);
+          }
+        }
+      }
+
+      // Create extra fees
+      if (extraFees && extraFees.length > 0) {
+        for (const fee of extraFees) {
+          if (!fee.name_en.trim() && !fee.name_ar.trim()) continue;
+          try {
+            await tripService.createExtraFee(createdTrip.id, fee);
+          } catch (err) {
+            console.error('Failed to create extra fee:', err);
           }
         }
       }
