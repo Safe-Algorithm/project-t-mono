@@ -443,11 +443,15 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       }
     }
 
-    // ── Meeting location must be a Google Maps URL ──
-    if (formData.has_meeting_place && formData.meeting_location) {
-      const GMAPS_RE = /^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i;
-      if (!GMAPS_RE.test(formData.meeting_location)) {
-        newErrors.push(t('trip.validation.invalidMapsUrl', 'Meeting location must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)'));
+    // ── Meeting location is required and must be a Google Maps URL ──
+    if (formData.has_meeting_place) {
+      if (!formData.meeting_location.trim()) {
+        newErrors.push(t('trip.validation.meetingLocationRequired', 'Meeting location (Google Maps link) is required'));
+      } else {
+        const GMAPS_RE = /^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i;
+        if (!GMAPS_RE.test(formData.meeting_location)) {
+          newErrors.push(t('trip.validation.invalidMapsUrl', 'Meeting location must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)'));
+        }
       }
     }
 
@@ -851,10 +855,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         </label>
         {formData.has_meeting_place && (
           <div className="ml-6">
-            <label className={labelCls}>{t('trip.meetingLocation')}</label>
+            <label className={labelCls}>{t('trip.meetingLocation')} <span className="text-red-500">*</span></label>
             <input
               className={`${inputCls} ${
-                formData.meeting_location &&
+                !formData.meeting_location.trim() ||
                 !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location)
                   ? 'border-red-400 focus:ring-red-400'
                   : ''
@@ -866,8 +870,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
               placeholder="https://maps.app.goo.gl/..."
               maxLength={500}
             />
-            {formData.meeting_location &&
-              !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location) ? (
+            {!formData.meeting_location.trim() ? (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                {t('trip.validation.meetingLocationRequired', 'Meeting location (Google Maps link) is required')}
+              </p>
+            ) : !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location) ? (
               <p className="text-xs text-red-500 dark:text-red-400 mt-1">
                 {t('trip.validation.invalidMapsUrl', 'Must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)')}
               </p>

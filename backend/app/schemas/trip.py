@@ -190,6 +190,8 @@ class TripUpdate(BaseModel):
             raise ValueError('end_date must be after start_date')
         if self.registration_deadline and self.start_date and self.registration_deadline > self.start_date:
             raise ValueError('registration_deadline must be on or before start_date')
+        if self.has_meeting_place and not self.meeting_location:
+            raise ValueError('meeting_location is required when has_meeting_place is True')
         return self
 
 
