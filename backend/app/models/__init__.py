@@ -23,3 +23,4 @@ from .support_ticket import SupportTicket, TripSupportTicket, TicketMessage, Tic
 from .trip_update import TripUpdate, TripUpdateReceipt
 from .rbac import Permission, PermissionRule, Role, RolePermissionLink, UserRoleLink, RoleSource
 from .provider_image import ProviderImage
+from .trip_share import TripShare

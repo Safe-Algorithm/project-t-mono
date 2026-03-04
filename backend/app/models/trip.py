@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from .trip_amenity import TripExtraFee
     from .trip_destination import TripDestination
     from .destination import Destination
+    from .trip_share import TripShare
 
 
 
@@ -95,3 +96,4 @@ class Trip(SQLModel, table=True):
     bookmarked_by: List["TripBookmark"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     extra_fees: List["TripExtraFee"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     trip_destinations: List["TripDestination"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    share: Optional["TripShare"] = Relationship(back_populates="trip", sa_relationship_kwargs={"cascade": "all, delete-orphan", "uselist": False})

@@ -114,7 +114,7 @@ def prepare_payment(
 
     # Store the app's redirect deep link so the callback handler can use it
     # without hardcoding it in the backend.
-    app_redirect_url = payment_in.redirect_url or "rihlaapp://payment-callback"
+    app_redirect_url = payment_in.redirect_url or f"{settings.APP_DEEP_LINK_SCHEME}://payment-callback"
 
     payment = Payment(
         registration_id=payment_in.registration_id,
@@ -251,7 +251,7 @@ async def payment_callback(
         # Query params carry the result so the app can act accordingly.
         registration_id = str(payment.registration_id)
         status_val = payment.status.value
-        base_redirect = payment.callback_url or "rihlaapp://payment-callback"
+        base_redirect = payment.callback_url or f"{settings.APP_DEEP_LINK_SCHEME}://payment-callback"
         deep_link = f"{base_redirect}?registrationId={registration_id}&status={status_val}"
 
         # Serve an HTML page that triggers the deep link via JS.

@@ -25,6 +25,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def _auth_url(source: RequestSource, path: str) -> str:
+    """
+    Return the correct base URL for auth email links based on request source.
+
+    - MOBILE_APP     → deep-link into the app  (rihlaapp://path)
+    - PROVIDERS_PANEL → providers panel web URL
+    - ADMIN_PANEL     → admin panel web URL
+    """
+    if source == RequestSource.MOBILE_APP:
+        return f"{settings.APP_DEEP_LINK_SCHEME}://{path}"
+    elif source == RequestSource.PROVIDERS_PANEL:
+        return f"{settings.PROVIDERS_PANEL_URL}/{path}"
+    else:
+        return f"{settings.ADMIN_PANEL_URL}/{path}"
+
+
 @router.post("/login/access-token", response_model=Token)
 def login_for_access_token(
     response: Response,
@@ -313,7 +329,7 @@ async def forgot_password(
     redis_client.setex(redis_key, 60 * 60, f"{user.id}:{source.value}")
     
     # Send password reset email in background
-    reset_url = f"{settings.FRONTEND_URL}/reset-password"
+    reset_url = _auth_url(source, "reset-password")
     background_tasks.add_task(
         email_service.send_password_reset_email,
         to_email=user.email,
@@ -415,7 +431,7 @@ async def send_verification_email(
     redis_client.setex(redis_key, 24 * 60 * 60, str(current_user.id))
     
     # Send verification email in background
-    verification_url = f"{settings.FRONTEND_URL}/verify-email"
+    verification_url = _auth_url(current_user.source, "verify-email")
     background_tasks.add_task(
         email_service.send_verification_email,
         to_email=current_user.email,

@@ -39,6 +39,18 @@ class Settings(BaseSettings):
     # For dev builds: run `npx expo run:android` then check the debug keystore fingerprint
     ANDROID_APP_FINGERPRINT: str = "00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00:00"
 
+    # Mobile app deep-link scheme (used in trip share redirects)
+    # Must match the scheme configured in app.json / Expo config
+    APP_DEEP_LINK_SCHEME: str = "rihlaapp"
+
+    # iOS App Store ID — used in the Safari Smart App Banner on trip share pages
+    # Set to your numeric App Store app ID once published (e.g. "1234567890")
+    IOS_APP_STORE_ID: str = ""  # Leave empty until app is published
+
+    # App store URLs — used as fallback when deep-link fails (app not installed)
+    IOS_APP_STORE_URL: str = "https://apps.apple.com/app/id"  # append your app ID
+    ANDROID_PLAY_STORE_URL: str = "https://play.google.com/store/apps/details?id="  # append your package name
+
     # Moyasar (Payment Gateway)
     MOYASAR_API_KEY: str = ""  # Secret key - backend only, never expose to client
     MOYASAR_PUBLISHABLE_KEY: str = ""  # Publishable key - safe to send to app
@@ -48,10 +60,9 @@ class Settings(BaseSettings):
     # Backend public URL (used for Moyasar payment callbacks — must be HTTPS in production)
     BACKEND_URL: str = "http://localhost:8000"
 
-    # Frontend URLs (for email links)
-    FRONTEND_URL: str = "http://localhost:3000"  # Mobile app (default)
-    ADMIN_PANEL_URL: str = "http://localhost:3001"  # Admin panel
-    PROVIDERS_PANEL_URL: str = "http://localhost:3002"  # Providers panel
+    # Panel URLs (used in auth email links — reset-password, verify-email)
+    ADMIN_PANEL_URL: str = "http://localhost:3001"
+    PROVIDERS_PANEL_URL: str = "http://localhost:3002"
     
     # Rate Limiting Configuration
     # OTP Rate Limits (max attempts per time window)
