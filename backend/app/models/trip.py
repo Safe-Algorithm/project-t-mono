@@ -73,11 +73,12 @@ class Trip(SQLModel, table=True):
     # Trip type: guided (provider-managed, has meeting point) or self_arranged (tourism package)
     trip_type: TripType = Field(
         default=TripType.GUIDED,
-        sa_column=Column(SAEnum(TripType, name="triptype"), nullable=False, server_default=TripType.GUIDED.value)
+        sa_column=Column(SAEnum(TripType, name="triptype", values_callable=lambda x: [e.value for e in x]), nullable=False, server_default=TripType.GUIDED.value)
     )
 
     # Meeting Place (only for guided trips)
     has_meeting_place: bool = Field(default=False)
+    meeting_place_name: Optional[str] = Field(default=None, max_length=200)
     meeting_location: Optional[str] = Field(default=None, max_length=500)
     meeting_time: Optional[datetime] = Field(default=None)
     

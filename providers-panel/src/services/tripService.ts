@@ -18,6 +18,7 @@ export interface TripCreatePayload {
   is_refundable?: boolean;
   amenities?: string[];
   has_meeting_place?: boolean;
+  meeting_place_name?: string;
   meeting_location?: string;
   meeting_time?: string;
   starting_city_id?: string;

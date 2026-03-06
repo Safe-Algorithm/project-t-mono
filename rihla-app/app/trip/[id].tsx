@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Dimensions, FlatList, Alert, Linking,
+  Image, Dimensions, FlatList, Alert, Linking, Share,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useTrip, useTripRating, useTripReviews, useFavorites, useToggleFavorite } from '../../hooks/useTrips';
+import apiClient from '../../lib/api';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -54,6 +55,15 @@ export default function TripDetailScreen() {
   const toggleFav = useToggleFavorite();
 
   const isFav = favorites?.some((t) => t.id === id) ?? false;
+
+  const handleShare = async () => {
+    try {
+      const { data } = await apiClient.get<{ share_url: string }>(`/trips/${id}/share`);
+      await Share.share({ message: data.share_url, url: data.share_url });
+    } catch {
+      Alert.alert(t('common.error'), t('trip.shareError', 'Could not generate share link'));
+    }
+  };
 
   if (isLoading) {
     return (
@@ -139,16 +149,21 @@ export default function TripDetailScreen() {
             <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
               <Ionicons name={i18n.language === 'ar' ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.white} />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={s.favBtn}
-              onPress={() => toggleFav.mutate({ tripId: id, isFav })}
-            >
-              <Ionicons
-                name={isFav ? 'heart' : 'heart-outline'}
-                size={22}
-                color={isFav ? colors.error : colors.white}
-              />
-            </TouchableOpacity>
+            <View style={s.overlayRight}>
+              <TouchableOpacity style={s.overlayBtn} onPress={handleShare}>
+                <Ionicons name="share-outline" size={22} color={colors.white} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.overlayBtn}
+                onPress={() => toggleFav.mutate({ tripId: id, isFav })}
+              >
+                <Ionicons
+                  name={isFav ? 'heart' : 'heart-outline'}
+                  size={22}
+                  color={isFav ? colors.error : colors.white}
+                />
+              </TouchableOpacity>
+            </View>
           </SafeAreaView>
         </View>
 
@@ -291,6 +306,9 @@ export default function TripDetailScreen() {
               <Ionicons name="location-outline" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={s.meetingLabel}>{t('trip.meetingPoint')}</Text>
+                {trip.meeting_place_name && (
+                  <Text style={s.meetingValue}>{trip.meeting_place_name}</Text>
+                )}
                 <TouchableOpacity
                   onPress={() => Linking.openURL(trip.meeting_location!)}
                   activeOpacity={0.7}
@@ -539,7 +557,8 @@ function makeStyles(c: ThemeColors) {
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center',
   },
-  favBtn: {
+  overlayRight: { flexDirection: 'row', gap: 8 },
+  overlayBtn: {
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.4)',
     alignItems: 'center', justifyContent: 'center',

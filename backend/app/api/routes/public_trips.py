@@ -94,6 +94,11 @@ def get_public_field_metadata(
     return AvailableFieldsResponse(fields=fields)
 
 
+def _get_extra_fees(session: Session, trip_id) -> list:
+    from app.models.trip_amenity import TripExtraFee
+    return session.query(TripExtraFee).filter(TripExtraFee.trip_id == trip_id).all()
+
+
 def build_trip_read(trip, session: Session) -> TripRead:
     """Convert a Trip ORM object to a TripRead schema with properly built packages."""
     all_packages = session.query(TripPackageModel).filter(
@@ -241,6 +246,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         amenities=resp_amenities,
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
+        meeting_place_name=getattr(trip, 'meeting_place_name', None),
         meeting_time=trip.meeting_time,
         trip_reference=trip.trip_reference,
         registration_deadline=trip.registration_deadline,
@@ -251,7 +257,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         timezone=trip.timezone,
         destinations=destinations_info,
         packages=packages_with_fields,
-        extra_fees=[],
+        extra_fees=_get_extra_fees(session, trip.id),
         available_spots=available_spots,
         simple_trip_required_fields=simple_required_fields if not is_packaged else [],
         simple_trip_required_fields_details=simple_required_fields_details if not is_packaged else [],

@@ -134,8 +134,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-40 w-64 bg-white dark:bg-slate-900 border-${isRTL ? 'l' : 'r'} border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-300
-        ${mobileOpen ? 'translate-x-0' : (isRTL ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')}`}>
+      <aside className={`fixed inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-40 w-64 bg-white dark:bg-slate-900 border-${isRTL ? 'l' : 'r'} border-slate-200 dark:border-slate-800 flex flex-col transition-[left,right] duration-300
+        ${isRTL
+          ? (mobileOpen ? 'right-0' : '-right-64 lg:right-0')
+          : (mobileOpen ? 'left-0' : '-left-64 lg:left-0')
+        }`}>
         {/* Brand */}
         <div className="flex items-center gap-3 px-5 py-5 border-b border-slate-200 dark:border-slate-800">
           <div className="w-9 h-9 rounded-xl bg-sky-500 flex items-center justify-center shadow-sm flex-shrink-0">

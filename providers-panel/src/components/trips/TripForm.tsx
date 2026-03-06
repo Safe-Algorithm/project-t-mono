@@ -43,6 +43,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     is_active: true,
     is_refundable: true,
     has_meeting_place: false,
+    meeting_place_name: '',
     meeting_location: '',
   });
 
@@ -172,6 +173,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         is_active: trip.is_active,
         is_refundable: trip.is_refundable ?? true,
         has_meeting_place: trip.has_meeting_place ?? false,
+        meeting_place_name: trip.meeting_place_name ?? '',
         meeting_location: trip.meeting_location ?? '',
       });
       if (trip.starting_city_id) {
@@ -472,8 +474,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       }
     }
 
-    // ── Meeting location is required and must be a Google Maps URL ──
-    if (formData.has_meeting_place) {
+    // ── Meeting place is mandatory for guided trips ──
+    if (tripTypeSelection === TripType.GUIDED) {
+      if (!formData.meeting_place_name.trim()) {
+        newErrors.push(t('trip.validation.meetingPlaceNameRequired', 'Meeting place name is required for guided trips'));
+      }
       if (!formData.meeting_location.trim()) {
         newErrors.push(t('trip.validation.meetingLocationRequired', 'Meeting location (Google Maps link) is required'));
       } else {
@@ -548,7 +553,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         ...formData,
         is_packaged_trip: isPackagedTrip,
         trip_type: tripTypeSelection,
-        has_meeting_place: tripTypeSelection === TripType.GUIDED ? formData.has_meeting_place : false,
+        has_meeting_place: tripTypeSelection === TripType.GUIDED,
+        meeting_place_name: tripTypeSelection === TripType.GUIDED ? formData.meeting_place_name : undefined,
         meeting_location: tripTypeSelection === TripType.GUIDED ? formData.meeting_location : undefined,
         timezone,
         max_participants: parseInt(formData.max_participants, 10),
@@ -875,49 +881,56 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         </div>
       )}
 
-      {/* ── Meeting Place (guided trips only) ── */}
-      {tripTypeSelection === TripType.GUIDED && <div className={sectionCls}>
-        <p className={sectionTitleCls}>{t('trip.meetingPlace')}</p>
-        <label className="flex items-center gap-2 mb-4 cursor-pointer">
-          <input type="checkbox" name="has_meeting_place" checked={formData.has_meeting_place} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t('trip.meetingPlaceDescription')}</span>
-        </label>
-        {formData.has_meeting_place && (
-          <div className="ml-6">
-            <label className={labelCls}>{t('trip.meetingLocation')} <span className="text-red-500">*</span></label>
-            <input
-              className={`${inputCls} ${
-                !formData.meeting_location.trim() ||
-                !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location)
-                  ? 'border-red-400 focus:ring-red-400'
-                  : ''
-              }`}
-              type="text"
-              name="meeting_location"
-              value={formData.meeting_location}
-              onChange={handleChange}
-              placeholder="https://maps.app.goo.gl/..."
-              maxLength={500}
-            />
-            {!formData.meeting_location.trim() ? (
-              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                {t('trip.validation.meetingLocationRequired', 'Meeting location (Google Maps link) is required')}
+      {/* ── Meeting Place (guided trips only — always required) ── */}
+      {tripTypeSelection === TripType.GUIDED && (
+        <div className={sectionCls}>
+          <p className={sectionTitleCls}>{t('trip.meetingPlace')}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 -mt-2 mb-4">{t('trip.meetingPlaceGuidedNote', 'Meeting place is required for guided trips.')}</p>
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className={labelCls}>{t('trip.meetingPlaceName', 'Meeting Place Name')} <span className="text-red-500">*</span></label>
+              <input
+                className={inputCls}
+                type="text"
+                name="meeting_place_name"
+                value={formData.meeting_place_name}
+                onChange={handleChange}
+                placeholder={t('trip.meetingPlaceNamePlaceholder', 'e.g. King Fahd Gate, Masjid Al-Haram entrance')}
+                maxLength={200}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>{t('trip.meetingLocation')} <span className="text-red-500">*</span></label>
+              <input
+                className={`${inputCls} ${
+                  formData.meeting_location.trim() &&
+                  !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location)
+                    ? 'border-red-400 focus:ring-red-400'
+                    : ''
+                }`}
+                type="text"
+                name="meeting_location"
+                value={formData.meeting_location}
+                onChange={handleChange}
+                placeholder="https://maps.app.goo.gl/..."
+                maxLength={500}
+              />
+              {formData.meeting_location.trim() && !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location) ? (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                  {t('trip.validation.invalidMapsUrl', 'Must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)')}
+                </p>
+              ) : (
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
+                  {t('trip.meetingLocationHint', 'Paste a Google Maps link. Users in the app can tap it to open the location.')}
+                </p>
+              )}
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {t('trip.meetingTimeNote', 'Meeting time is set to the trip start time.')}
               </p>
-            ) : !/^https:\/\/(maps\.google\.com\/|www\.google\.com\/maps\/|goo\.gl\/maps\/|maps\.app\.goo\.gl\/)/i.test(formData.meeting_location) ? (
-              <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                {t('trip.validation.invalidMapsUrl', 'Must be a Google Maps URL (e.g. https://maps.app.goo.gl/…)')}
-              </p>
-            ) : (
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">
-                {t('trip.meetingLocationHint', 'Paste a Google Maps link. Users in the app can tap it to open the location.')}
-              </p>
-            )}
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {t('trip.meetingTimeNote', 'Meeting time is set to the trip start time.')}
-            </p>
+            </div>
           </div>
-        )}
-      </div>}
+        </div>
+      )}
 
       {/* ── Extra Fees ── */}
       <div className={sectionCls}>
@@ -970,11 +983,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                     <label className={labelCls}>{t('trip.feeDescAr', 'Description (AR)')}</label>
                     <input className={inputCls} value={fee.description_ar ?? ''} onChange={e => updateExtraFee(index, 'description_ar', e.target.value)} placeholder={t('trip.optional', 'Optional')} dir="rtl" maxLength={500} />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className={labelCls}>{t('trip.feeAmount', 'Amount')} <span className="text-red-500">*</span></label>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 w-full">
                       <input
-                        className={`${inputCls} flex-1`}
+                        className="flex-1 min-w-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition placeholder-slate-400 dark:placeholder-slate-500"
                         type="number"
                         min="0.01"
                         step="0.01"
@@ -983,7 +996,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                         placeholder="0.00"
                       />
                       <select
-                        className={`${inputCls} w-24`}
+                        className="w-24 flex-shrink-0 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition"
                         value={fee.currency}
                         onChange={e => updateExtraFee(index, 'currency', e.target.value)}
                       >

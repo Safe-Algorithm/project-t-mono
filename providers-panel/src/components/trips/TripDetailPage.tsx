@@ -277,6 +277,12 @@ const TripDetailPage: React.FC = () => {
               <p className="font-medium text-slate-900 dark:text-white mt-0.5">{value}</p>
             </div>
           ))}
+          {!trip.is_packaged_trip && trip.price != null && (
+            <div>
+              <span className="text-xs text-slate-400 dark:text-slate-500">Price</span>
+              <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{trip.price} SAR</p>
+            </div>
+          )}
           {!trip.is_packaged_trip && (
             <div>
               <span className="text-xs text-slate-400 dark:text-slate-500">Refundable</span>
@@ -299,8 +305,11 @@ const TripDetailPage: React.FC = () => {
         {trip.has_meeting_place && (
           <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm">
             <p className="font-medium text-slate-900 dark:text-white mb-2">Meeting Place</p>
-            {trip.meeting_location && <p className="text-slate-600 dark:text-slate-400">{trip.meeting_location}</p>}
-            {trip.meeting_time && <p className="text-slate-600 dark:text-slate-400">{new Date(trip.meeting_time).toLocaleString()}</p>}
+            {trip.meeting_place_name && <p className="text-slate-700 dark:text-slate-300 font-medium">{trip.meeting_place_name}</p>}
+            {trip.meeting_location && (
+              <a href={trip.meeting_location} target="_blank" rel="noreferrer" className="text-sky-600 dark:text-sky-400 hover:underline break-all">{trip.meeting_location}</a>
+            )}
+            {trip.meeting_time && <p className="text-slate-500 dark:text-slate-400 mt-1">{new Date(trip.meeting_time).toLocaleString()}</p>}
           </div>
         )}
       </div>
@@ -340,6 +349,32 @@ const TripDetailPage: React.FC = () => {
           <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
             {trip.images.map((url, i) => (
               <img key={i} src={url} alt="" className="w-full h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(url, '_blank')} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Extra Fees */}
+      {trip.extra_fees && trip.extra_fees.length > 0 && (
+        <div className={`${cardCls} p-5`}>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Additional Fees ({trip.extra_fees.length})</h3>
+          <div className="space-y-2">
+            {trip.extra_fees.map(fee => (
+              <div key={fee.id} className="flex items-start justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-900 dark:text-white">{fee.name_en || fee.name_ar}</p>
+                  {fee.name_ar && fee.name_en && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5" dir="rtl">{fee.name_ar}</p>}
+                  {(fee.description_en || fee.description_ar) && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{fee.description_en || fee.description_ar}</p>
+                  )}
+                </div>
+                <div className="flex-shrink-0 flex items-center gap-2 ml-4">
+                  <span className="font-bold text-slate-900 dark:text-white">{fee.amount} {fee.currency}</span>
+                  {fee.is_mandatory && (
+                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">Mandatory</span>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         </div>

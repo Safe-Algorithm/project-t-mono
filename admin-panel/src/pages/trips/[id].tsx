@@ -97,6 +97,20 @@ interface Trip {
   meeting_time?: string;
   simple_trip_required_fields?: string[];
   simple_trip_required_fields_details?: TripPackageRequiredFieldDetail[];
+  meeting_place_name?: string;
+  price?: number | null;
+  extra_fees?: TripExtraFee[];
+}
+
+interface TripExtraFee {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  description_en?: string;
+  description_ar?: string;
+  amount: number;
+  currency: string;
+  is_mandatory: boolean;
 }
 
 interface TripRegistration {
@@ -343,13 +357,24 @@ const TripDetailPage = () => {
           </div>
         )}
 
+        {/* Price — non-packaged trips */}
+        {!trip.is_packaged_trip && trip.price != null && (
+          <div className="mt-5">
+            <p className={lCls}>Price</p>
+            <p className="text-sm font-semibold text-slate-900 dark:text-white">{trip.price} SAR</p>
+          </div>
+        )}
+
         {/* Meeting Place */}
         {trip.has_meeting_place && (
           <div className="mt-5">
             <p className={lCls}>{t('tripDetail.meetingPlace')}</p>
             <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-1.5">
-              {trip.meeting_location && <p className="text-sm text-slate-700 dark:text-slate-300"><span className="font-semibold">{t('tripDetail.meetingLocation')}:</span> {trip.meeting_location}</p>}
-              {trip.meeting_time && <p className="text-sm text-slate-700 dark:text-slate-300"><span className="font-semibold">{t('tripDetail.meetingTime')}:</span> {new Date(trip.meeting_time).toLocaleString()}</p>}
+              {trip.meeting_place_name && <p className="text-sm font-semibold text-slate-900 dark:text-white">{trip.meeting_place_name}</p>}
+              {trip.meeting_location && (
+                <a href={trip.meeting_location} target="_blank" rel="noreferrer" className="text-sm text-sky-600 dark:text-sky-400 hover:underline break-all">{trip.meeting_location}</a>
+              )}
+              {trip.meeting_time && <p className="text-sm text-slate-500 dark:text-slate-400">{new Date(trip.meeting_time).toLocaleString()}</p>}
             </div>
           </div>
         )}
@@ -371,6 +396,32 @@ const TripDetailPage = () => {
           </div>
         )}
       </div>
+
+      {/* Extra Fees */}
+      {trip.extra_fees && trip.extra_fees.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white mb-3">Additional Fees <span className="text-slate-400 font-normal">({trip.extra_fees.length})</span></h2>
+          <div className="space-y-2">
+            {trip.extra_fees.map(fee => (
+              <div key={fee.id} className="flex items-start justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm">
+                <div className="min-w-0">
+                  <p className="font-medium text-slate-900 dark:text-white">{fee.name_en || fee.name_ar}</p>
+                  {fee.name_ar && fee.name_en && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5" dir="rtl">{fee.name_ar}</p>}
+                  {(fee.description_en || fee.description_ar) && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{fee.description_en || fee.description_ar}</p>
+                  )}
+                </div>
+                <div className="flex-shrink-0 flex items-center gap-2 ml-4">
+                  <span className="font-bold text-slate-900 dark:text-white">{fee.amount} {fee.currency}</span>
+                  {fee.is_mandatory && (
+                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">Mandatory</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Trip Destinations */}
       {tripDestinations.length > 0 && (
@@ -634,7 +685,19 @@ const TripDetailPage = () => {
                   <div><p className={lCls}>{t('tripDetail.descEn')}</p><p className="text-sm text-slate-700 dark:text-slate-300">{pkg.description_en || '—'}</p></div>
                   <div><p className={lCls}>{t('tripDetail.descAr')}</p><p className="text-sm text-slate-700 dark:text-slate-300" dir="rtl">{pkg.description_ar || '—'}</p></div>
                   <div><p className={lCls}>{t('tripDetail.price')}</p><p className="text-sm font-semibold text-slate-900 dark:text-white">{pkg.price} {pkg.currency || 'SAR'}</p></div>
+                  {pkg.max_participants != null && <div><p className={lCls}>Max Participants</p><p className="text-sm text-slate-900 dark:text-white">{pkg.max_participants}</p></div>}
+                  {pkg.is_refundable != null && <div><p className={lCls}>Refundable</p><p className={`text-sm font-semibold ${pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>{pkg.is_refundable ? 'Yes' : 'No'}</p></div>}
                 </div>
+                {pkg.amenities && pkg.amenities.length > 0 && (
+                  <div className="mb-4">
+                    <p className={lCls}>Amenities</p>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {pkg.amenities.map(a => (
+                        <span key={a} className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-xs text-emerald-700 dark:text-emerald-400">{amenityLabels[a] || a}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <p className={lCls}>{t('tripDetail.requiredFields')}</p>
                   {pkg.required_fields.length === 0 ? (

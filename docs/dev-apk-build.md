@@ -98,7 +98,17 @@ emulator -avd Pixel_6_API_34
 adb install rihla-app.apk
 ```
 
-### Step 6 — Point the app at your local/ngrok backend
+### Step 6 — Start the Metro bundler
+
+Run this in your `rihla-app/` directory on your machine:
+
+```bash
+npx expo start --dev-client
+```
+
+Open the installed app on your phone — it will ask for the Metro server address or let you scan the QR code shown in the terminal. **Both your phone and machine must be on the same WiFi network.**
+
+### Step 7 — Point the app at your local/ngrok backend
 
 In `rihla-app/.env`:
 

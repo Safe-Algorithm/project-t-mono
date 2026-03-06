@@ -316,6 +316,7 @@ def duplicate_trip(*, session: Session, source_trip: Trip) -> Trip:
         timezone=source_trip.timezone,
         trip_type=source_trip.trip_type,
         has_meeting_place=source_trip.has_meeting_place,
+        meeting_place_name=source_trip.meeting_place_name,
         meeting_location=source_trip.meeting_location,
         meeting_time=None,
         provider_id=source_trip.provider_id,

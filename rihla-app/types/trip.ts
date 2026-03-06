@@ -80,6 +80,7 @@ export interface Trip {
   trip_type: string;
   amenities?: string[] | null;
   has_meeting_place: boolean;
+  meeting_place_name: string | null;
   meeting_location: string | null;
   meeting_time: string | null;
   images: string[] | null;

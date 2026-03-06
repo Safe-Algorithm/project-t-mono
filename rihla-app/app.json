@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "rihla-app",
-    "slug": "rihla-app",
+    "slug": "rihla",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -35,7 +35,10 @@
               "pathPrefix": "/payment-callback"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         },
         {
           "action": "VIEW",
@@ -44,7 +47,10 @@
               "scheme": "rihlaapp"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -58,6 +64,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "f998b35d-5781-43cf-8591-fee070fbd5bb"
+      }
+    },
+    "owner": "rihlas-organization"
   }
 }

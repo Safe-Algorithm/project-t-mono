@@ -22,7 +22,9 @@ export default function TabLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  const tabBarHeight = 52 + insets.bottom;
+  const extraBottomPad = 8;
+  const bottomPad = insets.bottom + extraBottomPad;
+  const tabBarHeight = 52 + bottomPad;
 
   return (
     <Tabs
@@ -35,7 +37,7 @@ export default function TabLayout() {
           borderTopColor: colors.border,
           borderTopWidth: 1,
           height: tabBarHeight,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
+          paddingBottom: bottomPad,
           paddingTop: 6,
         },
         tabBarLabelStyle: {
