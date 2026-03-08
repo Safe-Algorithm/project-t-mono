@@ -769,11 +769,11 @@ class TestWorkerUtcDatetimes:
         with patch("app.tasks.worker.Session") as mock_sess, \
              patch("app.services.sms.sms_service") as mock_sms:
             mock_sess.return_value.__enter__.return_value = session
-            mock_sms.send_sms = AsyncMock()
+            mock_sms.send_review_reminder = AsyncMock()
 
             await send_review_reminders()
 
-        mock_sms.send_sms.assert_called_once()
+        mock_sms.send_review_reminder.assert_called_once()
 
     @pytest.mark.asyncio
     @freeze_time("2025-06-15 12:00:00")
@@ -808,8 +808,8 @@ class TestWorkerUtcDatetimes:
         with patch("app.tasks.worker.Session") as mock_sess, \
              patch("app.services.sms.sms_service") as mock_sms:
             mock_sess.return_value.__enter__.return_value = session
-            mock_sms.send_sms = AsyncMock()
+            mock_sms.send_review_reminder = AsyncMock()
 
             await send_review_reminders()
 
-        mock_sms.send_sms.assert_not_called()
+        mock_sms.send_review_reminder.assert_not_called()

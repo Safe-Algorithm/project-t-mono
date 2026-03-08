@@ -221,7 +221,8 @@ async def invite_admin(
         inviter_name=current_user.name,
         company_name="Safe Algo Tourism Admin",
         invitation_token=invitation_token,
-        invitation_url=invitation_url
+        invitation_url=invitation_url,
+        language=getattr(current_user, "preferred_language", "en") or "en",
     )
     
     # Create admin user with is_active=False until they accept invitation

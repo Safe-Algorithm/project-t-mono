@@ -335,7 +335,8 @@ async def forgot_password(
         to_email=user.email,
         to_name=user.name,
         reset_token=reset_token,
-        reset_url=reset_url
+        reset_url=reset_url,
+        language=getattr(user, "preferred_language", "en") or "en",
     )
     
     return Msg(msg="If an account exists with this email, a password reset link has been sent")
@@ -437,7 +438,8 @@ async def send_verification_email(
         to_email=current_user.email,
         to_name=current_user.name,
         verification_token=verification_token,
-        verification_url=verification_url
+        verification_url=verification_url,
+        language=getattr(current_user, "preferred_language", "en") or "en",
     )
     
     return Msg(msg="Verification email sent")

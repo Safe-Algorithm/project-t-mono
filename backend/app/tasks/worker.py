@@ -129,38 +129,26 @@ async def send_review_reminders():
                         if not existing_review:
                             # Send review reminder via SMS/Email
                             trip_name = get_name(trip)
-                            message = (
-                                f"Hi {registration.user.name}! We hope you enjoyed your trip '{trip_name}'. "
-                                f"Please take a moment to share your experience and leave a review. "
-                                f"Your feedback helps other travelers!"
-                            )
+                            lang = getattr(registration.user, "preferred_language", "en") or "en"
                             
                             # Send SMS if phone verified
                             if registration.user.is_phone_verified and registration.user.phone:
                                 from app.services.sms import sms_service
-                                await sms_service.send_sms(
+                                await sms_service.send_review_reminder(
                                     to_phone=registration.user.phone,
-                                    message=message
+                                    trip_name=trip_name,
+                                    language=lang,
                                 )
                                 logger.info(f"Sent SMS review reminder to {registration.user.phone}")
                             
                             # Send Email if email verified
                             if registration.user.is_email_verified and registration.user.email:
                                 from app.services.email import email_service
-                                await email_service.send_email(
+                                await email_service.send_review_reminder_email(
                                     to_email=registration.user.email,
-                                    subject=f"Share your experience - {trip_name}",
-                                    html_content=f"""
-                                    <html>
-                                        <body>
-                                            <h2>How was your trip?</h2>
-                                            <p>Hi {registration.user.name}!</p>
-                                            <p>We hope you enjoyed your trip '{trip_name}'.</p>
-                                            <p>Please take a moment to share your experience and leave a review. Your feedback helps other travelers!</p>
-                                            <p>Thank you,<br>Safe Algo Tourism Team</p>
-                                        </body>
-                                    </html>
-                                    """
+                                    to_name=registration.user.name,
+                                    trip_name=trip_name,
+                                    language=lang,
                                 )
                                 logger.info(f"Sent email review reminder to {registration.user.email}")
                             

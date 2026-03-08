@@ -159,15 +159,14 @@ async def test_send_review_reminders_with_completed_trip(session: Session):
          patch('app.services.sms.sms_service') as mock_sms:
         
         mock_session_class.return_value.__enter__.return_value = session
-        mock_sms.send_sms = AsyncMock()
+        mock_sms.send_review_reminder = AsyncMock()
         
         await send_review_reminders()
         
-        # Verify SMS was sent
-        mock_sms.send_sms.assert_called_once()
-        call_args = mock_sms.send_sms.call_args
+        # Verify review reminder SMS was sent
+        mock_sms.send_review_reminder.assert_called_once()
+        call_args = mock_sms.send_review_reminder.call_args
         assert call_args[1]['to_phone'] == user.phone
-        assert 'review' in call_args[1]['message'].lower()
 
 
 @pytest.mark.asyncio
@@ -216,12 +215,12 @@ async def test_send_review_reminders_skips_existing_reviews(session: Session):
          patch('app.services.sms.sms_service') as mock_sms:
         
         mock_session_class.return_value.__enter__.return_value = session
-        mock_sms.send_sms = AsyncMock()
+        mock_sms.send_review_reminder = AsyncMock()
         
         await send_review_reminders()
         
         # Verify SMS was NOT sent (user already reviewed)
-        mock_sms.send_sms.assert_not_called()
+        mock_sms.send_review_reminder.assert_not_called()
 
 
 @pytest.mark.asyncio

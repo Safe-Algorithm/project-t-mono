@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 
 class SendOTPRequest(BaseModel):
     phone: str = Field(..., description="Phone number in E.164 format (e.g., +966501234567)")
+    language: str = Field(default="en", description="Preferred language for the SMS (en or ar)")
 
 
 class VerifyOTPRequest(BaseModel):
@@ -89,7 +90,12 @@ async def send_otp(
         redis_client.setex(rate_limit_key, 60 * 60, 1)  # 1 hour expiry
     
     # Send OTP via SMS in background
-    background_tasks.add_task(sms_service.send_otp, phone, otp_code)
+    background_tasks.add_task(
+        sms_service.send_otp,
+        phone,
+        otp_code,
+        getattr(current_user, "preferred_language", "en") or "en",
+    )
     
     return OTPResponse(
         message="OTP sent successfully",
@@ -207,7 +213,12 @@ async def send_otp_for_registration(
         redis_client.setex(rate_limit_key, settings.OTP_TIME_WINDOW_SECONDS, 1)
     
     # Send OTP via SMS in background
-    background_tasks.add_task(sms_service.send_otp, phone, otp_code)
+    background_tasks.add_task(
+        sms_service.send_otp,
+        phone,
+        otp_code,
+        request.language or "en",
+    )
     
     return OTPResponse(
         message="OTP sent successfully",
@@ -279,6 +290,7 @@ async def verify_otp_for_registration(
 
 class SendEmailOTPRequest(BaseModel):
     email: str = Field(..., description="Email address")
+    language: str = Field(default="en", description="Preferred language for the email (en or ar)")
 
 
 class VerifyEmailOTPRequest(BaseModel):
@@ -329,7 +341,8 @@ async def send_email_otp_for_registration(
     background_tasks.add_task(
         email_service.send_otp_email,
         to_email=email,
-        otp_code=otp_code
+        otp_code=otp_code,
+        language=request.language or "en",
     )
     
     return OTPResponse(
@@ -451,7 +464,8 @@ async def send_password_reset_otp(
         email_service.send_otp_email,
         to_email=email,
         otp_code=otp_code,
-        to_name=user.name
+        to_name=user.name,
+        language=getattr(user, "preferred_language", "en") or "en",
     )
     
     return OTPResponse(
@@ -580,7 +594,8 @@ async def send_email_change_otp(
         email_service.send_otp_email,
         to_email=new_email,
         otp_code=otp_code,
-        to_name=current_user.name
+        to_name=current_user.name,
+        language=getattr(current_user, "preferred_language", "en") or "en",
     )
     
     return OTPResponse(

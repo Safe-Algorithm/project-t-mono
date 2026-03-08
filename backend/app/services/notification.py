@@ -59,7 +59,8 @@ class NotificationService:
                 await sms_service.send_booking_confirmation(
                     to_phone=user.phone,
                     trip_name=trip_name,
-                    booking_reference=booking_reference
+                    booking_reference=booking_reference,
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
                 results["sms_sent"] = True
                 results["methods_used"].append("sms")
@@ -74,7 +75,9 @@ class NotificationService:
                     to_name=user.name,
                     trip_name=trip_name,
                     booking_reference=booking_reference,
-                    trip_details=trip_details
+                    start_date=trip_details.get("start_date", ""),
+                    total_amount=trip_details.get("total_amount", ""),
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
                 results["email_sent"] = True
                 results["methods_used"].append("email")
@@ -118,7 +121,8 @@ class NotificationService:
                 await sms_service.send_trip_reminder(
                     to_phone=user.phone,
                     trip_name=trip_name,
-                    start_date=start_date
+                    start_date=start_date,
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
                 results["sms_sent"] = True
                 results["methods_used"].append("sms")
@@ -133,7 +137,8 @@ class NotificationService:
                     to_name=user.name,
                     trip_name=trip_name,
                     start_date=start_date,
-                    trip_details=trip_details
+                    trip_details=trip_details,
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
                 results["email_sent"] = True
                 results["methods_used"].append("email")
@@ -174,13 +179,13 @@ class NotificationService:
         # Send SMS
         if send_sms and user.phone:
             try:
-                message = (
-                    f"Payment confirmed! Amount: {amount}\n"
-                    f"Trip: {trip_name}\n"
-                    f"Reference: {payment_reference}\n\n"
-                    f"Thank you for choosing Safe Algo!"
+                await sms_service.send_payment_confirmation(
+                    to_phone=user.phone,
+                    trip_name=trip_name,
+                    amount=amount,
+                    payment_reference=payment_reference,
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
-                await sms_service.send_sms(user.phone, message)
                 results["sms_sent"] = True
                 results["methods_used"].append("sms")
             except Exception as e:
@@ -194,7 +199,8 @@ class NotificationService:
                     to_name=user.name,
                     trip_name=trip_name,
                     amount=amount,
-                    payment_reference=payment_reference
+                    payment_reference=payment_reference,
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
                 results["email_sent"] = True
                 results["methods_used"].append("email")
@@ -235,11 +241,13 @@ class NotificationService:
         # Send SMS
         if send_sms and user.phone:
             try:
-                message = f"Booking cancelled: {trip_name}\nReference: {booking_reference}"
-                if refund_amount:
-                    message += f"\nRefund: {refund_amount}"
-                message += "\n\nSafe Algo Tourism"
-                await sms_service.send_sms(user.phone, message)
+                await sms_service.send_cancellation_confirmation(
+                    to_phone=user.phone,
+                    trip_name=trip_name,
+                    booking_reference=booking_reference,
+                    refund_amount=refund_amount,
+                    language=getattr(user, "preferred_language", "en") or "en",
+                )
                 results["sms_sent"] = True
                 results["methods_used"].append("sms")
             except Exception as e:
@@ -253,7 +261,8 @@ class NotificationService:
                     to_name=user.name,
                     trip_name=trip_name,
                     booking_reference=booking_reference,
-                    refund_amount=refund_amount
+                    refund_amount=refund_amount,
+                    language=getattr(user, "preferred_language", "en") or "en",
                 )
                 results["email_sent"] = True
                 results["methods_used"].append("email")
