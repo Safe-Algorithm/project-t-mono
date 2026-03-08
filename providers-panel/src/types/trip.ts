@@ -77,6 +77,7 @@ export interface Trip {
   trip_type?: TripType;
   has_meeting_place?: boolean;
   meeting_place_name?: string;
+  meeting_place_name_ar?: string;
   meeting_location?: string;
   meeting_time?: string;
   extra_fees?: TripExtraFee[];

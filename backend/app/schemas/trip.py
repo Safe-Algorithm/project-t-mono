@@ -72,6 +72,7 @@ class TripBase(BaseModel):
     trip_type: TripType = TripType.GUIDED
     has_meeting_place: bool = False
     meeting_place_name: Optional[str] = None
+    meeting_place_name_ar: Optional[str] = None
     meeting_location: Optional[str] = None
     registration_deadline: Optional[datetime] = None
     starting_city_id: Optional[uuid.UUID] = None
@@ -148,6 +149,7 @@ class TripUpdate(BaseModel):
     trip_type: Optional[TripType] = None
     has_meeting_place: Optional[bool] = None
     meeting_place_name: Optional[str] = None
+    meeting_place_name_ar: Optional[str] = None
     meeting_location: Optional[str] = None
     registration_deadline: Optional[datetime] = None
     starting_city_id: Optional[uuid.UUID] = None
@@ -237,6 +239,7 @@ class TripRead(TripBase):
     trip_type: TripType = TripType.GUIDED
     available_spots: int = 0
     meeting_place_name: Optional[str] = None
+    meeting_place_name_ar: Optional[str] = None
     # Read-only: derived from start_date on the backend whenever has_meeting_place=True
     meeting_time: Optional[datetime] = None
     starting_city: Optional[StartingCityInfo] = None

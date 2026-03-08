@@ -98,6 +98,7 @@ interface Trip {
   simple_trip_required_fields?: string[];
   simple_trip_required_fields_details?: TripPackageRequiredFieldDetail[];
   meeting_place_name?: string;
+  meeting_place_name_ar?: string;
   price?: number | null;
   extra_fees?: TripExtraFee[];
 }
@@ -369,8 +370,23 @@ const TripDetailPage = () => {
         {trip.has_meeting_place && (
           <div className="mt-5">
             <p className={lCls}>{t('tripDetail.meetingPlace')}</p>
-            <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-1.5">
-              {trip.meeting_place_name && <p className="text-sm font-semibold text-slate-900 dark:text-white">{trip.meeting_place_name}</p>}
+            <div className="mt-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 space-y-2">
+              {(trip.meeting_place_name || trip.meeting_place_name_ar) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {trip.meeting_place_name && (
+                    <div>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 block mb-0.5">EN</span>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{trip.meeting_place_name}</p>
+                    </div>
+                  )}
+                  {trip.meeting_place_name_ar && (
+                    <div>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 block mb-0.5">AR</span>
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white" dir="rtl">{trip.meeting_place_name_ar}</p>
+                    </div>
+                  )}
+                </div>
+              )}
               {trip.meeting_location && (
                 <a href={trip.meeting_location} target="_blank" rel="noreferrer" className="text-sm text-sky-600 dark:text-sky-400 hover:underline break-all">{trip.meeting_location}</a>
               )}

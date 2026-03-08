@@ -9,8 +9,8 @@ from pydantic import BaseModel, Field
 
 class TripExtraFeeBase(BaseModel):
     """Base schema for trip extra fee."""
-    name_en: str = Field(max_length=100)
-    name_ar: str = Field(max_length=100)
+    name_en: Optional[str] = Field(default=None, max_length=100)
+    name_ar: Optional[str] = Field(default=None, max_length=100)
     description_en: Optional[str] = Field(default=None, max_length=500)
     description_ar: Optional[str] = Field(default=None, max_length=500)
     amount: Decimal = Field(gt=0, max_digits=10, decimal_places=2)

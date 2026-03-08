@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { tripService, TripFilterParams } from '../../services/tripService';
 import { PermissionDeniedError } from '../../services/api';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +26,7 @@ function TripStatusBadge({ isActive }: { isActive: boolean; isRTL: boolean }) {
 
 const TripsPage = () => {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const isRTL = i18n.language === 'ar';
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
@@ -33,6 +35,22 @@ const TripsPage = () => {
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+
+  const handleDuplicate = useCallback(async (trip: Trip, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const name = trip.name_en || trip.name_ar || trip.id;
+    if (!confirm(`Duplicate "${name}"? A draft copy will be created.`)) return;
+    setDuplicatingId(trip.id);
+    try {
+      const newTrip = await tripService.duplicate(trip.id);
+      router.push(`/trips/${newTrip.id}`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to duplicate trip');
+    } finally {
+      setDuplicatingId(null);
+    }
+  }, [router]);
 
   const getTripName = (trip: Trip) =>
     (isRTL ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar) || '—';
@@ -238,6 +256,13 @@ const TripsPage = () => {
                         <Link href={`/trips/${trip.id}/edit`} className="text-sky-500 hover:text-sky-600 font-medium text-xs">
                           {t('common.edit')}
                         </Link>
+                        <button
+                          onClick={e => handleDuplicate(trip, e)}
+                          disabled={duplicatingId === trip.id}
+                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {duplicatingId === trip.id ? '…' : t('common.duplicate', 'Duplicate')}
+                        </button>
                       </div>
                     </td>
                   </tr>

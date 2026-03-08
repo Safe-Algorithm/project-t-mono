@@ -305,7 +305,20 @@ const TripDetailPage: React.FC = () => {
         {trip.has_meeting_place && (
           <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm">
             <p className="font-medium text-slate-900 dark:text-white mb-2">Meeting Place</p>
-            {trip.meeting_place_name && <p className="text-slate-700 dark:text-slate-300 font-medium">{trip.meeting_place_name}</p>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+              {trip.meeting_place_name && (
+                <div>
+                  <span className="text-xs text-slate-400 block mb-0.5">EN</span>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium">{trip.meeting_place_name}</p>
+                </div>
+              )}
+              {(trip as any).meeting_place_name_ar && (
+                <div>
+                  <span className="text-xs text-slate-400 block mb-0.5">AR</span>
+                  <p className="text-slate-700 dark:text-slate-300 font-medium" dir="rtl">{(trip as any).meeting_place_name_ar}</p>
+                </div>
+              )}
+            </div>
             {trip.meeting_location && (
               <a href={trip.meeting_location} target="_blank" rel="noreferrer" className="text-sky-600 dark:text-sky-400 hover:underline break-all">{trip.meeting_location}</a>
             )}

@@ -41,6 +41,8 @@ class TripPackageCreate(TripPackageBase):
             raise ValueError('At least one of name_en or name_ar must be provided')
         if not self.description_en and not self.description_ar:
             raise ValueError('At least one of description_en or description_ar must be provided')
+        if self.max_participants is None or self.max_participants < 1:
+            raise ValueError('max_participants is required and must be at least 1')
         return self
 
 
@@ -61,6 +63,13 @@ class TripPackageUpdate(BaseModel):
     @classmethod
     def coerce_empty_to_none(cls, v: Optional[str]) -> Optional[str]:
         return _empty_to_none(v)
+
+    @field_validator('max_participants')
+    @classmethod
+    def max_participants_positive(cls, v: Optional[int]) -> Optional[int]:
+        if v is not None and v < 1:
+            raise ValueError('max_participants must be at least 1')
+        return v
 
 
 class TripPackage(TripPackageBase):

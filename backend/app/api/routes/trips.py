@@ -167,6 +167,7 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         trip_metadata=trip.trip_metadata, is_active=trip.is_active,
         price=resp_price, is_refundable=resp_is_refundable, amenities=resp_amenities,
         has_meeting_place=trip.has_meeting_place, meeting_place_name=trip.meeting_place_name,
+        meeting_place_name_ar=trip.meeting_place_name_ar,
         meeting_location=trip.meeting_location,
         meeting_time=trip.meeting_time, trip_reference=trip.trip_reference,
         registration_deadline=trip.registration_deadline,
@@ -587,6 +588,55 @@ def leave_trip(
 # See package endpoints below for field management
 
 
+def _validate_tier_participant_totals(
+    session,
+    trip_id: uuid.UUID,
+    trip_max: int,
+    exclude_package_id=None,
+    override_package_max: dict = None,
+):
+    """
+    Validate that, if ALL active packages have a max_participants value,
+    their sum equals the trip's max_participants.
+    override_package_max is {package_id: new_value} for the package being created/updated.
+    """
+    from app.models.trip_package import TripPackage as TripPackageModel
+    packages = session.query(TripPackageModel).filter(
+        TripPackageModel.trip_id == trip_id,
+        TripPackageModel.is_active == True,  # noqa: E712
+    ).all()
+
+    # Include the new package being created (not yet in DB)
+    if override_package_max:
+        # Build effective list: replace/add values from override
+        effective = []
+        for p in packages:
+            if str(p.id) == str(exclude_package_id):
+                val = override_package_max.get(str(p.id))
+            else:
+                val = p.max_participants
+            effective.append(val)
+        # If this is a brand-new package (not yet in DB), add its value
+        if exclude_package_id is None and None not in (list(override_package_max.values())):
+            for v in override_package_max.values():
+                effective.append(v)
+    else:
+        effective = [p.max_participants for p in packages]
+
+    # Only validate when every package has a value
+    if all(v is not None and v > 0 for v in effective) and len(effective) > 0:
+        total = sum(effective)
+        if total != trip_max:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Sum of tier max_participants ({total}) must equal "
+                    f"the trip's max_participants ({trip_max}). "
+                    f"Please adjust tier capacities."
+                ),
+            )
+
+
 # Trip Packages Endpoints
 @router.post("/{trip_id}/packages", response_model=TripPackageWithRequiredFields)
 def create_trip_package(
@@ -603,6 +653,16 @@ def create_trip_package(
         raise HTTPException(status_code=404, detail="Trip not found")
     if trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Validate tier participant total if this new package provides max_participants
+    if package_in.max_participants is not None and trip.is_packaged_trip:
+        _validate_tier_participant_totals(
+            session=session,
+            trip_id=trip_id,
+            trip_max=trip.max_participants,
+            exclude_package_id=None,
+            override_package_max={"__new__": package_in.max_participants},
+        )
     
     from app.models.trip_package import TripPackage as TripPackageModel
     from app.models.trip_package_field import TripPackageRequiredField
@@ -726,6 +786,16 @@ def update_trip_package(
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
     
+    # Validate tier participant total if max_participants is being updated
+    if package_in.max_participants is not None and trip.is_packaged_trip:
+        _validate_tier_participant_totals(
+            session=session,
+            trip_id=trip_id,
+            trip_max=trip.max_participants,
+            exclude_package_id=package_id,
+            override_package_max={str(package_id): package_in.max_participants},
+        )
+
     # Update package fields (excluding required_fields)
     update_data = package_in.model_dump(exclude_unset=True, exclude={"required_fields"})
     for field, value in update_data.items():

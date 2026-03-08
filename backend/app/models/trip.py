@@ -79,6 +79,7 @@ class Trip(SQLModel, table=True):
     # Meeting Place (only for guided trips)
     has_meeting_place: bool = Field(default=False)
     meeting_place_name: Optional[str] = Field(default=None, max_length=200)
+    meeting_place_name_ar: Optional[str] = Field(default=None, max_length=200)
     meeting_location: Optional[str] = Field(default=None, max_length=500)
     meeting_time: Optional[datetime] = Field(default=None)
     

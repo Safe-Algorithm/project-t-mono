@@ -247,6 +247,7 @@ def build_trip_read(trip, session: Session) -> TripRead:
         has_meeting_place=trip.has_meeting_place,
         meeting_location=trip.meeting_location,
         meeting_place_name=getattr(trip, 'meeting_place_name', None),
+        meeting_place_name_ar=getattr(trip, 'meeting_place_name_ar', None),
         meeting_time=trip.meeting_time,
         trip_reference=trip.trip_reference,
         registration_deadline=trip.registration_deadline,

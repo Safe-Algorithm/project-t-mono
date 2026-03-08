@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import TripForm from '../../../components/trips/TripForm';
 import { tripService, TripUpdatePayload } from '../../../services/tripService';
+import { imageCollectionService } from '../../../services/imageCollectionService';
 import { Trip, CreateTripPackage, CreateTripExtraFee, PackageRequiredField, ValidationConfig } from '../../../types/trip';
 import { DestinationSelection } from '../../../components/trips/DestinationSelector';
 
@@ -41,7 +42,7 @@ const TripEditPage = () => {
     packages?: CreateTripPackage[] | null, 
     packageFields?: { [index: number]: string[] },
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
-    imageData?: { newImages: File[], imagesToDelete: string[] },
+    imageData?: { newImages: File[], imagesToDelete: string[], collectionUrls: string[] },
     destinationSelections?: DestinationSelection[],
     extraFees?: CreateTripExtraFee[]
   ) => {
@@ -69,6 +70,21 @@ const TripEditPage = () => {
           await tripService.uploadImages(id, imageData.newImages);
         } catch (err) {
           console.error('Failed to upload images:', err);
+        }
+      }
+
+      // Attach images newly selected from provider collection
+      if (imageData?.collectionUrls && imageData.collectionUrls.length > 0) {
+        for (const url of imageData.collectionUrls) {
+          try {
+            const collectionRes = await imageCollectionService.getAll(0, 200);
+            const match = collectionRes.items.find(img => img.url === url);
+            if (match) {
+              await imageCollectionService.attachToTrip(id, match.id);
+            }
+          } catch (err) {
+            console.error('Failed to attach collection image:', err);
+          }
         }
       }
       

@@ -36,8 +36,8 @@ class TripExtraFee(SQLModel, table=True):
     trip_id: uuid.UUID = Field(foreign_key="trip.id", index=True)
     
     # Bilingual name
-    name_en: str = Field(max_length=100)
-    name_ar: str = Field(max_length=100)
+    name_en: Optional[str] = Field(default=None, max_length=100)
+    name_ar: Optional[str] = Field(default=None, max_length=100)
     
     # Bilingual description (optional)
     description_en: Optional[str] = Field(default=None, max_length=500)

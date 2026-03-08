@@ -14,7 +14,7 @@ interface TripFormProps {
     packages?: CreateTripPackage[] | null, 
     packageFields?: { [index: number]: string[] }, 
     validationConfigs?: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } },
-    imageData?: { newImages: File[], imagesToDelete: string[] },
+    imageData?: { newImages: File[], imagesToDelete: string[], collectionUrls: string[] },
     destinationSelections?: DestinationSelection[],
     extraFees?: CreateTripExtraFee[]
   ) => void;
@@ -44,7 +44,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     is_refundable: true,
     has_meeting_place: false,
     meeting_place_name: '',
-    meeting_location: '',
+    meeting_place_name_ar: '',
+    meeting_location: ''
   });
 
   // Non-packaged trip: trip-level price and required fields (stored on hidden package)
@@ -63,6 +64,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const [tripImages, setTripImages] = useState<string[]>([]);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
+  const [selectedCollectionUrls, setSelectedCollectionUrls] = useState<string[]>([]);
 
   const [packages, setPackages] = useState<CreateTripPackage[]>([
     { name_en: '', name_ar: '', description_en: '', description_ar: '', price: 0, currency: 'SAR' }
@@ -174,7 +176,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         is_refundable: trip.is_refundable ?? true,
         has_meeting_place: trip.has_meeting_place ?? false,
         meeting_place_name: trip.meeting_place_name ?? '',
-        meeting_location: trip.meeting_location ?? '',
+        meeting_place_name_ar: trip.meeting_place_name_ar ?? '',
+        meeting_location: trip.meeting_location ?? ''
       });
       if (trip.starting_city_id) {
         setStartingCityId(trip.starting_city_id);
@@ -395,16 +398,19 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   };
 
   const toggleCollectionImage = (img: ProviderImage) => {
-    if (tripImages.includes(img.url) || newImageFiles.some(f => (f as any).__collectionUrl === img.url)) {
+    const isExisting = trip?.images?.includes(img.url) ?? false;
+    if (selectedCollectionUrls.includes(img.url) || (isExisting && tripImages.includes(img.url))) {
+      setSelectedCollectionUrls(prev => prev.filter(u => u !== img.url));
       setTripImages(prev => prev.filter(u => u !== img.url));
-      setNewImageFiles(prev => prev.filter(f => (f as any).__collectionUrl !== img.url));
+      if (isExisting) setImagesToDelete(prev => [...prev, img.url]);
     } else {
+      setSelectedCollectionUrls(prev => [...prev, img.url]);
       setTripImages(prev => [...prev, img.url]);
     }
   };
 
   const isCollectionImageSelected = (img: ProviderImage) =>
-    tripImages.includes(img.url) || newImageFiles.some(f => (f as any).__collectionUrl === img.url);
+    selectedCollectionUrls.includes(img.url) || (tripImages.includes(img.url) && (trip?.images?.includes(img.url) ?? false));
 
   const checkImageResolution = (file: File): Promise<{ ok: boolean; reason?: string }> =>
     new Promise(resolve => {
@@ -495,16 +501,29 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         newErrors.push(t('trip.validation.minTwoPackages', 'Packaged trips require at least 2 tiers'));
       }
       packages.forEach((pkg, index) => {
-        if (!pkg.name_en.trim() && !pkg.name_ar.trim()) {
+        if (!(pkg.name_en ?? '').trim() && !(pkg.name_ar ?? '').trim()) {
           newErrors.push(t('trip.validation.packageNeedsName', 'Tier {{n}}: Name in at least one language is required', { n: index + 1 }));
         }
-        if (!pkg.description_en.trim() && !pkg.description_ar.trim()) {
+        if (!(pkg.description_en ?? '').trim() && !(pkg.description_ar ?? '').trim()) {
           newErrors.push(t('trip.validation.packageNeedsDesc', 'Tier {{n}}: Description in at least one language is required', { n: index + 1 }));
         }
         if (!pkg.price || Number(pkg.price) < 1) {
           newErrors.push(t('trip.validation.packageMinPrice', 'Tier {{n}}: Price must be at least 1', { n: index + 1 }));
         }
+        if (!pkg.max_participants || Number(pkg.max_participants) < 1) {
+          newErrors.push(`Tier ${index + 1}: Max participants is required and must be at least 1`);
+        }
       });
+      // Validate that sum of tier max_participants equals trip max_participants
+      const tripMax = parseInt(formData.max_participants, 10);
+      if (!isNaN(tripMax)) {
+        const tierSum = packages.reduce((sum, pkg) => sum + (Number(pkg.max_participants) || 0), 0);
+        if (tierSum !== tripMax) {
+          newErrors.push(
+            `Tier participants total (${tierSum}) must equal the trip's max participants (${tripMax}). Please adjust tier capacities.`
+          );
+        }
+      }
     } else {
       // Non-packaged: validate trip-level price
       if (!tripPrice || Number(tripPrice) < 1) {
@@ -555,6 +574,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         trip_type: tripTypeSelection,
         has_meeting_place: tripTypeSelection === TripType.GUIDED,
         meeting_place_name: tripTypeSelection === TripType.GUIDED ? formData.meeting_place_name : undefined,
+        meeting_place_name_ar: tripTypeSelection === TripType.GUIDED && formData.meeting_place_name_ar.trim() ? formData.meeting_place_name_ar : undefined,
         meeting_location: tripTypeSelection === TripType.GUIDED ? formData.meeting_location : undefined,
         timezone,
         max_participants: parseInt(formData.max_participants, 10),
@@ -569,7 +589,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     
     const imageData = {
       newImages: newImageFiles,
-      imagesToDelete: imagesToDelete
+      imagesToDelete: imagesToDelete,
+      collectionUrls: selectedCollectionUrls,
     };
 
     if (isPackagedTrip) {
@@ -889,15 +910,33 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           <div className="flex flex-col gap-4">
             <div>
               <label className={labelCls}>{t('trip.meetingPlaceName', 'Meeting Place Name')} <span className="text-red-500">*</span></label>
-              <input
-                className={inputCls}
-                type="text"
-                name="meeting_place_name"
-                value={formData.meeting_place_name}
-                onChange={handleChange}
-                placeholder={t('trip.meetingPlaceNamePlaceholder', 'e.g. King Fahd Gate, Masjid Al-Haram entrance')}
-                maxLength={200}
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 dark:text-slate-500 mb-1 block">English</label>
+                  <input
+                    className={inputCls}
+                    type="text"
+                    name="meeting_place_name"
+                    value={formData.meeting_place_name}
+                    onChange={handleChange}
+                    placeholder={t('trip.meetingPlaceNamePlaceholder', 'e.g. King Fahd Gate, Masjid Al-Haram entrance')}
+                    maxLength={200}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 dark:text-slate-500 mb-1 block">Arabic (optional)</label>
+                  <input
+                    className={inputCls}
+                    type="text"
+                    name="meeting_place_name_ar"
+                    value={formData.meeting_place_name_ar}
+                    onChange={handleChange}
+                    placeholder="مثال: بوابة الملك فهد"
+                    dir="rtl"
+                    maxLength={200}
+                  />
+                </div>
+              </div>
             </div>
             <div>
               <label className={labelCls}>{t('trip.meetingLocation')} <span className="text-red-500">*</span></label>
@@ -1176,7 +1215,29 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           <div className="flex items-center justify-between mb-1">
             <p className={sectionTitleCls + ' mb-0'}>{t('tier.tiers')} <span className="text-sm font-normal text-slate-400">({t('tier.minRequired')})</span></p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{t('tier.provideOneLanguage')}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t('tier.provideOneLanguage')}</p>
+          {/* Live participants counter */}
+          {(() => {
+            const tripMax = parseInt(formData.max_participants, 10);
+            const allHaveMax = packages.every(pkg => pkg.max_participants != null && Number(pkg.max_participants) > 0);
+            const tierSum = packages.reduce((s, pkg) => s + (Number(pkg.max_participants) || 0), 0);
+            const hasAnyMax = packages.some(pkg => pkg.max_participants != null && Number(pkg.max_participants) > 0);
+            if (!hasAnyMax || isNaN(tripMax)) return null;
+            const ok = allHaveMax && tierSum === tripMax;
+            const over = allHaveMax && tierSum > tripMax;
+            return (
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold mb-4 ${
+                ok ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-800'
+                  : over ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800'
+                  : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+              }`}>
+                <span>{ok ? '✓' : '⚠'}</span>
+                <span>Tier total: {tierSum} / {isNaN(tripMax) ? '?' : tripMax} participants
+                  {!ok && !isNaN(tripMax) && ` — ${tripMax - tierSum > 0 ? `${tripMax - tierSum} remaining` : `${tierSum - tripMax} over limit`}`}
+                </span>
+              </div>
+            );
+          })()}
           <div className="flex flex-col gap-4">
             {packages.map((pkg, index) => (
               <div key={index} className="rounded-xl border border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/30">

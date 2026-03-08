@@ -306,9 +306,12 @@ export default function TripDetailScreen() {
               <Ionicons name="location-outline" size={18} color={colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={s.meetingLabel}>{t('trip.meetingPoint')}</Text>
-                {trip.meeting_place_name && (
-                  <Text style={s.meetingValue}>{trip.meeting_place_name}</Text>
-                )}
+{(() => {
+                  const mpName = i18n.language === 'ar'
+                    ? (trip.meeting_place_name_ar || trip.meeting_place_name)
+                    : (trip.meeting_place_name || trip.meeting_place_name_ar);
+                  return mpName ? <Text style={s.meetingValue}>{mpName}</Text> : null;
+                })()}
                 <TouchableOpacity
                   onPress={() => Linking.openURL(trip.meeting_location!)}
                   activeOpacity={0.7}
@@ -367,10 +370,10 @@ export default function TripDetailScreen() {
               {trip.extra_fees.map((fee) => (
                 <View key={fee.id} style={s.feeRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.feeName}>{i18n.language === 'ar' ? (fee.name_ar ?? fee.name_en) : (fee.name_en ?? fee.name_ar)}</Text>
-                    {(i18n.language === 'ar' ? (fee.description_ar ?? fee.description_en) : (fee.description_en ?? fee.description_ar)) && (
-                      <Text style={s.feeDesc}>{i18n.language === 'ar' ? (fee.description_ar ?? fee.description_en) : (fee.description_en ?? fee.description_ar)}</Text>
-                    )}
+                    <Text style={s.feeName}>{i18n.language === 'ar' ? (fee.name_ar || fee.name_en) : (fee.name_en || fee.name_ar)}</Text>
+                    {(i18n.language === 'ar' ? (fee.description_ar || fee.description_en) : (fee.description_en || fee.description_ar)) ? (
+                      <Text style={s.feeDesc}>{i18n.language === 'ar' ? (fee.description_ar || fee.description_en) : (fee.description_en || fee.description_ar)}</Text>
+                    ) : null}
                   </View>
                   <Text style={s.feeAmount}>{t('booking.priceFormat', { price: Number(fee.amount).toLocaleString() })}</Text>
                 </View>

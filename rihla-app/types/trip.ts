@@ -81,6 +81,7 @@ export interface Trip {
   amenities?: string[] | null;
   has_meeting_place: boolean;
   meeting_place_name: string | null;
+  meeting_place_name_ar: string | null;
   meeting_location: string | null;
   meeting_time: string | null;
   images: string[] | null;
