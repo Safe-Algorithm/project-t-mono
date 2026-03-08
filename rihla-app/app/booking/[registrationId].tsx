@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, CardDetails } from '../../hooks/useTrips';
+import apiClient from '../../lib/api';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
@@ -20,6 +21,8 @@ const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'error' | 'neutral
   confirmed: 'success',
   pending: 'warning',
   pending_payment: 'warning',
+  awaiting_provider: 'warning',
+  processing: 'primary',
   cancelled: 'error',
   completed: 'neutral',
 };
@@ -111,6 +114,9 @@ export default function BookingDetailScreen() {
   const [spotSecondsLeft, setSpotSecondsLeft] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const updateSectionRef = useRef<View>(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
 
   // Auto-open card modal when arriving from the booking flow (one-tap pay)
   useEffect(() => {
@@ -169,6 +175,31 @@ export default function BookingDetailScreen() {
   const handleMarkRead = useCallback((updateId: string) => {
     markRead.mutate(updateId);
   }, [markRead]);
+
+  const handleCancelBooking = useCallback(async () => {
+    if (!registrationId || !registration?.trip_id) return;
+    setCancelling(true);
+    try {
+      const { data } = await apiClient.post(
+        `/trips/${registration.trip_id}/registrations/${registrationId}/cancel`,
+        { reason: cancelReason || undefined },
+      );
+      setShowCancelModal(false);
+      qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
+      qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
+      const pct: number = data.refund_percentage;
+      const amt: number = data.refund_amount;
+      const msg = pct > 0
+        ? t('booking.cancelRefundInfo', { percentage: pct, amount: Number(amt).toLocaleString() })
+        : t('booking.cancelNoRefund');
+      Alert.alert(t('booking.cancelBooking'), `${t('booking.cancelSuccess')} ${msg}`);
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      Alert.alert(t('booking.cancelBooking'), typeof detail === 'string' ? detail : t('booking.cancelError'));
+    } finally {
+      setCancelling(false);
+    }
+  }, [registrationId, registration?.trip_id, cancelReason, qc, t]);
 
   const handlePayNow = useCallback(async () => {
     if (!registrationId) return;
@@ -311,6 +342,28 @@ export default function BookingDetailScreen() {
           </TouchableOpacity>
           <Text style={s.providerName}>{trip?.provider?.company_name}</Text>
         </View>
+
+        {/* Status info banner for self-arranged trip states */}
+        {registration.status === 'awaiting_provider' && (
+          <View style={s.awaitingCard}>
+            <View style={s.statusIconRow}>
+              <Ionicons name="hourglass-outline" size={26} color='#EA580C' />
+              <Text style={s.awaitingTitle}>{t('bookings.statusInfoTitle.awaiting_provider' as any)}</Text>
+            </View>
+            <Text style={s.statusInfoText}>{t('bookings.statusInfo.awaiting_provider' as any)}</Text>
+            <Text style={s.autoCancelText}>{t('bookings.autoCancelWarning' as any)}</Text>
+          </View>
+        )}
+
+        {registration.status === 'processing' && (
+          <View style={s.processingCard}>
+            <View style={s.statusIconRow}>
+              <Ionicons name="sync-circle-outline" size={26} color={colors.primary} />
+              <Text style={s.processingTitle}>{t('bookings.statusInfoTitle.processing' as any)}</Text>
+            </View>
+            <Text style={s.statusInfoText}>{t('bookings.statusInfo.processing' as any)}</Text>
+          </View>
+        )}
 
         {/* Success banner for confirmed bookings */}
         {registration.status === 'confirmed' && (
@@ -480,6 +533,90 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
+        {/* Refund policy disclosure — shown for active bookings */}
+        {registration.status !== 'cancelled' && registration.status !== 'pending_payment' && tripDetail && (
+          <View style={tripDetail.is_refundable === false ? s.nonRefundableCard : s.refundablePolicyCard}>
+            <View style={s.policyTitleRow}>
+              <Ionicons
+                name={tripDetail.is_refundable === false ? 'close-circle' : 'shield-checkmark-outline'}
+                size={18}
+                color={tripDetail.is_refundable === false ? '#DC2626' : '#166534'}
+              />
+              <Text style={tripDetail.is_refundable === false ? s.nonRefundablePolicyTitle : s.refundablePolicyTitle}>
+                {t('booking.refundPolicy')}
+              </Text>
+            </View>
+            {tripDetail.is_refundable === false ? (
+              <Text style={s.policyBody}>{t('booking.nonRefundableCheckout')}</Text>
+            ) : tripDetail.trip_type === 'self_arranged' ? (
+              <>
+                <Text style={s.policyBody}>{t('booking.refundableCheckout')}</Text>
+                <Text style={s.policyRule}>{'• '}{t('booking.refundRuleSelfArrangedPre')}</Text>
+                <Text style={s.policyRule}>{'• '}{t('booking.refundRuleSelfArrangedPost')}</Text>
+                <Text style={s.policyCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
+              </>
+            ) : (
+              <>
+                <Text style={s.policyBody}>{t('booking.refundableCheckout')}</Text>
+                <Text style={s.policyRule}>{'• '}{t('booking.refundRule72h')}</Text>
+                <Text style={s.policyRule}>{'• '}{t('booking.refundRule12to72h')}</Text>
+                <Text style={s.policyRule}>{'• '}{t('booking.refundRuleLess12h')}</Text>
+                <Text style={s.policyCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Cancel booking button — only for active paid bookings */}
+        {['awaiting_provider', 'processing', 'confirmed'].includes(registration.status) && (
+          <TouchableOpacity style={s.cancelBtn} onPress={() => setShowCancelModal(true)} activeOpacity={0.8}>
+            <Ionicons name="close-circle-outline" size={18} color="#DC2626" />
+            <Text style={s.cancelBtnText}>{t('booking.cancelBooking')}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Cancel confirmation modal */}
+        <Modal visible={showCancelModal} transparent animationType="slide">
+          <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+            <Pressable style={s.modalOverlay} onPress={() => setShowCancelModal(false)}>
+              <Pressable style={s.cardModal} onPress={(e) => e.stopPropagation()}>
+                <View style={s.cardModalHandle} />
+                <View style={s.cancelModalTitleRow}>
+                  <Ionicons name="warning-outline" size={22} color="#DC2626" />
+                  <Text style={s.cancelModalTitle}>{t('booking.cancelConfirmTitle')}</Text>
+                </View>
+                <Text style={s.cancelModalMsg}>{t('booking.cancelConfirmMessage')}</Text>
+                <Text style={s.cardLabel}>{t('booking.cancelReason')}</Text>
+                <TextInput
+                  style={[s.cardInput, { minHeight: 80, textAlignVertical: 'top' }]}
+                  value={cancelReason}
+                  onChangeText={setCancelReason}
+                  placeholder={t('booking.cancelReasonPlaceholder')}
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                />
+                <View style={{ gap: 10, marginTop: 4 }}>
+                  <Button
+                    title={cancelling ? t('booking.cancelling') : t('booking.cancelBooking')}
+                    onPress={handleCancelBooking}
+                    loading={cancelling}
+                    disabled={cancelling}
+                    fullWidth
+                    size="lg"
+                    variant="outline"
+                  />
+                  <Button
+                    title={t('common.back')}
+                    onPress={() => setShowCancelModal(false)}
+                    fullWidth
+                    size="lg"
+                  />
+                </View>
+              </Pressable>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Modal>
+
         {/* Trip Updates */}
         <View style={s.section} ref={updateSectionRef}>
           <View style={s.sectionTitleRow}>
@@ -570,6 +707,13 @@ function makeStyles(c: ThemeColors) {
     successIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     successTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.success },
     successSubtitle: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20 },
+    awaitingCard: { backgroundColor: '#FFF7ED', borderRadius: Radius.xl, padding: 16, marginBottom: 20, gap: 8, ...Shadow.sm, borderLeftWidth: 4, borderLeftColor: '#EA580C' },
+    awaitingTitle: { fontSize: FontSize.lg, fontWeight: '800', color: '#EA580C', flex: 1 },
+    processingCard: { backgroundColor: c.primarySurface, borderRadius: Radius.xl, padding: 16, marginBottom: 20, gap: 8, ...Shadow.sm, borderLeftWidth: 4, borderLeftColor: c.primary },
+    processingTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.primary, flex: 1 },
+    statusIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    statusInfoText: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20 },
+    autoCancelText: { fontSize: FontSize.xs, color: '#EA580C', lineHeight: 18, fontStyle: 'italic' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
     cardModal: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 24, paddingBottom: 40, gap: 16, ...Shadow.lg },
     cardModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.gray200, alignSelf: 'center', marginBottom: 8 },
@@ -578,5 +722,32 @@ function makeStyles(c: ThemeColors) {
     cardLabel: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary, marginBottom: 4 },
     cardInput: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 12, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.background },
     cardRow: { flexDirection: 'row', gap: 10 },
+
+    cancelBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      borderWidth: 1.5, borderColor: '#DC2626', borderRadius: Radius.xl,
+      paddingVertical: 14, marginBottom: 16, backgroundColor: '#FEF2F2',
+    },
+    cancelBtnText: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626' },
+    cancelModalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+    cancelModalTitle: { fontSize: FontSize.lg, fontWeight: '800', color: '#DC2626', flex: 1 },
+    cancelModalMsg: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 12 },
+
+    nonRefundableCard: {
+      backgroundColor: '#FEF2F2', borderRadius: Radius.xl,
+      borderWidth: 1.5, borderColor: '#FECACA',
+      padding: 14, marginBottom: 16,
+    },
+    refundablePolicyCard: {
+      backgroundColor: '#F0FDF4', borderRadius: Radius.xl,
+      borderWidth: 1, borderColor: '#BBF7D0',
+      padding: 14, marginBottom: 16,
+    },
+    policyTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    nonRefundablePolicyTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626', flex: 1 },
+    refundablePolicyTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#166534', flex: 1 },
+    policyBody: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 6 },
+    policyRule: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginLeft: 4 },
+    policyCooling: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18, marginTop: 6, fontStyle: 'italic' },
   });
 }

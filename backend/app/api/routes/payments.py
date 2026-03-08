@@ -208,7 +208,11 @@ async def payment_callback(
 
                 registration = session.get(TripRegistration, payment.registration_id)
                 if registration and registration.status == "pending_payment":
-                    registration.status = "confirmed"
+                    trip_obj = registration.trip
+                    if trip_obj and getattr(trip_obj, 'trip_type', None) and trip_obj.trip_type.value == 'self_arranged':
+                        registration.status = "awaiting_provider"
+                    else:
+                        registration.status = "confirmed"
                     session.add(registration)
 
                 payment.updated_at = datetime.utcnow()
@@ -226,7 +230,7 @@ async def payment_callback(
                 session.commit()
 
         # Send confirmation email after successful payment
-        if registration and registration.status == "confirmed":
+        if registration and registration.status in ("confirmed", "awaiting_provider"):
             from app.models.user import User as UserModel
             from app.services.email import email_service
             from app.utils.localization import get_localized_field
@@ -349,7 +353,11 @@ async def payment_webhook(
 
         registration = session.get(TripRegistration, payment.registration_id)
         if registration and registration.status == "pending_payment":
-            registration.status = "confirmed"
+            trip_obj = registration.trip
+            if trip_obj and getattr(trip_obj, 'trip_type', None) and trip_obj.trip_type.value == 'self_arranged':
+                registration.status = "awaiting_provider"
+            else:
+                registration.status = "confirmed"
             session.add(registration)
             confirmed_registration = registration
 
@@ -373,7 +381,7 @@ async def payment_webhook(
     session.add(payment)
     session.commit()
 
-    # Send confirmation email after successful webhook payment
+    # Send confirmation email after successful webhook payment (both confirmed and awaiting_provider)
     if confirmed_registration:
         from app.models.user import User as UserModel
         from app.services.email import email_service

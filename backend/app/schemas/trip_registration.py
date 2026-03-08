@@ -63,6 +63,7 @@ class TripRegistrationBase(BaseModel):
 
 class TripRegistrationCreate(TripRegistrationBase):
     participants: List[TripParticipantCreate]  # Removed package_id - now each participant has their own
+    trip_content_hash: Optional[str] = None  # Client sends back the hash it read; mismatch → 409
 
 
 class TripRegistrationUpdate(BaseModel):

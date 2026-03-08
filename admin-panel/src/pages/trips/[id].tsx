@@ -132,8 +132,19 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
   pending_payment: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
   pending: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+  awaiting_provider: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400',
+  processing: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400',
   cancelled: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
   completed: 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending_payment: 'Awaiting Payment',
+  awaiting_provider: 'Awaiting Provider',
+  processing: 'Provider Confirmed',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled',
+  completed: 'Completed',
 };
 
 interface FieldMetadata {
@@ -156,6 +167,11 @@ const TripDetailPage = () => {
   const [selectedBooking, setSelectedBooking] = useState<TripRegistration | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingBooking, setCancellingBooking] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelRefundPct, setCancelRefundPct] = useState<number | 'auto'>('auto');
+  const [showCancelForm, setShowCancelForm] = useState(false);
+  const [cancelResult, setCancelResult] = useState<{ refund_percentage: number; refund_amount: number } | null>(null);
   const { token } = useAuth();
   const router = useRouter();
   const { id } = router.query;
@@ -274,6 +290,33 @@ const TripDetailPage = () => {
 
     fetchTripDetails();
   }, [token, id]);
+
+  const handleAdminCancelBooking = async (reg: TripRegistration) => {
+    if (!id || typeof id !== 'string' || !token) return;
+    setCancellingBooking(reg.id);
+    setCancelResult(null);
+    try {
+      const body: any = { reason: cancelReason || undefined };
+      if (cancelRefundPct !== 'auto') body.refund_percentage_override = cancelRefundPct;
+      const resp = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/${id}/registrations/${reg.id}/admin-cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-Source': 'admin_panel' },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.detail || 'Failed to cancel booking');
+      setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'cancelled' } : r));
+      setSelectedBooking(prev => prev?.id === reg.id ? { ...prev, status: 'cancelled' } : prev);
+      setCancelResult({ refund_percentage: data.refund_percentage, refund_amount: data.refund_amount });
+      setShowCancelForm(false);
+      setCancelReason('');
+      setCancelRefundPct('auto');
+    } catch (err: any) {
+      alert(err.message || 'Failed to cancel booking');
+    } finally {
+      setCancellingBooking(null);
+    }
+  };
 
   const thCls = "text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide";
   const lCls = "text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-1";
@@ -534,7 +577,7 @@ const TripDetailPage = () => {
                     <td className="py-3 px-4 text-slate-500 dark:text-slate-400 hidden md:table-cell">{reg.total_amount} SAR</td>
                     <td className="py-3 px-4">
                       <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[reg.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                        {reg.status.replace('_', ' ')}
+                        {STATUS_LABELS[reg.status] ?? reg.status.replace(/_/g, ' ')}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-slate-400 dark:text-slate-500 text-xs hidden lg:table-cell">{new Date(reg.registration_date).toLocaleDateString()}</td>
@@ -552,14 +595,14 @@ const TripDetailPage = () => {
       {/* Booking Detail Drawer */}
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/40" onClick={() => setSelectedBooking(null)} />
+          <div className="flex-1 bg-black/40" onClick={() => { setSelectedBooking(null); setShowCancelForm(false); setCancelReason(''); setCancelRefundPct('auto'); setCancelResult(null); }} />
           <div className="w-full max-w-lg bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
               <div>
                 <h3 className="font-bold text-slate-900 dark:text-white">Booking Detail</h3>
                 <p className="text-xs text-slate-400 font-mono mt-0.5">{selectedBooking.booking_reference}</p>
               </div>
-              <button onClick={() => setSelectedBooking(null)} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none">&times;</button>
+              <button onClick={() => { setSelectedBooking(null); setShowCancelForm(false); setCancelReason(''); setCancelRefundPct('auto'); setCancelResult(null); }} className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none">&times;</button>
             </div>
             <div className="p-5 space-y-5 flex-1">
               <div className="bg-slate-50 dark:bg-slate-800 rounded-xl p-4">
@@ -570,7 +613,7 @@ const TripDetailPage = () => {
                   <div><span className="text-xs text-slate-400 block mb-0.5">Phone</span><span className="font-medium text-slate-900 dark:text-white">{selectedBooking.user_phone || '—'}</span></div>
                   <div><span className="text-xs text-slate-400 block mb-0.5">Status</span>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[selectedBooking.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                      {selectedBooking.status.replace('_', ' ')}
+                      {STATUS_LABELS[selectedBooking.status] ?? selectedBooking.status.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div><span className="text-xs text-slate-400 block mb-0.5">Participants</span><span className="font-medium text-slate-900 dark:text-white">{selectedBooking.total_participants}</span></div>
@@ -604,6 +647,69 @@ const TripDetailPage = () => {
                   </div>
                 </div>
               )}
+              {/* Cancel Result Banner */}
+              {cancelResult && (
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-400 mb-1">Booking Cancelled</p>
+                  {cancelResult.refund_percentage > 0 ? (
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                      Refund issued: {cancelResult.refund_percentage}% = {Number(cancelResult.refund_amount).toLocaleString()} SAR
+                    </p>
+                  ) : (
+                    <p className="text-xs text-slate-500 dark:text-slate-400">No refund issued.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Admin Cancel Booking */}
+              {['awaiting_provider', 'processing', 'confirmed'].includes(selectedBooking.status) && (
+                <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-sm font-semibold text-red-700 dark:text-red-400">Admin Cancel Booking</h4>
+                    <button
+                      onClick={() => { setShowCancelForm(v => !v); setCancelReason(''); setCancelRefundPct('auto'); setCancelResult(null); }}
+                      className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      {showCancelForm ? 'Dismiss' : 'Cancel this booking'}
+                    </button>
+                  </div>
+                  {showCancelForm && (
+                    <div className="space-y-3 mt-2">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Refund Override</label>
+                        <select
+                          value={String(cancelRefundPct)}
+                          onChange={e => setCancelRefundPct(e.target.value === 'auto' ? 'auto' : Number(e.target.value))}
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        >
+                          <option value="auto">Auto (use policy)</option>
+                          <option value="0">0% — No refund</option>
+                          <option value="50">50% partial refund</option>
+                          <option value="100">100% full refund</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 block mb-1">Reason (optional)</label>
+                        <textarea
+                          placeholder="Reason for cancellation..."
+                          value={cancelReason}
+                          onChange={e => setCancelReason(e.target.value)}
+                          rows={2}
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <button
+                        onClick={() => handleAdminCancelBooking(selectedBooking)}
+                        disabled={cancellingBooking === selectedBooking.id}
+                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
+                      >
+                        {cancellingBooking === selectedBooking.id ? 'Cancelling…' : 'Confirm Cancellation'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {tripUpdates.filter(u => u.registration_id === selectedBooking.id || u.registration_id === null).length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wide mb-3">Updates</p>

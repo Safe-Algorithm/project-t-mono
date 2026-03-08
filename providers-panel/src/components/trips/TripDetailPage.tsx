@@ -24,12 +24,27 @@ interface RegistrationUser {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  confirmed: 'bg-green-100 text-green-800',
-  pending_payment: 'bg-yellow-100 text-yellow-800',
-  pending: 'bg-yellow-100 text-yellow-800',
-  cancelled: 'bg-red-100 text-red-800',
-  completed: 'bg-blue-100 text-blue-800',
+  confirmed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  pending_payment: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
+  awaiting_provider: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  completed: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400',
 };
+
+const STATUS_LABELS: Record<string, string> = {
+  pending_payment: 'Awaiting Payment',
+  awaiting_provider: 'Awaiting Provider',
+  processing: 'Provider Confirmed',
+  confirmed: 'Confirmed',
+  cancelled: 'Cancelled',
+  completed: 'Completed',
+};
+
+function daysSince(dateStr: string): number {
+  return Math.floor((Date.now() - new Date(dateStr).getTime()) / (1000 * 60 * 60 * 24));
+}
 
 const TripDetailPage: React.FC = () => {
   const router = useRouter();
@@ -52,6 +67,7 @@ const TripDetailPage: React.FC = () => {
   const [selectedBooking, setSelectedBooking] = useState<RegistrationUser | null>(null);
   const [bookingUpdates, setBookingUpdates] = useState<TripUpdate[]>([]);
   const [drawerLoading, setDrawerLoading] = useState(false);
+  const [processingAction, setProcessingAction] = useState<string | null>(null);
 
   // Send update form state
   const [showSendForm, setShowSendForm] = useState(false);
@@ -63,6 +79,11 @@ const TripDetailPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
+
+  // Cancel booking state
+  const [cancellingBooking, setCancellingBooking] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [showCancelForm, setShowCancelForm] = useState(false);
 
   useEffect(() => {
     if (router.isReady && tripId && typeof tripId === 'string') {
@@ -163,8 +184,62 @@ const TripDetailPage: React.FC = () => {
   const pendingCount = registrations.filter(r => r.status === 'pending_payment' || r.status === 'pending').length;
   const availableSpots = trip ? trip.max_participants - registrations.filter(r => ['confirmed', 'pending_payment'].includes(r.status)).reduce((sum, r) => sum + r.total_participants, 0) : 0;
 
-  const cardCls = "bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800";
-  const inputCls = "w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm transition";
+  const cardCls = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden';
+  const inputCls = 'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500';
+
+  const handleStartProcessing = async (reg: RegistrationUser) => {
+    if (!tripId || typeof tripId !== 'string') return;
+    if (!confirm(`Mark booking ${reg.booking_reference} as Processing Order? This means you have started booking flights/hotels for this participant.`)) return;
+    setProcessingAction(reg.id);
+    try {
+      await tripService.startProcessing(tripId, reg.id);
+      setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'processing' } : r));
+      setSelectedBooking(prev => prev?.id === reg.id ? { ...prev, status: 'processing' } : prev);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update status');
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+
+  const handleConfirmProcessing = async (reg: RegistrationUser) => {
+    if (!tripId || typeof tripId !== 'string') return;
+    if (!confirm(`Mark booking ${reg.booking_reference} as Confirmed? This means all arrangements are complete for this participant.`)) return;
+    setProcessingAction(reg.id);
+    try {
+      await tripService.confirmProcessing(tripId, reg.id);
+      setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'confirmed' } : r));
+      setSelectedBooking(prev => prev?.id === reg.id ? { ...prev, status: 'confirmed' } : prev);
+    } catch (err: any) {
+      alert(err.message || 'Failed to update status');
+    } finally {
+      setProcessingAction(null);
+    }
+  };
+
+  const handleCancelBooking = async (reg: RegistrationUser) => {
+    if (!tripId || typeof tripId !== 'string') return;
+    setCancellingBooking(reg.id);
+    try {
+      const result = await api.post<{ refund_percentage: number; refund_amount: number }>(
+        `/trips/${tripId}/registrations/${reg.id}/cancel`,
+        { reason: cancelReason || undefined },
+      );
+      setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'cancelled' } : r));
+      setSelectedBooking(prev => prev?.id === reg.id ? { ...prev, status: 'cancelled' } : prev);
+      setShowCancelForm(false);
+      setCancelReason('');
+      const pct = result.refund_percentage;
+      const amt = result.refund_amount;
+      alert(pct > 0
+        ? `Booking cancelled. Refund: ${pct}% (${Number(amt).toLocaleString()} SAR)`
+        : 'Booking cancelled. No refund will be issued.');
+    } catch (err: any) {
+      alert(err.message || 'Failed to cancel booking');
+    } finally {
+      setCancellingBooking(null);
+    }
+  };
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -553,8 +628,17 @@ const TripDetailPage: React.FC = () => {
 
       {/* Bookings Table */}
       <div className={cardCls}>
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">Bookings ({registrations.length})</h2>
+          {trip.trip_type === 'self_arranged' && (() => {
+            const urgentCount = registrations.filter(r => r.status === 'awaiting_provider').length;
+            return urgentCount > 0 ? (
+              <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-semibold rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                {urgentCount} awaiting your action
+              </span>
+            ) : null;
+          })()}
         </div>
         {registrations.length === 0 ? (
           <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">No bookings yet.</p>
@@ -581,14 +665,41 @@ const TripDetailPage: React.FC = () => {
                     <td className="py-3 px-4 text-slate-500 dark:text-slate-400 text-center hidden sm:table-cell">{reg.total_participants}</td>
                     <td className="py-3 px-4 text-slate-600 dark:text-slate-300 font-medium hidden sm:table-cell">{reg.total_amount} SAR</td>
                     <td className="py-3 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[reg.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                        {reg.status.replace('_', ' ')}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit ${STATUS_COLORS[reg.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
+                          {STATUS_LABELS[reg.status] || reg.status.replace(/_/g, ' ')}
+                        </span>
+                        {reg.status === 'awaiting_provider' && (
+                          <span className="text-xs text-orange-600 dark:text-orange-400">
+                            {daysSince(reg.registration_date)}d waiting
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
-                      <button onClick={() => openBooking(reg)} className="px-3 py-1.5 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/40 rounded-xl hover:bg-sky-100 dark:hover:bg-sky-900/40 text-xs font-medium transition-colors">
-                        View
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {trip.trip_type === 'self_arranged' && reg.status === 'awaiting_provider' && (
+                          <button
+                            onClick={() => handleStartProcessing(reg)}
+                            disabled={processingAction === reg.id}
+                            className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            {processingAction === reg.id ? '…' : 'Start Processing'}
+                          </button>
+                        )}
+                        {trip.trip_type === 'self_arranged' && reg.status === 'processing' && (
+                          <button
+                            onClick={() => handleConfirmProcessing(reg)}
+                            disabled={processingAction === reg.id}
+                            className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            {processingAction === reg.id ? '…' : 'Mark Confirmed'}
+                          </button>
+                        )}
+                        <button onClick={() => openBooking(reg)} className="px-3 py-1.5 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/40 rounded-xl hover:bg-sky-100 dark:hover:bg-sky-900/40 text-xs font-medium transition-colors">
+                          View
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -601,14 +712,14 @@ const TripDetailPage: React.FC = () => {
       {/* Booking Detail Drawer */}
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1 bg-black/50" onClick={() => { setSelectedBooking(null); setShowSendForm(false); }} />
+          <div className="flex-1 bg-black/50" onClick={() => { setSelectedBooking(null); setShowSendForm(false); setShowCancelForm(false); setCancelReason(''); }} />
           <div className="w-full max-w-xl bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
               <div>
                 <h3 className="font-bold text-base text-slate-900 dark:text-white">Booking Detail</h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{selectedBooking.booking_reference}</p>
               </div>
-              <button onClick={() => { setSelectedBooking(null); setShowSendForm(false); }}
+              <button onClick={() => { setSelectedBooking(null); setShowSendForm(false); setShowCancelForm(false); setCancelReason(''); }}
                 className="w-8 h-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-xl leading-none">
                 &times;
               </button>
@@ -634,7 +745,7 @@ const TripDetailPage: React.FC = () => {
                   <div>
                     <span className="text-xs text-slate-400 dark:text-slate-500 block">Status</span>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[selectedBooking.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                      {selectedBooking.status.replace('_', ' ')}
+                      {STATUS_LABELS[selectedBooking.status] || selectedBooking.status.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div className="col-span-2">
@@ -643,6 +754,78 @@ const TripDetailPage: React.FC = () => {
                   </div>
                 </div>
               </div>
+
+              {/* Self-arranged processing actions */}
+              {trip.trip_type === 'self_arranged' && ['awaiting_provider', 'processing'].includes(selectedBooking.status) && (
+                <div className={`rounded-xl p-4 border ${
+                  selectedBooking.status === 'awaiting_provider'
+                    ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                    : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                }`}>
+                  <h4 className={`font-semibold text-sm mb-2 ${
+                    selectedBooking.status === 'awaiting_provider' ? 'text-orange-800 dark:text-orange-300' : 'text-blue-800 dark:text-blue-300'
+                  }`}>
+                    {selectedBooking.status === 'awaiting_provider' ? '⏳ Action Required' : '🔄 Order In Progress'}
+                  </h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
+                    {selectedBooking.status === 'awaiting_provider'
+                      ? `This participant paid ${daysSince(selectedBooking.registration_date)} day(s) ago. Click below once you have started booking their arrangements.`
+                      : 'You have started processing this booking. Click below once all arrangements (flights, hotels, etc.) are fully confirmed.'}
+                  </p>
+                  {selectedBooking.status === 'awaiting_provider' && (
+                    <button
+                      onClick={() => handleStartProcessing(selectedBooking)}
+                      disabled={processingAction === selectedBooking.id}
+                      className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {processingAction === selectedBooking.id ? 'Updating…' : 'Start Processing Order'}
+                    </button>
+                  )}
+                  {selectedBooking.status === 'processing' && (
+                    <button
+                      onClick={() => handleConfirmProcessing(selectedBooking)}
+                      disabled={processingAction === selectedBooking.id}
+                      className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
+                    >
+                      {processingAction === selectedBooking.id ? 'Updating…' : 'Mark All Arrangements Confirmed'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Cancel booking */}
+              {['awaiting_provider', 'processing', 'confirmed'].includes(selectedBooking.status) && (
+                <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-semibold text-sm text-red-700 dark:text-red-400">Cancel Booking</h4>
+                    <button
+                      onClick={() => { setShowCancelForm(v => !v); setCancelReason(''); }}
+                      className="text-xs text-red-600 dark:text-red-400 hover:underline"
+                    >
+                      {showCancelForm ? 'Dismiss' : 'Cancel this booking'}
+                    </button>
+                  </div>
+                  {showCancelForm && (
+                    <div className="space-y-2 mt-2">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">The refund will be calculated automatically based on the cancellation policy.</p>
+                      <textarea
+                        placeholder="Reason for cancellation (optional)"
+                        value={cancelReason}
+                        onChange={e => setCancelReason(e.target.value)}
+                        rows={2}
+                        className={`${inputCls} resize-none text-xs`}
+                      />
+                      <button
+                        onClick={() => handleCancelBooking(selectedBooking)}
+                        disabled={cancellingBooking === selectedBooking.id}
+                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
+                      >
+                        {cancellingBooking === selectedBooking.id ? 'Cancelling…' : 'Confirm Cancellation'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Participants */}
               {selectedBooking.participants?.length > 0 && (

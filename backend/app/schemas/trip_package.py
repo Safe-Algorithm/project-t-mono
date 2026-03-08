@@ -41,8 +41,6 @@ class TripPackageCreate(TripPackageBase):
             raise ValueError('At least one of name_en or name_ar must be provided')
         if not self.description_en and not self.description_ar:
             raise ValueError('At least one of description_en or description_ar must be provided')
-        if self.max_participants is None or self.max_participants < 1:
-            raise ValueError('max_participants is required and must be at least 1')
         return self
 
 

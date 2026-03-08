@@ -242,15 +242,28 @@ export default function TripDetailScreen() {
               value={trip.available_spots === 0 ? t('trip.soldOut') : t('trip.spotsLeft', { count: trip.available_spots })}
               colors={colors} s={s}
             />
-            {trip.is_refundable != null && (
-              <InfoChip
-                icon="refresh-outline"
-                label={t('booking.package')}
-                value={trip.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
-                colors={colors} s={s}
-              />
-            )}
           </View>
+
+          {/* Refundability banner */}
+          {trip.is_refundable != null && (
+            trip.is_refundable === false ? (
+              <View style={s.nonRefundableBanner}>
+                <View style={s.nonRefundableTitleRow}>
+                  <Ionicons name="close-circle" size={18} color="#fff" />
+                  <Text style={s.nonRefundableBannerTitle}>{t('trip.nonRefundableWarningTitle')}</Text>
+                </View>
+                <Text style={s.nonRefundableBannerBody}>{t('trip.nonRefundableWarningBody')}</Text>
+              </View>
+            ) : (
+              <View style={s.refundableBanner}>
+                <View style={s.refundableTitleRow}>
+                  <Ionicons name="checkmark-circle" size={18} color="#166534" />
+                  <Text style={s.refundableBannerTitle}>{t('trip.refundableTitle')}</Text>
+                </View>
+                <Text style={s.refundableBannerBody}>{t('trip.refundableBody')}</Text>
+              </View>
+            )
+          )}
 
           {/* Route: Starting city → Destinations */}
           {(trip.starting_city || (trip.destinations && trip.destinations.length > 0)) && (
@@ -719,5 +732,22 @@ function makeStyles(c: ThemeColors) {
   bottomPrice: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary },
   bookBtn: { minWidth: 140 },
     selectHint: { fontSize: FontSize.md, color: c.textTertiary, textAlign: 'center', fontWeight: '500' },
+
+  nonRefundableBanner: {
+    backgroundColor: '#DC2626', borderRadius: Radius.xl,
+    padding: 14, marginBottom: 12,
+  },
+  nonRefundableTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  nonRefundableBannerTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#fff', flex: 1 },
+  nonRefundableBannerBody: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.9)', lineHeight: 20 },
+
+  refundableBanner: {
+    backgroundColor: '#F0FDF4', borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: '#BBF7D0',
+    padding: 14, marginBottom: 12,
+  },
+  refundableTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  refundableBannerTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#166534', flex: 1 },
+  refundableBannerBody: { fontSize: FontSize.sm, color: '#166534', lineHeight: 20, opacity: 0.85 },
   });
 }

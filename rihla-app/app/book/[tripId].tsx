@@ -155,6 +155,7 @@ export default function BookingScreen() {
         payload = {
           total_participants: simpleCount,
           total_amount: totalAmount.toFixed(2),
+          trip_content_hash: trip?.content_hash ?? undefined,
           participants: simpleParticipants.slice(0, simpleCount).map((p, i) => ({
             is_registration_user: i === 0,
             ...p,
@@ -164,6 +165,7 @@ export default function BookingScreen() {
         payload = {
           total_participants: totalParticipants,
           total_amount: totalAmount.toFixed(2),
+          trip_content_hash: trip?.content_hash ?? undefined,
           participants: pkgFlatList.map(({ participant, pkg }, i) => ({
             package_id: pkg.id,
             is_registration_user: i === 0,
@@ -176,11 +178,20 @@ export default function BookingScreen() {
       router.replace(`/booking/${registration.id}?autoPayment=true`);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
+      const status = err?.response?.status;
       const msg = Array.isArray(detail)
         ? (detail[0]?.msg ?? t('common.error'))
         : (typeof detail === 'string' ? detail : t('common.error'));
       if (typeof detail === 'string' && detail.includes('already have an active registration')) {
         setAlreadyRegistered(true);
+      } else if (status === 409 && typeof detail === 'string' && detail.includes('trip details have been updated')) {
+        // Trip changed since user last loaded it — invalidate cache and go back to trip page
+        qc.invalidateQueries({ queryKey: ['trip', tripId] });
+        Alert.alert(
+          t('booking.tripChangedTitle'),
+          t('booking.tripChangedMessage'),
+          [{ text: t('booking.reviewTrip'), onPress: () => router.back() }],
+        );
       } else {
         Alert.alert(t('booking.title'), msg);
       }
@@ -399,6 +410,39 @@ export default function BookingScreen() {
                 )}
               </View>
             </View>
+            {/* Refund policy disclosure */}
+            {trip && trip.is_refundable != null && (
+              <View style={trip.is_refundable === false ? s.nonRefundableBox : s.refundableBox}>
+                <View style={s.refundBoxTitleRow}>
+                  <Ionicons
+                    name={trip.is_refundable === false ? 'close-circle' : 'shield-checkmark-outline'}
+                    size={18}
+                    color={trip.is_refundable === false ? '#DC2626' : '#166534'}
+                  />
+                  <Text style={trip.is_refundable === false ? s.nonRefundableBoxTitle : s.refundableBoxTitle}>
+                    {t('booking.refundPolicy')}
+                  </Text>
+                </View>
+                {trip.is_refundable === false ? (
+                  <Text style={s.refundBoxBody}>{t('booking.nonRefundableCheckout')}</Text>
+                ) : trip.trip_type === 'self_arranged' ? (
+                  <>
+                    <Text style={s.refundBoxBody}>{t('booking.refundableCheckout')}</Text>
+                    <Text style={s.refundBoxRule}>{'• '}{t('booking.refundRuleSelfArrangedPre')}</Text>
+                    <Text style={s.refundBoxRule}>{'• '}{t('booking.refundRuleSelfArrangedPost')}</Text>
+                    <Text style={s.refundBoxCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={s.refundBoxBody}>{t('booking.refundableCheckout')}</Text>
+                    <Text style={s.refundBoxRule}>{'• '}{t('booking.refundRule72h')}</Text>
+                    <Text style={s.refundBoxRule}>{'• '}{t('booking.refundRule12to72h')}</Text>
+                    <Text style={s.refundBoxRule}>{'• '}{t('booking.refundRuleLess12h')}</Text>
+                    <Text style={s.refundBoxCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
+                  </>
+                )}
+              </View>
+            )}
             <View style={s.section}>
               <View style={s.infoBox}>
                 <Ionicons name="information-circle-outline" size={18} color={colors.info} />
@@ -481,5 +525,22 @@ function makeStyles(c: ThemeColors) {
     actionRow: { flexDirection: 'row', gap: 12 },
     backActionBtn: { flex: 1 },
     payBtn: { flex: 2 },
+
+    nonRefundableBox: {
+      backgroundColor: '#FEF2F2', borderRadius: Radius.xl,
+      borderWidth: 1.5, borderColor: '#FECACA',
+      padding: 14, marginBottom: 16,
+    },
+    refundableBox: {
+      backgroundColor: '#F0FDF4', borderRadius: Radius.xl,
+      borderWidth: 1, borderColor: '#BBF7D0',
+      padding: 14, marginBottom: 16,
+    },
+    refundBoxTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+    nonRefundableBoxTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626', flex: 1 },
+    refundableBoxTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#166534', flex: 1 },
+    refundBoxBody: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 6 },
+    refundBoxRule: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginLeft: 4 },
+    refundBoxCooling: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18, marginTop: 6, fontStyle: 'italic' },
   });
 }

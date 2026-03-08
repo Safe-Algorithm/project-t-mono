@@ -3395,3 +3395,287 @@ def test_trip_type_in_public_trip_response(client: TestClient, session: Session)
     public_resp = client.get(f"{settings.API_V1_STR}/public-trips/{trip_id}")
     assert public_resp.status_code == 200
     assert public_resp.json()["trip_type"] == "self_arranged"
+
+
+# ── Trip update/delete protection rules ────────────────────────────────────────
+
+def _create_trip_with_paid_registration(client, session, headers, user):
+    """Helper: create a trip + a paid TripRegistration record for it."""
+    from app.models.trip_registration import TripRegistration as TRModel, TripRegistrationParticipant
+    from app.models.payment import Payment, PaymentStatus
+    import uuid as _uuid
+
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Protected Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+            "max_participants": 10,
+            "price": 100.0,
+        },
+    )
+    assert resp.status_code == 200
+    trip_id = _uuid.UUID(resp.json()["id"])
+
+    reg = TRModel(
+        trip_id=trip_id,
+        user_id=user.id,
+        total_participants=1,
+        total_amount=100,
+        status="confirmed",
+        booking_reference=f"TEST-{_uuid.uuid4().hex[:8].upper()}",
+    )
+    session.add(reg)
+    session.commit()
+    session.refresh(reg)
+
+    payment = Payment(
+        registration_id=reg.id,
+        user_id=user.id,
+        amount=100,
+        currency="SAR",
+        status=PaymentStatus.PAID,
+        description="Test payment",
+        moyasar_payment_id=f"mock_{_uuid.uuid4().hex[:8]}",
+        paid_at=datetime.datetime.utcnow(),
+    )
+    session.add(payment)
+    session.commit()
+    return str(trip_id)
+
+
+def test_content_hash_generated_on_create(client: TestClient, session: Session):
+    """A newly created trip must have a non-null content_hash."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Hash Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 5,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["content_hash"] is not None
+
+
+def test_content_hash_changes_on_update(client: TestClient, session: Session):
+    """Updating a material field must change content_hash."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Hash Change Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 5,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+    old_hash = create_resp.json()["content_hash"]
+
+    update_resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"name_en": "Hash Change Trip Updated"},
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["content_hash"] != old_hash
+
+
+def test_update_trip_is_refundable_blocked(client: TestClient, session: Session):
+    """Changing is_refundable on a trip must always return 400."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Refund Lock Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 5,
+            "is_refundable": True,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"is_refundable": False},
+    )
+    assert resp.status_code == 400
+    assert "Refundability cannot be changed" in resp.json()["detail"]
+
+
+def test_update_trip_material_fields_blocked_with_paid_bookings(client: TestClient, session: Session):
+    """Changing material fields when paid bookings exist must return 409."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id = _create_trip_with_paid_registration(client, session, headers, user)
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"name_en": "Should Be Blocked"},
+    )
+    assert resp.status_code == 409
+    assert "active paid bookings" in resp.json()["detail"]
+
+
+def test_update_trip_deactivate_blocked_with_paid_bookings(client: TestClient, session: Session):
+    """Setting is_active=False when paid bookings exist must return 409."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id = _create_trip_with_paid_registration(client, session, headers, user)
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"is_active": False},
+    )
+    assert resp.status_code == 409
+    assert "deactivate" in resp.json()["detail"]
+
+
+def test_update_trip_non_material_fields_allowed_with_paid_bookings(client: TestClient, session: Session):
+    """Updating images/trip_metadata is still allowed even when paid bookings exist."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id = _create_trip_with_paid_registration(client, session, headers, user)
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"trip_metadata": {"note": "photos updated"}},
+    )
+    assert resp.status_code == 200
+
+
+def test_delete_trip_no_bookings_allowed(client: TestClient, session: Session):
+    """Deleting a trip with no paid registrations must succeed."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Delete Me",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 5,
+        },
+    )
+    trip_id = resp.json()["id"]
+
+    del_resp = client.delete(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert del_resp.status_code == 200
+    assert del_resp.json()["ok"] is True
+
+
+def test_delete_trip_blocked_with_paid_bookings(client: TestClient, session: Session):
+    """Deleting a trip that has paid registrations must return 409."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id = _create_trip_with_paid_registration(client, session, headers, user)
+
+    resp = client.delete(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert resp.status_code == 409
+    assert "cancel-trip" in resp.json()["detail"]
+
+
+def test_register_stale_content_hash_returns_409(client: TestClient, session: Session):
+    """Booking with a wrong content_hash must return 409."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Hash Check Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 10,
+            "price": 100.0,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/register",
+        headers=headers,
+        json={
+            "total_participants": 1,
+            "total_amount": "100.00",
+            "trip_content_hash": "000000000000000000000000000000000000000000000000000000000000dead",
+            "participants": [{"is_registration_user": True, "name": "Test User", "date_of_birth": "1990-01-01"}],
+        },
+    )
+    assert resp.status_code == 409
+    assert "trip details have been updated" in resp.json()["detail"]
+
+
+def test_register_correct_content_hash_succeeds(client: TestClient, session: Session):
+    """Booking with the correct content_hash must proceed past the hash check."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Hash Ok Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 10,
+            "price": 100.0,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+    correct_hash = create_resp.json()["content_hash"]
+
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/register",
+        headers=headers,
+        json={
+            "total_participants": 1,
+            "total_amount": "100.00",
+            "trip_content_hash": correct_hash,
+            "participants": [{"is_registration_user": True, "name": "Test User", "date_of_birth": "1990-01-01"}],
+        },
+    )
+    # Should not be blocked by hash check (may fail later for other reasons, but not 409 hash mismatch)
+    assert resp.status_code != 409 or "trip details have been updated" not in resp.json().get("detail", "")
+
+
+def test_register_omitted_content_hash_allowed(client: TestClient, session: Session):
+    """Booking without sending trip_content_hash at all must not be blocked by the hash check."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "No Hash Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 10,
+            "price": 100.0,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+
+    resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/register",
+        headers=headers,
+        json={
+            "total_participants": 1,
+            "total_amount": "100.00",
+            "participants": [{"is_registration_user": True, "name": "Test User", "date_of_birth": "1990-01-01"}],
+        },
+    )
+    assert resp.status_code != 409 or "trip details have been updated" not in resp.json().get("detail", "")

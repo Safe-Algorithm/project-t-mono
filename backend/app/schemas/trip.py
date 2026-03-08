@@ -236,6 +236,7 @@ class TripRead(TripBase):
     provider: ProviderInfo
     is_active: bool
     trip_reference: str
+    content_hash: Optional[str] = None
     trip_type: TripType = TripType.GUIDED
     available_spots: int = 0
     meeting_place_name: Optional[str] = None

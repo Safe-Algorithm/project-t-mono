@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 import logging
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, BackgroundTasks, UploadFile, File
@@ -165,6 +166,7 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         start_date=trip.start_date, end_date=trip.end_date,
         max_participants=trip.max_participants, images=trip.images,
         trip_metadata=trip.trip_metadata, is_active=trip.is_active,
+        content_hash=trip.content_hash,
         price=resp_price, is_refundable=resp_is_refundable, amenities=resp_amenities,
         has_meeting_place=trip.has_meeting_place, meeting_place_name=trip.meeting_place_name,
         meeting_place_name_ar=trip.meeting_place_name_ar,
@@ -207,6 +209,8 @@ def create_trip(
                 amenities=trip_in.amenities,
             )
             session.refresh(trip)
+            # Recompute hash now that the hidden package exists (packages are part of the hash)
+            crud.trip.recompute_content_hash(session=session, trip=trip)
         from app.crud import provider as provider_crud
         provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
         provider_info = {"id": provider.id, "company_name": provider.company_name} if provider else {"id": trip.provider_id, "company_name": "Unknown"}
@@ -484,11 +488,70 @@ def update_trip(
     _rbac: None = Depends(require_provider_permission),
 ):
     """Update a trip."""
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.payment import Payment, PaymentStatus
+    from sqlmodel import select as sql_select
+
     db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not db_trip:
         raise HTTPException(status_code=404, detail="Trip not found")
     if db_trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Rule: is_refundable is frozen once the trip is published — never allow changes.
+    if trip_in.is_refundable is not None:
+        raise HTTPException(
+            status_code=400,
+            detail="Refundability cannot be changed after a trip is published. "
+                   "Users may have booked based on the original refund policy.",
+        )
+
+    # Check whether any paid payment exists across ALL non-cancelled registrations for this trip.
+    # We do this as a single join-like query to avoid false negatives when the first
+    # registration is pending_payment but another has a completed payment.
+    has_active_paid_bookings = session.exec(
+        sql_select(Payment).join(
+            TripRegistrationModel,
+            Payment.registration_id == TripRegistrationModel.id,
+        ).where(
+            TripRegistrationModel.trip_id == trip_id,
+            TripRegistrationModel.status != "cancelled",
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first() is not None
+
+    if has_active_paid_bookings:
+        # Rule: Cannot edit content fields when paid participants exist.
+        # Only allow non-material edits like images or trip_metadata.
+        _MATERIAL_FIELDS = {
+            "name_en", "name_ar", "description_en", "description_ar",
+            "start_date", "end_date", "registration_deadline", "max_participants",
+            "trip_type", "is_packaged_trip", "timezone",
+            "has_meeting_place", "meeting_place_name", "meeting_place_name_ar",
+            "meeting_location", "price", "amenities",
+            "starting_city_id", "is_international",
+        }
+        attempted = set(trip_in.model_dump(exclude_unset=True).keys()) & _MATERIAL_FIELDS
+        if attempted:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "This trip has active paid bookings. "
+                    "Material trip details cannot be changed once participants have booked. "
+                    "To change the trip, cancel it first (all participants will be refunded)."
+                ),
+            )
+
+        # Rule: Cannot deactivate a trip that has paid participants.
+        if trip_in.is_active is False:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Cannot deactivate a trip that has active paid bookings. "
+                    "Use the cancel-trip endpoint to cancel the trip and refund all participants."
+                ),
+            )
+
     trip = crud.trip.update_trip(session=session, db_trip=db_trip, trip_in=trip_in)
     if not trip.name_en and not trip.name_ar:
         raise HTTPException(status_code=400, detail="At least one of name_en or name_ar must be provided")
@@ -518,18 +581,42 @@ def delete_trip(
     current_user: User = Depends(get_current_active_provider),
     _rbac: None = Depends(require_provider_permission),
 ):
-    """Delete a trip."""
-    try:
-        db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
-        if not db_trip:
-            raise HTTPException(status_code=404, detail="Trip not found")
-        if db_trip.provider_id != current_user.provider_id:
-            raise HTTPException(status_code=403, detail="Not enough permissions")
-        crud.trip.delete_trip(session=session, db_trip=db_trip)
-        return {"ok": True}
-    except Exception as e:
-        logger.error(f"Error deleting trip: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+    """Delete a trip. Blocked when paid active registrations exist — use cancel-trip instead."""
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.payment import Payment, PaymentStatus
+    from sqlmodel import select as sql_select
+
+    db_trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not db_trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if db_trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Rule: Cannot delete a trip that has active paid participants.
+    # Provider must cancel the trip (which refunds everyone) instead.
+    # Check across ALL non-cancelled registrations, not just the first one.
+    has_active_paid_bookings_for_delete = session.exec(
+        sql_select(Payment).join(
+            TripRegistrationModel,
+            Payment.registration_id == TripRegistrationModel.id,
+        ).where(
+            TripRegistrationModel.trip_id == trip_id,
+            TripRegistrationModel.status != "cancelled",
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first() is not None
+    if has_active_paid_bookings_for_delete:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Cannot delete a trip that has active paid bookings. "
+                "Use the cancel-trip endpoint instead — this will refund all participants "
+                "and notify them of the cancellation."
+            ),
+        )
+
+    crud.trip.delete_trip(session=session, db_trip=db_trip)
+    return {"ok": True}
 
 
 @router.post("/{trip_id}/join", response_model=TripRead)
@@ -623,8 +710,8 @@ def _validate_tier_participant_totals(
     else:
         effective = [p.max_participants for p in packages]
 
-    # Only validate when every package has a value
-    if all(v is not None and v > 0 for v in effective) and len(effective) > 0:
+    # Only validate when there are 2+ packages and every package has a value
+    if all(v is not None and v > 0 for v in effective) and len(effective) >= 2:
         total = sum(effective)
         if total != trip_max:
             raise HTTPException(
@@ -695,7 +782,9 @@ def create_trip_package(
         )
         session.add(required_field)
     session.commit()
-    
+    session.refresh(trip)
+    crud.trip.recompute_content_hash(session=session, trip=trip)
+
     # Get required fields for response
     required_fields = session.query(TripPackageRequiredField).filter(
         TripPackageRequiredField.package_id == package.id
@@ -834,7 +923,9 @@ def update_trip_package(
     
     session.commit()
     session.refresh(package)
-    
+    session.refresh(trip)
+    crud.trip.recompute_content_hash(session=session, trip=trip)
+
     # Get required fields for response
     required_fields = session.query(TripPackageRequiredField).filter(
         TripPackageRequiredField.package_id == package.id
@@ -895,6 +986,8 @@ def delete_trip_package(
     package.is_active = False
     session.add(package)
     session.commit()
+    session.refresh(trip)
+    crud.trip.recompute_content_hash(session=session, trip=trip)
 
 
 # Trip Package Required Fields Endpoints
@@ -1083,13 +1176,27 @@ async def register_for_trip(
     if trip.start_date <= datetime.now(timezone.utc).replace(tzinfo=None):
         raise HTTPException(status_code=400, detail="This trip has already started or passed")
 
+    # Guard: trip content_hash must match what the client last read.
+    # If the provider changed trip details since the user opened the trip page,
+    # we reject the booking so the user sees the updated information first.
+    if registration_in.trip_content_hash is not None and trip.content_hash is not None:
+        if registration_in.trip_content_hash != trip.content_hash:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "The trip details have been updated since you last viewed this trip. "
+                    "Please review the updated information and try booking again."
+                ),
+            )
+
     # Guard: user must not already have an active registration for this trip
     from app.models.trip_registration import TripRegistration as TripRegistrationModel
     from sqlmodel import select as sql_select
+    _ACTIVE_STATUSES = ["pending_payment", "awaiting_provider", "processing", "confirmed"]
     existing_user_reg_stmt = sql_select(TripRegistrationModel).where(
         TripRegistrationModel.trip_id == trip_id,
         TripRegistrationModel.user_id == current_user.id,
-        TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+        TripRegistrationModel.status.in_(_ACTIVE_STATUSES),
     )
     existing_user_reg = session.exec(existing_user_reg_stmt).first()
     if existing_user_reg:
@@ -1098,10 +1205,10 @@ async def register_for_trip(
             detail="You already have an active registration for this trip. Check your bookings."
         )
 
-    # Guard: trip must not be full (count confirmed + pending_payment registrations)
+    # Guard: trip must not be full (count all active registrations)
     confirmed_count_stmt = sql_select(TripRegistrationModel).where(
         TripRegistrationModel.trip_id == trip_id,
-        TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+        TripRegistrationModel.status.in_(_ACTIVE_STATUSES),
     )
     existing_regs = session.exec(confirmed_count_stmt).all()
     booked_participants = sum(r.total_participants for r in existing_regs)
@@ -1134,7 +1241,7 @@ async def register_for_trip(
                     .join(TripRegistrationModel, TripParticipantModel.registration_id == TripRegistrationModel.id)
                     .filter(
                         TripParticipantModel.package_id == pkg_id,
-                        TripRegistrationModel.status.in_(["confirmed", "pending_payment"]),
+                        TripRegistrationModel.status.in_(_ACTIVE_STATUSES),
                     )
                     .count()
                 )
@@ -1330,6 +1437,475 @@ def get_trip_registrations(
 
     return result
 
+
+# ── Provider Registration Status Transitions ────────────────────────────────
+
+@router.post("/{trip_id}/registrations/{registration_id}/start-processing")
+def flag_registration_processing(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    registration_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """
+    Provider marks a self-arranged booking as 'processing' — they have started
+    booking flights/hotels for the participant.
+    Allowed transition: awaiting_provider → processing
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    if trip.trip_type.value != "self_arranged":
+        raise HTTPException(status_code=400, detail="Only self-arranged trips use the processing workflow")
+
+    reg = session.get(TripRegistrationModel, registration_id)
+    if not reg or reg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    if reg.status != "awaiting_provider":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot start processing: booking is currently '{reg.status}'. Expected 'awaiting_provider'.",
+        )
+
+    reg.status = "processing"
+    reg.processing_started_at = datetime.utcnow()
+    session.add(reg)
+    session.commit()
+    session.refresh(reg)
+    return {"id": str(reg.id), "status": reg.status, "processing_started_at": reg.processing_started_at}
+
+
+@router.post("/{trip_id}/registrations/{registration_id}/confirm-processing")
+def flag_registration_confirmed(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    registration_id: uuid.UUID,
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """
+    Provider marks a self-arranged booking as 'confirmed' — all arrangements
+    (flights, hotels, etc.) are fully booked for the participant.
+    Allowed transition: processing → confirmed
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+    if trip.trip_type.value != "self_arranged":
+        raise HTTPException(status_code=400, detail="Only self-arranged trips use the processing workflow")
+
+    reg = session.get(TripRegistrationModel, registration_id)
+    if not reg or reg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Registration not found")
+    if reg.status != "processing":
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot confirm: booking is currently '{reg.status}'. Expected 'processing'.",
+        )
+
+    reg.status = "confirmed"
+    session.add(reg)
+    session.commit()
+    session.refresh(reg)
+    return {"id": str(reg.id), "status": reg.status}
+
+
+# ── Cancellation & Refund Endpoints ─────────────────────────────────────────
+
+
+class UserCancelRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class AdminCancelBookingRequest(BaseModel):
+    refund_percentage_override: Optional[int] = None  # None = auto (use policy); or 0, 50, 100
+    reason: Optional[str] = None
+
+
+class ProviderCancelTripRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+class AdminCancelTripRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+async def _execute_refund_and_record(
+    session,
+    registration,
+    decision,
+    cancelled_by: str,
+    actor_user_id,
+    reason: Optional[str],
+):
+    """Apply refund via Moyasar (if amount > 0), record in RefundRecord, update registration."""
+    from app.models.payment import Payment, PaymentStatus
+    from app.models.refund_record import RefundRecord
+    from app.services.moyasar import payment_service
+    from sqlmodel import select as sql_select
+    from datetime import datetime
+
+    now = datetime.utcnow()
+
+    # Find the paid payment for this registration
+    paid_payment = session.exec(
+        sql_select(Payment).where(
+            Payment.registration_id == registration.id,
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first()
+
+    moyasar_refund_response = None
+    refund_succeeded = False
+
+    # Determine actual refund amount — 0 if no paid payment exists (booking was never charged)
+    from decimal import Decimal as _Decimal
+    actual_refund_amount = decision.refund_amount if paid_payment else _Decimal("0.00")
+    actual_refund_pct = decision.refund_percentage if paid_payment else 0
+    actual_rule = decision.refund_rule if paid_payment else "no_payment_found"
+
+    if decision.eligible and paid_payment and paid_payment.moyasar_payment_id:
+        try:
+            result = await payment_service.refund_payment(
+                payment_id=paid_payment.moyasar_payment_id,
+                amount=actual_refund_amount,
+                description=f"Cancellation refund: {actual_rule}",
+            )
+            moyasar_refund_response = str(result)
+            paid_payment.refunded = True
+            paid_payment.refunded_amount = actual_refund_amount
+            paid_payment.refunded_at = now
+            paid_payment.status = PaymentStatus.REFUNDED
+            session.add(paid_payment)
+            refund_succeeded = True
+        except Exception as exc:
+            logger.error(f"Moyasar refund failed for registration {registration.id}: {exc}")
+            moyasar_refund_response = str(exc)
+            refund_succeeded = False
+    elif not paid_payment:
+        # Booking was never paid — nothing to refund, just cancel cleanly
+        refund_succeeded = True
+
+    record = RefundRecord(
+        registration_id=registration.id,
+        payment_id=paid_payment.id if paid_payment else None,
+        moyasar_payment_id=paid_payment.moyasar_payment_id if paid_payment else None,
+        cancelled_by=cancelled_by,
+        actor_user_id=actor_user_id,
+        refund_percentage=actual_refund_pct,
+        refund_amount=actual_refund_amount,
+        original_amount=registration.total_amount,
+        refund_rule=actual_rule,
+        reason=reason,
+        moyasar_refund_response=moyasar_refund_response,
+        refund_succeeded=refund_succeeded,
+    )
+    session.add(record)
+
+    registration.status = "cancelled"
+    registration.cancelled_at = now
+    registration.cancellation_reason = reason
+    registration.cancelled_by = cancelled_by
+    session.add(registration)
+
+
+@router.post("/{trip_id}/registrations/{registration_id}/cancel")
+async def user_cancel_booking(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    registration_id: uuid.UUID,
+    body: UserCancelRequest = UserCancelRequest(),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    User cancels their own booking. Refund is determined automatically by policy:
+    - Cooling-off (1 hr, deadline > 24h away) → 100%
+    - Non-refundable outside cooling-off → 0%
+    - Guided refundable: tiered by hours to registration_deadline
+    - Self-arranged refundable: 100% if awaiting_provider, 0% if processing/confirmed
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from app.models.payment import Payment, PaymentStatus
+    from app.services.refund import compute_refund
+    from sqlmodel import select as sql_select
+
+    reg = session.get(TripRegistrationModel, registration_id)
+    if not reg or reg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if reg.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your booking")
+    if reg.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Booking is already cancelled")
+    if reg.status == "pending_payment":
+        raise HTTPException(status_code=400, detail="Cannot cancel a booking that has not been paid yet")
+
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    # Determine package refundability — use the first participant's package
+    is_refundable = True
+    participants = reg.participants
+    if participants and participants[0].package_id:
+        pkg = session.get(TripPackageModel, participants[0].package_id)
+        if pkg and pkg.is_refundable is not None:
+            is_refundable = pkg.is_refundable
+
+    # Get paid_at from payment record
+    paid_payment = session.exec(
+        sql_select(Payment).where(
+            Payment.registration_id == reg.id,
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first()
+    paid_at = paid_payment.paid_at if paid_payment else None
+
+    decision = compute_refund(
+        total_amount=reg.total_amount,
+        is_refundable=is_refundable,
+        trip_type=trip.trip_type.value,
+        registration_status=reg.status,
+        registration_deadline=trip.registration_deadline,
+        paid_at=paid_at,
+        cancelled_by="user",
+    )
+
+    await _execute_refund_and_record(
+        session=session,
+        registration=reg,
+        decision=decision,
+        cancelled_by="user",
+        actor_user_id=current_user.id,
+        reason=body.reason,
+    )
+    session.commit()
+
+    # Use actual recorded values — may differ from decision when no paid payment exists
+    actual_pct = decision.refund_percentage if paid_payment else 0
+    actual_amt = float(decision.refund_amount) if paid_payment else 0.0
+
+    return {
+        "status": "cancelled",
+        "refund_percentage": actual_pct,
+        "refund_amount": actual_amt,
+        "refund_rule": decision.refund_rule if paid_payment else "no_payment_found",
+        "explanation": decision.explanation if paid_payment else "Booking cancelled. No payment was recorded, so no refund is due.",
+    }
+
+
+@router.post("/{trip_id}/cancel")
+async def provider_cancel_trip(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    body: ProviderCancelTripRequest = ProviderCancelTripRequest(),
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """
+    Provider cancels the entire trip. All active bookings are cancelled with 100% refund,
+    bypassing non-refundable flags.
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.services.refund import compute_refund
+    from sqlmodel import select as sql_select
+
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    active_regs = session.exec(
+        sql_select(TripRegistrationModel).where(
+            TripRegistrationModel.trip_id == trip_id,
+            TripRegistrationModel.status != "cancelled",
+        )
+    ).all()
+
+    for reg in active_regs:
+        decision = compute_refund(
+            total_amount=reg.total_amount,
+            is_refundable=True,  # provider cancel always 100%
+            trip_type=trip.trip_type.value,
+            registration_status=reg.status,
+            registration_deadline=trip.registration_deadline,
+            paid_at=None,
+            cancelled_by="provider",
+        )
+        await _execute_refund_and_record(
+            session=session,
+            registration=reg,
+            decision=decision,
+            cancelled_by="provider",
+            actor_user_id=current_user.id,
+            reason=body.reason,
+        )
+
+    trip.is_active = False
+    session.add(trip)
+    session.commit()
+
+    return {
+        "status": "trip_cancelled",
+        "bookings_cancelled": len(active_regs),
+        "all_refunded_100_percent": True,
+    }
+
+
+@router.post("/{trip_id}/registrations/{registration_id}/admin-cancel")
+async def admin_cancel_booking(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    registration_id: uuid.UUID,
+    body: AdminCancelBookingRequest,
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Admin cancels a single booking with a manually chosen refund percentage (0, 50, or 100).
+    Bypasses all policy rules.
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.services.refund import compute_refund
+
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    if body.refund_percentage_override is not None and body.refund_percentage_override not in (0, 50, 100):
+        raise HTTPException(status_code=400, detail="refund_percentage_override must be 0, 50, or 100")
+
+    reg = session.get(TripRegistrationModel, registration_id)
+    if not reg or reg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if reg.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Booking is already cancelled")
+
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    # Determine package refundability for policy-based auto calculation
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from app.models.payment import Payment, PaymentStatus
+    from sqlmodel import select as sql_select
+    is_refundable = True
+    if reg.participants and reg.participants[0].package_id:
+        pkg = session.get(TripPackageModel, reg.participants[0].package_id)
+        if pkg and pkg.is_refundable is not None:
+            is_refundable = pkg.is_refundable
+
+    paid_payment = session.exec(
+        sql_select(Payment).where(
+            Payment.registration_id == reg.id,
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first()
+
+    decision = compute_refund(
+        total_amount=reg.total_amount,
+        is_refundable=is_refundable,
+        trip_type=trip.trip_type.value,
+        registration_status=reg.status,
+        registration_deadline=trip.registration_deadline,
+        paid_at=paid_payment.paid_at if paid_payment else None,
+        cancelled_by="admin",
+        admin_override_percentage=body.refund_percentage_override,
+    )
+
+    await _execute_refund_and_record(
+        session=session,
+        registration=reg,
+        decision=decision,
+        cancelled_by="admin",
+        actor_user_id=current_user.id,
+        reason=body.reason,
+    )
+    session.commit()
+
+    actual_pct = decision.refund_percentage if paid_payment else 0
+    actual_amt = float(decision.refund_amount) if paid_payment else 0.0
+
+    return {
+        "status": "cancelled",
+        "refund_percentage": actual_pct,
+        "refund_amount": actual_amt,
+        "refund_rule": decision.refund_rule if paid_payment else "no_payment_found",
+        "explanation": decision.explanation if paid_payment else "Booking cancelled. No payment was recorded, so no refund is due.",
+    }
+
+
+@router.post("/{trip_id}/admin-cancel")
+async def admin_cancel_trip(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    body: AdminCancelTripRequest = AdminCancelTripRequest(),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Admin cancels an entire trip. All active bookings get 100% refund.
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.services.refund import compute_refund
+    from sqlmodel import select as sql_select
+
+    if not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    active_regs = session.exec(
+        sql_select(TripRegistrationModel).where(
+            TripRegistrationModel.trip_id == trip_id,
+            TripRegistrationModel.status != "cancelled",
+        )
+    ).all()
+
+    for reg in active_regs:
+        decision = compute_refund(
+            total_amount=reg.total_amount,
+            is_refundable=True,
+            trip_type=trip.trip_type.value,
+            registration_status=reg.status,
+            registration_deadline=trip.registration_deadline,
+            paid_at=None,
+            cancelled_by="admin",
+            admin_override_percentage=100,  # trip-level cancel always refunds 100%
+        )
+        await _execute_refund_and_record(
+            session=session,
+            registration=reg,
+            decision=decision,
+            cancelled_by="admin",
+            actor_user_id=current_user.id,
+            reason=body.reason,
+        )
+
+    trip.is_active = False
+    session.add(trip)
+    session.commit()
+
+    return {
+        "status": "trip_cancelled",
+        "bookings_cancelled": len(active_regs),
+        "all_refunded_100_percent": True,
+    }
+
+
+# ── Spot-count guard — include awaiting_provider + processing in "occupied" ─
 
 # Field Validation Endpoints
 

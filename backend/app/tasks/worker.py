@@ -176,6 +176,105 @@ async def send_review_reminders():
         raise
 
 
+@broker.task(schedule=[{"cron": "0 * * * *"}])  # Every hour
+async def auto_cancel_stale_awaiting_provider():
+    """
+    Cancel self-arranged trip bookings that have been in 'awaiting_provider'
+    for more than 3 days.  Providers must start processing within 3 days or
+    the booking is auto-cancelled, freeing the spot for another user.
+    """
+    logger.info("Checking for stale awaiting_provider registrations")
+    try:
+        from datetime import timedelta
+        from decimal import Decimal
+        from app.models.payment import Payment, PaymentStatus
+        from app.models.refund_record import RefundRecord
+        from app.services.moyasar import payment_service
+        from app.services.refund import compute_refund
+
+        cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=3)
+        with Session(engine) as session:
+            stale = session.exec(
+                select(TripRegistration).where(
+                    TripRegistration.status == "awaiting_provider",
+                    TripRegistration.registration_date <= cutoff,
+                )
+            ).all()
+            logger.info(f"Found {len(stale)} stale awaiting_provider registrations")
+            now = datetime.now(timezone.utc).replace(tzinfo=None)
+            for reg in stale:
+                trip = session.get(Trip, reg.trip_id)
+                if not trip:
+                    continue
+
+                paid_payment = session.exec(
+                    select(Payment).where(
+                        Payment.registration_id == reg.id,
+                        Payment.status == PaymentStatus.PAID,
+                    )
+                ).first()
+
+                decision = compute_refund(
+                    total_amount=reg.total_amount,
+                    is_refundable=True,
+                    trip_type=trip.trip_type.value,
+                    registration_status=reg.status,
+                    registration_deadline=trip.registration_deadline,
+                    paid_at=paid_payment.paid_at if paid_payment else None,
+                    cancelled_by="system",
+                )
+
+                moyasar_refund_response = None
+                refund_succeeded = False
+                if decision.eligible and paid_payment and paid_payment.moyasar_payment_id:
+                    try:
+                        result = await payment_service.refund_payment(
+                            payment_id=paid_payment.moyasar_payment_id,
+                            amount=decision.refund_amount,
+                            description="Auto-cancelled: provider did not respond within 3 days",
+                        )
+                        moyasar_refund_response = str(result)
+                        paid_payment.refunded = True
+                        paid_payment.refunded_amount = decision.refund_amount
+                        paid_payment.refunded_at = now
+                        paid_payment.status = PaymentStatus.REFUNDED
+                        session.add(paid_payment)
+                        refund_succeeded = True
+                    except Exception as refund_err:
+                        logger.error(f"Moyasar refund failed for stale reg {reg.id}: {refund_err}")
+                        moyasar_refund_response = str(refund_err)
+                elif decision.eligible:
+                    refund_succeeded = True
+
+                record = RefundRecord(
+                    registration_id=reg.id,
+                    payment_id=paid_payment.id if paid_payment else None,
+                    moyasar_payment_id=paid_payment.moyasar_payment_id if paid_payment else None,
+                    cancelled_by="system",
+                    actor_user_id=None,
+                    refund_percentage=decision.refund_percentage,
+                    refund_amount=decision.refund_amount,
+                    original_amount=reg.total_amount,
+                    refund_rule=decision.refund_rule,
+                    reason="Auto-cancelled: provider did not respond within 3 days",
+                    moyasar_refund_response=moyasar_refund_response,
+                    refund_succeeded=refund_succeeded,
+                )
+                session.add(record)
+
+                reg.status = "cancelled"
+                reg.cancelled_at = now
+                reg.cancellation_reason = "Provider did not respond within 3 days"
+                reg.cancelled_by = "system"
+                session.add(reg)
+
+            if stale:
+                session.commit()
+    except Exception as e:
+        logger.error(f"auto_cancel_stale_awaiting_provider failed: {e}")
+        raise
+
+
 @broker.task(schedule=[{"cron": "* * * * *"}])  # Every minute
 async def cancel_expired_spot_reservations():
     """

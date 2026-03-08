@@ -49,7 +49,8 @@ class Trip(SQLModel, table=True):
     trip_reference: str = Field(default_factory=_generate_trip_ref, max_length=20, index=True)
     images: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
 
-    # Registration deadline — must be <= start_date
+    # Registration deadline — must be <= start_date (required for refund policy calculations)
+    # Always populated by crud.create_trip (defaults to start_date if not provided)
     registration_deadline: Optional[datetime] = Field(default=None, index=True)
 
     # Starting city (single Destination of type=city, required for new trips)
@@ -85,6 +86,11 @@ class Trip(SQLModel, table=True):
     
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    # SHA-256 of all user-visible, booking-relevant fields.
+    # Recomputed on every meaningful update. Clients send this back at booking time;
+    # a mismatch means the trip changed since the user last read it → 409 Conflict.
+    content_hash: Optional[str] = Field(default=None, max_length=64, index=True)
 
     provider_id: uuid.UUID = Field(foreign_key="provider.id")
     provider: "Provider" = Relationship(back_populates="trips")

@@ -1,3 +1,5 @@
+import hashlib
+import json
 import uuid
 from typing import List, Optional
 from datetime import datetime, timezone as _tz
@@ -37,15 +39,67 @@ def _compute_is_international(session: Session, trip: Trip) -> bool:
 
 _PACKAGE_ONLY_FIELDS = {"price", "is_refundable", "amenities"}
 
+# Fields that are booking-relevant and user-visible — changes to these bump content_hash.
+_HASH_FIELDS = (
+    "name_en", "name_ar", "description_en", "description_ar",
+    "start_date", "end_date", "registration_deadline", "max_participants",
+    "trip_type", "is_packaged_trip", "timezone",
+    "has_meeting_place", "meeting_place_name", "meeting_place_name_ar",
+    "meeting_location", "meeting_time",
+    "starting_city_id", "is_international",
+    "trip_metadata",
+)
+
+
+def _compute_content_hash(trip: Trip) -> str:
+    """Return a stable SHA-256 hex digest of all booking-relevant trip fields."""
+    def _ser(v):
+        if isinstance(v, datetime):
+            return v.isoformat()
+        if isinstance(v, uuid.UUID):
+            return str(v)
+        return v
+
+    payload = {f: _ser(getattr(trip, f, None)) for f in _HASH_FIELDS}
+    # Also fold in the packages' own booking-relevant fields (price, is_refundable, amenities)
+    # so that a package change also invalidates cached trips on the client.
+    try:
+        pkgs = sorted(
+            [
+                {
+                    "id": str(p.id),
+                    "price": str(p.price),
+                    "is_refundable": p.is_refundable,
+                    "is_active": p.is_active,
+                    "amenities": sorted(p.amenities or []),
+                    "max_participants": p.max_participants,
+                }
+                for p in (trip.packages or [])
+            ],
+            key=lambda x: x["id"],
+        )
+        payload["packages"] = pkgs
+    except Exception:
+        pass  # packages may not be loaded yet on first create
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()
+
 
 def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) -> Trip:
     trip_data = {k: v for k, v in trip_in.model_dump().items() if k not in _PACKAGE_ONLY_FIELDS}
+    # Default registration_deadline to start_date if not explicitly provided
+    if trip_data.get("registration_deadline") is None:
+        trip_data["registration_deadline"] = trip_data.get("start_date")
     # Derive meeting_time from start_date when a meeting place is configured
     if trip_data.get("has_meeting_place"):
         trip_data["meeting_time"] = trip_data.get("start_date")
     else:
         trip_data["meeting_time"] = None
     trip = Trip(**trip_data, provider_id=provider.id)
+    session.add(trip)
+    session.commit()
+    session.refresh(trip)
+    trip.content_hash = _compute_content_hash(trip)
     session.add(trip)
     session.commit()
     session.refresh(trip)
@@ -253,10 +307,19 @@ def update_trip(*, session: Session, db_trip: Trip, trip_in: TripUpdate) -> Trip
             db_trip.meeting_time = db_trip.start_date
         else:
             db_trip.meeting_time = None
+    db_trip.updated_at = datetime.now(_tz.utc).replace(tzinfo=None)
+    db_trip.content_hash = _compute_content_hash(db_trip)
     session.add(db_trip)
     session.commit()
     session.refresh(db_trip)
     return db_trip
+
+
+def recompute_content_hash(*, session: Session, trip: Trip) -> None:
+    """Recompute and persist content_hash after related changes (e.g. package update)."""
+    trip.content_hash = _compute_content_hash(trip)
+    session.add(trip)
+    session.commit()
 
 
 def delete_trip(*, session: Session, db_trip: Trip):

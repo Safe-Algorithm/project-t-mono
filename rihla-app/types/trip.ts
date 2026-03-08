@@ -90,6 +90,7 @@ export interface Trip {
   extra_fees: TripExtraFee[];
   average_rating?: number;
   total_reviews?: number;
+  content_hash?: string | null;
 }
 
 export interface TripRating {

@@ -199,6 +199,14 @@ export const tripService = {
     return api.post<Trip>(`/trips/${tripId}/duplicate`, {});
   },
 
+  startProcessing: (tripId: string, registrationId: string): Promise<{ id: string; status: string; processing_started_at: string }> => {
+    return api.post(`/trips/${tripId}/registrations/${registrationId}/start-processing`, {});
+  },
+
+  confirmProcessing: (tripId: string, registrationId: string): Promise<{ id: string; status: string }> => {
+    return api.post(`/trips/${tripId}/registrations/${registrationId}/confirm-processing`, {});
+  },
+
   deleteImage: async (tripId: string, imageUrl: string): Promise<{ message: string; remaining_images: number }> => {
     const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/trips/${tripId}/images?image_url=${encodeURIComponent(imageUrl)}`, {
       method: 'DELETE',

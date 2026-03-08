@@ -30,9 +30,21 @@ class TripRegistration(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     total_amount: Decimal = Field(decimal_places=2, max_digits=10)
-    status: str = Field(default="pending_payment")  # pending_payment, confirmed, cancelled
+    # Status flow:
+    #   pending_payment → confirmed (guided trips, after payment)
+    #   pending_payment → awaiting_provider (self-arranged trips, after payment)
+    #   awaiting_provider → processing (provider flags as started)
+    #   processing → confirmed (provider marks done)
+    #   Any non-cancelled status → cancelled (manual or 3-day auto-cancel for awaiting_provider)
+    status: str = Field(default="pending_payment")
     spot_reserved_until: Optional[datetime] = Field(default=None)  # 15-min payment window
     booking_reference: str = Field(default_factory=_generate_booking_ref, max_length=20, index=True)
+    processing_started_at: Optional[datetime] = Field(default=None)  # When provider flagged as processing
+
+    # Cancellation audit fields
+    cancelled_at: Optional[datetime] = Field(default=None)
+    cancellation_reason: Optional[str] = Field(default=None, max_length=500)
+    cancelled_by: Optional[str] = Field(default=None, max_length=50)  # 'user', 'provider', 'admin', 'system'
     
     # Relationships
     trip: "Trip" = Relationship()
