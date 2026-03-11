@@ -5,6 +5,9 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     DATABASE_URL: str = "postgresql://user:password@db/db"
     REDIS_URL: str = "redis://redis:6379"
+    
+    # CORS Origins (comma-separated)
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://localhost:3002"
 
     # TODO: Replace with a real secret key
     SECRET_KEY: str = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
