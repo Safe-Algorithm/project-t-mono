@@ -5,6 +5,7 @@ import { PermissionDeniedError } from '@/services/api';
 import { teamService } from '@/services/teamService';
 import { User } from '@/types/user';
 import PermissionDenied from '@/components/common/PermissionDenied';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ const Modal: React.FC<{ title: string; onClose: () => void; children: React.Reac
 
 export default function RolesPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const [tab, setTab] = useState<Tab>('roles');
   const [roles, setRoles] = useState<RoleWithPermissions[]>([]);
@@ -76,11 +78,11 @@ export default function RolesPage() {
       setAllPerms(p);
       setTeamMembers(t);
     } catch (e: any) {
-      setError(e instanceof Error ? e : new Error(e?.message || 'Failed to load data'));
+      setError(e instanceof Error ? e : new Error(e?.message || t('roles.errorLoad')));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -96,7 +98,7 @@ export default function RolesPage() {
       setShowCreateRole(false);
       await load();
     } catch (e: any) {
-      alert(e?.message || 'Failed to create role');
+      alert(e?.message || t('roles.errorCreate'));
     } finally {
       setSaving(false);
     }
@@ -105,13 +107,13 @@ export default function RolesPage() {
   // ── Delete Role ─────────────────────────────────────────────────────────────
 
   const handleDeleteRole = async (role: Role) => {
-    if (role.is_system) { alert('System roles cannot be deleted.'); return; }
-    if (!confirm(`Delete role "${role.name}"? This will also remove it from all assigned users.`)) return;
+    if (role.is_system) { alert(t('roles.systemRoleDeleteBlocked')); return; }
+    if (!confirm(t('roles.deleteConfirm', { name: role.name }))) return;
     try {
       await rolesService.deleteRole(role.id);
       await load();
     } catch (e: any) {
-      alert(e?.message || 'Failed to delete role');
+      alert(e?.message || t('roles.errorDelete'));
     }
   };
 
@@ -123,7 +125,7 @@ export default function RolesPage() {
       await rolesService.updateRole(role.id, { is_active: !role.is_active });
       await load();
     } catch (e: any) {
-      alert(e?.message || 'Failed to update role');
+      alert(e?.message || t('roles.errorUpdate'));
     }
   };
 
@@ -148,7 +150,7 @@ export default function RolesPage() {
       setManagingPermsRole(null);
       await load();
     } catch (e: any) {
-      alert(e?.message || 'Failed to save permissions');
+      alert(e?.message || t('roles.errorSavePermissions'));
     } finally {
       setSaving(false);
     }
@@ -181,7 +183,7 @@ export default function RolesPage() {
       const links = await rolesService.listRoleUsers(managingUsersRole.id);
       setRoleUsers(links);
     } catch (e: any) {
-      alert(e?.message || 'Failed to assign user');
+      alert(e?.message || t('roles.errorAssignUser'));
     }
   };
 
@@ -191,7 +193,7 @@ export default function RolesPage() {
       await rolesService.removeUserFromRole(managingUsersRole.id, userId);
       setRoleUsers(prev => prev.filter(l => l.user_id !== userId));
     } catch (e: any) {
-      alert(e?.message || 'Failed to remove user');
+      alert(e?.message || t('roles.errorRemoveUser'));
     }
   };
 
@@ -209,9 +211,9 @@ export default function RolesPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Roles & Permissions</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('roles.title')}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Create custom roles, attach permissions, and assign roles to team members.
+              {t('roles.subtitle')}
             </p>
           </div>
           {tab === 'roles' && (
@@ -219,32 +221,32 @@ export default function RolesPage() {
               onClick={() => setShowCreateRole(true)}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
             >
-              + New Role
+              {t('roles.newRole')}
             </button>
           )}
         </div>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-gray-700">
-          {(['roles', 'permissions'] as Tab[]).map(t => (
+          {(['roles', 'permissions'] as Tab[]).map(tabKey => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition -mb-px ${
-                tab === t
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition ${
+                tab === tabKey
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
             >
-              {t === 'roles' ? 'Roles' : 'Available Permissions'}
+              {tabKey === 'roles' ? t('roles.tabRoles') : t('roles.tabPermissions')}
             </button>
           ))}
         </div>
 
         {loading ? (
-          <div className="text-center py-12 text-gray-400">Loading…</div>
+          <div className="text-center py-12 text-gray-400">{t('roles.loading')}</div>
         ) : error instanceof PermissionDeniedError ? (
-          <PermissionDenied action="manage roles" />
+          <PermissionDenied action={t('roles.permissionDeniedAction')} />
         ) : error ? (
           <div className="text-center py-12 text-red-500">{error.message}</div>
         ) : tab === 'roles' ? (
@@ -252,7 +254,7 @@ export default function RolesPage() {
           <div className="space-y-3">
             {roles.length === 0 && (
               <div className="text-center py-12 text-gray-400">
-                No roles yet. Create one to get started.
+                {t('roles.empty')}
               </div>
             )}
             {roles.map(role => (
@@ -263,22 +265,22 @@ export default function RolesPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-semibold text-gray-900 dark:text-white">{role.name}</span>
-                    {role.is_system && <Badge label="System" color="bg-purple-100 text-purple-800" />}
-                    {!role.is_active && <Badge label="Inactive" color="bg-gray-100 text-gray-600" />}
+                    {role.is_system && <Badge label={t('roles.system')} color="bg-purple-100 text-purple-800" />}
+                    {!role.is_active && <Badge label={t('roles.inactive')} color="bg-gray-100 text-gray-600" />}
                   </div>
                   {role.description && (
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">{role.description}</p>
                   )}
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {role.permissions.length === 0 ? (
-                      <span className="text-xs text-gray-400 italic">No permissions assigned</span>
+                      <span className="text-xs text-gray-400 italic">{t('roles.noPermissionsAssigned')}</span>
                     ) : (
                       role.permissions.slice(0, 4).map(p => (
                         <Badge key={p.id} label={p.name} color="bg-blue-50 text-blue-700" />
                       ))
                     )}
                     {role.permissions.length > 4 && (
-                      <Badge label={`+${role.permissions.length - 4} more`} color="bg-gray-100 text-gray-600" />
+                      <Badge label={t('roles.more', { count: role.permissions.length - 4 })} color="bg-gray-100 text-gray-600" />
                     )}
                   </div>
                 </div>
@@ -288,13 +290,13 @@ export default function RolesPage() {
                     onClick={() => openManagePerms(role)}
                     className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition"
                   >
-                    Permissions
+                    {t('roles.permissions')}
                   </button>
                   <button
                     onClick={() => openManageUsers(role)}
                     className="px-3 py-1.5 text-xs font-medium border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition"
                   >
-                    Members
+                    {t('roles.members')}
                   </button>
                   {!role.is_system && (
                     <>
@@ -306,13 +308,13 @@ export default function RolesPage() {
                             : 'border border-green-300 text-green-700 hover:bg-green-50'
                         }`}
                       >
-                        {role.is_active ? 'Deactivate' : 'Activate'}
+                        {role.is_active ? t('roles.deactivate') : t('roles.activate')}
                       </button>
                       <button
                         onClick={() => handleDeleteRole(role)}
                         className="px-3 py-1.5 text-xs font-medium border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition"
                       >
-                        Delete
+                        {t('roles.delete')}
                       </button>
                     </>
                   )}
@@ -361,24 +363,24 @@ export default function RolesPage() {
 
       {/* Create Role Modal */}
       {showCreateRole && (
-        <Modal title="Create New Role" onClose={() => setShowCreateRole(false)}>
+        <Modal title={t('roles.createModalTitle')} onClose={() => setShowCreateRole(false)}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role Name *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('roles.roleName')}</label>
               <input
                 type="text"
                 value={newRoleName}
                 onChange={e => setNewRoleName(e.target.value)}
-                placeholder="e.g. Trip Manager"
+                placeholder={t('roles.roleNamePlaceholder')}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('roles.description')}</label>
               <textarea
                 value={newRoleDesc}
                 onChange={e => setNewRoleDesc(e.target.value)}
-                placeholder="Optional description"
+                placeholder={t('roles.descriptionPlaceholder')}
                 rows={3}
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white resize-none"
               />
@@ -388,14 +390,14 @@ export default function RolesPage() {
                 onClick={() => setShowCreateRole(false)}
                 className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
-                Cancel
+                {t('team.cancel')}
               </button>
               <button
                 onClick={handleCreateRole}
                 disabled={saving || !newRoleName.trim()}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
               >
-                {saving ? 'Creating…' : 'Create Role'}
+                {saving ? t('roles.creating') : t('roles.createRole')}
               </button>
             </div>
           </div>
@@ -404,7 +406,7 @@ export default function RolesPage() {
 
       {/* Manage Permissions Modal */}
       {managingPermsRole && (
-        <Modal title={`Permissions — ${managingPermsRole.name}`} onClose={() => setManagingPermsRole(null)}>
+        <Modal title={t('roles.permissionsModalTitle', { name: managingPermsRole.name })} onClose={() => setManagingPermsRole(null)}>
           <div className="space-y-5">
             {Object.entries(permGroups).map(([group, perms]) => (
               <div key={group}>
@@ -437,14 +439,14 @@ export default function RolesPage() {
                 onClick={() => setManagingPermsRole(null)}
                 className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
-                Cancel
+                {t('team.cancel')}
               </button>
               <button
                 onClick={handleSavePerms}
                 disabled={saving}
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition"
               >
-                {saving ? 'Saving…' : 'Save Permissions'}
+                {saving ? t('roles.saving') : t('roles.savePermissions')}
               </button>
             </div>
           </div>
@@ -453,13 +455,13 @@ export default function RolesPage() {
 
       {/* Manage Members Modal */}
       {managingUsersRole && (
-        <Modal title={`Members — ${managingUsersRole.name}`} onClose={() => setManagingUsersRole(null)}>
+        <Modal title={t('roles.membersModalTitle', { name: managingUsersRole.name })} onClose={() => setManagingUsersRole(null)}>
           <div className="space-y-5">
             {/* Currently assigned */}
             <div>
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Assigned Members</h4>
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t('roles.assignedMembers')}</h4>
               {roleUsers.length === 0 ? (
-                <p className="text-sm text-gray-400 italic">No members assigned yet.</p>
+                <p className="text-sm text-gray-400 italic">{t('roles.noMembersAssigned')}</p>
               ) : (
                 <div className="space-y-1.5">
                   {roleUsers.map(link => {
@@ -476,7 +478,7 @@ export default function RolesPage() {
                           onClick={() => handleRemoveUser(link.user_id)}
                           className="text-xs text-red-600 hover:text-red-800 font-medium"
                         >
-                          Remove
+                          {t('roles.remove')}
                         </button>
                       </div>
                     );
@@ -488,7 +490,7 @@ export default function RolesPage() {
             {/* Unassigned members */}
             {unassignedMembers.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Add Member</h4>
+                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">{t('roles.addMember')}</h4>
                 <div className="space-y-1.5">
                   {unassignedMembers.map(member => (
                     <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-dashed border-gray-200 dark:border-gray-600">
@@ -502,7 +504,7 @@ export default function RolesPage() {
                         onClick={() => handleAssignUser(member.id)}
                         className="text-xs text-blue-600 hover:text-blue-800 font-medium"
                       >
-                        Assign
+                        {t('roles.assign')}
                       </button>
                     </div>
                   ))}
@@ -515,7 +517,7 @@ export default function RolesPage() {
                 onClick={() => setManagingUsersRole(null)}
                 className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
-                Done
+                {t('roles.done')}
               </button>
             </div>
           </div>

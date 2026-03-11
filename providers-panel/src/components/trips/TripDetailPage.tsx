@@ -34,12 +34,13 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_payment: 'Awaiting Payment',
-  awaiting_provider: 'Awaiting Provider',
-  processing: 'Provider Confirmed',
-  confirmed: 'Confirmed',
-  cancelled: 'Cancelled',
-  completed: 'Completed',
+  pending: 'tripDetail.awaitingPayment',
+  pending_payment: 'tripDetail.awaitingPayment',
+  awaiting_provider: 'tripDetail.awaitingProvider',
+  processing: 'tripDetail.providerConfirmed',
+  confirmed: 'tripDetail.confirmed',
+  cancelled: 'tripDetail.cancelled',
+  completed: 'tripDetail.completed',
 };
 
 function daysSince(dateStr: string): number {
@@ -103,7 +104,7 @@ const TripDetailPage: React.FC = () => {
         tripUpdateService.listForTrip(tripId),
       ]);
       if (tripData.status === 'fulfilled') setTrip(tripData.value);
-      else setError('Failed to load trip details');
+      else setError(t('tripDetail.errorLoad'));
       if (fieldsResp.status === 'fulfilled') setAvailableFields(fieldsResp.value.fields || []);
       if (dests.status === 'fulfilled') setTripDestinations(dests.value);
       if (regs.status === 'fulfilled') setRegistrations(regs.value);
@@ -139,7 +140,7 @@ const TripDetailPage: React.FC = () => {
       } else if (selectedBooking) {
         await tripUpdateService.sendToRegistration(selectedBooking.id, payload);
       }
-      setSendSuccess('Update sent successfully');
+      setSendSuccess(t('tripDetail.updateSent'));
       setUpdateTitle('');
       setUpdateMessage('');
       setUpdateImportant(false);
@@ -152,7 +153,7 @@ const TripDetailPage: React.FC = () => {
         setBookingUpdates(all.filter(u => u.registration_id === selectedBooking.id || u.registration_id === null));
       }
     } catch (err: any) {
-      setSendError(err.message || 'Failed to send update');
+      setSendError(err.message || t('tripDetail.updateSendFailed'));
     } finally {
       setSending(false);
     }
@@ -189,14 +190,14 @@ const TripDetailPage: React.FC = () => {
 
   const handleStartProcessing = async (reg: RegistrationUser) => {
     if (!tripId || typeof tripId !== 'string') return;
-    if (!confirm(`Mark booking ${reg.booking_reference} as Processing Order? This means you have started booking flights/hotels for this participant.`)) return;
+    if (!confirm(t('tripDetail.markProcessingConfirm', { reference: reg.booking_reference }))) return;
     setProcessingAction(reg.id);
     try {
       await tripService.startProcessing(tripId, reg.id);
       setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'processing' } : r));
       setSelectedBooking(prev => prev?.id === reg.id ? { ...prev, status: 'processing' } : prev);
     } catch (err: any) {
-      alert(err.message || 'Failed to update status');
+      alert(err.message || t('tripDetail.updateStatusFailed'));
     } finally {
       setProcessingAction(null);
     }
@@ -204,14 +205,14 @@ const TripDetailPage: React.FC = () => {
 
   const handleConfirmProcessing = async (reg: RegistrationUser) => {
     if (!tripId || typeof tripId !== 'string') return;
-    if (!confirm(`Mark booking ${reg.booking_reference} as Confirmed? This means all arrangements are complete for this participant.`)) return;
+    if (!confirm(t('tripDetail.markConfirmedConfirm', { reference: reg.booking_reference }))) return;
     setProcessingAction(reg.id);
     try {
       await tripService.confirmProcessing(tripId, reg.id);
       setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'confirmed' } : r));
       setSelectedBooking(prev => prev?.id === reg.id ? { ...prev, status: 'confirmed' } : prev);
     } catch (err: any) {
-      alert(err.message || 'Failed to update status');
+      alert(err.message || t('tripDetail.updateStatusFailed'));
     } finally {
       setProcessingAction(null);
     }
@@ -232,10 +233,10 @@ const TripDetailPage: React.FC = () => {
       const pct = result.refund_percentage;
       const amt = result.refund_amount;
       alert(pct > 0
-        ? `Booking cancelled. Refund: ${pct}% (${Number(amt).toLocaleString()} SAR)`
-        : 'Booking cancelled. No refund will be issued.');
+        ? t('tripDetail.bookingCancelledWithRefund', { percent: pct, amount: Number(amt).toLocaleString() })
+        : t('tripDetail.bookingCancelledNoRefund'));
     } catch (err: any) {
-      alert(err.message || 'Failed to cancel booking');
+      alert(err.message || t('tripDetail.bookingCancelFailed'));
     } finally {
       setCancellingBooking(null);
     }
@@ -263,10 +264,10 @@ const TripDetailPage: React.FC = () => {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{trip.name_en || trip.name_ar}</h1>
           {trip.name_ar && trip.name_en && <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5" dir="rtl">{trip.name_ar}</p>}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{trip.is_active ? 'Active' : 'Inactive'}</span>
-            {trip.is_international && <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">International</span>}
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{trip.is_active ? t('tripDetail.active') : t('tripDetail.inactive')}</span>
+            {trip.is_international && <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">{t('tripDetail.international')}</span>}
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${trip.is_packaged_trip ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-              {trip.is_packaged_trip ? 'Packaged' : 'Simple'}
+              {trip.is_packaged_trip ? t('tripDetail.packaged') : t('tripDetail.simple')}
             </span>
             {(trip as any).trip_type && (
               <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
@@ -274,7 +275,7 @@ const TripDetailPage: React.FC = () => {
                   ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
                   : 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400'
               }`}>
-                {(trip as any).trip_type === 'guided' ? '🧭 Guided Trip' : '🎁 Tourism Package'}
+                {(trip as any).trip_type === 'guided' ? t('tripDetail.guidedTrip') : t('tripDetail.tourismPackage')}
               </span>
             )}
           </div>
@@ -288,12 +289,12 @@ const TripDetailPage: React.FC = () => {
             {shareCopied ? (
               <>
                 <svg className="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                <span className="text-emerald-600 dark:text-emerald-400">{t('action.linkCopied', 'Link Copied!')}</span>
+                <span className="text-emerald-600 dark:text-emerald-400">{t('action.linkCopied')}</span>
               </>
             ) : (
               <>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                {t('action.shareTrip', 'Share')}
+                {t('action.shareTrip')}
               </>
             )}
           </button>
@@ -325,10 +326,10 @@ const TripDetailPage: React.FC = () => {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Bookings', value: registrations.length, color: 'text-slate-900 dark:text-white' },
-          { label: 'Confirmed', value: confirmedCount, color: 'text-emerald-600 dark:text-emerald-400' },
-          { label: 'Pending Payment', value: pendingCount, color: 'text-amber-600 dark:text-amber-400' },
-          { label: 'Available Spots', value: Math.max(0, availableSpots), color: availableSpots <= 5 ? 'text-red-600 dark:text-red-400' : 'text-sky-600 dark:text-sky-400' },
+          { label: t('tripDetail.totalBookings'), value: registrations.length, color: 'text-slate-900 dark:text-white' },
+          { label: t('tripDetail.confirmed'), value: confirmedCount, color: 'text-emerald-600 dark:text-emerald-400' },
+          { label: t('tripDetail.pendingPayment'), value: pendingCount, color: 'text-amber-600 dark:text-amber-400' },
+          { label: t('tripDetail.availableSpots'), value: Math.max(0, availableSpots), color: availableSpots <= 5 ? 'text-red-600 dark:text-red-400' : 'text-sky-600 dark:text-sky-400' },
         ].map(s => (
           <div key={s.label} className={`${cardCls} p-4`}>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{s.label}</p>
@@ -339,13 +340,13 @@ const TripDetailPage: React.FC = () => {
 
       {/* Trip Info */}
       <div className={`${cardCls} p-6`}>
-        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Trip Information</h2>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t('tripDetail.tripInformation')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
           {[
-            { label: 'Start Date', value: `${formatInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')} (${tzLabel(trip.timezone ?? 'Asia/Riyadh')})` },
-            { label: 'End Date', value: formatInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh') },
-            { label: 'Registration Deadline', value: trip.registration_deadline ? formatInTripTz(trip.registration_deadline, trip.timezone ?? 'Asia/Riyadh') : '—' },
-            { label: 'Max Participants', value: String(trip.max_participants) },
+            { label: t('tripDetail.startDate'), value: `${formatInTripTz(trip.start_date, trip.timezone ?? 'Asia/Riyadh')} (${tzLabel(trip.timezone ?? 'Asia/Riyadh')})` },
+            { label: t('tripDetail.endDate'), value: formatInTripTz(trip.end_date, trip.timezone ?? 'Asia/Riyadh') },
+            { label: t('tripDetail.registrationDeadline'), value: trip.registration_deadline ? formatInTripTz(trip.registration_deadline, trip.timezone ?? 'Asia/Riyadh') : '—' },
+            { label: t('tripDetail.maxParticipants'), value: String(trip.max_participants) },
           ].map(({ label, value }) => (
             <div key={label}>
               <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
@@ -354,19 +355,19 @@ const TripDetailPage: React.FC = () => {
           ))}
           {!trip.is_packaged_trip && trip.price != null && (
             <div>
-              <span className="text-xs text-slate-400 dark:text-slate-500">Price</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{t('tripDetail.price')}</span>
               <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{trip.price} SAR</p>
             </div>
           )}
           {!trip.is_packaged_trip && (
             <div>
-              <span className="text-xs text-slate-400 dark:text-slate-500">Refundable</span>
-              <p className={`font-medium mt-0.5 ${trip.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{trip.is_refundable ? 'Yes' : 'No'}</p>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{t('tripDetail.refundable')}</span>
+              <p className={`font-medium mt-0.5 ${trip.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{trip.is_refundable ? t('tripDetail.yes') : t('tripDetail.no')}</p>
             </div>
           )}
           {(trip as any).starting_city && (
             <div>
-              <span className="text-xs text-slate-400 dark:text-slate-500">Starting City</span>
+              <span className="text-xs text-slate-400 dark:text-slate-500">{t('tripDetail.startingCity')}</span>
               <p className="font-medium text-slate-900 dark:text-white mt-0.5">{(trip as any).starting_city.name_en}</p>
             </div>
           )}
@@ -379,7 +380,7 @@ const TripDetailPage: React.FC = () => {
         )}
         {trip.has_meeting_place && (
           <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 text-sm">
-            <p className="font-medium text-slate-900 dark:text-white mb-2">Meeting Place</p>
+            <p className="font-medium text-slate-900 dark:text-white mb-2">{t('tripDetail.meetingPlace')}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
               {trip.meeting_place_name && (
                 <div>
@@ -407,11 +408,11 @@ const TripDetailPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {tripDestinations.length > 0 && (
             <div className={`${cardCls} p-5`}>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Destinations</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{t('tripDetail.destinations')}</h3>
               <div className="flex flex-wrap gap-2">
                 {tripDestinations.map(td => (
                   <span key={td.id} className="px-3 py-1 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800/40 rounded-full text-sm text-sky-700 dark:text-sky-400">
-                    {td.destination?.name_en || 'Unknown'}{td.place ? ` → ${td.place.name_en}` : ''}
+                    {td.destination?.name_en || t('tripDetail.unknown')}{td.place ? ` → ${td.place.name_en}` : ''}
                   </span>
                 ))}
               </div>
@@ -419,7 +420,7 @@ const TripDetailPage: React.FC = () => {
           )}
           {!trip.is_packaged_trip && trip.amenities && trip.amenities.length > 0 && (
             <div className={`${cardCls} p-5`}>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Amenities</h3>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{t('tripDetail.amenities')}</h3>
               <div className="flex flex-wrap gap-2">
                 {trip.amenities.map(a => (
                   <span key={a} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-sm text-emerald-700 dark:text-emerald-400">✓ {t(`amenity.${a}`, a)}</span>
@@ -433,7 +434,7 @@ const TripDetailPage: React.FC = () => {
       {/* Images */}
       {trip.images && trip.images.length > 0 && (
         <div className={`${cardCls} p-5`}>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Images</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{t('tripDetail.images')}</h3>
           <div className="grid grid-cols-3 md:grid-cols-5 gap-2">
             {trip.images.map((url, i) => (
               <img key={i} src={url} alt="" className="w-full h-24 object-cover rounded-xl cursor-pointer hover:opacity-80 transition-opacity" onClick={() => window.open(url, '_blank')} />
@@ -445,7 +446,7 @@ const TripDetailPage: React.FC = () => {
       {/* Extra Fees */}
       {trip.extra_fees && trip.extra_fees.length > 0 && (
         <div className={`${cardCls} p-5`}>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Additional Fees ({trip.extra_fees.length})</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{t('tripDetail.additionalFees', { count: trip.extra_fees.length })}</h3>
           <div className="space-y-2">
             {trip.extra_fees.map(fee => (
               <div key={fee.id} className="flex items-start justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3 text-sm">
@@ -459,7 +460,7 @@ const TripDetailPage: React.FC = () => {
                 <div className="flex-shrink-0 flex items-center gap-2 ml-4">
                   <span className="font-bold text-slate-900 dark:text-white">{fee.amount} {fee.currency}</span>
                   {fee.is_mandatory && (
-                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">Mandatory</span>
+                    <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full text-xs font-medium">{t('tripDetail.mandatory')}</span>
                   )}
                 </div>
               </div>
@@ -473,12 +474,12 @@ const TripDetailPage: React.FC = () => {
         <div className={cardCls}>
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
             <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-              Required Fields ({(trip.simple_trip_required_fields ?? []).length})
+              {t('tripDetail.requiredFields', { count: (trip.simple_trip_required_fields ?? []).length })}
             </h2>
           </div>
           <div className="p-6">
             {(trip.simple_trip_required_fields ?? []).length === 0 ? (
-              <p className="text-sm text-slate-400 dark:text-slate-500">No required fields configured.</p>
+              <p className="text-sm text-slate-400 dark:text-slate-500">{t('tripDetail.noRequiredFields')}</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {(trip.simple_trip_required_fields ?? []).map((fieldType) => {
@@ -509,12 +510,12 @@ const TripDetailPage: React.FC = () => {
       {trip.is_packaged_trip && (
         <div className={cardCls}>
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Booking Tiers ({trip.packages.length})</h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('tripDetail.bookingTiers', { count: trip.packages.length })}</h2>
           </div>
           <div className="p-6">
             {trip.packages.length === 0 ? (
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400 text-sm">
-                No tiers yet. Add at least 2 tiers for a packaged trip.
+                {t('tripDetail.noTiers')}
               </div>
             ) : (
               <div className="space-y-3">
@@ -526,15 +527,15 @@ const TripDetailPage: React.FC = () => {
                         {pkg.name_ar && pkg.name_en && <p className="text-xs text-slate-400 dark:text-slate-500" dir="rtl">{pkg.name_ar}</p>}
                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pkg.description_en || pkg.description_ar}</p>
                         <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{pkg.price} {pkg.currency || 'SAR'}</p>
-                        {pkg.max_participants != null && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Max: {pkg.max_participants} participants</p>}
-                        {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{pkg.is_refundable ? '✓ Refundable' : '✗ Non-refundable'}</span></p>}
+                        {pkg.max_participants != null && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{t('tripDetail.maxParticipantsValue', { count: pkg.max_participants })}</p>}
+                        {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{pkg.is_refundable ? t('tripDetail.refundableShort') : t('tripDetail.nonRefundableShort')}</span></p>}
                         {pkg.amenities && pkg.amenities.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
                             {pkg.amenities.map(a => <span key={a} className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40 rounded-full text-xs text-emerald-700 dark:text-emerald-400">{t(`amenity.${a}`, a)}</span>)}
                           </div>
                         )}
                       </div>
-                      <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${pkg.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{pkg.is_active ? 'Active' : 'Inactive'}</span>
+                      <span className={`flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold ${pkg.is_active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>{pkg.is_active ? t('tripDetail.active') : t('tripDetail.inactive')}</span>
                     </div>
                     {pkg.required_fields?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
@@ -554,10 +555,10 @@ const TripDetailPage: React.FC = () => {
       {/* Broadcast Updates */}
       <div className={cardCls}>
         <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Broadcast Updates ({tripUpdates.filter(u => !u.registration_id).length})</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('tripDetail.broadcastUpdates', { count: tripUpdates.filter(u => !u.registration_id).length })}</h2>
           <button onClick={() => { setSendTarget('all'); setShowSendForm(v => !v); setSendError(null); setSendSuccess(null); }}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${showSendForm && sendTarget === 'all' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'bg-sky-500 hover:bg-sky-600 text-white'}`}>
-            {showSendForm && sendTarget === 'all' ? 'Cancel' : 'Send to All'}
+            {showSendForm && sendTarget === 'all' ? t('tripDetail.cancel') : t('tripDetail.sendToAll')}
           </button>
         </div>
         <div className="p-6">
@@ -565,12 +566,12 @@ const TripDetailPage: React.FC = () => {
             <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 mb-4 space-y-3">
               {sendError && <p className="text-red-600 dark:text-red-400 text-sm">{sendError}</p>}
               {sendSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-sm">{sendSuccess}</p>}
-              <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
-              <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+              <input type="text" placeholder={t('tripDetail.title')} value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
+              <textarea placeholder={t('tripDetail.message')} value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
               <div className="flex items-center gap-3">
                 <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-sky-400 transition-colors text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-0">
                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                  <span className="truncate">{updateFile ? updateFile.name : 'Attach file (image/PDF)'}</span>
+                  <span className="truncate">{updateFile ? updateFile.name : t('tripDetail.attachFile')}</span>
                   <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => setUpdateFile(e.target.files?.[0] ?? null)} />
                 </label>
                 {updateFile && <button onClick={() => setUpdateFile(null)} className="text-xs text-red-500 flex-shrink-0">✕</button>}
@@ -578,17 +579,17 @@ const TripDetailPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm cursor-pointer font-medium text-red-600 dark:text-red-400">
                   <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} className="accent-red-500" />
-                  Mark as Important
+                  {t('tripDetail.markImportant')}
                 </label>
                 <button onClick={handleSendUpdate} disabled={sending || !updateTitle.trim() || !updateMessage.trim()}
                   className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-sm font-medium transition-colors">
-                  {sending ? 'Sending…' : 'Send'}
+                  {sending ? t('tripDetail.sending') : t('tripDetail.send')}
                 </button>
               </div>
             </div>
           )}
           {tripUpdates.filter(u => !u.registration_id).length === 0 ? (
-            <p className="text-slate-400 dark:text-slate-500 text-sm">No broadcast updates sent yet.</p>
+            <p className="text-slate-400 dark:text-slate-500 text-sm">{t('tripDetail.noBroadcastUpdates')}</p>
           ) : (
             <div className="space-y-3">
               {tripUpdates.filter(u => !u.registration_id).map(u => (
@@ -596,7 +597,7 @@ const TripDetailPage: React.FC = () => {
                   <div className="flex justify-between items-start mb-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm text-slate-900 dark:text-white">{u.title}</span>
-                      {u.is_important && <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-medium">Important</span>}
+                      {u.is_important && <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs font-medium">{t('tripDetail.important')}</span>}
                     </div>
                     <span className="text-xs text-slate-400 dark:text-slate-500">{new Date(u.created_at).toLocaleString()}</span>
                   </div>
@@ -612,13 +613,13 @@ const TripDetailPage: React.FC = () => {
                           <a key={i} href={att.url} target="_blank" rel="noreferrer"
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            {att.filename || 'Attachment'}
+                            {att.filename || t('tripDetail.attachment')}
                           </a>
                         )
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">Read: {u.read_count ?? 0} / {u.total_recipients ?? '?'}</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">{t('tripDetail.readCount', { read: u.read_count ?? 0, total: u.total_recipients ?? '?' })}</p>
                 </div>
               ))}
             </div>
@@ -629,30 +630,30 @@ const TripDetailPage: React.FC = () => {
       {/* Bookings Table */}
       <div className={cardCls}>
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Bookings ({registrations.length})</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('tripDetail.bookings', { count: registrations.length })}</h2>
           {trip.trip_type === 'self_arranged' && (() => {
             const urgentCount = registrations.filter(r => r.status === 'awaiting_provider').length;
             return urgentCount > 0 ? (
               <span className="flex items-center gap-1.5 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-semibold rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                {urgentCount} awaiting your action
+                {t('tripDetail.awaitingYourAction', { count: urgentCount })}
               </span>
             ) : null;
           })()}
         </div>
         {registrations.length === 0 ? (
-          <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">No bookings yet.</p>
+          <p className="p-8 text-center text-slate-400 dark:text-slate-500 text-sm">{t('tripDetail.noBookings')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Ref</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Name</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">Email</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Participants</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">Amount</th>
-                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('tripDetail.ref')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('tripDetail.name')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">{t('tripDetail.email')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">{t('tripDetail.participants')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">{t('tripDetail.amount')}</th>
+                  <th className="text-start py-3 px-4 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{t('tripDetail.status')}</th>
                   <th className="py-3 px-4" />
                 </tr>
               </thead>
@@ -667,11 +668,11 @@ const TripDetailPage: React.FC = () => {
                     <td className="py-3 px-4">
                       <div className="flex flex-col gap-1">
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold w-fit ${STATUS_COLORS[reg.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                          {STATUS_LABELS[reg.status] || reg.status.replace(/_/g, ' ')}
+                          {STATUS_LABELS[reg.status] ? t(STATUS_LABELS[reg.status]) : reg.status}
                         </span>
                         {reg.status === 'awaiting_provider' && (
                           <span className="text-xs text-orange-600 dark:text-orange-400">
-                            {daysSince(reg.registration_date)}d waiting
+                            {t('tripDetail.waitingDays', { count: daysSince(reg.registration_date) })}
                           </span>
                         )}
                       </div>
@@ -684,7 +685,7 @@ const TripDetailPage: React.FC = () => {
                             disabled={processingAction === reg.id}
                             className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
                           >
-                            {processingAction === reg.id ? '…' : 'Start Processing'}
+                            {processingAction === reg.id ? '…' : t('tripDetail.startProcessing')}
                           </button>
                         )}
                         {trip.trip_type === 'self_arranged' && reg.status === 'processing' && (
@@ -693,11 +694,11 @@ const TripDetailPage: React.FC = () => {
                             disabled={processingAction === reg.id}
                             className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-xs font-medium transition-colors disabled:opacity-50"
                           >
-                            {processingAction === reg.id ? '…' : 'Mark Confirmed'}
+                            {processingAction === reg.id ? '…' : t('tripDetail.markConfirmed')}
                           </button>
                         )}
                         <button onClick={() => openBooking(reg)} className="px-3 py-1.5 bg-sky-50 dark:bg-sky-900/20 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-800/40 rounded-xl hover:bg-sky-100 dark:hover:bg-sky-900/40 text-xs font-medium transition-colors">
-                          View
+                          {t('tripDetail.view')}
                         </button>
                       </div>
                     </td>
@@ -716,7 +717,7 @@ const TripDetailPage: React.FC = () => {
           <div className="w-full max-w-xl bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl flex flex-col border-l border-slate-200 dark:border-slate-800">
             <div className="flex justify-between items-center px-5 py-4 border-b border-slate-200 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10">
               <div>
-                <h3 className="font-bold text-base text-slate-900 dark:text-white">Booking Detail</h3>
+                <h3 className="font-bold text-base text-slate-900 dark:text-white">{t('tripDetail.bookingDetail')}</h3>
                 <p className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-0.5">{selectedBooking.booking_reference}</p>
               </div>
               <button onClick={() => { setSelectedBooking(null); setShowSendForm(false); setShowCancelForm(false); setCancelReason(''); }}
@@ -728,14 +729,14 @@ const TripDetailPage: React.FC = () => {
             <div className="p-5 space-y-5 flex-1">
               {/* Booker info */}
               <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4">
-                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Booker Information</h4>
+                <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">{t('tripDetail.bookerInformation')}</h4>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   {[
-                    { label: 'Name', value: selectedBooking.user_name || '—' },
-                    { label: 'Email', value: selectedBooking.user_email || '—' },
-                    { label: 'Phone', value: selectedBooking.user_phone || '—' },
-                    { label: 'Participants', value: String(selectedBooking.total_participants) },
-                    { label: 'Amount', value: `${selectedBooking.total_amount} SAR` },
+                    { label: t('tripDetail.name'), value: selectedBooking.user_name || '—' },
+                    { label: t('tripDetail.email'), value: selectedBooking.user_email || '—' },
+                    { label: t('tripDetail.phone'), value: selectedBooking.user_phone || '—' },
+                    { label: t('tripDetail.participants'), value: String(selectedBooking.total_participants) },
+                    { label: t('tripDetail.amount'), value: `${selectedBooking.total_amount} SAR` },
                   ].map(({ label, value }) => (
                     <div key={label}>
                       <span className="text-xs text-slate-400 dark:text-slate-500 block">{label}</span>
@@ -743,13 +744,13 @@ const TripDetailPage: React.FC = () => {
                     </div>
                   ))}
                   <div>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 block">Status</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 block">{t('tripDetail.status')}</span>
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[selectedBooking.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'}`}>
-                      {STATUS_LABELS[selectedBooking.status] || selectedBooking.status.replace(/_/g, ' ')}
+                      {STATUS_LABELS[selectedBooking.status] ? t(STATUS_LABELS[selectedBooking.status]) : selectedBooking.status}
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <span className="text-xs text-slate-400 dark:text-slate-500 block">Booked On</span>
+                    <span className="text-xs text-slate-400 dark:text-slate-500 block">{t('tripDetail.bookedOn')}</span>
                     <span className="font-medium text-slate-900 dark:text-white">{new Date(selectedBooking.registration_date).toLocaleString()}</span>
                   </div>
                 </div>
@@ -765,12 +766,12 @@ const TripDetailPage: React.FC = () => {
                   <h4 className={`font-semibold text-sm mb-2 ${
                     selectedBooking.status === 'awaiting_provider' ? 'text-orange-800 dark:text-orange-300' : 'text-blue-800 dark:text-blue-300'
                   }`}>
-                    {selectedBooking.status === 'awaiting_provider' ? '⏳ Action Required' : '🔄 Order In Progress'}
+                    {selectedBooking.status === 'awaiting_provider' ? t('tripDetail.actionRequired') : t('tripDetail.orderInProgress')}
                   </h4>
                   <p className="text-xs text-slate-600 dark:text-slate-400 mb-3">
                     {selectedBooking.status === 'awaiting_provider'
-                      ? `This participant paid ${daysSince(selectedBooking.registration_date)} day(s) ago. Click below once you have started booking their arrangements.`
-                      : 'You have started processing this booking. Click below once all arrangements (flights, hotels, etc.) are fully confirmed.'}
+                      ? t('tripDetail.awaitingProviderHelp', { days: daysSince(selectedBooking.registration_date) })
+                      : t('tripDetail.processingHelp')}
                   </p>
                   {selectedBooking.status === 'awaiting_provider' && (
                     <button
@@ -778,7 +779,7 @@ const TripDetailPage: React.FC = () => {
                       disabled={processingAction === selectedBooking.id}
                       className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
                     >
-                      {processingAction === selectedBooking.id ? 'Updating…' : 'Start Processing Order'}
+                      {processingAction === selectedBooking.id ? t('tripDetail.updating') : t('tripDetail.startProcessingOrder')}
                     </button>
                   )}
                   {selectedBooking.status === 'processing' && (
@@ -787,7 +788,7 @@ const TripDetailPage: React.FC = () => {
                       disabled={processingAction === selectedBooking.id}
                       className="w-full py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-semibold transition-colors disabled:opacity-50"
                     >
-                      {processingAction === selectedBooking.id ? 'Updating…' : 'Mark All Arrangements Confirmed'}
+                      {processingAction === selectedBooking.id ? t('tripDetail.updating') : t('tripDetail.markAllArrangementsConfirmed')}
                     </button>
                   )}
                 </div>
@@ -797,19 +798,19 @@ const TripDetailPage: React.FC = () => {
               {['awaiting_provider', 'processing', 'confirmed'].includes(selectedBooking.status) && (
                 <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-sm text-red-700 dark:text-red-400">Cancel Booking</h4>
+                    <h4 className="font-semibold text-sm text-red-700 dark:text-red-400">{t('tripDetail.cancelBooking')}</h4>
                     <button
                       onClick={() => { setShowCancelForm(v => !v); setCancelReason(''); }}
                       className="text-xs text-red-600 dark:text-red-400 hover:underline"
                     >
-                      {showCancelForm ? 'Dismiss' : 'Cancel this booking'}
+                      {showCancelForm ? t('tripDetail.dismiss') : t('tripDetail.cancelThisBooking')}
                     </button>
                   </div>
                   {showCancelForm && (
                     <div className="space-y-2 mt-2">
-                      <p className="text-xs text-slate-500 dark:text-slate-400">The refund will be calculated automatically based on the cancellation policy.</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{t('tripDetail.refundCalculated')}</p>
                       <textarea
-                        placeholder="Reason for cancellation (optional)"
+                        placeholder={t('tripDetail.cancellationReasonOptional')}
                         value={cancelReason}
                         onChange={e => setCancelReason(e.target.value)}
                         rows={2}
@@ -820,7 +821,7 @@ const TripDetailPage: React.FC = () => {
                         disabled={cancellingBooking === selectedBooking.id}
                         className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
                       >
-                        {cancellingBooking === selectedBooking.id ? 'Cancelling…' : 'Confirm Cancellation'}
+                        {cancellingBooking === selectedBooking.id ? t('tripDetail.cancelling') : t('tripDetail.confirmCancellation')}
                       </button>
                     </div>
                   )}
@@ -830,14 +831,14 @@ const TripDetailPage: React.FC = () => {
               {/* Participants */}
               {selectedBooking.participants?.length > 0 && (
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">Participants ({selectedBooking.participants.length})</h4>
+                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white mb-3">{t('tripDetail.participantsCount', { count: selectedBooking.participants.length })}</h4>
                   <div className="space-y-2">
                     {selectedBooking.participants.map((p: any, i: number) => {
                       const pkg = trip.packages.find((pk: TripPackage) => pk.id === p.package_id);
                       return (
                         <div key={p.id || i} className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 text-sm">
                           <div className="flex justify-between items-start mb-2">
-                            <p className="font-semibold text-slate-900 dark:text-white">{p.name || `Participant ${i + 1}`}</p>
+                            <p className="font-semibold text-slate-900 dark:text-white">{p.name || t('tripDetail.participantNumber', { count: i + 1 })}</p>
                             {pkg && (
                               <span className="px-2 py-0.5 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800/40 rounded-full text-xs text-sky-700 dark:text-sky-400 font-medium">
                                 {pkg.name_en || pkg.name_ar}
@@ -847,12 +848,12 @@ const TripDetailPage: React.FC = () => {
                           <div className="grid grid-cols-2 gap-1 text-xs text-slate-500 dark:text-slate-400">
                             {p.email && <span>{p.email}</span>}
                             {p.phone && <span>{p.phone}</span>}
-                            {p.date_of_birth && <span>DOB: {p.date_of_birth}</span>}
-                            {p.gender && <span>Gender: {p.gender}</span>}
-                            {p.id_iqama_number && <span>ID: {p.id_iqama_number}</span>}
-                            {p.passport_number && <span>Passport: {p.passport_number}</span>}
-                            {p.nationality && <span>Nationality: {p.nationality}</span>}
-                            {p.medical_conditions && <span className="col-span-2">Medical: {p.medical_conditions}</span>}
+                            {p.date_of_birth && <span>{t('tripDetail.dob', { value: p.date_of_birth })}</span>}
+                            {p.gender && <span>{t('tripDetail.gender', { value: p.gender })}</span>}
+                            {p.id_iqama_number && <span>{t('tripDetail.idNumber', { value: p.id_iqama_number })}</span>}
+                            {p.passport_number && <span>{t('tripDetail.passport', { value: p.passport_number })}</span>}
+                            {p.nationality && <span>{t('tripDetail.nationality', { value: p.nationality })}</span>}
+                            {p.medical_conditions && <span className="col-span-2">{t('tripDetail.medical', { value: p.medical_conditions })}</span>}
                           </div>
                         </div>
                       );
@@ -864,12 +865,12 @@ const TripDetailPage: React.FC = () => {
               {/* Updates for this booking */}
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white">Updates for this Booking</h4>
+                  <h4 className="font-semibold text-sm text-slate-900 dark:text-white">{t('tripDetail.updatesForBooking')}</h4>
                   <button
                     onClick={() => { setSendTarget('booking'); setShowSendForm(v => !v); setSendError(null); setSendSuccess(null); }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${showSendForm && sendTarget === 'booking' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'bg-sky-500 hover:bg-sky-600 text-white'}`}
                   >
-                    {showSendForm && sendTarget === 'booking' ? 'Cancel' : 'Send Update'}
+                    {showSendForm && sendTarget === 'booking' ? t('tripDetail.cancel') : t('tripDetail.sendUpdate')}
                   </button>
                 </div>
 
@@ -877,12 +878,12 @@ const TripDetailPage: React.FC = () => {
                   <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 mb-3 space-y-2">
                     {sendError && <p className="text-red-600 dark:text-red-400 text-xs">{sendError}</p>}
                     {sendSuccess && <p className="text-emerald-600 dark:text-emerald-400 text-xs">{sendSuccess}</p>}
-                    <input type="text" placeholder="Title" value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
-                    <textarea placeholder="Message" value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
+                    <input type="text" placeholder={t('tripDetail.title')} value={updateTitle} onChange={e => setUpdateTitle(e.target.value)} className={inputCls} />
+                    <textarea placeholder={t('tripDetail.message')} value={updateMessage} onChange={e => setUpdateMessage(e.target.value)} rows={3} className={`${inputCls} resize-none`} />
                     <div className="flex items-center gap-2">
                       <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-sky-400 transition-colors text-xs text-slate-500 dark:text-slate-400 flex-1 min-w-0">
                         <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                        <span className="truncate">{updateFile ? updateFile.name : 'Attach'}</span>
+                        <span className="truncate">{updateFile ? updateFile.name : t('tripDetail.attach')}</span>
                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={e => setUpdateFile(e.target.files?.[0] ?? null)} />
                       </label>
                       {updateFile && <button onClick={() => setUpdateFile(null)} className="text-xs text-red-500">✕</button>}
@@ -890,11 +891,11 @@ const TripDetailPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <label className="flex items-center gap-2 text-xs cursor-pointer font-medium text-red-600 dark:text-red-400">
                         <input type="checkbox" checked={updateImportant} onChange={e => setUpdateImportant(e.target.checked)} className="accent-red-500" />
-                        Important
+                        {t('tripDetail.important')}
                       </label>
                       <button onClick={handleSendUpdate} disabled={sending || !updateTitle.trim() || !updateMessage.trim()}
                         className="px-3 py-1.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-xs font-medium transition-colors">
-                        {sending ? 'Sending…' : 'Send'}
+                        {sending ? t('tripDetail.sending') : t('tripDetail.send')}
                       </button>
                     </div>
                   </div>
@@ -905,7 +906,7 @@ const TripDetailPage: React.FC = () => {
                     <div className="animate-spin w-5 h-5 rounded-full border-2 border-sky-500 border-t-transparent" />
                   </div>
                 ) : bookingUpdates.length === 0 ? (
-                  <p className="text-slate-400 dark:text-slate-500 text-xs">No updates for this booking.</p>
+                  <p className="text-slate-400 dark:text-slate-500 text-xs">{t('tripDetail.noBookingUpdates')}</p>
                 ) : (
                   <div className="space-y-2">
                     {bookingUpdates.map(u => (
@@ -913,10 +914,10 @@ const TripDetailPage: React.FC = () => {
                         <div className="flex justify-between items-start mb-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="font-medium text-xs text-slate-900 dark:text-white">{u.title}</span>
-                            {u.is_important && <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs">Important</span>}
+                            {u.is_important && <span className="px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-xs">{t('tripDetail.important')}</span>}
                             {u.registration_id
-                              ? <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs">Targeted</span>
-                              : <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full text-xs">Broadcast</span>}
+                              ? <span className="px-1.5 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs">{t('tripDetail.verifyTargeted')}</span>
+                              : <span className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full text-xs">{t('tripDetail.broadcast')}</span>}
                           </div>
                           <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">{new Date(u.created_at).toLocaleString()}</span>
                         </div>
@@ -932,7 +933,7 @@ const TripDetailPage: React.FC = () => {
                                 <a key={i} href={att.url} target="_blank" rel="noreferrer"
                                   className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs text-sky-600 dark:text-sky-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                   <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                                  <span className="truncate max-w-[140px]">{att.filename || 'Attachment'}</span>
+                                  <span className="truncate max-w-[140px]">{att.filename || t('tripDetail.attachment')}</span>
                                 </a>
                               )
                             ))}

@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: ${INSTALL_DEV:-false}
+    env_file:
+      - .env
+    ports:
+      - "5000:8000"
+    restart: unless-stopped
+
+  taskiq-worker:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: ${INSTALL_DEV:-false}
+    env_file:
+      - .env
+    restart: unless-stopped
+    command: ["/bin/bash", "/app/taskiq-worker-start.sh"]
+
+  taskiq-scheduler:
+    build:
+      context: .
+      args:
+        INSTALL_DEV: ${INSTALL_DEV:-false}
+    env_file:
+      - .env
+    restart: unless-stopped
+    command: ["/bin/bash", "/app/taskiq-scheduler-start.sh"]

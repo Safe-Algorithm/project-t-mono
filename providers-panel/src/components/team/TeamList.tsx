@@ -1,6 +1,7 @@
 import React from 'react';
 import { User } from '@/types/user';
 import { Role } from '@/services/rolesService';
+import { useTranslation } from 'react-i18next';
 
 interface TeamListProps {
   members: User[];
@@ -20,6 +21,7 @@ const AVATAR_COLORS = [
 ];
 
 const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUpdateRole, isUpdating, memberRoles = {} }) => {
+  const { t } = useTranslation();
   if (members.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -28,8 +30,8 @@ const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUp
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
         </div>
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No team members yet</p>
-        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">Invite someone to get started</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">{t('team.noMembers')}</p>
+        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">{t('team.noMembersHint')}</p>
       </div>
     );
   }
@@ -53,12 +55,12 @@ const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUp
                 <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{member.name || '—'}</p>
                 {isPending && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
-                    Pending Invitation
+                    {t('team.pendingInvitation')}
                   </span>
                 )}
                 {!isPending && member.role === 'super_user' && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400">
-                    Super User
+                    {t('team.superUser')}
                   </span>
                 )}
               </div>
@@ -86,8 +88,8 @@ const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUp
                   disabled={isUpdating === member.id}
                   className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-sky-500 disabled:opacity-60 transition"
                 >
-                  <option value="normal">Normal</option>
-                  <option value="super_user">Super User</option>
+                  <option value="normal">{t('team.normal')}</option>
+                  <option value="super_user">{t('team.superUser')}</option>
                 </select>
               )}
 
@@ -99,14 +101,14 @@ const TeamList: React.FC<TeamListProps> = ({ members, onDelete, isDeleting, onUp
                 {isDeleting === member.id ? (
                   <>
                     <div className="w-3 h-3 rounded-full border-2 border-red-400 border-t-transparent animate-spin" />
-                    {isPending ? 'Canceling...' : 'Removing...'}
+                    {isPending ? t('team.canceling') : t('team.removing')}
                   </>
                 ) : (
                   <>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
-                    {isPending ? 'Cancel' : 'Remove'}
+                    {isPending ? t('team.cancel') : t('roles.remove')}
                   </>
                 )}
               </button>

@@ -1,6 +1,7 @@
 import { useAuth } from '@/context/UserContext';
 import { useRouter } from 'next/router';
 import { ReactNode, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -9,6 +10,7 @@ interface ProtectedRouteProps {
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { token, isInitialized } = useAuth();
   const router = useRouter();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isInitialized && !token) {
@@ -17,11 +19,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }, [token, isInitialized, router]);
 
   if (!isInitialized) {
-    return <p>Loading...</p>; // Show loading while checking authentication
+    return <p>{t('app.loading')}</p>;
   }
 
   if (!token) {
-    return <p>Redirecting to login...</p>; // Show message while redirecting
+    return <p>{t('app.redirectingToLogin')}</p>;
   }
 
   return <>{children}</>;

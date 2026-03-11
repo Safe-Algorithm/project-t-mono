@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { api } from '@/services/api';
 import { useAuth } from '@/context/UserContext';
 import { rolesService, Role } from '@/services/rolesService';
+import { useTranslation } from 'react-i18next';
 
 interface User {
   id: string;
@@ -22,6 +23,7 @@ interface ProfileData {
 const UserProfile: React.FC = () => {
   const router = useRouter();
   const { logout } = useAuth();
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [myRoles, setMyRoles] = useState<Role[]>([]);
   const [rolesLoading, setRolesLoading] = useState(true);
@@ -82,12 +84,12 @@ const UserProfile: React.FC = () => {
     if (file) {
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!allowedTypes.includes(file.type)) {
-        setMessage({ type: 'error', text: 'Invalid file type. Please upload a JPG, PNG, GIF, or WebP image.' });
+        setMessage({ type: 'error', text: t('userProfile.invalidImageType') });
         return;
       }
 
       if (file.size > 5 * 1024 * 1024) {
-        setMessage({ type: 'error', text: 'File size exceeds 5MB limit.' });
+        setMessage({ type: 'error', text: t('userProfile.imageTooLarge') });
         return;
       }
 
@@ -111,11 +113,11 @@ const UserProfile: React.FC = () => {
       formData.append('file', avatarFile);
 
       await api.postFormData('/users/me/avatar', formData);
-      setMessage({ type: 'success', text: 'Avatar updated successfully!' });
+      setMessage({ type: 'success', text: t('userProfile.avatarUpdated') });
       setAvatarFile(null);
       await fetchUser();
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to upload avatar' });
+      setMessage({ type: 'error', text: error.message || t('userProfile.avatarUploadFailed') });
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,7 @@ const UserProfile: React.FC = () => {
 
   const handleSendEmailOtp = async () => {
     if (!newEmail || newEmail === user?.email) {
-      setMessage({ type: 'error', text: 'Please enter a different email address' });
+      setMessage({ type: 'error', text: t('userProfile.enterDifferentEmail') });
       return;
     }
 
@@ -133,9 +135,9 @@ const UserProfile: React.FC = () => {
     try {
       await api.post('/otp/send-email-change-otp', { email: newEmail });
       setEmailOtpSent(true);
-      setMessage({ type: 'success', text: 'OTP sent to new email address' });
+      setMessage({ type: 'success', text: t('userProfile.emailOtpSent') });
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to send OTP' });
+      setMessage({ type: 'error', text: error.message || t('userProfile.sendOtpFailed') });
     } finally {
       setSendingEmailOtp(false);
     }
@@ -143,7 +145,7 @@ const UserProfile: React.FC = () => {
 
   const handleVerifyEmailChange = async () => {
     if (!emailOtp || emailOtp.length !== 6) {
-      setMessage({ type: 'error', text: 'Please enter a valid 6-digit OTP' });
+      setMessage({ type: 'error', text: t('userProfile.enterValidOtp') });
       return;
     }
 
@@ -152,7 +154,7 @@ const UserProfile: React.FC = () => {
 
     try {
       await api.post('/otp/verify-email-change', { new_email: newEmail, otp: emailOtp });
-      setMessage({ type: 'success', text: 'Email changed successfully! Redirecting to login...' });
+      setMessage({ type: 'success', text: t('userProfile.emailChanged') });
       
       // Wait a moment to show success message, then logout and redirect
       setTimeout(() => {
@@ -160,7 +162,7 @@ const UserProfile: React.FC = () => {
         router.push('/login');
       }, 2000);
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to verify OTP' });
+      setMessage({ type: 'error', text: error.message || t('userProfile.verifyOtpFailed') });
       setVerifyingEmailOtp(false);
     }
   };
@@ -183,11 +185,11 @@ const UserProfile: React.FC = () => {
 
       if (Object.keys(updateData).length > 0) {
         await api.patch('/users/me', updateData);
-        setMessage({ type: 'success', text: 'Profile updated successfully!' });
+        setMessage({ type: 'success', text: t('userProfile.profileUpdated') });
         await fetchUser();
       }
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to update profile' });
+      setMessage({ type: 'error', text: error.message || t('userProfile.profileUpdateFailed') });
     } finally {
       setLoading(false);
     }
@@ -197,12 +199,12 @@ const UserProfile: React.FC = () => {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      setMessage({ type: 'error', text: 'Passwords do not match' });
+      setMessage({ type: 'error', text: t('userProfile.passwordsDontMatch') });
       return;
     }
 
     if (newPassword.length < 8) {
-      setMessage({ type: 'error', text: 'Password must be at least 8 characters long' });
+      setMessage({ type: 'error', text: t('userProfile.passwordTooShort') });
       return;
     }
 
@@ -211,11 +213,11 @@ const UserProfile: React.FC = () => {
 
     try {
       await api.patch('/users/me', { password: newPassword });
-      setMessage({ type: 'success', text: 'Password changed successfully!' });
+      setMessage({ type: 'success', text: t('userProfile.passwordChanged') });
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to change password' });
+      setMessage({ type: 'error', text: error.message || t('userProfile.passwordChangeFailed') });
     } finally {
       setLoading(false);
     }
@@ -241,8 +243,8 @@ const UserProfile: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Account Settings</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your personal account information and security</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('userProfile.title')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('userProfile.subtitle')}</p>
       </div>
 
       {message && <Alert type={message.type} text={message.text} />}
@@ -250,7 +252,7 @@ const UserProfile: React.FC = () => {
       {/* Avatar + Profile Info */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Profile Picture</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('userProfile.profilePicture')}</h2>
         </div>
         <div className="px-6 py-5">
           <div className="flex items-center gap-5">
@@ -270,12 +272,12 @@ const UserProfile: React.FC = () => {
               </label>
             </div>
             <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">Upload a profile picture · Max 5MB</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">JPG, PNG, GIF, WebP</p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('userProfile.uploadProfilePicture')}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{t('userProfile.supportedImageTypes')}</p>
               {avatarFile && (
                 <button onClick={handleAvatarUpload} disabled={loading}
                   className="mt-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-xs font-medium rounded-xl transition-colors">
-                  Upload
+                  {t('userProfile.upload')}
                 </button>
               )}
             </div>
@@ -286,60 +288,60 @@ const UserProfile: React.FC = () => {
       {/* Profile Information */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Profile Information</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('userProfile.profileInformation')}</h2>
         </div>
         <form onSubmit={handleProfileUpdate} className="px-6 py-5 space-y-4">
           <div>
-            <label className={labelCls}>Full Name</label>
+            <label className={labelCls}>{t('userProfile.fullName')}</label>
             <input type="text" value={profileData.name} onChange={e => setProfileData({ ...profileData, name: e.target.value })} className={inputCls} required />
           </div>
 
           <div>
-            <label className={labelCls}>Email Address</label>
+            <label className={labelCls}>{t('userProfile.emailAddress')}</label>
             {!changingEmail ? (
               <div className="flex gap-2">
                 <input type="email" value={profileData.email} disabled className={`${inputCls} flex-1 opacity-60 cursor-not-allowed`} />
                 <button type="button" onClick={() => setChangingEmail(true)}
                   className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors whitespace-nowrap">
-                  Change
+                  {t('userProfile.change')}
                 </button>
               </div>
             ) : (
               <div className="space-y-2">
                 <div className="flex gap-2">
-                  <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder="New email address" className={`${inputCls} flex-1`} />
+                  <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)} placeholder={t('userProfile.newEmailAddress')} className={`${inputCls} flex-1`} />
                   <button type="button" onClick={handleSendEmailOtp} disabled={sendingEmailOtp || !newEmail}
                     className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-medium transition-colors whitespace-nowrap">
-                    {sendingEmailOtp ? 'Sending...' : 'Send OTP'}
+                    {sendingEmailOtp ? t('userProfile.sending') : t('userProfile.sendOtp')}
                   </button>
                 </div>
                 {emailOtpSent && (
                   <div className="flex gap-2">
                     <input type="text" value={emailOtp} onChange={e => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="6-digit OTP" maxLength={6} className={`${inputCls} flex-1 text-center tracking-widest`} />
+                      placeholder={t('userProfile.otpPlaceholder')} maxLength={6} className={`${inputCls} flex-1 text-center tracking-widest`} />
                     <button type="button" onClick={handleVerifyEmailChange} disabled={verifyingEmailOtp || emailOtp.length !== 6}
                       className="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white text-sm font-medium transition-colors">
-                      {verifyingEmailOtp ? 'Verifying...' : 'Verify'}
+                      {verifyingEmailOtp ? t('userProfile.verifying') : t('userProfile.verify')}
                     </button>
                   </div>
                 )}
                 <button type="button" onClick={() => { setChangingEmail(false); setNewEmail(''); setEmailOtp(''); setEmailOtpSent(false); }}
                   className="text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
-                  Cancel
+                  {t('team.cancel')}
                 </button>
               </div>
             )}
           </div>
 
           <div>
-            <label className={labelCls}>Phone Number</label>
+            <label className={labelCls}>{t('userProfile.phoneNumber')}</label>
             <input type="tel" value={profileData.phone} onChange={e => setProfileData({ ...profileData, phone: e.target.value })} className={inputCls} placeholder="+966 5x xxx xxxx" />
           </div>
 
           <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
             <button type="submit" disabled={loading || (profileData.name === user?.name && profileData.phone === user?.phone)}
               className="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('roles.saving') : t('userProfile.saveChanges')}
             </button>
           </div>
         </form>
@@ -348,17 +350,17 @@ const UserProfile: React.FC = () => {
       {/* My Roles */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">My Roles</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Roles assigned to your account</p>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('userProfile.myRoles')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('userProfile.rolesAssigned')}</p>
         </div>
         <div className="px-6 py-5">
           {rolesLoading ? (
             <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
               <div className="w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600 border-t-transparent animate-spin" />
-              Loading roles...
+              {t('userProfile.loadingRoles')}
             </div>
           ) : myRoles.length === 0 ? (
-            <p className="text-sm text-slate-400 dark:text-slate-500">No roles assigned to your account.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">{t('userProfile.noRolesAssigned')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {myRoles.map(role => (
@@ -375,22 +377,22 @@ const UserProfile: React.FC = () => {
       {/* Change Password */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Change Password</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Choose a strong password of at least 8 characters</p>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('userProfile.changePassword')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('userProfile.changePasswordHint')}</p>
         </div>
         <form onSubmit={handlePasswordChange} className="px-6 py-5 space-y-4">
           <div>
-            <label className={labelCls}>New Password</label>
-            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputCls} minLength={8} placeholder="Min. 8 characters" />
+            <label className={labelCls}>{t('userProfile.newPassword')}</label>
+            <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} className={inputCls} minLength={8} placeholder={t('userProfile.newPasswordPlaceholder')} />
           </div>
           <div>
-            <label className={labelCls}>Confirm New Password</label>
-            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls} minLength={8} placeholder="Repeat new password" />
+            <label className={labelCls}>{t('userProfile.confirmNewPassword')}</label>
+            <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} className={inputCls} minLength={8} placeholder={t('userProfile.confirmNewPasswordPlaceholder')} />
           </div>
           <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
             <button type="submit" disabled={loading || !newPassword || !confirmPassword}
               className="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
-              {loading ? 'Updating...' : 'Update Password'}
+              {loading ? t('userProfile.updating') : t('userProfile.updatePassword')}
             </button>
           </div>
         </form>

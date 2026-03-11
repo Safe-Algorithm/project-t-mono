@@ -21,13 +21,14 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
 }
 
 function TripStatusBadge({ isActive }: { isActive: boolean }) {
+  const { t } = useTranslation();
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
       isActive
         ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
     }`}>
-      {isActive ? '● Active' : '○ Inactive'}
+      {isActive ? t('dashboard.statusActive') : t('dashboard.statusInactive')}
     </span>
   );
 }
@@ -66,10 +67,10 @@ const DashboardPage = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          {isRTL ? `مرحباً، ${user.company_name || user.name} 👋` : `Welcome back, ${user.company_name || user.name} 👋`}
+          {t('dashboard.welcomeBack', { name: user.company_name || user.name })}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {isRTL ? 'إليك ملخص نشاطك الأخير' : "Here's a summary of your activity"}
+          {t('dashboard.summary')}
         </p>
       </div>
 
@@ -96,7 +97,7 @@ const DashboardPage = () => {
           }
         />
         <StatCard
-          label={isRTL ? 'إجمالي المقاعد' : 'Total Seats'}
+          label={t('dashboard.totalSeats')}
           value={isLoading ? '—' : totalParticipants.toLocaleString()}
           color="bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"
           icon={
@@ -111,10 +112,10 @@ const DashboardPage = () => {
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">
-            {isRTL ? 'الرحلات القادمة' : 'Upcoming Trips'}
+            {t('dashboard.upcomingTrips')}
           </h2>
           <Link href="/trips" className="text-sm text-sky-500 hover:text-sky-600 font-medium">
-            {isRTL ? 'عرض الكل' : 'View all'} →
+            {t('dashboard.viewAll')} →
           </Link>
         </div>
 
@@ -138,13 +139,13 @@ const DashboardPage = () => {
               <thead>
                 <tr className="border-b border-slate-100 dark:border-slate-800">
                   <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    {isRTL ? 'الرحلة' : 'Trip'}
+                    {t('dashboard.trip')}
                   </th>
                   <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    {isRTL ? 'تاريخ البدء' : 'Start Date'}
+                    {t('dashboard.tripStartDate')}
                   </th>
                   <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    {isRTL ? 'المقاعد' : 'Seats'}
+                    {t('dashboard.seats')}
                   </th>
                   <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     {isRTL ? 'الحالة' : 'Status'}
@@ -191,7 +192,7 @@ const DashboardPage = () => {
           <div>
             <p className="font-semibold text-slate-900 dark:text-white text-sm">{t('trips.createNew')}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {isRTL ? 'أضف رحلة جديدة لعملائك' : 'Add a new trip for your customers'}
+              {t('dashboard.addTripCta')}
             </p>
           </div>
         </Link>
@@ -204,7 +205,7 @@ const DashboardPage = () => {
           <div>
             <p className="font-semibold text-slate-900 dark:text-white text-sm">{t('nav.tripUpdates')}</p>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {isRTL ? 'أرسل تحديثات لمسجلي رحلاتك' : 'Send updates to your trip registrants'}
+              {t('dashboard.sendUpdatesCta')}
             </p>
           </div>
         </Link>
