@@ -5,6 +5,9 @@ from sqlalchemy import pool
 
 from alembic import context
 
+# Import settings to get DATABASE_URL from environment
+from app.core.config import settings
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -51,7 +54,11 @@ def run_migrations_offline() -> None:
     script output.
 
     """
+    # Try to get URL from alembic.ini first, fallback to environment variable
     url = config.get_main_option("sqlalchemy.url")
+    if not url:
+        url = settings.DATABASE_URL
+        
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -70,8 +77,15 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    # Get configuration from alembic.ini, but override with environment variables if set
+    configuration = config.get_section(config.config_ini_section, {})
+    
+    # Override DATABASE_URL from environment if available
+    if settings.DATABASE_URL:
+        configuration["sqlalchemy.url"] = settings.DATABASE_URL
+    
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
