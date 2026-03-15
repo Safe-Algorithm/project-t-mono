@@ -211,7 +211,18 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       if (!trip.is_packaged_trip) {
         // Non-packaged: price comes from the hidden package and is exposed via trip.price
         setTripPrice(trip.price != null ? String(trip.price) : '');
-        setTripRequiredFields(['name', 'date_of_birth']);
+        const mandatoryFields = ['name', 'date_of_birth'];
+        const hiddenFields = trip.simple_trip_required_fields || [];
+        setTripRequiredFields(Array.from(new Set([...mandatoryFields, ...hiddenFields])));
+        const hiddenValidationConfigs: { [fieldName: string]: ValidationConfig } = {};
+        if (trip.simple_trip_required_fields_details) {
+          trip.simple_trip_required_fields_details.forEach((fieldDetail) => {
+            if (fieldDetail.validation_config && Object.keys(fieldDetail.validation_config).length > 0) {
+              hiddenValidationConfigs[fieldDetail.field_type] = fieldDetail.validation_config;
+            }
+          });
+        }
+        setTripValidationConfigs(hiddenValidationConfigs);
       } else if (trip.packages && trip.packages.length > 0) {
         // Packaged: populate packages
         const existingPackages: CreateTripPackage[] = trip.packages.map(pkg => ({

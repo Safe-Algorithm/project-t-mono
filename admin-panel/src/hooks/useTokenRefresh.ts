@@ -6,21 +6,25 @@ export const useTokenRefresh = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
     if (token) {
-      // Set up automatic token refresh every 10 minutes (access token expires in 15 minutes)
       intervalRef.current = setInterval(async () => {
         const success = await refreshToken();
         if (!success) {
           logout();
         }
-      }, 10 * 60 * 1000); // 10 minutes
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-        }
-      };
+      }, 10 * 60 * 1000);
     }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [token, refreshToken, logout]);
 
   // Also refresh on API call failures (401 errors)

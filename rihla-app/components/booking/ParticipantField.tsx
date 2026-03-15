@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, FlatList,
   TextInput, Pressable, ScrollView, NativeSyntheticEvent, NativeScrollEvent,
@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import { FieldMetadata, NationalityOption } from '../../hooks/useTrips';
+import { COUNTRIES, Country } from '../ui/PhoneInput';
+import { useLanguageStore } from '../../store/languageStore';
 
 // ─── Field type constants (mirrors backend TripFieldType) ────────────────────
 export type FieldType =
@@ -28,9 +30,11 @@ interface Props {
   allowedGenders?: string[];
   /** Nationality options fetched from /public-trips/nationalities */
   nationalityOptions?: NationalityOption[];
+  /** Optional validation_config for the field (used to filter phone country codes) */
+  validationConfig?: Record<string, any> | null;
 }
 
-export default function ParticipantField({ fieldType, value, onChange, isRequired, metadata, allowedGenders, nationalityOptions }: Props) {
+export default function ParticipantField({ fieldType, value, onChange, isRequired, metadata, allowedGenders, nationalityOptions, validationConfig }: Props) {
   const { colors } = useTheme();
   const s = makeStyles(colors);
 
@@ -67,8 +71,10 @@ export default function ParticipantField({ fieldType, value, onChange, isRequire
   switch (fieldType) {
     case 'email':
       return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="email-address" autoCapitalize="none" colors={colors} s={s} />;
-    case 'phone':
-      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="phone-pad" colors={colors} s={s} />;
+    case 'phone': {
+      const allowedCodes: string[] | undefined = validationConfig?.phone_country_codes?.allowed_codes;
+      return <PhoneDialField label={label} value={value} onChange={onChange} isRequired={isRequired} allowedDialCodes={allowedCodes} colors={colors} s={s} />;
+    }
     case 'id_iqama_number':
     case 'passport_number':
       return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="default" autoCapitalize="characters" colors={colors} s={s} />;
@@ -94,6 +100,113 @@ function PlainInput({ label, value, onChange, isRequired, keyboardType = 'defaul
         placeholderTextColor={colors.textTertiary}
         placeholder={label}
       />
+    </View>
+  );
+}
+
+// ─── Phone field with dial-code picker ───────────────────────────────────────
+function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, colors, s }: {
+  label: string; value: string; onChange: (v: string) => void; isRequired?: boolean;
+  allowedDialCodes?: string[]; colors: ThemeColors; s: any;
+}) {
+  const { t } = useTranslation();
+  const { language } = useLanguageStore();
+
+  // Build the country list, optionally filtered
+  const availableCountries = useMemo(() => {
+    if (!allowedDialCodes || allowedDialCodes.length === 0) return COUNTRIES;
+    // allowed_codes may be stored as bare codes like "966" or "+966"
+    const normalised = allowedDialCodes.map(c => c.startsWith('+') ? c : `+${c}`);
+    return COUNTRIES.filter(c => normalised.includes(c.dialCode));
+  }, [allowedDialCodes]);
+
+  // Default to Saudi Arabia or the first available
+  const defaultCountry = useMemo(
+    () => availableCountries.find(c => c.dialCode === '+966') ?? availableCountries[0] ?? COUNTRIES[0],
+    [availableCountries]
+  );
+
+  // Parse stored value to determine current dial code + local number
+  const parseValue = (raw: string): { country: Country; local: string } => {
+    if (!raw) return { country: defaultCountry, local: '' };
+    for (const c of COUNTRIES) {
+      if (raw.startsWith(c.dialCode)) {
+        const match = availableCountries.find(ac => ac.dialCode === c.dialCode) ?? defaultCountry;
+        return { country: match, local: raw.slice(c.dialCode.length) };
+      }
+    }
+    return { country: defaultCountry, local: raw };
+  };
+
+  const parsed = parseValue(value);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(parsed.country);
+  const [localNumber, setLocalNumber] = useState(parsed.local);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+
+  const handleCountryChange = (c: Country) => {
+    setSelectedCountry(c);
+    setPickerOpen(false);
+    onChange(`${c.dialCode}${localNumber}`);
+  };
+
+  const handleLocalChange = (text: string) => {
+    setLocalNumber(text);
+    onChange(`${selectedCountry.dialCode}${text}`);
+  };
+
+  return (
+    <View style={s.fieldWrap}>
+      <FieldLabel label={label} isRequired={isRequired} s={s} />
+      <View style={[s.input, s.phoneRow, focused && s.inputFocused]}>
+        <TouchableOpacity style={s.dialPickerBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
+          <Text style={s.phoneFlag}>{selectedCountry.flag}</Text>
+          <Text style={s.phoneDialCode}>{selectedCountry.dialCode}</Text>
+          <Ionicons name="chevron-down" size={13} color={colors.textTertiary} />
+        </TouchableOpacity>
+        <View style={s.phoneDivider} />
+        <TextInput
+          style={s.phoneLocalInput}
+          value={localNumber}
+          onChangeText={handleLocalChange}
+          keyboardType="phone-pad"
+          placeholder={selectedCountry.placeholder}
+          placeholderTextColor={colors.textTertiary}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+        />
+      </View>
+
+      <Modal visible={pickerOpen} transparent animationType="slide">
+        <Pressable style={s.modalOverlay} onPress={() => setPickerOpen(false)}>
+          <Pressable style={[s.selectSheet, { maxHeight: '70%' }]} onPress={e => e.stopPropagation()}>
+            <View style={s.selectSheetHandle} />
+            <Text style={s.selectSheetTitle}>{t('booking.selectDialCode', { defaultValue: 'Select Country Code' })}</Text>
+            <FlatList
+              data={availableCountries}
+              keyExtractor={item => `${item.dialCode}-${item.name}`}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => {
+                const isSelected = item.dialCode === selectedCountry.dialCode && item.name === selectedCountry.name;
+                return (
+                  <TouchableOpacity
+                    style={[s.selectOption, isSelected && s.selectOptionActive]}
+                    onPress={() => handleCountryChange(item)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={s.phoneFlag}>{item.flag}</Text>
+                    <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive, { flex: 1, marginLeft: 10 }]}>
+                      {language === 'ar' ? item.name_ar : item.name}
+                    </Text>
+                    <Text style={{ fontSize: FontSize.md, color: colors.textSecondary, fontWeight: '600' }}>{item.dialCode}</Text>
+                    {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} style={{ marginLeft: 8 }} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -383,6 +496,13 @@ function makeStyles(c: ThemeColors) {
     },
     inputFocused: { borderColor: c.primary },
     textarea: { minHeight: 80, paddingTop: 12 },
+
+    phoneRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 0, paddingVertical: 0 },
+    dialPickerBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 12 },
+    phoneFlag: { fontSize: 22 },
+    phoneDialCode: { fontSize: FontSize.md, fontWeight: '700', color: c.textPrimary },
+    phoneDivider: { width: 1, height: 22, backgroundColor: c.border },
+    phoneLocalInput: { flex: 1, fontSize: FontSize.md, color: c.textPrimary, paddingHorizontal: 12, paddingVertical: 12 },
 
     selectBtn: {
       flexDirection: 'row',

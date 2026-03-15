@@ -9,6 +9,7 @@ GET /share/{token}/data         — JSON trip data via share token (for mobile d
 import html
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import HTMLResponse
@@ -16,7 +17,7 @@ from sqlmodel import Session
 
 import app.crud as crud
 from app.crud import trip_share as trip_share_crud
-from app.api.deps import get_session
+from app.api.deps import get_session, get_language
 from app.core.config import settings
 from app.schemas.trip_share import TripShareResponse
 from app.utils.localization import get_name, get_description
@@ -31,11 +32,54 @@ def _backend_base() -> str:
     return settings.BACKEND_URL.rstrip("/")
 
 
+def _share_lang_query(lang: str) -> str:
+    return urlencode({"lang": "ar" if lang == "ar" else "en"})
+
+
+def _format_share_date(dt: datetime | None, lang: str) -> str:
+    if not dt:
+        return ""
+    if lang == "ar":
+        arabic_months = [
+            "يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو",
+            "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر",
+        ]
+        return f"{dt.day} {arabic_months[dt.month - 1]} {dt.year}"
+    return dt.strftime("%b %d, %Y")
+
+
+def _share_translations(lang: str) -> dict[str, str]:
+    if lang == "ar":
+        return {
+            "default_title": "رحلة",
+            "default_description": "اكتشف هذه الرحلة المميزة.",
+            "date_label": "📅",
+            "spots_label": "👥 {{count}} مقاعد",
+            "open_app": "افتح في تطبيق رحلة",
+            "get_app": "حمّل التطبيق:",
+            "download_app": "حمّل رحلة",
+            "html_lang": "ar",
+            "dir": "rtl",
+        }
+    return {
+        "default_title": "Trip",
+        "default_description": "Discover this amazing trip.",
+        "date_label": "📅",
+        "spots_label": "👥 {{count}} spots",
+        "open_app": "Open in Rihla App",
+        "get_app": "Get the app:",
+        "download_app": "Download Rihla",
+        "html_lang": "en",
+        "dir": "ltr",
+    }
+
+
 # ── 1. Generate / retrieve share link ────────────────────────────────────────
 
 @trips_router.get("/{trip_id}/share", response_model=TripShareResponse)
 def get_or_create_trip_share(
     trip_id: uuid.UUID,
+    lang: str = Depends(get_language),
     session: Session = Depends(get_session),
 ):
     """
@@ -47,7 +91,7 @@ def get_or_create_trip_share(
         raise HTTPException(status_code=404, detail="Trip not found")
 
     share = trip_share_crud.get_or_create_share(session=session, trip_id=trip_id)
-    share_url = f"{_backend_base()}{settings.API_V1_STR}/share/{share.share_token}"
+    share_url = f"{_backend_base()}{settings.API_V1_STR}/share/{share.share_token}?{_share_lang_query(lang)}"
 
     return TripShareResponse(
         share_token=share.share_token,
@@ -62,6 +106,7 @@ def get_or_create_trip_share(
 @share_router.get("/{token}", response_class=HTMLResponse, include_in_schema=False)
 def trip_share_preview(
     token: str,
+    lang: str = Depends(get_language),
     session: Session = Depends(get_session),
 ):
     """
@@ -84,12 +129,13 @@ def trip_share_preview(
 
     trip_share_crud.increment_view(session=session, share=share)
 
-    title = html.escape(get_name(trip) or "Trip")
-    description = html.escape(get_description(trip) or "Discover this amazing trip.")
+    copy = _share_translations(lang)
+    title = html.escape(get_name(trip, lang) or copy["default_title"])
+    description = html.escape(get_description(trip, lang) or copy["default_description"])
 
     image_url = trip.images[0] if trip.images else ""
 
-    canonical_url = f"{_backend_base()}{settings.API_V1_STR}/share/{token}"
+    canonical_url = f"{_backend_base()}{settings.API_V1_STR}/share/{token}?{_share_lang_query(lang)}"
     app_deep_link = f"{settings.APP_DEEP_LINK_SCHEME}://trip/{trip.id}"
 
     og_image_tag = f'<meta property="og:image" content="{html.escape(image_url)}" />' if image_url else ""
@@ -101,11 +147,12 @@ def trip_share_preview(
     if settings.IOS_APP_STORE_ID:
         ios_app_banner = f'<meta name="apple-itunes-app" content="app-id={html.escape(settings.IOS_APP_STORE_ID)}, app-argument={app_deep_link}" />'
 
-    start_date = trip.start_date.strftime("%b %d, %Y") if trip.start_date else ""
-    end_date = trip.end_date.strftime("%b %d, %Y") if trip.end_date else ""
+    start_date = _format_share_date(trip.start_date, lang)
+    end_date = _format_share_date(trip.end_date, lang)
+    spots_label = html.escape(copy["spots_label"].replace("{{count}}", str(trip.max_participants)))
 
     page = f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{copy["html_lang"]}" dir="{copy["dir"]}">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -152,13 +199,13 @@ def trip_share_preview(
         <h1>{title}</h1>
         <p class="desc">{description}</p>
         <div class="meta">
-          {f'<span class="badge">📅 {start_date} – {end_date}</span>' if start_date else ""}
-          {'<span class="badge">👥 ' + str(trip.max_participants) + ' spots</span>'}
+          {f'<span class="badge">{copy["date_label"]} {start_date} – {end_date}</span>' if start_date else ""}
+          {'<span class="badge">' + spots_label + '</span>'}
         </div>
-        <a class="cta" href="{app_deep_link}" id="openApp">Open in Rihla App</a>
+        <a class="cta" href="{app_deep_link}" id="openApp">{copy["open_app"]}</a>
         <p class="hint" id="storeHint" style="display:none">
-          Get the app:
-          <a id="storeLink" href="#" style="color:#0EA5E9">Download Rihla</a>
+          {copy["get_app"]}
+          <a id="storeLink" href="#" style="color:#0EA5E9">{copy["download_app"]}</a>
         </p>
       </div>
     </div>

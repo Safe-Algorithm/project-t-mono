@@ -18,6 +18,7 @@ import PhoneInput, { COUNTRIES, Country } from '../../components/ui/PhoneInput';
 import { FontSize, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api';
+import { useLanguageStore } from '../../store/languageStore';
 
 type Step = 'contact' | 'otp' | 'details';
 
@@ -25,6 +26,7 @@ export default function RegisterScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
+  const { language, setLanguage, isRTL } = useLanguageStore();
   const [step, setStep] = useState<Step>('contact');
   const [contactType, setContactType] = useState<'email' | 'phone'>('email');
   const [contact, setContact] = useState('');
@@ -39,14 +41,15 @@ export default function RegisterScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fullPhone = `${selectedCountry.dialCode}${localNumber.trim()}`;
+  const stepOrder: Step[] = ['contact', 'otp', 'details'];
 
   const sendOtp = async () => {
     if (contactType === 'email' && !contact.trim()) {
-      setErrors({ contact: 'Email is required' });
+      setErrors({ contact: t('auth.emailRequired') });
       return;
     }
     if (contactType === 'phone' && !localNumber.trim()) {
-      setErrors({ contact: 'Phone number is required' });
+      setErrors({ contact: t('auth.phoneRequired') });
       return;
     }
     setLoading(true);
@@ -60,7 +63,9 @@ export default function RegisterScreen() {
       setStep('otp');
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      const msg = Array.isArray(detail) ? (detail[0]?.msg ?? 'Failed to send OTP') : (typeof detail === 'string' ? detail : 'Failed to send OTP');
+      const msg = Array.isArray(detail)
+        ? (detail[0]?.msg ?? t('auth.sendCodeFailed'))
+        : (typeof detail === 'string' ? detail : t('auth.sendCodeFailed'));
       setErrors({ contact: msg });
     } finally {
       setLoading(false);
@@ -69,7 +74,7 @@ export default function RegisterScreen() {
 
   const verifyOtp = async () => {
     if (!otp.trim() || otp.length < 6) {
-      setErrors({ otp: 'Enter the 6-digit code' });
+      setErrors({ otp: t('auth.enterOtp') });
       return;
     }
     setLoading(true);
@@ -92,8 +97,8 @@ export default function RegisterScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
-        ? (detail[0]?.msg ?? 'Invalid OTP code')
-        : (typeof detail === 'string' ? detail : 'Invalid OTP code');
+        ? (detail[0]?.msg ?? t('auth.invalidOtp'))
+        : (typeof detail === 'string' ? detail : t('auth.invalidOtp'));
       setErrors({ otp: msg });
     } finally {
       setLoading(false);
@@ -102,10 +107,10 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     const e: Record<string, string> = {};
-    if (!name.trim()) e.name = 'Name is required';
-    if (!password) e.password = 'Password is required';
-    else if (password.length < 8) e.password = 'At least 8 characters';
-    if (password !== confirmPassword) e.confirmPassword = 'Passwords do not match';
+    if (!name.trim()) e.name = t('auth.nameRequired');
+    if (!password) e.password = t('auth.passwordRequired');
+    else if (password.length < 8) e.password = t('auth.passwordMin');
+    if (password !== confirmPassword) e.confirmPassword = t('changePassword.mismatch');
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
     setLoading(true);
@@ -124,9 +129,9 @@ export default function RegisterScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail)
-        ? (detail[0]?.msg ?? 'Something went wrong')
-        : (typeof detail === 'string' ? detail : 'Something went wrong');
-      Alert.alert('Registration Failed', msg);
+        ? (detail[0]?.msg ?? t('auth.genericError'))
+        : (typeof detail === 'string' ? detail : t('auth.genericError'));
+      Alert.alert(t('auth.registrationFailedTitle'), msg);
     } finally {
       setLoading(false);
     }
@@ -136,53 +141,64 @@ export default function RegisterScreen() {
     <View style={s.container}>
     <KeyboardAvoidingView style={s.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
-        <TouchableOpacity style={s.backBtn}
-          onPress={() => (step === 'contact' ? router.back() : setStep(step === 'otp' ? 'contact' : 'otp'))}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        <TouchableOpacity style={[s.langToggle, isRTL && s.langToggleRtl]} onPress={() => setLanguage(language === 'en' ? 'ar' : 'en')}>
+          <Text style={s.langToggleText}>{language === 'en' ? 'العربية' : 'English'}</Text>
         </TouchableOpacity>
-        <View style={s.headerArea}>
+        <TouchableOpacity style={[s.backBtn, isRTL && s.backBtnRtl]}
+          onPress={() => (step === 'contact' ? router.back() : setStep(step === 'otp' ? 'contact' : 'otp'))}>
+          <Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={[s.headerArea, isRTL && s.headerAreaRtl]}>
           <Text style={s.title}>
-            {step === 'contact' ? 'Create Account' : step === 'otp' ? 'Verify Code' : 'Almost Done'}
+            {step === 'contact' ? t('auth.registerTitle') : step === 'otp' ? t('auth.verifyCodeTitle') : t('auth.completeProfileTitle')}
           </Text>
           <Text style={s.subtitle}>
-            {step === 'contact' ? 'Join Rihla to start booking amazing trips'
-              : step === 'otp' ? `We sent a 6-digit code to ${contactType === 'phone' ? fullPhone : contact}`
-              : 'Set up your profile to finish'}
+            {step === 'contact'
+              ? t('auth.registerSubtitle')
+              : step === 'otp'
+                ? t('auth.otpSentTo', { contact: contactType === 'phone' ? fullPhone : contact })
+                : t('auth.completeProfileSubtitle')}
           </Text>
         </View>
         <View style={s.steps}>
-          {['contact', 'otp', 'details'].map((sv, i) => (
-            <View key={sv} style={s.stepRow}>
-              <View style={[s.stepDot, (step === sv || ['contact','otp','details'].indexOf(step) > i) && s.stepDotActive]}>
-                <Text style={[s.stepNum, (step === sv || ['contact','otp','details'].indexOf(step) > i) && s.stepNumActive]}>{i + 1}</Text>
+          {stepOrder.map((sv, i) => {
+            const isActive = step === sv || stepOrder.indexOf(step) > i;
+            const lineActive = stepOrder.indexOf(step) > i;
+            const isLast = i === stepOrder.length - 1;
+            return (
+              <View key={sv} style={[s.stepRow, isLast && s.stepRowLast, isRTL && s.stepRowRtl]}>
+                {i < 2 && isRTL && <View style={[s.stepLine, lineActive && s.stepLineActive]} />}
+                <View style={[s.stepDot, isActive && s.stepDotActive]}>
+                  <Text style={[s.stepNum, isActive && s.stepNumActive]}>{i + 1}</Text>
+                </View>
+                {i < 2 && !isRTL && <View style={[s.stepLine, lineActive && s.stepLineActive]} />}
               </View>
-              {i < 2 && <View style={[s.stepLine, ['contact','otp','details'].indexOf(step) > i && s.stepLineActive]} />}
-            </View>
-          ))}
+            );
+          })}
         </View>
         <View style={s.form}>
           {step === 'contact' && (
             <>
-              <View style={s.toggle}>
+              <View style={[s.toggle, isRTL && s.rowRtl]}>
                 <TouchableOpacity style={[s.toggleBtn, contactType === 'email' && s.toggleBtnActive]}
                   onPress={() => { setContactType('email'); setContact(''); setErrors({}); }}>
                   <Ionicons name="mail-outline" size={16} color={contactType === 'email' ? colors.primary : colors.textTertiary} />
-                  <Text style={[s.toggleText, contactType === 'email' && s.toggleTextActive]}>Email</Text>
+                  <Text style={[s.toggleText, contactType === 'email' && s.toggleTextActive]}>{t('auth.email')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[s.toggleBtn, contactType === 'phone' && s.toggleBtnActive]}
                   onPress={() => { setContactType('phone'); setContact(''); setLocalNumber(''); setErrors({}); }}>
                   <Ionicons name="call-outline" size={16} color={contactType === 'phone' ? colors.primary : colors.textTertiary} />
-                  <Text style={[s.toggleText, contactType === 'phone' && s.toggleTextActive]}>Phone</Text>
+                  <Text style={[s.toggleText, contactType === 'phone' && s.toggleTextActive]}>{t('auth.phone')}</Text>
                 </TouchableOpacity>
               </View>
               {contactType === 'email' ? (
-                <Input label="Email Address" placeholder="you@example.com"
+                <Input label={t('auth.email')} placeholder={t('auth.email')}
                   value={contact} onChangeText={setContact}
                   keyboardType="email-address" autoCapitalize="none"
                   leftIcon="mail-outline" error={errors.contact} />
               ) : (
                 <PhoneInput
-                  label="Phone Number"
+                  label={t('auth.phoneNumber')}
                   value={localNumber}
                   onChangeText={setLocalNumber}
                   selectedCountry={selectedCountry}
@@ -190,35 +206,35 @@ export default function RegisterScreen() {
                   error={errors.contact}
                 />
               )}
-              <Button title="Send Verification Code" onPress={sendOtp} loading={loading} fullWidth size="lg" style={s.btn} />
+              <Button title={t('auth.sendVerificationCode')} onPress={sendOtp} loading={loading} fullWidth size="lg" style={s.btn} />
             </>
           )}
           {step === 'otp' && (
             <>
-              <Input label="Verification Code" placeholder="000000" value={otp} onChangeText={setOtp}
+              <Input label={t('auth.otpLabel')} placeholder="000000" value={otp} onChangeText={setOtp}
                 keyboardType="number-pad" maxLength={6} leftIcon="key-outline" error={errors.otp} />
-              <Button title="Verify Code" onPress={verifyOtp} loading={loading} fullWidth size="lg" style={s.btn} />
+              <Button title={t('auth.verifyCode')} onPress={verifyOtp} loading={loading} fullWidth size="lg" style={s.btn} />
               <TouchableOpacity onPress={sendOtp} style={s.resend}>
-                <Text style={s.resendText}>Didn't receive it? <Text style={s.resendLink}>Resend</Text></Text>
+                <Text style={[s.resendText, isRTL && s.textRtl]}>{t('auth.didNotReceive')} <Text style={s.resendLink}>{t('auth.resend')}</Text></Text>
               </TouchableOpacity>
             </>
           )}
           {step === 'details' && (
             <>
-              <Input label="Full Name" placeholder="Your full name" value={name} onChangeText={setName}
+              <Input label={t('auth.name')} placeholder={t('auth.name')} value={name} onChangeText={setName}
                 autoCapitalize="words" leftIcon="person-outline" error={errors.name} />
-              <Input label="Password" placeholder="Min. 8 characters" value={password} onChangeText={setPassword}
+              <Input label={t('auth.password')} placeholder={t('auth.passwordMin')} value={password} onChangeText={setPassword}
                 isPassword leftIcon="lock-closed-outline" error={errors.password} />
-              <Input label="Confirm Password" placeholder="Repeat your password" value={confirmPassword}
+              <Input label={t('changePassword.confirm')} placeholder={t('changePassword.confirm')} value={confirmPassword}
                 onChangeText={setConfirmPassword} isPassword leftIcon="lock-closed-outline" error={errors.confirmPassword} />
-              <Button title="Create Account" onPress={handleRegister} loading={loading} fullWidth size="lg" style={s.btn} />
+              <Button title={t('auth.register')} onPress={handleRegister} loading={loading} fullWidth size="lg" style={s.btn} />
             </>
           )}
         </View>
-        <View style={s.loginRow}>
-          <Text style={s.loginText}>Already have an account? </Text>
+        <View style={[s.loginRow, isRTL && s.rowRtl]}>
+          <Text style={s.loginText}>{t('auth.hasAccount')} </Text>
           <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-            <Text style={s.loginLink}>Sign in</Text>
+            <Text style={s.loginLink}>{t('auth.signIn')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -233,12 +249,19 @@ function makeStyles(c: ThemeColors) {
     flex1: { flex: 1 },
     scrollView: { flex: 1 },
     scroll: { flexGrow: 1, paddingBottom: 40 },
-    backBtn: { marginTop: 56, marginLeft: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-    headerArea: { paddingHorizontal: 24, marginTop: 16, gap: 6 },
+    backBtn: { position: 'absolute', top: 48, left: 16, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+    backBtnRtl: { left: undefined, right: 16 },
+    langToggle: { position: 'absolute', top: 48, right: 20, backgroundColor: c.primarySurface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, zIndex: 1 },
+    langToggleRtl: { right: undefined, left: 20 },
+    langToggleText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '700' },
+    headerArea: { paddingHorizontal: 24, marginTop: 104, gap: 6 },
+    headerAreaRtl: { alignItems: 'flex-end' },
     title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary },
     subtitle: { fontSize: FontSize.md, color: c.textSecondary, lineHeight: 22 },
     steps: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, marginTop: 24, marginBottom: 8 },
     stepRow: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    stepRowLast: { flex: 0 },
+    stepRowRtl: { flexDirection: 'row-reverse' },
     stepDot: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
     stepDotActive: { backgroundColor: c.primary },
     stepNum: { fontSize: FontSize.xs, fontWeight: '700', color: c.textTertiary },
@@ -251,7 +274,9 @@ function makeStyles(c: ThemeColors) {
     toggleBtnActive: { backgroundColor: c.surface, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 },
     toggleText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textTertiary },
     toggleTextActive: { color: c.primary },
+    rowRtl: { flexDirection: 'row-reverse' },
     btn: { marginTop: 8 },
+    textRtl: { textAlign: 'right' as const },
     resend: { alignSelf: 'center', paddingVertical: 8 },
     resendText: { fontSize: FontSize.sm, color: c.textSecondary },
     resendLink: { color: c.primary, fontWeight: '700' },

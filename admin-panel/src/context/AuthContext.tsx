@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { setGlobalRefreshToken } from '@/services/api';
 
 interface AuthContextType {
@@ -15,7 +15,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const refreshTokens = async (): Promise<boolean> => {
+  const refreshTokens = useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/refresh`, {
         method: 'POST',
@@ -32,24 +32,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('admin_access_token', data.access_token);
         return true;
       } else {
+        setToken(null);
+        localStorage.removeItem('admin_access_token');
         return false;
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
+      setToken(null);
+      localStorage.removeItem('admin_access_token');
       return false;
     }
-  };
+  }, []);
 
-  const login = (accessToken: string) => {
+  const login = useCallback((accessToken: string) => {
     setToken(accessToken);
     localStorage.setItem('admin_access_token', accessToken);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setToken(null);
     localStorage.removeItem('admin_access_token');
     localStorage.removeItem('admin_refresh_token'); // Clean up any old refresh tokens
-    // Clear refresh token cookie by calling logout endpoint
     try {
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/logout`, {
         method: 'POST',
@@ -59,21 +62,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         credentials: 'include',
       });
     } catch (error) {
-      // Ignore errors on logout
       console.warn('Logout request failed:', error);
     }
-    // Redirect to login page
     window.location.href = '/login';
-  };
+  }, []);
 
-  const refreshToken = async (): Promise<boolean> => {
-    return refreshTokens();
-  };
+  const refreshToken = useCallback(async (): Promise<boolean> => refreshTokens(), [refreshTokens]);
 
-  // Set the global refresh token function for the API service
   useEffect(() => {
     setGlobalRefreshToken(refreshTokens);
-  }, []);
+  }, [refreshTokens]);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -94,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeAuth();
-  }, []);
+  }, [refreshTokens]);
 
   return (
     <AuthContext.Provider value={{ token, isInitialized, login, logout, refreshToken }}>

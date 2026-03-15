@@ -29,6 +29,7 @@ const login = async (credentials: { email: string; password: string }): Promise<
       'Content-Type': 'application/x-www-form-urlencoded',
       'X-Source': 'providers_panel',
     },
+    credentials: 'include',
     body: formData,
   });
   

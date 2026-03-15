@@ -34,7 +34,10 @@ const mockTrip: Trip = {
   starting_city_id: null,
   starting_city: null,
   destinations: [],
+  trip_type: 'adventure',
   has_meeting_place: false,
+  meeting_place_name: null,
+  meeting_place_name_ar: null,
   meeting_location: null,
   meeting_time: null,
   amenities: ['hotel', 'meals'],
@@ -55,6 +58,8 @@ const mockTrip: Trip = {
       required_fields: [],
     },
   ],
+  simple_trip_required_fields: ['name', 'date_of_birth'],
+  simple_trip_required_fields_details: [],
   extra_fees: [],
 };
 

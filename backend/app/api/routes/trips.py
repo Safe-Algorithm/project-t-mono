@@ -1478,17 +1478,26 @@ async def register_for_trip(
                 # Check if field is required and present
                 if required_field.is_required and (field_value is None or (isinstance(field_value, str) and not field_value.strip())):
                     raise HTTPException(
-                        status_code=400, 
-                        detail=f"Required field '{field_type.value}' is missing for participant with package '{get_name(package)}'"
+                        status_code=400,
+                        detail={
+                            "code": "required_field_missing",
+                            "field": field_type.value,
+                            "package": get_name(package),
+                        }
                     )
-                
+
                 # Validate field value: always for passport (auto format), config-driven otherwise
                 if field_value and (required_field.validation_config or field_type == TripFieldType.PASSPORT_NUMBER):
                     validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config, lang=_reg_lang)
                     if validation_errors:
                         raise HTTPException(
                             status_code=400,
-                            detail=f"Validation failed for field '{field_type.value}' in package '{get_name(package)}': {', '.join(validation_errors)}"
+                            detail={
+                                "code": "field_validation_failed",
+                                "field": field_type.value,
+                                "package": get_name(package),
+                                "messages": validation_errors,
+                            }
                         )
     
     # Create registration with pending_payment status and 15-min spot reservation

@@ -447,7 +447,9 @@ def test_register_for_trip_with_required_fields_validation(client: TestClient, s
         json=registration_data
     )
     assert response.status_code == 400
-    assert "Required field" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail["code"] == "required_field_missing"
+    assert detail["field"] in ("phone", "email", "date_of_birth")
 
 
 # Tests for Trip Package Required Fields
@@ -745,8 +747,10 @@ def test_register_for_trip_missing_package_required_fields(client: TestClient, s
         json=registration_data
     )
     assert response.status_code == 400
-    assert "Required field" in response.json()["detail"]
-    assert "Strict Package" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert detail["code"] == "required_field_missing"
+    assert detail["field"] in ("phone", "email")
+    assert "Strict Package" in detail["package"]
 
 
 @patch('app.services.email.email_service.send_booking_confirmation_email')

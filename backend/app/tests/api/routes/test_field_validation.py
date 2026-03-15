@@ -630,7 +630,10 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
             json=invalid_registration,
         )
         assert response.status_code == 400
-        assert "Validation failed" in response.json()["detail"]
+        detail = response.json()["detail"]
+        assert detail["code"] == "field_validation_failed"
+        assert detail["field"] == "date_of_birth"
+        assert len(detail["messages"]) > 0
 
 
 def test_set_package_required_fields_with_validation_api(client: TestClient, session: Session):

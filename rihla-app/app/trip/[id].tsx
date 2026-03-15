@@ -58,7 +58,8 @@ export default function TripDetailScreen() {
 
   const handleShare = async () => {
     try {
-      const { data } = await apiClient.get<{ share_url: string }>(`/trips/${id}/share`);
+      const shareLang = i18n.language === 'ar' ? 'ar' : 'en';
+      const { data } = await apiClient.get<{ share_url: string }>(`/trips/${id}/share?lang=${shareLang}`);
       await Share.share({ message: data.share_url, url: data.share_url });
     } catch {
       Alert.alert(t('common.error'), t('trip.shareError', 'Could not generate share link'));

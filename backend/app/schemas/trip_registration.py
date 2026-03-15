@@ -21,6 +21,7 @@ class TripParticipantBase(BaseModel):
     date_of_birth: Optional[date] = None
     gender: Optional[GenderType] = None
     disability: Optional[DisabilityType] = None
+    nationality: Optional[str] = None
     medical_conditions: Optional[str] = None
     allergies: Optional[str] = None
     additional_info: Optional[Dict[str, Any]] = None

@@ -74,6 +74,7 @@ class TripRegistrationParticipant(SQLModel, table=True):
     date_of_birth: Optional[date] = Field(default=None)
     gender: Optional[GenderType] = Field(default=None)
     disability: Optional[DisabilityType] = Field(default=None)
+    nationality: Optional[str] = Field(default=None, max_length=10)
     medical_conditions: Optional[str] = Field(default=None)
     allergies: Optional[str] = Field(default=None)
     

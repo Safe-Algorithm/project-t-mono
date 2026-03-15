@@ -87,6 +87,8 @@ const resources = {
       "action.viewDetails": "View Details",
       "action.editTrip": "Edit Trip",
       "action.backToTrips": "Back to Trips",
+      "action.shareTrip": "Share Trip",
+      "action.linkCopied": "Link Copied!",
       
       // Status
       "status.active": "Active",
@@ -764,6 +766,8 @@ const resources = {
       "register.successMsg": "Registration successful! Your documents are being processed.",
       "register.errorVerifyEmail": "Please verify your email before submitting",
       "register.missingFiles": "Please upload all required files: {{files}}",
+      "register.registrationCategory": "Registration Category",
+      "register.selectGroupHint": "Select the category that matches your company type. The required documents will update accordingly.",
 
       // Forgot password page
       "forgotPassword.title": "Reset Password",
@@ -874,6 +878,8 @@ const resources = {
       "action.viewDetails": "عرض التفاصيل",
       "action.editTrip": "تعديل الرحلة",
       "action.backToTrips": "العودة إلى الرحلات",
+      "action.shareTrip": "مشاركة الرحلة",
+      "action.linkCopied": "تم نسخ الرابط!",
       
       // Status
       "status.active": "نشط",
@@ -1551,6 +1557,8 @@ const resources = {
       "register.successMsg": "تم التسجيل بنجاح! جاري معالجة مستنداتك.",
       "register.errorVerifyEmail": "يرجى التحقق من بريدك الإلكتروني قبل الإرسال",
       "register.missingFiles": "يرجى رفع جميع الملفات المطلوبة: {{files}}",
+      "register.registrationCategory": "فئة التسجيل",
+      "register.selectGroupHint": "اختر الفئة التي تتوافق مع نوع شركتك. ستُحدَّث المستندات المطلوبة تلقائياً.",
 
       // Forgot password page
       "forgotPassword.title": "إعادة تعيين كلمة المرور",

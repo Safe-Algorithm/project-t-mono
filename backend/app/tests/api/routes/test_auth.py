@@ -36,6 +36,34 @@ def test_login_with_admin_source(client: TestClient, session: Session) -> None:
     assert token["refresh_token"]
 
 
+def test_login_sets_lax_cookie_for_http_requests(client: TestClient, session: Session) -> None:
+    user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
+    response = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": user.email, "password": "password123"},
+        headers={"X-Source": "admin_panel"},
+    )
+    assert response.status_code == 200
+    set_cookie = response.headers["set-cookie"].lower()
+    assert "refresh_token_admin_panel=" in set_cookie
+    assert "samesite=lax" in set_cookie
+    assert "; secure" not in set_cookie
+
+
+def test_login_sets_secure_none_cookie_for_https_requests(client: TestClient, session: Session) -> None:
+    user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
+    response = client.post(
+        f"{settings.API_V1_STR}/login/access-token",
+        data={"username": user.email, "password": "password123"},
+        headers={"X-Source": "admin_panel", "X-Forwarded-Proto": "https"},
+    )
+    assert response.status_code == 200
+    set_cookie = response.headers["set-cookie"].lower()
+    assert "refresh_token_admin_panel=" in set_cookie
+    assert "samesite=none" in set_cookie
+    assert "; secure" in set_cookie
+
+
 def test_register(client: TestClient, session: Session) -> None:
     # For admin/provider users (provide both email and phone)
     user_data = {

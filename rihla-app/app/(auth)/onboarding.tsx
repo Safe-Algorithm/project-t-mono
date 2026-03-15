@@ -22,51 +22,51 @@ import { Ionicons } from '@expo/vector-icons';
 import { FontSize, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
+import { useLanguageStore } from '../../store/languageStore';
 
 const { width: W, height: H } = Dimensions.get('window');
-
-const SLIDES = [
-  {
-    id: '1',
-    title: 'Discover Amazing Trips',
-    subtitle: 'Find curated travel experiences across Saudi Arabia and beyond',
-    icon: 'compass' as const,
-    bg: '#EFF6FF',
-    iconColor: '#3B82F6',
-  },
-  {
-    id: '2',
-    title: 'Book with Confidence',
-    subtitle: 'Secure payments, verified providers, and instant confirmations',
-    icon: 'shield-checkmark' as const,
-    bg: '#F0FDF4',
-    iconColor: '#10B981',
-  },
-  {
-    id: '3',
-    title: 'Travel Your Way',
-    subtitle: 'Choose packages that fit your group size, budget, and schedule',
-    icon: 'people' as const,
-    bg: '#FFF7ED',
-    iconColor: '#F97316',
-  },
-];
-
-const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<typeof SLIDES[0]>);
+const AnimatedFlatList = Animated.createAnimatedComponent(FlatList<any>);
 
 export default function OnboardingScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const { language, setLanguage, isRTL } = useLanguageStore();
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
   const flatListRef = useRef<FlatList>(null);
+  const slides = [
+    {
+      id: '1',
+      title: t('onboarding.slide1Title'),
+      subtitle: t('onboarding.slide1Subtitle'),
+      icon: 'compass' as const,
+      bg: '#EFF6FF',
+      iconColor: '#3B82F6',
+    },
+    {
+      id: '2',
+      title: t('onboarding.slide2Title'),
+      subtitle: t('onboarding.slide2Subtitle'),
+      icon: 'shield-checkmark' as const,
+      bg: '#F0FDF4',
+      iconColor: '#10B981',
+    },
+    {
+      id: '3',
+      title: t('onboarding.slide3Title'),
+      subtitle: t('onboarding.slide3Subtitle'),
+      icon: 'people' as const,
+      bg: '#FFF7ED',
+      iconColor: '#F97316',
+    },
+  ];
 
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollX.value = e.contentOffset.x;
   });
 
   const handleNext = () => {
-    if (currentIndex < SLIDES.length - 1) {
+    if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
       setCurrentIndex(currentIndex + 1);
     } else {
@@ -76,9 +76,27 @@ export default function OnboardingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <TouchableOpacity
+        onPress={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+        style={{
+          position: 'absolute',
+          top: 56,
+          right: isRTL ? undefined : 24,
+          left: isRTL ? 24 : undefined,
+          backgroundColor: colors.primarySurface,
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 16,
+          zIndex: 1,
+        }}
+      >
+        <Text style={{ fontSize: FontSize.sm, color: colors.primary, fontWeight: '700' }}>
+          {language === 'en' ? 'العربية' : 'English'}
+        </Text>
+      </TouchableOpacity>
       <AnimatedFlatList
         ref={flatListRef as any}
-        data={SLIDES}
+        data={slides}
         keyExtractor={(item) => item.id}
         horizontal
         pagingEnabled
@@ -95,26 +113,26 @@ export default function OnboardingScreen() {
 
       <View style={{ paddingHorizontal: 24, paddingBottom: 48, gap: 16, alignItems: 'center' }}>
         <View style={{ flexDirection: 'row', gap: 6, marginBottom: 8 }}>
-          {SLIDES.map((_, i) => (
+          {slides.map((_, i) => (
             <DotIndicator key={i} index={i} scrollX={scrollX} />
           ))}
         </View>
 
         <Button
-          title={currentIndex === SLIDES.length - 1 ? t('auth.signIn') : t('common.ok')}
+          title={currentIndex === slides.length - 1 ? t('auth.signIn') : t('common.next')}
           onPress={handleNext}
           fullWidth
           size="lg"
           rightIcon={
-            currentIndex < SLIDES.length - 1 ? (
-              <Ionicons name="arrow-forward" size={18} color={colors.white} />
+            currentIndex < slides.length - 1 ? (
+              <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={18} color={colors.white} />
             ) : undefined
           }
         />
 
-        {currentIndex < SLIDES.length - 1 && (
+        {currentIndex < slides.length - 1 && (
           <TouchableOpacity onPress={() => router.replace('/(auth)/login')} style={{ paddingVertical: 8 }}>
-            <Text style={{ fontSize: FontSize.md, color: colors.textTertiary, fontWeight: '500' }}>{t('common.close')}</Text>
+            <Text style={{ fontSize: FontSize.md, color: colors.textTertiary, fontWeight: '500' }}>{t('onboarding.skip')}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -127,7 +145,14 @@ function SlideItem({
   index,
   scrollX,
 }: {
-  item: typeof SLIDES[0];
+  item: {
+    id: string;
+    title: string;
+    subtitle: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    bg: string;
+    iconColor: string;
+  };
   index: number;
   scrollX: SharedValue<number>;
 }) {

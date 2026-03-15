@@ -50,11 +50,39 @@ export default function BookingScreen() {
   const isPackaged = trip?.is_packaged_trip ?? false;
   const activePackages = useMemo(() => trip?.packages?.filter(p => p.is_active) ?? [], [trip]);
 
-  // Non-packaged: mandatory fields (backend auto-assigns hidden package)
-  const simpleRequiredFields = useMemo(() => [
-    { field_type: 'name' as FieldType, is_required: true, validation_config: null },
-    { field_type: 'date_of_birth' as FieldType, is_required: true, validation_config: null },
-  ], []);
+  const simpleRequiredFields = useMemo(() => {
+    const mandatoryFields: FieldType[] = ['name', 'date_of_birth'];
+    const hiddenFieldDetails = trip?.simple_trip_required_fields_details ?? [];
+    const merged = new Map<FieldType, { field_type: FieldType; is_required: boolean; validation_config: Record<string, any> | null }>();
+
+    mandatoryFields.forEach((fieldType) => {
+      merged.set(fieldType, {
+        field_type: fieldType,
+        is_required: true,
+        validation_config: null,
+      });
+    });
+
+    hiddenFieldDetails.forEach((field) => {
+      merged.set(field.field_type as FieldType, {
+        field_type: field.field_type as FieldType,
+        is_required: field.is_required,
+        validation_config: field.validation_config ?? null,
+      });
+    });
+
+    (trip?.simple_trip_required_fields ?? []).forEach((fieldType) => {
+      if (!merged.has(fieldType as FieldType)) {
+        merged.set(fieldType as FieldType, {
+          field_type: fieldType as FieldType,
+          is_required: true,
+          validation_config: null,
+        });
+      }
+    });
+
+    return Array.from(merged.values());
+  }, [trip?.simple_trip_required_fields, trip?.simple_trip_required_fields_details]);
 
   // Packaged: flat list of {participant, pkg, globalIndex}
   const pkgFlatList = useMemo(() => {
@@ -96,7 +124,8 @@ export default function BookingScreen() {
   };
 
   const changeSimpleCount = (delta: number) => {
-    const newCount = Math.max(1, Math.min(10, simpleCount + delta));
+    const maxCount = Math.min(10, trip?.available_spots ?? 10);
+    const newCount = Math.max(1, Math.min(maxCount, simpleCount + delta));
     setSimpleCount(newCount);
     setSimpleParticipants(prev => {
       if (newCount > prev.length) return [...prev, ...Array(newCount - prev.length).fill({})];
@@ -124,11 +153,12 @@ export default function BookingScreen() {
   const validateFields = () => {
     const fieldLabel = (ft: string) =>
       fieldMetadata?.[ft]?.display_name ?? ft.replace(/_/g, ' ');
+    const isEmpty = (v: string | undefined) => !v || (typeof v === 'string' && !v.trim());
 
     if (!isPackaged) {
       for (let i = 0; i < simpleCount; i++) {
         for (const field of simpleRequiredFields) {
-          if (!simpleParticipants[i]?.[field.field_type]?.trim()) {
+          if (field.is_required && isEmpty(simpleParticipants[i]?.[field.field_type])) {
             Alert.alert(t('common.error'), `${fieldLabel(field.field_type)} — ${t('booking.participant', { number: i + 1 })}`);
             return false;
           }
@@ -136,8 +166,11 @@ export default function BookingScreen() {
       }
     } else {
       for (const { participant, pkg, globalIndex } of pkgFlatList) {
+        const details = pkg.required_fields_details ?? [];
         for (const ft of (pkg.required_fields ?? [])) {
-          if (!participant[ft]?.trim()) {
+          const detail = details.find(d => d.field_type === ft);
+          const isRequired = detail ? detail.is_required : true;
+          if (isRequired && isEmpty(participant[ft])) {
             Alert.alert(t('common.error'), `${fieldLabel(ft)} — ${t('booking.participant', { number: globalIndex + 1 })}`);
             return false;
           }
@@ -179,20 +212,42 @@ export default function BookingScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const status = err?.response?.status;
-      const msg = Array.isArray(detail)
-        ? (detail[0]?.msg ?? t('common.error'))
-        : (typeof detail === 'string' ? detail : t('common.error'));
+
       if (typeof detail === 'string' && detail.includes('already have an active registration')) {
         setAlreadyRegistered(true);
       } else if (status === 409 && typeof detail === 'string' && detail.includes('trip details have been updated')) {
-        // Trip changed since user last loaded it — invalidate cache and go back to trip page
         qc.invalidateQueries({ queryKey: ['trip', tripId] });
         Alert.alert(
           t('booking.tripChangedTitle'),
           t('booking.tripChangedMessage'),
           [{ text: t('booking.reviewTrip'), onPress: () => router.back() }],
         );
+      } else if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        // Structured error from backend
+        const fieldLabel = detail.field
+          ? (fieldMetadata?.[detail.field]?.display_name ?? detail.field.replace(/_/g, ' '))
+          : '';
+        if (detail.code === 'required_field_missing') {
+          Alert.alert(
+            t('common.error'),
+            t('booking.requiredFieldMissing', { field: fieldLabel, package: detail.package ?? '' }),
+          );
+        } else if (detail.code === 'field_validation_failed') {
+          Alert.alert(
+            t('common.error'),
+            t('booking.fieldValidationFailed', {
+              field: fieldLabel,
+              package: detail.package ?? '',
+              messages: Array.isArray(detail.messages) ? detail.messages.join(', ') : '',
+            }),
+          );
+        } else {
+          Alert.alert(t('booking.title'), t('common.error'));
+        }
       } else {
+        const msg = Array.isArray(detail)
+          ? (detail[0]?.msg ?? t('common.error'))
+          : (typeof detail === 'string' ? detail : t('common.error'));
         Alert.alert(t('booking.title'), msg);
       }
     } finally {
@@ -286,8 +341,8 @@ export default function BookingScreen() {
                     <Ionicons name="remove" size={20} color={simpleCount <= 1 ? colors.gray300 : colors.textPrimary} />
                   </TouchableOpacity>
                   <Text style={s.counterValue}>{simpleCount}</Text>
-                  <TouchableOpacity style={[s.counterBtn, simpleCount >= 10 && s.counterBtnDisabled]} onPress={() => changeSimpleCount(1)} disabled={simpleCount >= 10}>
-                    <Ionicons name="add" size={20} color={simpleCount >= 10 ? colors.gray300 : colors.textPrimary} />
+                  <TouchableOpacity style={[s.counterBtn, simpleCount >= Math.min(10, trip?.available_spots ?? 10) && s.counterBtnDisabled]} onPress={() => changeSimpleCount(1)} disabled={simpleCount >= Math.min(10, trip?.available_spots ?? 10)}>
+                    <Ionicons name="add" size={20} color={simpleCount >= Math.min(10, trip?.available_spots ?? 10) ? colors.gray300 : colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -347,7 +402,9 @@ export default function BookingScreen() {
                         onChange={v => updateSimpleParticipant(i, field.field_type, v)}
                         isRequired={field.is_required}
                         metadata={fieldMetadata?.[field.field_type]}
+                        allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
                         nationalityOptions={nationalities}
+                        validationConfig={field.validation_config}
                       />
                     ))}
                   </View>
@@ -356,11 +413,14 @@ export default function BookingScreen() {
             ) : (
               pkgFlatList.map(({ participant, pkg, globalIndex }) => {
                 const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
-                const fields = (pkg.required_fields ?? []).map(ft => ({
-                  field_type: ft as FieldType,
-                  is_required: true,
-                  validation_config: pkg.required_fields_details?.find(d => d.field_type === ft)?.validation_config ?? null,
-                }));
+                const fields = (pkg.required_fields ?? []).map(ft => {
+                  const detail = pkg.required_fields_details?.find(d => d.field_type === ft);
+                  return {
+                    field_type: ft as FieldType,
+                    is_required: detail ? detail.is_required : true,
+                    validation_config: detail?.validation_config ?? null,
+                  };
+                });
                 return (
                   <View key={globalIndex} style={s.section}>
                     <Text style={s.sectionTitle}>{t('booking.participant', { number: globalIndex + 1 })}</Text>
@@ -376,6 +436,7 @@ export default function BookingScreen() {
                           metadata={fieldMetadata?.[field.field_type]}
                           allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
                           nationalityOptions={nationalities}
+                          validationConfig={field.validation_config}
                         />
                       ))}
                     </View>
@@ -398,6 +459,12 @@ export default function BookingScreen() {
               <View style={s.confirmCard}>
                 <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
                 <ConfirmRow label={t('booking.participants')} value={String(totalParticipants)} s={s} />
+                {!isPackaged && (
+                  <View style={s.totalRow}>
+                    <Text style={s.totalLabel}>{t('booking.totalAmount')}</Text>
+                    <Text style={s.totalValue}>{t('booking.priceFormat', { price: totalAmount.toLocaleString() })}</Text>
+                  </View>
+                )}
                 {isPackaged && pkgSelections.map(sel => {
                   const pName = (i18n.language === 'ar' ? (sel.package.name_ar || sel.package.name_en) : (sel.package.name_en || sel.package.name_ar)) || 'Tier';
                   return <ConfirmRow key={sel.package.id} label={pName} value={`${sel.count} × ${Number(sel.package.price).toLocaleString()} SAR`} s={s} />;

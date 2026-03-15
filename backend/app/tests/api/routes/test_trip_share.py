@@ -14,10 +14,21 @@ from app.core.config import settings
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _create_trip(session: Session, provider, *, name_en="Share Test Trip", with_image=False):
+def _create_trip(
+    session: Session,
+    provider,
+    *,
+    name_en="Share Test Trip",
+    name_ar=None,
+    description_en="A trip to share",
+    description_ar=None,
+    with_image=False,
+):
     trip_in = TripCreate(
         name_en=name_en,
-        description_en="A trip to share",
+        name_ar=name_ar,
+        description_en=description_en,
+        description_ar=description_ar,
         start_date=datetime.datetime(2030, 6, 1),
         end_date=datetime.datetime(2030, 6, 3),
         max_participants=20,
@@ -64,6 +75,15 @@ def test_share_url_points_to_share_endpoint(client: TestClient, session: Session
 
     data = client.get(f"{settings.API_V1_STR}/trips/{trip.id}/share").json()
     assert f"{settings.API_V1_STR}/share/" in data["share_url"]
+
+
+def test_share_url_includes_arabic_lang_query(client: TestClient, session: Session):
+    """Arabic share requests should generate share URLs with lang=ar."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip = _create_trip(session, user.provider)
+
+    data = client.get(f"{settings.API_V1_STR}/trips/{trip.id}/share?lang=ar").json()
+    assert "lang=ar" in data["share_url"]
 
 
 def test_share_token_is_nonempty_string(client: TestClient, session: Session):
@@ -149,6 +169,28 @@ def test_share_preview_contains_trip_title(client: TestClient, session: Session)
 
     body = client.get(f"{settings.API_V1_STR}/share/{token}").text
     assert "Madinah Discovery Trip" in body
+
+
+def test_share_preview_localizes_arabic_content(client: TestClient, session: Session):
+    """Arabic share previews should render Arabic title, description, and page metadata."""
+    user, _ = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip = _create_trip(
+        session,
+        user.provider,
+        name_en="Desert Journey",
+        name_ar="رحلة الصحراء",
+        description_en="An English description",
+        description_ar="وصف عربي للرحلة",
+    )
+    token = _get_token(client, trip.id)
+
+    body = client.get(f"{settings.API_V1_STR}/share/{token}?lang=ar").text
+    assert 'lang="ar"' in body
+    assert 'dir="rtl"' in body
+    assert "رحلة الصحراء" in body
+    assert "وصف عربي للرحلة" in body
+    assert "افتح في تطبيق رحلة" in body
+    assert "مقاعد" in body
 
 
 def test_share_preview_contains_deep_link_scheme(client: TestClient, session: Session):

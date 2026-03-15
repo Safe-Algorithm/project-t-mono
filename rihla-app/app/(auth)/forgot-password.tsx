@@ -11,6 +11,7 @@ import Input from '../../components/ui/Input';
 import { FontSize, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import apiClient from '../../lib/api';
+import { useLanguageStore } from '../../store/languageStore';
 
 type Step = 'email' | 'otp' | 'success';
 
@@ -25,6 +26,7 @@ export default function ForgotPasswordScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
+  const { language, setLanguage, isRTL } = useLanguageStore();
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
@@ -34,7 +36,7 @@ export default function ForgotPasswordScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSendOtp = async () => {
-    if (!email.trim()) { setErrors({ email: t('auth.email') }); return; }
+    if (!email.trim()) { setErrors({ email: t('auth.emailRequired') }); return; }
     setLoading(true);
     try {
       await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
@@ -61,9 +63,9 @@ export default function ForgotPasswordScreen() {
 
   const handleResetPassword = async () => {
     const e: Record<string, string> = {};
-    if (!otp.trim() || otp.length < 6) e.otp = t('auth.otpLabel');
-    if (!newPassword) e.newPassword = t('changePassword.new');
-    else if (newPassword.length < 8) e.newPassword = t('changePassword.new');
+    if (!otp.trim() || otp.length < 6) e.otp = t('auth.enterOtp');
+    if (!newPassword) e.newPassword = t('auth.passwordRequired');
+    else if (newPassword.length < 8) e.newPassword = t('auth.passwordMin');
     if (newPassword !== confirmPassword) e.confirmPassword = t('changePassword.mismatch');
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
@@ -87,43 +89,46 @@ export default function ForgotPasswordScreen() {
     <View style={s.container}>
     <KeyboardAvoidingView style={s.flex1} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+        <TouchableOpacity style={[s.langToggle, isRTL && s.langToggleRtl]} onPress={() => setLanguage(language === 'en' ? 'ar' : 'en')}>
+          <Text style={s.langToggleText}>{language === 'en' ? 'العربية' : 'English'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[s.backBtn, isRTL && s.backBtnRtl]} onPress={() => router.back()}>
+          <Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={s.iconWrap}>
           <Ionicons name="lock-open-outline" size={56} color={colors.primary} />
         </View>
-        <Text style={s.title}>Reset Password</Text>
+        <Text style={s.title}>{t('auth.forgotPasswordTitle')}</Text>
         {step === 'email' && (
           <>
-            <Text style={s.subtitle}>Enter your email and we'll send you a verification code.</Text>
+            <Text style={s.subtitle}>{t('auth.forgotPasswordSubtitle')}</Text>
             <View style={s.form}>
-              <Input label="Email Address" placeholder="you@example.com" value={email}
+              <Input label={t('auth.email')} placeholder={t('auth.email')} value={email}
                 onChangeText={(v) => { setEmail(v); setErrors({}); }}
                 keyboardType="email-address" autoCapitalize="none" leftIcon="mail-outline" error={errors.email} />
-              <Button title="Send Code" onPress={handleSendOtp} loading={loading} fullWidth size="lg" />
+              <Button title={t('auth.sendCode')} onPress={handleSendOtp} loading={loading} fullWidth size="lg" />
             </View>
           </>
         )}
         {step === 'otp' && (
           <>
-            <Text style={s.subtitle}>Enter the 6-digit code sent to {email}, then choose a new password.</Text>
+            <Text style={s.subtitle}>{t('auth.forgotPasswordOtpSubtitle', { email })}</Text>
             <View style={s.form}>
-              <Input label="Verification Code" placeholder="000000" value={otp}
+              <Input label={t('auth.otpLabel')} placeholder="000000" value={otp}
                 onChangeText={(v) => { setOtp(v.replace(/\D/g, '')); setErrors({}); }}
                 keyboardType="number-pad" maxLength={6} leftIcon="key-outline" error={errors.otp} />
-              <Input label="New Password" placeholder="At least 8 characters" value={newPassword}
+              <Input label={t('changePassword.new')} placeholder={t('auth.passwordMin')} value={newPassword}
                 onChangeText={(v) => { setNewPassword(v); setErrors({}); }}
                 isPassword leftIcon="lock-closed-outline" error={errors.newPassword} />
-              <Input label="Confirm Password" placeholder="Repeat new password" value={confirmPassword}
+              <Input label={t('changePassword.confirm')} placeholder={t('changePassword.confirm')} value={confirmPassword}
                 onChangeText={(v) => { setConfirmPassword(v); setErrors({}); }}
                 isPassword leftIcon="lock-closed-outline" error={errors.confirmPassword} />
-              <Button title="Reset Password" onPress={handleResetPassword} loading={loading} fullWidth size="lg" />
+              <Button title={t('auth.resetPassword')} onPress={handleResetPassword} loading={loading} fullWidth size="lg" />
               <TouchableOpacity onPress={handleResendOtp} disabled={loading} style={s.resendBtn}>
-                <Text style={s.resendText}>Resend code</Text>
+                <Text style={s.resendText}>{t('auth.resend')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => { setStep('email'); setOtp(''); setErrors({}); }} style={s.resendBtn}>
-                <Text style={s.resendText}>Change email</Text>
+                <Text style={s.resendText}>{t('auth.changeEmail')}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -131,9 +136,9 @@ export default function ForgotPasswordScreen() {
         {step === 'success' && (
           <View style={s.successBox}>
             <Ionicons name="checkmark-circle" size={56} color={colors.success} />
-            <Text style={s.successTitle}>Password Reset!</Text>
-            <Text style={s.successText}>Your password has been updated. You can now sign in.</Text>
-            <Button title="Back to Login" onPress={() => router.replace('/(auth)/login')} fullWidth style={{ marginTop: 8 }} />
+            <Text style={s.successTitle}>{t('auth.passwordResetTitle')}</Text>
+            <Text style={s.successText}>{t('auth.passwordResetSubtitle')}</Text>
+            <Button title={t('auth.backToLogin')} onPress={() => router.replace('/(auth)/login')} fullWidth style={{ marginTop: 8 }} />
           </View>
         )}
       </ScrollView>
@@ -148,8 +153,12 @@ function makeStyles(c: ThemeColors) {
     flex1: { flex: 1 },
     scrollView: { flex: 1 },
     scroll: { flexGrow: 1, paddingHorizontal: 24, paddingBottom: 40 },
-    backBtn: { marginTop: 56, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-    iconWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 32, marginBottom: 24 },
+    backBtn: { position: 'absolute', top: 48, left: 16, width: 40, height: 40, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+    backBtnRtl: { left: undefined, right: 16 },
+    langToggle: { position: 'absolute', top: 48, right: 24, backgroundColor: c.primarySurface, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, zIndex: 1 },
+    langToggleRtl: { right: undefined, left: 24 },
+    langToggleText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '700' },
+    iconWrap: { width: 96, height: 96, borderRadius: 48, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginTop: 104, marginBottom: 24 },
     title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, textAlign: 'center', marginBottom: 8 },
     subtitle: { fontSize: FontSize.md, color: c.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: 32 },
     form: { gap: 16 },

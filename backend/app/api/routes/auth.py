@@ -41,8 +41,67 @@ def _auth_url(source: RequestSource, path: str) -> str:
         return f"{settings.ADMIN_PANEL_URL}/{path}"
 
 
+def _get_request_scheme(request: Request) -> str:
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    if forwarded_proto:
+        return forwarded_proto.split(",")[0].strip().lower()
+    return request.url.scheme.lower()
+
+
+def _get_auth_cookie_settings(request: Request) -> dict:
+    secure = settings.AUTH_COOKIE_SECURE
+    if secure is None:
+        secure = _get_request_scheme(request) == "https"
+
+    samesite = (settings.AUTH_COOKIE_SAMESITE or "auto").lower()
+    if samesite == "auto":
+        samesite = "none" if secure else "lax"
+
+    if samesite not in {"lax", "strict", "none"}:
+        samesite = "none" if secure else "lax"
+
+    if samesite == "none" and not secure:
+        samesite = "lax"
+
+    cookie_settings = {
+        "max_age": settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+        "httponly": True,
+        "secure": secure,
+        "samesite": samesite,
+    }
+    if settings.AUTH_COOKIE_DOMAIN:
+        cookie_settings["domain"] = settings.AUTH_COOKIE_DOMAIN
+    return cookie_settings
+
+
+def _set_refresh_token_cookie(request: Request, response: Response, source: RequestSource, refresh_token: str) -> None:
+    cookie_name = f"refresh_token_{source.value}"
+    response.set_cookie(
+        key=cookie_name,
+        value=refresh_token,
+        **_get_auth_cookie_settings(request),
+    )
+
+
+def _clear_refresh_token_cookie(request: Request, response: Response, source: RequestSource) -> None:
+    cookie_name = f"refresh_token_{source.value}"
+    cookie_settings = _get_auth_cookie_settings(request)
+    delete_kwargs = {
+        "httponly": cookie_settings["httponly"],
+        "secure": cookie_settings["secure"],
+        "samesite": cookie_settings["samesite"],
+    }
+    if "domain" in cookie_settings:
+        delete_kwargs["domain"] = cookie_settings["domain"]
+    response.delete_cookie(
+        key=cookie_name,
+        **delete_kwargs,
+    )
+
+
 @router.post("/login/access-token", response_model=Token)
 def login_for_access_token(
+    request: Request,
     response: Response,
     session: Session = Depends(deps.get_session),
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -79,16 +138,7 @@ def login_for_access_token(
         data={"sub": token_subject, "source": source.value}
     )
     
-    # Set refresh token as HttpOnly Secure SameSite cookie
-    cookie_name = f"refresh_token_{source.value}"
-    response.set_cookie(
-        key=cookie_name,
-        value=refresh_token,
-        max_age=security.settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # Convert days to seconds
-        httponly=True,
-        secure=False,  # Set to False for development (localhost)
-        samesite="lax"  # Changed to lax for better compatibility
-    )
+    _set_refresh_token_cookie(request, response, source, refresh_token)
     
     return Token(access_token=access_token, refresh_token=refresh_token, token_type="bearer")
 
@@ -261,15 +311,7 @@ def refresh_access_token(
             data={"sub": token_subject, "source": source.value}
         )
 
-        # Always update cookie for web panels
-        response.set_cookie(
-            key=cookie_name,
-            value=new_refresh_token,
-            max_age=security.settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
-            httponly=True,
-            secure=False,
-            samesite="lax",
-        )
+        _set_refresh_token_cookie(request, response, source, new_refresh_token)
 
         return Token(access_token=access_token, refresh_token=new_refresh_token, token_type="bearer")
 
@@ -282,19 +324,14 @@ def refresh_access_token(
 
 @router.post("/logout", response_model=Msg)
 def logout(
+    request: Request,
     response: Response,
     source: RequestSource = Depends(deps.get_request_source),
 ) -> Msg:
     """
     Logout user by clearing refresh token cookie.
     """
-    cookie_name = f"refresh_token_{source.value}"
-    response.delete_cookie(
-        key=cookie_name,
-        httponly=True,
-        secure=False,  # Set to False for development (localhost)
-        samesite="lax"  # Changed to lax for better compatibility
-    )
+    _clear_refresh_token_cookie(request, response, source)
     return Msg(msg="Successfully logged out")
 
 

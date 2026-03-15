@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useUser } from '@/hooks/useUser';
 import { User } from '@/types/user';
 import { setGlobalRefreshToken } from '@/services/api';
@@ -19,9 +19,9 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
-  const { user, isLoading, error, refetch } = useUser(token);
+  const { user, isLoading, error } = useUser(token);
 
-  const refreshTokens = async (): Promise<boolean> => {
+  const refreshTokens = useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/refresh`, {
         method: 'POST',
@@ -50,7 +50,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.removeItem('provider_access_token');
       return false;
     }
-  };
+  }, []);
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -71,19 +71,17 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     initializeAuth();
-  }, []);
+  }, [refreshTokens]);
 
 
-  const login = (accessToken: string) => {
+  const login = useCallback((accessToken: string) => {
     setToken(accessToken);
     localStorage.setItem('provider_access_token', accessToken);
-    // Don't immediately refetch - let the useEffect handle it
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setToken(null);
     localStorage.removeItem('provider_access_token');
-    // Clear refresh token cookie by calling logout endpoint
     try {
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/v1/logout`, {
         method: 'POST',
@@ -93,21 +91,16 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         credentials: 'include',
       });
     } catch (error) {
-      // Ignore errors on logout
       console.warn('Logout request failed:', error);
     }
-    // Redirect to login page
     window.location.href = '/login';
-  };
+  }, []);
 
-  const refreshToken = async (): Promise<boolean> => {
-    return refreshTokens();
-  };
+  const refreshToken = useCallback(async (): Promise<boolean> => refreshTokens(), [refreshTokens]);
 
-  // Set the global refresh token function for the API service
   useEffect(() => {
     setGlobalRefreshToken(refreshTokens);
-  }, []);
+  }, [refreshTokens]);
 
   return (
     <UserContext.Provider value={{ user, token, isInitialized, isLoading, error, login, logout, refreshToken }}>

@@ -163,7 +163,8 @@ const TripDetailPage: React.FC = () => {
     if (!tripId || typeof tripId !== 'string') return;
     setShareLoading(true);
     try {
-      const data = await api.get<{ share_url: string; share_token: string; view_count: number }>(`/trips/${tripId}/share`);
+      const shareLang = i18n.language === 'ar' ? 'ar' : 'en';
+      const data = await api.get<{ share_url: string; share_token: string; view_count: number }>(`/trips/${tripId}/share?lang=${shareLang}`);
       setShareUrl(data.share_url);
       await navigator.clipboard.writeText(data.share_url);
       setShareCopied(true);

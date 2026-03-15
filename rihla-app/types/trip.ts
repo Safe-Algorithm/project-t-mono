@@ -87,6 +87,8 @@ export interface Trip {
   images: string[] | null;
   trip_metadata?: Record<string, any> | null;
   packages: TripPackage[];
+  simple_trip_required_fields: string[];
+  simple_trip_required_fields_details?: TripPackageRequiredField[];
   extra_fees: TripExtraFee[];
   average_rating?: number;
   total_reviews?: number;

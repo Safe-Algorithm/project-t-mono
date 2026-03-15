@@ -24,7 +24,7 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
-  const { language, setLanguage } = useLanguageStore();
+  const { language, setLanguage, isRTL } = useLanguageStore();
   const [loginType, setLoginType] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [localNumber, setLocalNumber] = useState('');
@@ -42,7 +42,7 @@ export default function LoginScreen() {
       if (!email.trim()) e.contact = t('auth.email');
       else if (!/\S+@\S+\.\S+/.test(email)) e.contact = t('auth.email');
     } else {
-      if (!localNumber.trim()) e.contact = 'Phone number is required';
+      if (!localNumber.trim()) e.contact = t('auth.phoneRequired');
     }
     if (!password) e.password = t('auth.password');
     setErrors(e);
@@ -80,19 +80,21 @@ export default function LoginScreen() {
           <Text style={s.tagline}>{t('auth.loginSubtitle')}</Text>
         </View>
         <View style={s.form}>
-          <Text style={s.title}>{t('auth.loginTitle')}</Text>
-          <Text style={s.subtitle}>{t('auth.loginSubtitle')}</Text>
+          <View style={[s.headerArea, isRTL && s.headerAreaRtl]}>
+            <Text style={s.title}>{t('auth.loginTitle')}</Text>
+            <Text style={s.subtitle}>{t('auth.loginSubtitle')}</Text>
+          </View>
           <View style={s.fields}>
-            <View style={s.toggle}>
+            <View style={[s.toggle, isRTL && s.rowRtl]}>
               <TouchableOpacity style={[s.toggleBtn, loginType === 'email' && s.toggleBtnActive]}
                 onPress={() => { setLoginType('email'); setErrors({}); }}>
                 <Ionicons name="mail-outline" size={16} color={loginType === 'email' ? colors.primary : colors.textTertiary} />
-                <Text style={[s.toggleText, loginType === 'email' && s.toggleTextActive]}>Email</Text>
+                <Text style={[s.toggleText, loginType === 'email' && s.toggleTextActive]}>{t('auth.email')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[s.toggleBtn, loginType === 'phone' && s.toggleBtnActive]}
                 onPress={() => { setLoginType('phone'); setErrors({}); }}>
                 <Ionicons name="call-outline" size={16} color={loginType === 'phone' ? colors.primary : colors.textTertiary} />
-                <Text style={[s.toggleText, loginType === 'phone' && s.toggleTextActive]}>Phone</Text>
+                <Text style={[s.toggleText, loginType === 'phone' && s.toggleTextActive]}>{t('auth.phone')}</Text>
               </TouchableOpacity>
             </View>
             {loginType === 'email' ? (
@@ -101,7 +103,7 @@ export default function LoginScreen() {
                 leftIcon="mail-outline" error={errors.contact} />
             ) : (
               <PhoneInput
-                label="Phone Number"
+                label={t('auth.phoneNumber')}
                 value={localNumber}
                 onChangeText={setLocalNumber}
                 selectedCountry={selectedCountry}
@@ -112,16 +114,16 @@ export default function LoginScreen() {
             <Input label={t('auth.password')} placeholder={t('auth.password')} value={password}
               onChangeText={setPassword} isPassword leftIcon="lock-closed-outline" error={errors.password} />
           </View>
-          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={s.forgotRow}>
+          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={[s.forgotRow, isRTL && s.forgotRowRtl]}>
             <Text style={s.forgotText}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
           <Button title={t('auth.login')} onPress={handleLogin} loading={loading} fullWidth size="lg" style={s.loginBtn} />
           <View style={s.divider}>
             <View style={s.dividerLine} />
-            <Text style={s.dividerText}>or</Text>
+            <Text style={s.dividerText}>{t('auth.or')}</Text>
             <View style={s.dividerLine} />
           </View>
-          <View style={s.registerRow}>
+          <View style={[s.registerRow, isRTL && s.rowRtl]}>
             <Text style={s.registerText}>{t('auth.noAccount')} </Text>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
               <Text style={s.registerLink}>{t('auth.signUp')}</Text>
@@ -147,16 +149,20 @@ function makeStyles(c: ThemeColors) {
     langToggle: { position: 'absolute', top: 48, right: 20, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
     langToggleText: { fontSize: FontSize.sm, color: c.white, fontWeight: '700' },
     form: { flex: 1, paddingHorizontal: 24, paddingTop: 32, paddingBottom: 40, gap: 0 },
-    title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, marginBottom: 6 },
-    subtitle: { fontSize: FontSize.md, color: c.textSecondary, marginBottom: 28 },
+    headerArea: { gap: 4, marginBottom: 28 },
+    headerAreaRtl: { alignItems: 'flex-end' },
+    title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary },
+    subtitle: { fontSize: FontSize.md, color: c.textSecondary },
     fields: { gap: 16, marginBottom: 12 },
     forgotRow: { alignSelf: 'flex-end', marginBottom: 24 },
+    forgotRowRtl: { alignSelf: 'flex-start' },
     forgotText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600' },
     loginBtn: { marginBottom: 24 },
     divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24 },
     dividerLine: { flex: 1, height: 1, backgroundColor: c.border },
     dividerText: { fontSize: FontSize.sm, color: c.textTertiary },
     registerRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center' },
+    rowRtl: { flexDirection: 'row-reverse' },
     registerText: { fontSize: FontSize.md, color: c.textSecondary },
     registerLink: { fontSize: FontSize.md, color: c.primary, fontWeight: '700' },
     toggle: { flexDirection: 'row', backgroundColor: c.gray100, borderRadius: 12, padding: 4, gap: 4 },
