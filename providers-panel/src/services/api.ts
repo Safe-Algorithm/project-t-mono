@@ -7,6 +7,7 @@ const getAuthToken = (): string | null => {
 
 // Global refresh token function that can be set by the auth context
 let globalRefreshToken: (() => Promise<boolean>) | null = null;
+let refreshInProgress: Promise<boolean> | null = null;
 
 export const setGlobalRefreshToken = (refreshFn: () => Promise<boolean>) => {
   globalRefreshToken = refreshFn;
@@ -40,7 +41,14 @@ const handleResponse = async (response: Response, retryCallback?: () => Promise<
   // Handle 401 Unauthorized - try to refresh token first
   if (response.status === 401 && globalRefreshToken && retryCallback) {
     try {
-      const refreshSuccess = await globalRefreshToken();
+      // If a refresh is already in progress, wait for it instead of starting a new one
+      if (!refreshInProgress) {
+        refreshInProgress = globalRefreshToken();
+      }
+      
+      const refreshSuccess = await refreshInProgress;
+      refreshInProgress = null; // Clear the flag after completion
+      
       if (refreshSuccess) {
         // Retry the original request with new token
         const retryResponse = await retryCallback();
@@ -48,6 +56,7 @@ const handleResponse = async (response: Response, retryCallback?: () => Promise<
       }
     } catch (refreshError) {
       console.error('Token refresh failed:', refreshError);
+      refreshInProgress = null; // Clear the flag on error
     }
     
     // If refresh failed or no refresh function available, redirect to login
