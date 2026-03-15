@@ -39,7 +39,9 @@ export default function ProviderProfileScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const renderTrip = useCallback(({ item }: { item: Trip }) => (
-    <TripCard trip={item} onPress={() => router.push(`/trip/${item.id}`)} />
+    <View style={{ paddingHorizontal: 16 }}>
+      <TripCard trip={item} onPress={() => router.push(`/trip/${item.id}`)} />
+    </View>
   ), []);
 
   if (isLoading) {
@@ -92,7 +94,7 @@ export default function ProviderProfileScreen() {
             </View>
           )}
         </View>
-        <View style={[s.avatarWrapper, { top: COVER_HEIGHT - AVATAR_OVERLAP, width: AVATAR_SIZE + 6, height: AVATAR_SIZE + 6, borderRadius: (AVATAR_SIZE + 6) / 2 }]}>
+        <View style={[s.avatarWrapper, { top: COVER_HEIGHT - AVATAR_OVERLAP, left: 20, width: AVATAR_SIZE + 6, height: AVATAR_SIZE + 6, borderRadius: (AVATAR_SIZE + 6) / 2 }]}>
           {provider.company_avatar_url ? (
             <Image source={{ uri: provider.company_avatar_url }} style={[s.avatar, { width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2 }]} />
           ) : (
@@ -144,10 +146,12 @@ export default function ProviderProfileScreen() {
             <Text style={s.bio}>{bio}</Text>
           </View>
         )}
-        {trips.length > 0 && (
-          <Text style={s.sectionTitle}>{t('provider.tripsBy', { name: provider.company_name })}</Text>
-        )}
       </View>
+      {trips.length > 0 && (
+        <View style={{ paddingHorizontal: 20 }}>
+          <Text style={s.sectionTitle}>{t('provider.tripsBy', { name: provider.company_name })}</Text>
+        </View>
+      )}
     </>
   );
 
@@ -201,23 +205,23 @@ function makeStyles(c: ThemeColors) {
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 },
     errorText: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
     backLink: { fontSize: FontSize.md, color: c.primary, fontWeight: '600' },
-    profileCard: { backgroundColor: c.surface, alignItems: 'center', paddingBottom: 24, paddingHorizontal: 20, gap: 10, borderBottomWidth: 1, borderBottomColor: c.border, position: 'relative' },
+    profileCard: { backgroundColor: c.surface, alignItems: 'center', paddingBottom: 24, gap: 10, borderBottomWidth: 1, borderBottomColor: c.border, position: 'relative' },
     coverContainer: { position: 'absolute', top: 0, left: 0, right: 0 },
     coverImage: { width: '100%', height: '100%' },
     coverPlaceholder: { width: '100%', height: '100%', backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
-    avatarWrapper: { position: 'absolute', left: 20, backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
+    avatarWrapper: { position: 'absolute', backgroundColor: c.surface, alignItems: 'center', justifyContent: 'center' },
     avatar: { width: 88, height: 88, borderRadius: 44 },
     avatarPlaceholder: { width: 88, height: 88, borderRadius: 44, backgroundColor: c.primarySurface, alignItems: 'center', justifyContent: 'center' },
     avatarInitials: { fontSize: FontSize.xxl, fontWeight: '800', color: c.primary },
-    companyName: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, textAlign: 'center' },
-    ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    companyName: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, textAlign: 'center', paddingHorizontal: 20 },
+    ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20 },
     ratingText: { fontSize: FontSize.sm, color: c.textSecondary, fontWeight: '500' },
-    statsRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.gray50, borderRadius: Radius.xl, paddingVertical: 16, paddingHorizontal: 8, width: '100%', marginTop: 4 },
+    statsRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: c.gray50, borderRadius: Radius.xl, paddingVertical: 16, paddingHorizontal: 8, marginHorizontal: 20, marginTop: 4 },
     statItem: { flex: 1, alignItems: 'center', gap: 4 },
     statDivider: { width: 1, height: 40, backgroundColor: c.border },
     statValue: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary },
     statLabel: { fontSize: FontSize.xs, color: c.textTertiary, fontWeight: '500' },
-    listContent: { paddingHorizontal: 16, paddingBottom: 0 },
+    listContent: { paddingBottom: 0 },
     content: { padding: 20, gap: 0 },
     section: { marginBottom: 24 },
     sectionTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary, marginBottom: 12, textAlign: 'center' },
