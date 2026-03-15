@@ -61,18 +61,34 @@ def _compute_content_hash(trip: Trip) -> str:
         return v
 
     payload = {f: _ser(getattr(trip, f, None)) for f in _HASH_FIELDS}
-    # Also fold in the packages' own booking-relevant fields (price, is_refundable, amenities)
-    # so that a package change also invalidates cached trips on the client.
+    # Also fold in the packages' own booking-relevant fields and required fields
+    # so package changes invalidate cached trips on the client.
     try:
         pkgs = sorted(
             [
                 {
                     "id": str(p.id),
+                    "name_en": p.name_en,
+                    "name_ar": p.name_ar,
+                    "description_en": p.description_en,
+                    "description_ar": p.description_ar,
                     "price": str(p.price),
+                    "currency": p.currency.value if hasattr(p.currency, "value") else str(p.currency),
                     "is_refundable": p.is_refundable,
                     "is_active": p.is_active,
                     "amenities": sorted(p.amenities or []),
                     "max_participants": p.max_participants,
+                    "required_fields": sorted(
+                        [
+                            {
+                                "field_type": rf.field_type.value if hasattr(rf.field_type, "value") else str(rf.field_type),
+                                "is_required": rf.is_required,
+                                "validation_config": rf.validation_config or {},
+                            }
+                            for rf in (p.required_fields or [])
+                        ],
+                        key=lambda item: item["field_type"],
+                    ),
                 }
                 for p in (trip.packages or [])
             ],

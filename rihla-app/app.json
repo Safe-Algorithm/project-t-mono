@@ -4,14 +4,14 @@
     "slug": "rihla",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Rihla-logo.png",
     "scheme": "rihlaapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/Rihla-logo-transparent.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#13519c"
     },
     "ios": {
       "supportsTablet": true
@@ -19,8 +19,8 @@
     "android": {
       "package": "com.safealgo.rihlaapp",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/Rihla-logo.png",
+        "backgroundColor": "#13519c"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -31,7 +31,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "*.ngrok-free.app",
+              "host": "www.safealgo.sa",
               "pathPrefix": "/payment-callback"
             }
           ],

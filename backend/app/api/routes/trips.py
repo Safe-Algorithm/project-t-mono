@@ -2,6 +2,7 @@ import asyncio
 import uuid
 import logging
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Dict, Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, BackgroundTasks, UploadFile, File
@@ -26,6 +27,144 @@ from app.crud import trip_extra_fee
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def _normalize_trip_value_for_compare(value):
+    if hasattr(value, "value"):
+        return value.value
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, Decimal):
+        return format(value.normalize(), "f")
+    if isinstance(value, (int, float)):
+        return format(Decimal(str(value)).normalize(), "f")
+    if isinstance(value, datetime):
+        return value.replace(tzinfo=None)
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _normalize_trip_value_for_compare(v) for k, v in sorted(value.items())}
+    if isinstance(value, list):
+        return sorted(_normalize_trip_value_for_compare(item) for item in value)
+    return value
+
+
+def _get_hidden_package(session: Session, trip_id: uuid.UUID):
+    from app.models.trip_package import TripPackage as TripPackageModel
+
+    return session.query(TripPackageModel).filter(TripPackageModel.trip_id == trip_id).first()
+
+
+def _filter_trip_update_changes(session: Session, db_trip, trip_in: TripUpdate) -> Dict[str, Any]:
+    payload = trip_in.model_dump(exclude_unset=True)
+    hidden_package = None
+    package_only_fields = {"price", "is_refundable", "amenities"}
+
+    if any(field in payload for field in package_only_fields):
+        hidden_package = _get_hidden_package(session, db_trip.id)
+
+    changed: Dict[str, Any] = {}
+    for field, value in payload.items():
+        if field in package_only_fields:
+            current_value = getattr(hidden_package, field, None) if hidden_package else None
+        else:
+            current_value = getattr(db_trip, field, None)
+        if _normalize_trip_value_for_compare(value) != _normalize_trip_value_for_compare(current_value):
+            changed[field] = value
+    return changed
+
+
+def _filter_package_update_changes(package, package_in: TripPackageUpdate) -> Dict[str, Any]:
+    payload = package_in.model_dump(exclude_unset=True, exclude={"required_fields"})
+    changed: Dict[str, Any] = {}
+    for field, value in payload.items():
+        current_value = getattr(package, field, None)
+        if _normalize_trip_value_for_compare(value) != _normalize_trip_value_for_compare(current_value):
+            changed[field] = value
+    return changed
+
+
+def _trip_has_active_paid_bookings(session: Session, trip_id: uuid.UUID) -> bool:
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.payment import Payment, PaymentStatus
+    from sqlmodel import select as sql_select
+
+    return session.exec(
+        sql_select(Payment).join(
+            TripRegistrationModel,
+            Payment.registration_id == TripRegistrationModel.id,
+        ).where(
+            TripRegistrationModel.trip_id == trip_id,
+            TripRegistrationModel.status != "cancelled",
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first() is not None
+
+
+def _raise_paid_booking_material_change_error() -> None:
+    raise HTTPException(
+        status_code=409,
+        detail=(
+            "This trip has active paid bookings. "
+            "Material trip details cannot be changed once participants have booked. "
+            "To change the trip, cancel it first (all participants will be refunded)."
+        ),
+    )
+
+
+def _normalize_required_field_state(fields) -> List[Dict[str, Any]]:
+    normalized = []
+    for field in fields:
+        field_type = field["field_type"]
+        normalized.append({
+            "field_type": field_type.value if hasattr(field_type, "value") else str(field_type),
+            "is_required": bool(field.get("is_required", True)),
+            "validation_config": _normalize_trip_value_for_compare(field.get("validation_config") or {}),
+        })
+    return sorted(normalized, key=lambda item: item["field_type"])
+
+
+def _get_package_required_fields_state(package) -> List[Dict[str, Any]]:
+    return _normalize_required_field_state([
+        {
+            "field_type": field.field_type,
+            "is_required": field.is_required,
+            "validation_config": field.validation_config,
+        }
+        for field in (package.required_fields or [])
+    ])
+
+
+def _desired_required_fields_state(field_types: List[TripFieldType]) -> List[Dict[str, Any]]:
+    mandatory_fields = {TripFieldType.NAME, TripFieldType.DATE_OF_BIRTH}
+    all_fields = mandatory_fields.union(set(field_types or []))
+    return _normalize_required_field_state([
+        {
+            "field_type": field_type,
+            "is_required": True,
+            "validation_config": {},
+        }
+        for field_type in all_fields
+    ])
+
+
+def _desired_required_fields_state_with_validation(
+    required_fields: List[PackageRequiredFieldWithValidation],
+) -> List[Dict[str, Any]]:
+    desired: Dict[TripFieldType, Dict[str, Any]] = {
+        TripFieldType.NAME: {},
+        TripFieldType.DATE_OF_BIRTH: {},
+    }
+    for field_config in required_fields:
+        desired[field_config.field_type] = field_config.validation_config or {}
+    return _normalize_required_field_state([
+        {
+            "field_type": field_type,
+            "is_required": True,
+            "validation_config": validation_config,
+        }
+        for field_type, validation_config in desired.items()
+    ])
 
 
 def _get_starting_city_info(session: Session, trip) -> Optional[dict]:
@@ -498,8 +637,10 @@ def update_trip(
     if db_trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    # Rule: is_refundable is frozen once the trip is published — never allow changes.
-    if trip_in.is_refundable is not None:
+    trip_changes = _filter_trip_update_changes(session, db_trip, trip_in)
+    trip_in = TripUpdate(**trip_changes)
+
+    if "is_refundable" in trip_changes:
         raise HTTPException(
             status_code=400,
             detail="Refundability cannot be changed after a trip is published. "
@@ -531,7 +672,7 @@ def update_trip(
             "meeting_location", "price", "amenities",
             "starting_city_id", "is_international",
         }
-        attempted = set(trip_in.model_dump(exclude_unset=True).keys()) & _MATERIAL_FIELDS
+        attempted = set(trip_changes.keys()) & _MATERIAL_FIELDS
         if attempted:
             raise HTTPException(
                 status_code=409,
@@ -740,6 +881,8 @@ def create_trip_package(
         raise HTTPException(status_code=404, detail="Trip not found")
     if trip.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not enough permissions")
+    if _trip_has_active_paid_bookings(session, trip_id):
+        _raise_paid_booking_material_change_error()
 
     # Validate tier participant total if this new package provides max_participants
     if package_in.max_participants is not None and trip.is_packaged_trip:
@@ -874,20 +1017,37 @@ def update_trip_package(
     
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
-    
+
+    package_changes = _filter_package_update_changes(package, package_in)
+    required_fields_changed = False
+    if package_in.required_fields is not None:
+        required_fields_changed = (
+            _get_package_required_fields_state(package)
+            != _desired_required_fields_state(package_in.required_fields)
+        )
+
+    if "is_refundable" in package_changes:
+        raise HTTPException(
+            status_code=400,
+            detail="Refundability cannot be changed after a trip is published. "
+                   "Users may have booked based on the original refund policy.",
+        )
+
+    if _trip_has_active_paid_bookings(session, trip_id) and (package_changes or required_fields_changed):
+        _raise_paid_booking_material_change_error()
+
     # Validate tier participant total if max_participants is being updated
-    if package_in.max_participants is not None and trip.is_packaged_trip:
+    if "max_participants" in package_changes and trip.is_packaged_trip:
         _validate_tier_participant_totals(
             session=session,
             trip_id=trip_id,
             trip_max=trip.max_participants,
             exclude_package_id=package_id,
-            override_package_max={str(package_id): package_in.max_participants},
+            override_package_max={str(package_id): package_changes["max_participants"]},
         )
 
     # Update package fields (excluding required_fields)
-    update_data = package_in.model_dump(exclude_unset=True, exclude={"required_fields"})
-    for field, value in update_data.items():
+    for field, value in package_changes.items():
         setattr(package, field, value)
 
     # Validate that at least one name and one description remain after patch
@@ -897,7 +1057,7 @@ def update_trip_package(
         raise HTTPException(status_code=400, detail="At least one of description_en or description_ar must be provided")
     
     # Update required fields if provided
-    if package_in.required_fields is not None:
+    if package_in.required_fields is not None and required_fields_changed:
         # Clear existing required fields
         session.query(TripPackageRequiredField).filter(
             TripPackageRequiredField.package_id == package_id
@@ -921,10 +1081,14 @@ def update_trip_package(
             )
             session.add(required_field)
     
-    session.commit()
-    session.refresh(package)
-    session.refresh(trip)
-    crud.trip.recompute_content_hash(session=session, trip=trip)
+    if package_changes or required_fields_changed:
+        session.commit()
+        session.refresh(package)
+        session.refresh(trip)
+        crud.trip.recompute_content_hash(session=session, trip=trip)
+    else:
+        session.refresh(package)
+        session.refresh(trip)
 
     # Get required fields for response
     required_fields = session.query(TripPackageRequiredField).filter(
@@ -972,6 +1136,8 @@ def delete_trip_package(
     ).first()
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
+    if _trip_has_active_paid_bookings(session, trip_id):
+        _raise_paid_booking_material_change_error()
 
     active_count = session.query(TripPackageModel).filter(
         TripPackageModel.trip_id == trip_id,
@@ -1019,6 +1185,10 @@ def set_package_required_fields(
     
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
+
+    if _trip_has_active_paid_bookings(session, trip_id):
+        if _get_package_required_fields_state(package) != _desired_required_fields_state(field_types):
+            _raise_paid_booking_material_change_error()
     
     # Clear existing required fields
     session.query(TripPackageRequiredField).filter(
@@ -1041,6 +1211,8 @@ def set_package_required_fields(
         session.add(required_field)
     
     session.commit()
+    session.refresh(trip)
+    crud.trip.recompute_content_hash(session=session, trip=trip)
     return {"message": "Required fields updated successfully"}
 
 
@@ -1072,6 +1244,10 @@ def set_package_required_fields_with_validation(
     
     if not package:
         raise HTTPException(status_code=404, detail="Package not found")
+
+    if _trip_has_active_paid_bookings(session, trip_id):
+        if _get_package_required_fields_state(package) != _desired_required_fields_state_with_validation(request.required_fields):
+            _raise_paid_booking_material_change_error()
     
     # Validate all validation configs before proceeding
     validation_errors = []
@@ -1116,6 +1292,8 @@ def set_package_required_fields_with_validation(
         session.add(required_field)
     
     session.commit()
+    session.refresh(trip)
+    crud.trip.recompute_content_hash(session=session, trip=trip)
     return {"message": "Required fields with validation configurations updated successfully"}
 
 

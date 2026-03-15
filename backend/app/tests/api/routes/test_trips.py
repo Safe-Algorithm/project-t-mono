@@ -3447,6 +3447,95 @@ def _create_trip_with_paid_registration(client, session, headers, user):
     return str(trip_id)
 
 
+def _create_packaged_trip(client, headers):
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Protected Packaged Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+            "max_participants": 10,
+            "is_packaged_trip": True,
+        },
+    )
+    assert create_resp.status_code == 200
+    trip_id = create_resp.json()["id"]
+
+    pkg1_resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/packages",
+        headers=headers,
+        json={
+            "name_en": "Standard",
+            "description_en": "Standard tier",
+            "price": 100.0,
+            "max_participants": 5,
+            "is_refundable": True,
+        },
+    )
+    assert pkg1_resp.status_code == 200
+
+    pkg2_resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/packages",
+        headers=headers,
+        json={
+            "name_en": "Premium",
+            "description_en": "Premium tier",
+            "price": 150.0,
+            "max_participants": 5,
+            "is_refundable": False,
+        },
+    )
+    assert pkg2_resp.status_code == 200
+
+    return trip_id, pkg1_resp.json()["id"], pkg2_resp.json()["id"]
+
+
+def _create_packaged_trip_with_paid_registration(client, session, headers, user):
+    """Helper: create a packaged trip with packages and a paid registration tied to one package."""
+    from app.models.payment import Payment, PaymentStatus
+
+    trip_id, package_id, other_package_id = _create_packaged_trip(client, headers)
+
+    reg = TripRegistration(
+        trip_id=uuid.UUID(trip_id),
+        user_id=user.id,
+        total_participants=1,
+        total_amount=100,
+        status="confirmed",
+        booking_reference=f"TEST-{uuid.uuid4().hex[:8].upper()}",
+    )
+    session.add(reg)
+    session.commit()
+    session.refresh(reg)
+
+    participant = TripRegistrationParticipant(
+        registration_id=reg.id,
+        package_id=uuid.UUID(package_id),
+        registration_user_id=user.id,
+        is_registration_user=True,
+        name="Test User",
+        date_of_birth=datetime.date(1990, 1, 1),
+    )
+    session.add(participant)
+    session.commit()
+
+    payment = Payment(
+        registration_id=reg.id,
+        user_id=user.id,
+        amount=100,
+        currency="SAR",
+        status=PaymentStatus.PAID,
+        description="Test payment",
+        moyasar_payment_id=f"mock_{uuid.uuid4().hex[:8]}",
+        paid_at=datetime.datetime.utcnow(),
+    )
+    session.add(payment)
+    session.commit()
+    return trip_id, package_id, other_package_id
+
+
 def test_content_hash_generated_on_create(client: TestClient, session: Session):
     """A newly created trip must have a non-null content_hash."""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
@@ -3517,6 +3606,45 @@ def test_update_trip_is_refundable_blocked(client: TestClient, session: Session)
     assert "Refundability cannot be changed" in resp.json()["detail"]
 
 
+def test_update_trip_same_is_refundable_value_allowed(client: TestClient, session: Session):
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Refund Lock Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=11)),
+            "max_participants": 5,
+            "price": 100.0,
+            "is_refundable": True,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"is_refundable": True},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_refundable"] is True
+
+
+def test_update_trip_package_same_is_refundable_value_allowed(client: TestClient, session: Session):
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, package_id, _ = _create_packaged_trip(client, headers)
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}/packages/{package_id}",
+        headers=headers,
+        json={"is_refundable": True},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["id"] == package_id
+
+
 def test_update_trip_material_fields_blocked_with_paid_bookings(client: TestClient, session: Session):
     """Changing material fields when paid bookings exist must return 409."""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
@@ -3529,6 +3657,41 @@ def test_update_trip_material_fields_blocked_with_paid_bookings(client: TestClie
     )
     assert resp.status_code == 409
     assert "active paid bookings" in resp.json()["detail"]
+
+
+def test_update_trip_full_unchanged_payload_allowed_with_paid_bookings(client: TestClient, session: Session):
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id = _create_trip_with_paid_registration(client, session, headers, user)
+
+    trip_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert trip_resp.status_code == 200
+    trip_data = trip_resp.json()
+
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={
+            "name_en": trip_data["name_en"],
+            "description_en": trip_data["description_en"],
+            "start_date": trip_data["start_date"],
+            "end_date": trip_data["end_date"],
+            "registration_deadline": trip_data["registration_deadline"],
+            "max_participants": trip_data["max_participants"],
+            "trip_type": trip_data["trip_type"],
+            "is_packaged_trip": trip_data["is_packaged_trip"],
+            "timezone": trip_data["timezone"],
+            "has_meeting_place": trip_data["has_meeting_place"],
+            "meeting_place_name": trip_data["meeting_place_name"],
+            "meeting_place_name_ar": trip_data["meeting_place_name_ar"],
+            "meeting_location": trip_data["meeting_location"],
+            "starting_city_id": trip_data["starting_city_id"],
+            "is_international": trip_data["is_international"],
+            "price": trip_data["price"],
+            "is_refundable": trip_data["is_refundable"],
+            "amenities": trip_data["amenities"],
+        },
+    )
+    assert resp.status_code == 200
 
 
 def test_update_trip_deactivate_blocked_with_paid_bookings(client: TestClient, session: Session):
@@ -3587,6 +3750,46 @@ def test_delete_trip_blocked_with_paid_bookings(client: TestClient, session: Ses
     resp = client.delete(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
     assert resp.status_code == 409
     assert "cancel-trip" in resp.json()["detail"]
+
+
+def test_content_hash_changes_on_package_update(client: TestClient, session: Session):
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, package_id, _ = _create_packaged_trip(client, headers)
+
+    trip_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert trip_resp.status_code == 200
+    old_hash = trip_resp.json()["content_hash"]
+
+    update_resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}/packages/{package_id}",
+        headers=headers,
+        json={"name_en": "Updated Standard"},
+    )
+    assert update_resp.status_code == 200
+
+    updated_trip_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert updated_trip_resp.status_code == 200
+    assert updated_trip_resp.json()["content_hash"] != old_hash
+
+
+def test_content_hash_changes_on_package_required_fields_update(client: TestClient, session: Session):
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, package_id, _ = _create_packaged_trip(client, headers)
+
+    trip_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert trip_resp.status_code == 200
+    old_hash = trip_resp.json()["content_hash"]
+
+    update_resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/packages/{package_id}/required-fields",
+        headers=headers,
+        json=["name", "date_of_birth", "phone"],
+    )
+    assert update_resp.status_code == 200
+
+    updated_trip_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert updated_trip_resp.status_code == 200
+    assert updated_trip_resp.json()["content_hash"] != old_hash
 
 
 def test_register_stale_content_hash_returns_409(client: TestClient, session: Session):

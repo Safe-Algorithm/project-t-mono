@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import Constants from 'expo-constants';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Clipboard, Linking, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image,
@@ -221,7 +222,7 @@ export default function BookingDetailScreen() {
 
       // Step 2: Call Moyasar directly from the app with the publishable key
       // Card data never touches our backend (Moyasar policy)
-      const publishableKey = process.env.EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY ?? '';
+      const publishableKey = Constants.expoConfig?.extra?.EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY ?? '';
       const moyasarRes = await fetch('https://api.moyasar.com/v1/payments', {
         method: 'POST',
         headers: {

@@ -1,9 +1,10 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
+import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import './i18n';
 import i18n from './i18n';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8000/api/v1';
+const BASE_URL = Constants.expoConfig?.extra?.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8000/api/v1';
 
 const apiClient: AxiosInstance = axios.create({
   baseURL: BASE_URL,
