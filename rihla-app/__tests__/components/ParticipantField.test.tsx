@@ -17,6 +17,15 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 
 jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock'));
 
+jest.mock('../../lib/i18n', () => ({
+  __esModule: true,
+  default: { language: 'en', t: (k: string) => k },
+}));
+
+jest.mock('../../store/languageStore', () => ({
+  useLanguageStore: () => ({ language: 'en', setLanguage: jest.fn() }),
+}));
+
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Ionicons' }));
 
 jest.mock('react-i18next', () => ({

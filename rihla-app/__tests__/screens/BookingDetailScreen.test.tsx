@@ -24,6 +24,15 @@ jest.mock('react-native-reanimated', () =>
   require('react-native-reanimated/mock')
 );
 
+jest.mock('../../lib/i18n', () => ({
+  __esModule: true,
+  default: { language: 'en', t: (k: string) => k },
+}));
+
+jest.mock('../../store/languageStore', () => ({
+  useLanguageStore: () => ({ language: 'en', setLanguage: jest.fn() }),
+}));
+
 jest.mock('@expo/vector-icons', () => ({
   Ionicons: 'Ionicons',
 }));
@@ -190,7 +199,7 @@ function setupHooks(overrides: { registration?: any; updates?: any } = {}) {
 function renderScreen() {
   const BookingDetailScreen =
     require('../../app/booking/[registrationId]').default;
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={qc}>
       <BookingDetailScreen />
