@@ -17,7 +17,7 @@ def test_create_user(client: TestClient, session: Session) -> None:
 
 def test_get_current_user(client: TestClient, session: Session) -> None:
     user = create_random_user(session)
-    login_data = {"username": user.email, "password": "password123"}
+    login_data = {"username": user.email, "password": "TestPass1!"}
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data, headers={"X-Source": "MOBILE_APP"})
     token = r.json()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}

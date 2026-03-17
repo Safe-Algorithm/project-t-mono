@@ -11,6 +11,7 @@ from sqlmodel import Session
 from app import crud
 from app.api import deps
 from app.core import security
+from app.core.security import validate_password_strength
 from app.core.config import settings
 from app.core.redis import redis_client
 from app.models.user import User
@@ -241,6 +242,12 @@ def register(
                 detail="The user with this phone number already exists for this source.",
             )
     
+    # Enforce password strength policy
+    if user_in.password:
+        pw_errors = validate_password_strength(user_in.password)
+        if pw_errors:
+            raise HTTPException(status_code=400, detail=" ".join(pw_errors))
+
     # Create user
     user = crud.user.create_user(session, user_in=user_in, source=source)
     

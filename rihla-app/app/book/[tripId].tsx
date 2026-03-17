@@ -7,7 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip, useFieldMetadata, useNationalities } from '../../hooks/useTrips';
+import { useTrip, useFieldMetadata, useNationalities, useMyRegistrations } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../../components/ui/Button';
@@ -35,6 +35,11 @@ export default function BookingScreen() {
   const { data: fieldMetadata } = useFieldMetadata();
   const { data: nationalities } = useNationalities();
   const qc = useQueryClient();
+  const { data: myRegistrations } = useMyRegistrations();
+  // Compute before any early returns (Rules of Hooks — no conditionals before this)
+  const existingBooking = (myRegistrations ?? []).find(
+    (r) => r.trip_id === tripId && !['cancelled', 'completed'].includes(r.status)
+  ) ?? null;
   const [loading, setLoading] = useState(false);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [step, setStep] = useState<'count' | 'fields' | 'confirm'>('count');
@@ -134,9 +139,17 @@ export default function BookingScreen() {
   };
 
   const addPkgCount = (pkg: TripPackage) => {
+    const pkgMaxSpots = pkg.available_spots ?? Infinity;
+    const tripMaxSpots = trip?.available_spots ?? Infinity;
     setPkgSelections(prev => {
+      const currentTotal = prev.reduce((acc, s) => acc + s.count, 0);
+      if (currentTotal >= tripMaxSpots) return prev;
       const existing = prev.find(s => s.package.id === pkg.id);
-      if (existing) return prev.map(s => s.package.id === pkg.id ? { ...s, count: s.count + 1 } : s);
+      if (existing) {
+        if (existing.count >= pkgMaxSpots) return prev;
+        return prev.map(s => s.package.id === pkg.id ? { ...s, count: s.count + 1 } : s);
+      }
+      if (pkgMaxSpots === 0) return prev;
       return [...prev, { package: pkg, count: 1 }];
     });
   };
@@ -266,13 +279,21 @@ export default function BookingScreen() {
     );
   }
 
-  if (alreadyRegistered) {
+  if (alreadyRegistered || existingBooking) {
+    const bookingId = existingBooking?.id;
     return (
       <SafeAreaView style={s.container}>
         <View style={s.center}>
           <Ionicons name="checkmark-circle-outline" size={48} color={colors.success} />
           <Text style={s.errorText}>{t('booking.alreadyRegistered')}</Text>
-          <Button title={t('booking.viewBookings')} onPress={() => router.replace('/(tabs)/bookings')} />
+          {bookingId && (
+            <Button
+              title={t('booking.viewBooking')}
+              onPress={() => router.replace({ pathname: '/booking/[registrationId]', params: { registrationId: bookingId } })}
+              fullWidth
+            />
+          )}
+          <Button title={t('booking.viewBookings')} onPress={() => router.replace('/(tabs)/bookings')} variant={bookingId ? 'outline' : undefined} />
           <Button title={t('trip.goBack')} onPress={() => router.back()} variant="outline" />
         </View>
       </SafeAreaView>
@@ -296,6 +317,23 @@ export default function BookingScreen() {
   const stepIndex = steps.indexOf(step);
 
   const canProceedFromCount = isPackaged ? totalParticipants > 0 : true;
+
+  // Skip fields step if there are no required fields
+  const hasRequiredFields = isPackaged
+    ? pkgSelections.some(sel => (sel.package.required_fields ?? []).length > 0)
+    : simpleRequiredFields.length > 0;
+
+  const handleProceedFromCount = () => {
+    if (hasRequiredFields) {
+      setStep('fields');
+    } else {
+      setStep('confirm');
+    }
+  };
+
+  const handleProceedFromFields = () => {
+    if (validateFields()) setStep('confirm');
+  };
 
   return (
     <View style={s.container}>
@@ -365,8 +403,12 @@ export default function BookingScreen() {
                           <Ionicons name="remove" size={18} color={count <= 0 ? colors.gray300 : colors.textPrimary} />
                         </TouchableOpacity>
                         <Text style={s.counterValue}>{count}</Text>
-                        <TouchableOpacity style={s.counterBtn} onPress={() => addPkgCount(pkg)}>
-                          <Ionicons name="add" size={18} color={colors.textPrimary} />
+                        <TouchableOpacity
+                          style={[s.counterBtn, (pkg.available_spots === 0 || pkgSelections.reduce((acc, s) => acc + s.count, 0) >= (trip?.available_spots ?? Infinity)) && s.counterBtnDisabled]}
+                          onPress={() => addPkgCount(pkg)}
+                          disabled={pkg.available_spots === 0 || pkgSelections.reduce((acc, s) => acc + s.count, 0) >= (trip?.available_spots ?? Infinity)}
+                        >
+                          <Ionicons name="add" size={18} color={(pkg.available_spots === 0 || pkgSelections.reduce((acc, s) => acc + s.count, 0) >= (trip?.available_spots ?? Infinity)) ? colors.gray300 : colors.textPrimary} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -379,7 +421,7 @@ export default function BookingScreen() {
             )}
             <Button
               title={t('common.next', { defaultValue: 'Next' })}
-              onPress={() => setStep('fields')}
+              onPress={handleProceedFromCount}
               fullWidth size="lg" style={s.continueBtn}
               disabled={!canProceedFromCount}
             />
@@ -446,7 +488,7 @@ export default function BookingScreen() {
             )}
             <View style={s.actionRow}>
               <Button title={t('common.back')} variant="outline" onPress={() => setStep('count')} style={s.backActionBtn} />
-              <Button title={t('common.confirm')} onPress={() => { if (validateFields()) setStep('confirm'); }} style={s.payBtn} size="lg" />
+              <Button title={t('common.confirm')} onPress={handleProceedFromFields} style={s.payBtn} size="lg" />
             </View>
           </>
         )}
@@ -517,7 +559,7 @@ export default function BookingScreen() {
               </View>
             </View>
             <View style={s.actionRow}>
-              <Button title={t('common.back')} variant="outline" onPress={() => setStep('fields')} style={s.backActionBtn} />
+              <Button title={t('common.back')} variant="outline" onPress={() => hasRequiredFields ? setStep('fields') : setStep('count')} style={s.backActionBtn} />
               <Button title={t('booking.confirmBooking')} onPress={handleBook} loading={loading} style={s.payBtn} size="lg" />
             </View>
           </>

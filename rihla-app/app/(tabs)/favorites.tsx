@@ -25,7 +25,7 @@ export default function FavoritesScreen() {
       trip={item}
       onPress={() => router.push(`/trip/${item.id}`)}
       isFavorite
-      onFavoriteToggle={() => toggleFav.mutate({ tripId: item.id, isFav: true })}
+      onFavoriteToggle={() => { if (!toggleFav.isPending) toggleFav.mutate({ tripId: item.id, isFav: true }); }}
     />
   );
 

@@ -167,7 +167,7 @@ def test_change_password_success(client: TestClient, session: Session) -> None:
         f"{settings.API_V1_STR}/change-password",
         headers=headers,
         params={
-            "current_password": "password123",  # Default password from create_random_user
+            "current_password": "TestPass1!",  # Default password from create_random_user
             "new_password": "NewPassword123!"
         }
     )

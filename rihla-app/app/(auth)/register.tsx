@@ -105,11 +105,24 @@ export default function RegisterScreen() {
     }
   };
 
+  const getPasswordStrength = (pw: string): { score: number; rules: { label: string; ok: boolean }[] } => {
+    const rules = [
+      { label: t('auth.pwRuleLength'), ok: pw.length >= 8 },
+      { label: t('auth.pwRuleUpper'), ok: /[A-Z]/.test(pw) },
+      { label: t('auth.pwRuleLower'), ok: /[a-z]/.test(pw) },
+      { label: t('auth.pwRuleDigit'), ok: /\d/.test(pw) },
+      { label: t('auth.pwRuleSpecial'), ok: /[^A-Za-z0-9]/.test(pw) },
+    ];
+    return { score: rules.filter((r) => r.ok).length, rules };
+  };
+
+  const pwStrength = getPasswordStrength(password);
+
   const handleRegister = async () => {
     const e: Record<string, string> = {};
     if (!name.trim()) e.name = t('auth.nameRequired');
     if (!password) e.password = t('auth.passwordRequired');
-    else if (password.length < 8) e.password = t('auth.passwordMin');
+    else if (pwStrength.score < 5) e.password = t('auth.passwordWeak');
     if (password !== confirmPassword) e.confirmPassword = t('changePassword.mismatch');
     if (Object.keys(e).length > 0) { setErrors(e); return; }
 
@@ -149,10 +162,10 @@ export default function RegisterScreen() {
           <Ionicons name={isRTL ? 'arrow-forward' : 'arrow-back'} size={24} color={colors.textPrimary} />
         </TouchableOpacity>
         <View style={[s.headerArea, isRTL && s.headerAreaRtl]}>
-          <Text style={s.title}>
+          <Text style={[s.title, isRTL && s.textRtl]}>
             {step === 'contact' ? t('auth.registerTitle') : step === 'otp' ? t('auth.verifyCodeTitle') : t('auth.completeProfileTitle')}
           </Text>
-          <Text style={s.subtitle}>
+          <Text style={[s.subtitle, isRTL && s.textRtl]}>
             {step === 'contact'
               ? t('auth.registerSubtitle')
               : step === 'otp'
@@ -212,7 +225,8 @@ export default function RegisterScreen() {
           {step === 'otp' && (
             <>
               <Input label={t('auth.otpLabel')} placeholder="000000" value={otp} onChangeText={setOtp}
-                keyboardType="number-pad" maxLength={6} leftIcon="key-outline" error={errors.otp} />
+                keyboardType="number-pad" maxLength={6} leftIcon="key-outline" error={errors.otp}
+                autoComplete="one-time-code" textContentType="oneTimeCode" />
               <Button title={t('auth.verifyCode')} onPress={verifyOtp} loading={loading} fullWidth size="lg" style={s.btn} />
               <TouchableOpacity onPress={sendOtp} style={s.resend}>
                 <Text style={[s.resendText, isRTL && s.textRtl]}>{t('auth.didNotReceive')} <Text style={s.resendLink}>{t('auth.resend')}</Text></Text>
@@ -224,9 +238,34 @@ export default function RegisterScreen() {
               <Input label={t('auth.name')} placeholder={t('auth.name')} value={name} onChangeText={setName}
                 autoCapitalize="words" leftIcon="person-outline" error={errors.name} />
               <Input label={t('auth.password')} placeholder={t('auth.passwordMin')} value={password} onChangeText={setPassword}
-                isPassword leftIcon="lock-closed-outline" error={errors.password} />
+                isPassword leftIcon="lock-closed-outline" error={errors.password}
+                autoComplete="new-password" textContentType="newPassword" />
+              {password.length > 0 && (
+                <View style={s.pwStrength}>
+                  <View style={s.pwStrengthBar}>
+                    {[0,1,2,3,4].map((i) => (
+                      <View key={i} style={[
+                        s.pwStrengthSegment,
+                        { backgroundColor: i < pwStrength.score
+                          ? pwStrength.score <= 2 ? '#EF4444'
+                          : pwStrength.score <= 3 ? '#F59E0B'
+                          : '#16A34A'
+                          : colors.gray200 },
+                      ]} />
+                    ))}
+                  </View>
+                  {pwStrength.rules.map((r) => (
+                    <View key={r.label} style={s.pwRule}>
+                      <Ionicons name={r.ok ? 'checkmark-circle' : 'ellipse-outline'} size={13}
+                        color={r.ok ? '#16A34A' : colors.textTertiary} />
+                      <Text style={[s.pwRuleText, r.ok && s.pwRuleOk]}>{r.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
               <Input label={t('changePassword.confirm')} placeholder={t('changePassword.confirm')} value={confirmPassword}
-                onChangeText={setConfirmPassword} isPassword leftIcon="lock-closed-outline" error={errors.confirmPassword} />
+                onChangeText={setConfirmPassword} isPassword leftIcon="lock-closed-outline" error={errors.confirmPassword}
+                autoComplete="new-password" textContentType="newPassword" />
               <Button title={t('auth.register')} onPress={handleRegister} loading={loading} fullWidth size="lg" style={s.btn} />
             </>
           )}
@@ -283,5 +322,11 @@ function makeStyles(c: ThemeColors) {
     loginRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
     loginText: { fontSize: FontSize.md, color: c.textSecondary },
     loginLink: { fontSize: FontSize.md, color: c.primary, fontWeight: '700' },
+    pwStrength: { gap: 6, marginTop: -8 },
+    pwStrengthBar: { flexDirection: 'row', gap: 4 },
+    pwStrengthSegment: { flex: 1, height: 4, borderRadius: 2 },
+    pwRule: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    pwRuleText: { fontSize: FontSize.xs, color: c.textTertiary },
+    pwRuleOk: { color: '#16A34A' },
   });
 }

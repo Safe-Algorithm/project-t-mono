@@ -28,7 +28,7 @@ def test_invite_admin_sends_email(client: TestClient, session: Session) -> None:
                 "email": "newadmin@example.com",
                 "name": "New Admin",
                 "phone": "+966501234567",
-                "password": "password123"
+                "password": "TestPass1!"
             }
         )
         
@@ -54,7 +54,7 @@ def test_invite_existing_admin_fails(client: TestClient, session: Session) -> No
             "email": user.email,
             "name": "Duplicate Admin",
             "phone": "+966501234568",
-            "password": "password123"
+            "password": "TestPass1!"
         }
     )
     
@@ -71,7 +71,7 @@ def test_accept_admin_invitation_success(client: TestClient, session: Session) -
         email="invitedadmin@example.com",
         name="Invited Admin",
         phone="+966501234567",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("TestPass1!"),
         role=UserRole.NORMAL,
         source=RequestSource.ADMIN_PANEL,
         is_active=False
@@ -86,7 +86,7 @@ def test_accept_admin_invitation_success(client: TestClient, session: Session) -
         "email": admin_user.email,
         "name": admin_user.name,
         "phone": admin_user.phone,
-        "password": "password123",
+        "password": "TestPass1!",
         "role": "normal",
         "inviter_name": "Super Admin",
         "source": RequestSource.ADMIN_PANEL.value
@@ -135,7 +135,7 @@ def test_only_super_admin_can_invite(client: TestClient, session: Session) -> No
             "email": "newadmin@example.com",
             "name": "New Admin",
             "phone": "+966501234567",
-            "password": "password123"
+            "password": "TestPass1!"
         }
     )
     
@@ -155,7 +155,7 @@ def test_admin_invitation_creates_correct_user_type(client: TestClient, session:
                 "email": "testadmin@example.com",
                 "name": "Test Admin",
                 "phone": "+966501234569",
-                "password": "password123"
+                "password": "TestPass1!"
             }
         )
         
@@ -187,7 +187,7 @@ def test_invite_admin_duplicate_phone_fails(client: TestClient, session: Session
             "email": "differentemail@example.com",
             "name": "Different Admin",
             "phone": user.phone,  # Same phone as existing user
-            "password": "password123"
+            "password": "TestPass1!"
         }
     )
     
@@ -207,7 +207,7 @@ def test_provider_invitation_creates_correct_user_type(client: TestClient, sessi
                 "email": "testprovider@example.com",
                 "name": "Test Provider",
                 "phone": "+966501234570",
-                "password": "password123"
+                "password": "TestPass1!"
             }
         )
         

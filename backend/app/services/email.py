@@ -570,7 +570,7 @@ This invitation will expire in 7 days.
   .container{{max-width:600px;margin:0 auto;padding:20px;}}
   .header{{background:#0EA5E9;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0;}}
   .content{{padding:30px;background:#f9fafb;}}
-  .otp{{font-size:36px;font-weight:bold;text-align:center;letter-spacing:10px;color:#0EA5E9;padding:20px;background:#fff;border-radius:8px;margin:20px 0;border:2px dashed #0EA5E9;}}
+  .otp{{font-size:28px;font-weight:bold;text-align:center;letter-spacing:6px;color:#0EA5E9;padding:16px 20px;background:#fff;border-radius:8px;margin:20px 0;border:2px dashed #0EA5E9;word-break:keep-all;white-space:nowrap;}}
   .footer{{text-align:center;padding:20px;color:#9ca3af;font-size:12px;}}
 </style>
 </head>
@@ -603,7 +603,7 @@ This invitation will expire in 7 days.
   .container{{max-width:600px;margin:0 auto;padding:20px;}}
   .header{{background:#0EA5E9;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0;}}
   .content{{padding:30px;background:#f9fafb;}}
-  .otp{{font-size:36px;font-weight:bold;text-align:center;letter-spacing:10px;color:#0EA5E9;padding:20px;background:#fff;border-radius:8px;margin:20px 0;border:2px dashed #0EA5E9;}}
+  .otp{{font-size:28px;font-weight:bold;text-align:center;letter-spacing:6px;color:#0EA5E9;padding:16px 20px;background:#fff;border-radius:8px;margin:20px 0;border:2px dashed #0EA5E9;word-break:keep-all;white-space:nowrap;}}
   .footer{{text-align:center;padding:20px;color:#9ca3af;font-size:12px;}}
 </style>
 </head>

@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlmodel import Session
 from pydantic import BaseModel, Field
+from app.core.security import validate_password_strength
 
 from app.api import deps
 from app.core.redis import redis_client
@@ -523,6 +524,11 @@ async def reset_password_with_otp(
             detail="Invalid request"
         )
     
+    # Enforce password strength policy
+    pw_errors = validate_password_strength(new_password)
+    if pw_errors:
+        raise HTTPException(status_code=400, detail=" ".join(pw_errors))
+
     # Update password
     user.hashed_password = crud.user.get_password_hash(new_password)
     session.add(user)

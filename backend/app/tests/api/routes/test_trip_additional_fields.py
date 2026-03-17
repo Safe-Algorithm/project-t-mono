@@ -110,11 +110,12 @@ def test_create_trip_refundable(client: TestClient, session: Session):
 
 
 def test_update_trip_refundability(client: TestClient, session: Session):
-    """Refundability is frozen after trip creation — any attempt to change it returns 400."""
+    """Refundability is frozen after trip creation — changing the value returns 400,
+    but re-submitting the same value (no-op) is allowed."""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
     trip = _create_trip_via_api(client, headers, is_refundable=True)
 
-    # Attempting to set to non-refundable must be blocked
+    # Attempting to change to non-refundable must be blocked
     resp = client.put(
         f"{settings.API_V1_STR}/trips/{trip['id']}",
         headers=headers,
@@ -123,14 +124,14 @@ def test_update_trip_refundability(client: TestClient, session: Session):
     assert resp.status_code == 400
     assert "Refundability cannot be changed" in resp.json()["detail"]
 
-    # Attempting to set back to refundable is also blocked (even same value)
+    # Re-submitting the same value (True → True) is a no-op and must succeed
     resp = client.put(
         f"{settings.API_V1_STR}/trips/{trip['id']}",
         headers=headers,
         json={"is_refundable": True},
     )
-    assert resp.status_code == 400
-    assert "Refundability cannot be changed" in resp.json()["detail"]
+    assert resp.status_code == 200
+    assert resp.json()["is_refundable"] is True
 
 
 # ===== Meeting Place =====

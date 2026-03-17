@@ -4,6 +4,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Clipboard, Linking, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image,
 } from 'react-native';
+import Toast from '../../components/ui/Toast';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -109,6 +110,8 @@ export default function BookingDetailScreen() {
   const [payLoading, setPayLoading] = useState(false);
   const [showCardModal, setShowCardModal] = useState(false);
   const [card, setCard] = useState<CardDetails>({ name: '', number: '', month: 0, year: 0, cvc: '' });
+  const [cardErrors, setCardErrors] = useState<Partial<Record<keyof CardDetails, string>>>({});
+  const [cardNumberDisplay, setCardNumberDisplay] = useState('');
   const preparePayment = usePreparePayment();
   const confirmPayment = useConfirmPayment();
   const autoPaymentTriggered = useRef(false);
@@ -118,6 +121,9 @@ export default function BookingDetailScreen() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
+  const [cancelResult, setCancelResult] = useState<{ refundPct: number; refundAmt: number } | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Auto-open card modal when arriving from the booking flow (one-tap pay)
   useEffect(() => {
@@ -190,24 +196,34 @@ export default function BookingDetailScreen() {
       qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
       const pct: number = data.refund_percentage;
       const amt: number = data.refund_amount;
-      const msg = pct > 0
-        ? t('booking.cancelRefundInfo', { percentage: pct, amount: Number(amt).toLocaleString() })
-        : t('booking.cancelNoRefund');
-      Alert.alert(t('booking.cancelBooking'), `${t('booking.cancelSuccess')} ${msg}`);
+      setCancelResult({ refundPct: pct, refundAmt: amt });
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      Alert.alert(t('booking.cancelBooking'), typeof detail === 'string' ? detail : t('booking.cancelError'));
+      setToastMessage(typeof detail === 'string' ? detail : t('booking.cancelError'));
+      setToastVisible(true);
     } finally {
       setCancelling(false);
     }
   }, [registrationId, registration?.trip_id, cancelReason, qc, t]);
 
+  const validateCard = () => {
+    const errs: Partial<Record<keyof CardDetails, string>> = {};
+    if (!card.name.trim()) errs.name = t('booking.cardNameRequired', 'Name on card is required');
+    const digits = card.number.replace(/\D/g, '');
+    if (!digits || digits.length < 13 || digits.length > 19) errs.number = t('booking.cardNumberInvalid', 'Enter a valid card number');
+    const m = card.month;
+    if (!m || m < 1 || m > 12) errs.month = t('booking.cardMonthInvalid', 'MM (1–12)');
+    const y = card.year;
+    const currentYY = new Date().getFullYear() % 100;
+    if (!y || y < currentYY || y > currentYY + 20) errs.year = t('booking.cardYearInvalid', 'YY');
+    if (!card.cvc || card.cvc.length < 3) errs.cvc = t('booking.cardCvcInvalid', '3–4 digits');
+    setCardErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handlePayNow = useCallback(async () => {
     if (!registrationId) return;
-    if (!card.name || !card.number || !card.month || !card.year || !card.cvc) {
-      Alert.alert(t('booking.title'), t('booking.cardRequired'));
-      return;
-    }
+    if (!validateCard()) return;
     setShowCardModal(false);
     setPayLoading(true);
     try {
@@ -247,8 +263,20 @@ export default function BookingDetailScreen() {
       });
       const moyasarData = await moyasarRes.json();
       if (!moyasarRes.ok) {
-        const msg = moyasarData?.message || t('common.error');
-        Alert.alert(t('booking.title'), msg);
+        const rawMsg: string = moyasarData?.message ?? moyasarData?.errors?.number?.[0] ?? moyasarData?.errors?.cvc?.[0] ?? '';
+        const knownErrors: Record<string, string> = {
+          'Invalid card number': t('booking.cardNumberInvalid', 'Invalid card number'),
+          'invalid_number': t('booking.cardNumberInvalid', 'Invalid card number'),
+          'invalid_expiry_month': t('booking.cardMonthInvalid', 'Invalid expiry month'),
+          'invalid_expiry_year': t('booking.cardYearInvalid', 'Invalid expiry year'),
+          'invalid_cvc': t('booking.cardCvcInvalid', 'Invalid CVV'),
+          'card_declined': t('booking.cardDeclined', 'Card was declined. Please try a different card.'),
+          'insufficient_funds': t('booking.cardInsufficientFunds', 'Insufficient funds on card.'),
+          'Data Validation failed': t('booking.cardValidationFailed', 'Card details are invalid. Please check and try again.'),
+        };
+        const displayMsg = Object.entries(knownErrors).find(([k]) => rawMsg.toLowerCase().includes(k.toLowerCase()))?.[1] ?? (rawMsg || t('common.error'));
+        setShowCardModal(true);
+        Alert.alert(t('booking.paymentFailed', 'Payment Failed'), displayMsg);
         return;
       }
 
@@ -414,60 +442,71 @@ export default function BookingDetailScreen() {
                 <View style={s.cardFields}>
                   <Text style={s.cardLabel}>{t('booking.cardName')}</Text>
                   <TextInput
-                    style={s.cardInput}
+                    style={[s.cardInput, cardErrors.name ? s.cardInputError : undefined]}
                     value={card.name}
-                    onChangeText={(v) => setCard((c) => ({ ...c, name: v }))}
+                    onChangeText={(v) => { setCard((c) => ({ ...c, name: v })); setCardErrors((e) => ({ ...e, name: undefined })); }}
                     placeholder="John Doe"
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="words"
                   />
+                  {cardErrors.name ? <Text style={s.cardFieldError}>{cardErrors.name}</Text> : null}
                   <Text style={s.cardLabel}>{t('booking.cardNumber')}</Text>
                   <TextInput
-                    style={s.cardInput}
-                    value={card.number}
-                    onChangeText={(v) => setCard((c) => ({ ...c, number: v.replace(/\s/g, '') }))}
+                    style={[s.cardInput, cardErrors.number ? s.cardInputError : undefined]}
+                    value={cardNumberDisplay}
+                    onChangeText={(v) => {
+                      const digits = v.replace(/\D/g, '').slice(0, 16);
+                      const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+                      setCardNumberDisplay(formatted);
+                      setCard((c) => ({ ...c, number: digits }));
+                      setCardErrors((e) => ({ ...e, number: undefined }));
+                    }}
                     placeholder="1234 5678 9012 3456"
                     placeholderTextColor={colors.textTertiary}
                     keyboardType="number-pad"
                     maxLength={19}
                   />
+                  {cardErrors.number ? <Text style={s.cardFieldError}>{cardErrors.number}</Text> : null}
                   <View style={s.cardRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={s.cardLabel}>{t('booking.cardMonth')}</Text>
                       <TextInput
-                        style={s.cardInput}
-                        value={card.month ? String(card.month) : ''}
-                        onChangeText={(v) => setCard((c) => ({ ...c, month: parseInt(v) || 0 }))}
+                        style={[s.cardInput, cardErrors.month ? s.cardInputError : undefined]}
+                        value={card.month ? String(card.month).padStart(2, '0') : ''}
+                        onChangeText={(v) => { setCard((c) => ({ ...c, month: parseInt(v) || 0 })); setCardErrors((e) => ({ ...e, month: undefined })); }}
                         placeholder="MM"
                         placeholderTextColor={colors.textTertiary}
                         keyboardType="number-pad"
                         maxLength={2}
                       />
+                      {cardErrors.month ? <Text style={s.cardFieldError}>{cardErrors.month}</Text> : null}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={s.cardLabel}>{t('booking.cardYear')}</Text>
                       <TextInput
-                        style={s.cardInput}
+                        style={[s.cardInput, cardErrors.year ? s.cardInputError : undefined]}
                         value={card.year ? String(card.year) : ''}
-                        onChangeText={(v) => setCard((c) => ({ ...c, year: parseInt(v) || 0 }))}
-                        placeholder="YYYY"
+                        onChangeText={(v) => { setCard((c) => ({ ...c, year: parseInt(v) || 0 })); setCardErrors((e) => ({ ...e, year: undefined })); }}
+                        placeholder="YY"
                         placeholderTextColor={colors.textTertiary}
                         keyboardType="number-pad"
-                        maxLength={4}
+                        maxLength={2}
                       />
+                      {cardErrors.year ? <Text style={s.cardFieldError}>{cardErrors.year}</Text> : null}
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={s.cardLabel}>{t('booking.cardCvc')}</Text>
                       <TextInput
-                        style={s.cardInput}
+                        style={[s.cardInput, cardErrors.cvc ? s.cardInputError : undefined]}
                         value={card.cvc}
-                        onChangeText={(v) => setCard((c) => ({ ...c, cvc: v }))}
+                        onChangeText={(v) => { setCard((c) => ({ ...c, cvc: v })); setCardErrors((e) => ({ ...e, cvc: undefined })); }}
                         placeholder="CVV"
                         placeholderTextColor={colors.textTertiary}
                         keyboardType="number-pad"
                         maxLength={4}
                         secureTextEntry
                       />
+                      {cardErrors.cvc ? <Text style={s.cardFieldError}>{cardErrors.cvc}</Text> : null}
                     </View>
                   </View>
                 </View>
@@ -568,11 +607,13 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
-        {/* Cancel booking button — only for active paid bookings */}
-        {['awaiting_provider', 'processing', 'confirmed'].includes(registration.status) && (
+        {/* Cancel booking button — shown for active bookings and unpaid pending spots */}
+        {['awaiting_provider', 'processing', 'confirmed', 'pending_payment'].includes(registration.status) && (
           <TouchableOpacity style={s.cancelBtn} onPress={() => setShowCancelModal(true)} activeOpacity={0.8}>
             <Ionicons name="close-circle-outline" size={18} color="#DC2626" />
-            <Text style={s.cancelBtnText}>{t('booking.cancelBooking')}</Text>
+            <Text style={s.cancelBtnText}>
+              {registration.status === 'pending_payment' ? t('booking.cancelPendingPayment') : t('booking.cancelBooking')}
+            </Text>
           </TouchableOpacity>
         )}
 
@@ -618,6 +659,32 @@ export default function BookingDetailScreen() {
           </KeyboardAvoidingView>
         </Modal>
 
+        {/* Cancellation result card — replaces popup Alert */}
+        {cancelResult && (
+          <View style={s.cancelResultCard}>
+            <View style={s.cancelResultIconRow}>
+              <Ionicons name="checkmark-circle" size={32} color="#16A34A" />
+              <Text style={s.cancelResultTitle}>{t('booking.cancelSuccess')}</Text>
+            </View>
+            {cancelResult.refundPct > 0 ? (
+              <>
+                <Text style={s.cancelResultBody}>
+                  {t('booking.cancelRefundInfo', { percentage: cancelResult.refundPct, amount: Number(cancelResult.refundAmt).toLocaleString() })}
+                </Text>
+                <View style={s.cancelResultTimeline}>
+                  <Ionicons name="time-outline" size={16} color="#6B7280" />
+                  <Text style={s.cancelResultTimelineText}>{t('booking.refundTimeline', 'Refund will be processed within 3–7 business days.')}</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={s.cancelResultBody}>{t('booking.cancelNoRefund')}</Text>
+            )}
+            <TouchableOpacity style={s.cancelResultDismiss} onPress={() => setCancelResult(null)}>
+              <Text style={s.cancelResultDismissText}>{t('common.ok', 'OK')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Trip Updates */}
         <View style={s.section} ref={updateSectionRef}>
           <View style={s.sectionTitleRow}>
@@ -644,6 +711,13 @@ export default function BookingDetailScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type="error"
+        onHide={() => setToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -722,8 +796,18 @@ function makeStyles(c: ThemeColors) {
     cardFields: { gap: 12 },
     cardLabel: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary, marginBottom: 4 },
     cardInput: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 12, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.background },
+    cardInputError: { borderColor: c.error },
+    cardFieldError: { fontSize: FontSize.xs, color: c.error, marginTop: 2 },
     cardRow: { flexDirection: 'row', gap: 10 },
 
+    cancelResultCard: { backgroundColor: '#F0FDF4', borderRadius: Radius.xl, padding: 20, marginBottom: 20, borderWidth: 1.5, borderColor: '#16A34A20', gap: 12 },
+    cancelResultIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    cancelResultTitle: { fontSize: FontSize.lg, fontWeight: '800', color: '#166534' },
+    cancelResultBody: { fontSize: FontSize.sm, color: '#166534', lineHeight: 20 },
+    cancelResultTimeline: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#DCFCE7', borderRadius: Radius.md, padding: 10 },
+    cancelResultTimelineText: { fontSize: FontSize.xs, color: '#166534', flex: 1, lineHeight: 18 },
+    cancelResultDismiss: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#16A34A', borderRadius: Radius.full },
+    cancelResultDismissText: { fontSize: FontSize.sm, fontWeight: '700', color: '#fff' },
     cancelBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       borderWidth: 1.5, borderColor: '#DC2626', borderRadius: Radius.xl,

@@ -1,7 +1,7 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 from app.core.config import settings
-from app.tests.utils.user import create_random_user
+from app.tests.utils.user import create_random_user, TEST_PASSWORD
 from app.models.source import RequestSource
 from unittest.mock import patch
 
@@ -10,7 +10,7 @@ def test_login(client: TestClient, session: Session) -> None:
     user = create_random_user(session)
     response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": TEST_PASSWORD},
         headers={"X-Source": "mobile_app"}
     )
     assert response.status_code == 200
@@ -25,7 +25,7 @@ def test_login_with_admin_source(client: TestClient, session: Session) -> None:
     user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": TEST_PASSWORD},
         headers={"X-Source": "admin_panel"}
     )
     assert response.status_code == 200
@@ -40,7 +40,7 @@ def test_login_sets_lax_cookie_for_http_requests(client: TestClient, session: Se
     user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": "TestPass1!"},
         headers={"X-Source": "admin_panel"},
     )
     assert response.status_code == 200
@@ -54,7 +54,7 @@ def test_login_sets_secure_none_cookie_for_https_requests(client: TestClient, se
     user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": TEST_PASSWORD},
         headers={"X-Source": "admin_panel", "X-Forwarded-Proto": "https"},
     )
     assert response.status_code == 200
@@ -68,7 +68,7 @@ def test_register(client: TestClient, session: Session) -> None:
     # For admin/provider users (provide both email and phone)
     user_data = {
         "email": "test@example.com",
-        "password": "password123",
+        "password": TEST_PASSWORD,
         "name": "Test User",
         "phone": "1234567890"
     }
@@ -87,7 +87,7 @@ def test_register_duplicate_email_same_source(client: TestClient, session: Sessi
     user = create_random_user(session, source=RequestSource.ADMIN_PANEL)
     user_data = {
         "email": user.email,
-        "password": "password123",
+        "password": TEST_PASSWORD,
         "name": "Test User",
         "phone": "9876543210"
     }
@@ -104,7 +104,7 @@ def test_register_same_email_different_source(client: TestClient, session: Sessi
     user = create_random_user(session, source=RequestSource.MOBILE_APP)
     user_data = {
         "email": user.email,
-        "password": "password123",
+        "password": TEST_PASSWORD,
         "name": "Test User",
         "phone": "9876543210"
     }
@@ -125,14 +125,14 @@ def test_change_password(client: TestClient, session: Session) -> None:
     # Login first
     login_response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": TEST_PASSWORD},
         headers={"X-Source": "mobile_app"}
     )
     token = login_response.json()["access_token"]
     
     # Test change password
     response = client.post(
-        f"{settings.API_V1_STR}/change-password?current_password=password123&new_password=newpassword123",
+        f"{settings.API_V1_STR}/change-password?current_password={TEST_PASSWORD}&new_password=NewPass2@",
         headers={"Authorization": f"Bearer {token}", "X-Source": "mobile_app"}
     )
     assert response.status_code == 200
@@ -149,7 +149,7 @@ def test_reset_password(mock_redis, client: TestClient, session: Session) -> Non
     
     # Test reset password
     response = client.post(
-        f"{settings.API_V1_STR}/reset-password?token=fake_reset_token&new_password=newpassword123",
+        f"{settings.API_V1_STR}/reset-password?token=fake_reset_token&new_password=NewPass2@",
         headers={"X-Source": "admin_panel"}
     )
     assert response.status_code == 200
@@ -183,7 +183,7 @@ def test_refresh_token(client: TestClient, session: Session) -> None:
     # Login first to get refresh token cookie
     login_response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": "TestPass1!"},
         headers={"X-Source": "mobile_app"}
     )
     assert login_response.status_code == 200
@@ -257,7 +257,7 @@ def test_logout(client: TestClient, session: Session) -> None:
     # Login first to get refresh token cookie
     login_response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": user.email, "password": "password123"},
+        data={"username": user.email, "password": "TestPass1!"},
         headers={"X-Source": "mobile_app"}
     )
     assert login_response.status_code == 200

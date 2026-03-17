@@ -42,6 +42,7 @@ export default function BookingSuccessScreen() {
 
   const bookingRef = registration?.booking_reference ?? `BOOK-${registrationId?.slice(0, 8).toUpperCase()}`;
   const isConfirmed = registration?.status === 'confirmed';
+  const isAwaitingProvider = registration?.status === 'awaiting_provider' || registration?.status === 'processing';
   const isExpired = secondsLeft !== null && secondsLeft === 0 && registration?.status === 'pending_payment';
 
   const handleCopy = useCallback(() => {
@@ -63,16 +64,18 @@ export default function BookingSuccessScreen() {
     <View style={s.container}>
       <Animated.View style={[s.iconWrap, iconStyle]}>
         <Ionicons
-          name={isConfirmed ? 'checkmark-circle' : isExpired ? 'close-circle' : 'time'}
+          name={isConfirmed ? 'checkmark-circle' : isAwaitingProvider ? 'checkmark-circle' : isExpired ? 'close-circle' : 'time'}
           size={100}
-          color={isConfirmed ? colors.success : isExpired ? colors.error : colors.warning ?? '#F59E0B'}
+          color={isConfirmed ? colors.success : isAwaitingProvider ? colors.primary : isExpired ? colors.error : colors.warning ?? '#F59E0B'}
         />
       </Animated.View>
       <Animated.View style={[s.content, contentStyle]}>
         <Text style={s.title}>
-          {isConfirmed ? t('booking.confirmed') : isExpired ? t('booking.spotExpired') : t('booking.successTitle')}
+          {isConfirmed ? t('booking.confirmed') : isAwaitingProvider ? t('booking.paymentReceived') : isExpired ? t('booking.spotExpired') : t('booking.successTitle')}
         </Text>
-        <Text style={s.subtitle}>{t('booking.successMessage')}</Text>
+        <Text style={s.subtitle}>
+          {isAwaitingProvider ? t('booking.awaitingProviderMessage') : t('booking.successMessage')}
+        </Text>
 
         {/* Booking Reference Card */}
         <View style={s.refCard}>
@@ -90,8 +93,16 @@ export default function BookingSuccessScreen() {
           {copied && <Text style={s.copiedText}>{t('common.done')}</Text>}
         </View>
 
+        {/* Awaiting provider badge */}
+        {isAwaitingProvider && (
+          <View style={[s.pendingBadge, { backgroundColor: colors.primarySurface ?? '#EFF6FF' }]}>
+            <Ionicons name="hourglass-outline" size={14} color={colors.primary} />
+            <Text style={[s.pendingText, { color: colors.primary }]}>{t('bookings.status.awaiting_provider')}</Text>
+          </View>
+        )}
+
         {/* Countdown timer (only when pending_payment) */}
-        {!isConfirmed && !isExpired && secondsLeft !== null && (
+        {!isConfirmed && !isAwaitingProvider && !isExpired && secondsLeft !== null && (
           <View style={[s.timerBox, { backgroundColor: colors.warning ? `${colors.warning}20` : '#FEF3C7' }]}>
             <Ionicons name="timer-outline" size={16} color={colors.warning ?? '#F59E0B'} />
             <Text style={[s.timerText, { color: colors.warning ?? '#F59E0B' }]}>
@@ -101,7 +112,7 @@ export default function BookingSuccessScreen() {
         )}
 
         {/* Status badge */}
-        {!isConfirmed && !isExpired && (
+        {!isConfirmed && !isAwaitingProvider && !isExpired && (
           <View style={s.pendingBadge}>
             <Ionicons name="card-outline" size={14} color={colors.info} />
             <Text style={s.pendingText}>{t('booking.pendingPayment')}</Text>
@@ -109,10 +120,18 @@ export default function BookingSuccessScreen() {
         )}
 
         <View style={s.actions}>
-          {!isConfirmed && registrationId && (
+          {!isConfirmed && !isAwaitingProvider && registrationId && (
             <Button
               title={t('booking.payNow')}
               onPress={() => router.push({ pathname: '/booking/[registrationId]', params: { registrationId } })}
+              fullWidth
+              size="lg"
+            />
+          )}
+          {isAwaitingProvider && registrationId && (
+            <Button
+              title={t('booking.viewBooking')}
+              onPress={() => router.replace({ pathname: '/booking/[registrationId]', params: { registrationId } })}
               fullWidth
               size="lg"
             />
@@ -122,7 +141,7 @@ export default function BookingSuccessScreen() {
             onPress={() => router.replace('/(tabs)/bookings')}
             fullWidth
             size="lg"
-            variant={isConfirmed ? undefined : 'outline'}
+            variant={isConfirmed || isAwaitingProvider ? undefined : 'outline'}
           />
           <Button
             title={t('explore.subtitle')}

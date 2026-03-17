@@ -16,6 +16,8 @@ import { useThemeStore } from '../../store/themeStore';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import apiClient from '../../lib/api';
+import { useMyRegistrations, useFavorites, useMyReviews } from '../../hooks/useTrips';
+import Toast from '../../components/ui/Toast';
 
 interface MenuItemProps {
   icon: any;
@@ -54,11 +56,32 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(false);
   const nameChanged = name.trim() !== (user?.name ?? '').trim();
   const [avatarLoading, setAvatarLoading] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'error' | 'success' | 'info'>('error');
+
+  const showToast = (msg: string, type: 'error' | 'success' | 'info' = 'error') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setToastVisible(true);
+  };
+
+  const { data: myRegistrations } = useMyRegistrations();
+  const { data: favorites } = useFavorites();
+  const { data: myReviews } = useMyReviews();
+
+  const tripsCount = myRegistrations?.filter(r => !['cancelled'].includes(r.status)).length ?? null;
+  const savedCount = favorites?.length ?? null;
+  const reviewsCount = myReviews?.length ?? null;
+
+  React.useEffect(() => {
+    if (user?.name !== undefined) setName(user.name ?? '');
+  }, [user?.name]);
 
   const handleAvatarUpload = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert(t('profile.permissionRequired'), t('profile.permissionMessage'));
+      showToast(t('profile.permissionMessage'), 'info');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -82,7 +105,7 @@ export default function ProfileScreen() {
       });
       updateUser(data);
     } catch (err: any) {
-      Alert.alert(t('profile.uploadFailed'), err?.response?.data?.detail ?? 'Could not upload photo.');
+      showToast(err?.response?.data?.detail ?? t('profile.uploadFailed'), 'error');
     } finally {
       setAvatarLoading(false);
     }
@@ -95,7 +118,7 @@ export default function ProfileScreen() {
       const { data } = await apiClient.patch('/users/me', { name: name.trim() });
       updateUser(data);
     } catch (err: any) {
-      Alert.alert(t('common.error'), err?.response?.data?.detail ?? t('profile.updateFailed'));
+      showToast(err?.response?.data?.detail ?? t('profile.updateFailed'), 'error');
     } finally {
       setLoading(false);
     }
@@ -183,9 +206,9 @@ export default function ProfileScreen() {
         </View>
 
         <View style={s.statsRow}>
-          <StatCard icon="calendar-outline" label={t('profile.trips')} value="—" />
-          <StatCard icon="heart-outline" label={t('profile.saved')} value="—" />
-          <StatCard icon="star-outline" label={t('profile.reviews')} value="—" />
+          <StatCard icon="calendar-outline" label={t('profile.trips')} value={tripsCount !== null ? String(tripsCount) : '—'} />
+          <StatCard icon="heart-outline" label={t('profile.saved')} value={savedCount !== null ? String(savedCount) : '—'} />
+          <StatCard icon="star-outline" label={t('profile.reviews')} value={reviewsCount !== null ? String(reviewsCount) : '—'} />
         </View>
 
         <View style={s.section}>
@@ -232,6 +255,13 @@ export default function ProfileScreen() {
         <Text style={s.version}>{t('common.version')}</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type={toastType}
+        onHide={() => setToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }

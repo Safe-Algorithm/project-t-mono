@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta, timezone
 
 from jose import jwt, JWTError
@@ -54,6 +55,34 @@ def verify_refresh_token(token: str) -> dict:
         return payload
     except JWTError:
         raise ValueError("Invalid refresh token")
+
+
+PASSWORD_RULES = {
+    "min_length": 8,
+    "require_uppercase": True,
+    "require_lowercase": True,
+    "require_digit": True,
+    "require_special": True,
+}
+
+
+def validate_password_strength(password: str) -> list[str]:
+    """
+    Validate password against policy rules.
+    Returns a list of violated rule messages (empty list = password is valid).
+    """
+    errors = []
+    if len(password) < PASSWORD_RULES["min_length"]:
+        errors.append(f"Password must be at least {PASSWORD_RULES['min_length']} characters long.")
+    if PASSWORD_RULES["require_uppercase"] and not re.search(r"[A-Z]", password):
+        errors.append("Password must contain at least one uppercase letter.")
+    if PASSWORD_RULES["require_lowercase"] and not re.search(r"[a-z]", password):
+        errors.append("Password must contain at least one lowercase letter.")
+    if PASSWORD_RULES["require_digit"] and not re.search(r"\d", password):
+        errors.append("Password must contain at least one number.")
+    if PASSWORD_RULES["require_special"] and not re.search(r"[^A-Za-z0-9]", password):
+        errors.append("Password must contain at least one special character.")
+    return errors
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

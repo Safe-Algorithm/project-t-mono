@@ -62,9 +62,9 @@ export default function ExploreScreen() {
       trip={item}
       onPress={() => router.push(`/trip/${item.id}`)}
       isFavorite={favoriteIds.has(item.id)}
-      onFavoriteToggle={() =>
-        toggleFav.mutate({ tripId: item.id, isFav: favoriteIds.has(item.id) })
-      }
+      onFavoriteToggle={() => {
+        if (!toggleFav.isPending) toggleFav.mutate({ tripId: item.id, isFav: favoriteIds.has(item.id) });
+      }}
     />
   ), [favoriteIds, toggleFav]);
 

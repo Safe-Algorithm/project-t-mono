@@ -21,9 +21,11 @@ def random_email() -> str:
 def random_phone() -> str:
     return "".join(random.choices(string.digits, k=10))
 
+TEST_PASSWORD = "TestPass1!"
+
 def create_random_user(session: Session, source: RequestSource = RequestSource.MOBILE_APP, **kwargs) -> User:
     email = kwargs.get("email", random_email())
-    password = kwargs.get("password", "password123")
+    password = kwargs.get("password", TEST_PASSWORD)
     name = kwargs.get("name", "Test User")
     phone = kwargs.get("phone", random_phone())
     user_in = UserCreate(email=email, password=password, name=name, phone=phone, **kwargs)
@@ -53,7 +55,7 @@ def user_authentication_headers(
         is_superuser=role == UserRole.SUPER_USER,
     )
 
-    login_data = {"username": user.email, "password": "password123"}
+    login_data = {"username": user.email, "password": TEST_PASSWORD}
     r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data, headers={"X-Source": source_header})
     response = r.json()
     auth_token = response["access_token"]

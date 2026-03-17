@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
+  PanResponder,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -64,6 +66,65 @@ function getDestName(d: DestinationOption) {
   return i18n.language === 'ar' ? d.name_ar || d.name_en : d.name_en || d.name_ar;
 }
 
+function DatePickerRow({ label, value, onChange, colors, s }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  colors: ThemeColors;
+  s: ReturnType<typeof makeStyles>;
+}) {
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const years = Array.from({ length: 3 }, (_, i) => String(currentYear + i));
+  const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+  const [y, m] = value ? value.split('-') : ['', ''];
+
+  const setYear = (yr: string) => onChange(yr && m ? `${yr}-${m}-01` : '');
+  const setMonth = (mo: string) => onChange(y && mo ? `${y}-${mo}-01` : '');
+  const clearDate = () => onChange('');
+
+  return (
+    <View style={{ marginBottom: 8 }}>
+      <Text style={s.inputLabel}>{label}</Text>
+      {value ? (
+        <View style={s.dateSelected}>
+          <Text style={s.dateSelectedText}>{value.slice(0, 7)}</Text>
+          <TouchableOpacity onPress={clearDate}>
+            <Ionicons name="close-circle" size={18} color={colors.textTertiary} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={s.datePickerRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+            {years.map((yr) => (
+              <TouchableOpacity
+                key={yr}
+                style={[s.dateChip, y === yr && s.dateChipActive]}
+                onPress={() => setYear(yr)}
+              >
+                <Text style={[s.dateChipText, y === yr && s.dateChipTextActive]}>{yr}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          {y ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2, marginTop: 6 }}>
+              {months.map((mo) => (
+                <TouchableOpacity
+                  key={mo}
+                  style={[s.dateChip, m === mo && s.dateChipActive]}
+                  onPress={() => setMonth(mo)}
+                >
+                  <Text style={[s.dateChipText, m === mo && s.dateChipTextActive]}>{mo}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function FilterSheet({ visible, onClose, filters, onApply }: FilterSheetProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -74,6 +135,28 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
   // Local YYYY-MM-DD strings for the date inputs (display only; converted to UTC ISO on apply)
   const [startDateStr, setStartDateStr] = useState('');
   const [endDateStr, setEndDateStr] = useState('');
+
+  // #20 Drag-to-dismiss
+  const translateY = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 5,
+      onPanResponderMove: (_, g) => {
+        if (g.dy > 0) translateY.setValue(g.dy);
+      },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80) {
+          Animated.timing(translateY, { toValue: 600, duration: 200, useNativeDriver: true }).start(() => {
+            translateY.setValue(0);
+            onClose();
+          });
+        } else {
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+    })
+  ).current;
 
   // Flatten all cities from the destination tree for the picker
   const allCities: DestinationOption[] = destinationTree.flatMap(
@@ -132,23 +215,37 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
     onClose();
   };
 
+  // #19 Reset draft when sheet closes without applying
+  const handleClose = () => {
+    setLocal(filters);
+    const fromIso = filters.start_date_from;
+    const toIso = filters.start_date_to;
+    setStartDateStr(fromIso ? fromIso.slice(0, 10) : '');
+    setEndDateStr(toIso ? toIso.slice(0, 10) : '');
+    translateY.setValue(0);
+    onClose();
+  };
+
   const handleReset = () => {
     setLocal({});
     setStartDateStr('');
     setEndDateStr('');
     onApply({});
+    translateY.setValue(0);
     onClose();
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <View style={s.backdrop}>
-        <TouchableOpacity style={s.backdropTouch} onPress={onClose} />
-        <View style={s.sheet}>
-          <View style={s.handle} />
+        <TouchableOpacity style={s.backdropTouch} onPress={handleClose} />
+        <Animated.View style={[s.sheet, { transform: [{ translateY }] }]}>
+          <View style={s.handleBar} {...panResponder.panHandlers}>
+            <View style={s.handle} />
+          </View>
           <View style={s.header}>
             <Text style={s.title}>{t('filters.title')}</Text>
-            <TouchableOpacity onPress={onClose}>
+            <TouchableOpacity onPress={handleClose}>
               <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -229,7 +326,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
               ))}
             </View>
 
-            {/* Date Range */}
+            {/* Date Range - #13 replaced manual text input with picker */}
             <Text style={s.sectionLabel}>{t('filters.dateRange', 'Trip Start Date')}</Text>
             <Text style={s.sectionHint}>{t('filters.dateRangeHint', 'Filter trips by when they start')}</Text>
 
@@ -254,34 +351,20 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
               })}
             </View>
 
-            {/* Manual date inputs */}
-            <View style={s.row}>
-              <View style={s.priceInput}>
-                <Text style={s.inputLabel}>{t('filters.dateFrom', 'From')}</Text>
-                <TextInput
-                  style={[s.input, startDateStr && !isValidDate(startDateStr) && s.inputError]}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textTertiary}
-                  value={startDateStr}
-                  onChangeText={setStartDateStr}
-                  keyboardType="numeric"
-                  maxLength={10}
-                />
-              </View>
-              <View style={s.priceDash}><Text style={s.dashText}>—</Text></View>
-              <View style={s.priceInput}>
-                <Text style={s.inputLabel}>{t('filters.dateTo', 'To')}</Text>
-                <TextInput
-                  style={[s.input, endDateStr && !isValidDate(endDateStr) && s.inputError]}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={colors.textTertiary}
-                  value={endDateStr}
-                  onChangeText={setEndDateStr}
-                  keyboardType="numeric"
-                  maxLength={10}
-                />
-              </View>
-            </View>
+            <DatePickerRow
+              label={t('filters.dateFrom', 'From')}
+              value={startDateStr}
+              onChange={setStartDateStr}
+              colors={colors}
+              s={s}
+            />
+            <DatePickerRow
+              label={t('filters.dateTo', 'To')}
+              value={endDateStr}
+              onChange={setEndDateStr}
+              colors={colors}
+              s={s}
+            />
 
             {/* Price */}
             <Text style={s.sectionLabel}>{t('filters.priceRange')}</Text>
@@ -362,7 +445,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
             <Button title={t('filters.resetFilters')} variant="outline" onPress={handleReset} style={s.resetBtn} />
             <Button title={t('filters.applyFilters')} onPress={handleApply} style={s.applyBtn} />
           </View>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -373,28 +456,36 @@ function makeStyles(c: ThemeColors) {
     backdrop: { flex: 1, justifyContent: 'flex-end' },
     backdropTouch: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     sheet: { backgroundColor: c.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '92%', flexDirection: 'column', ...Shadow.lg },
-    handle: { width: 40, height: 4, backgroundColor: c.gray200, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+    handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 40 },
+    handle: { width: 40, height: 4, backgroundColor: c.gray300, borderRadius: 2 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
     title: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
     body: { flexShrink: 1, paddingHorizontal: 20, paddingTop: 16 },
     bodyContent: { paddingBottom: 24 },
-    sectionLabel: { fontSize: FontSize.sm, fontWeight: '700', color: c.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 16 },
+    sectionLabel: { fontSize: FontSize.sm, fontWeight: '700', color: c.textPrimary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 16 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     priceInput: { flex: 1 },
-    inputLabel: { fontSize: FontSize.xs, color: c.textTertiary, marginBottom: 4 },
-    input: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.gray50 },
+    inputLabel: { fontSize: FontSize.xs, color: c.textSecondary, marginBottom: 4, fontWeight: '600' },
+    input: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.surface },
     inputError: { borderColor: c.error },
     priceDash: { paddingTop: 18 },
     dashText: { color: c.textTertiary, fontSize: FontSize.lg },
-    sectionHint: { fontSize: FontSize.xs, color: c.textTertiary, marginBottom: 10, marginTop: -6 },
+    sectionHint: { fontSize: FontSize.xs, color: c.textSecondary, marginBottom: 10, marginTop: -6 },
     chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
     ratingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    ratingChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
-    ratingChipActive: { borderColor: c.primary, backgroundColor: c.primarySurface },
-    ratingChipText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary },
-    ratingChipTextActive: { color: c.primary },
+    ratingChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
+    ratingChipActive: { borderColor: c.primary, backgroundColor: c.primary },
+    ratingChipText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary },
+    ratingChipTextActive: { color: c.white },
     actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28, borderTopWidth: 1, borderTopColor: c.border },
     resetBtn: { flex: 1 },
     applyBtn: { flex: 2 },
+    datePickerRow: { marginBottom: 4 },
+    dateChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
+    dateChipActive: { borderColor: c.primary, backgroundColor: c.primary },
+    dateChipText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary },
+    dateChipTextActive: { color: c.white },
+    dateSelected: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1.5, borderColor: c.primary, borderRadius: Radius.md, backgroundColor: c.primarySurface, alignSelf: 'flex-start', marginBottom: 4 },
+    dateSelectedText: { fontSize: FontSize.sm, fontWeight: '700', color: c.primary },
   });
 }

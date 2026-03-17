@@ -21,7 +21,7 @@ import { FontSize, Radius, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function LoginScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const { language, setLanguage, isRTL } = useLanguageStore();
@@ -76,13 +76,13 @@ export default function LoginScreen() {
           <View style={s.logoContainer}>
             <Ionicons name="compass" size={40} color={colors.white} />
           </View>
-          <Text style={s.appName}>Rihla</Text>
+          <Text style={s.appName}>{i18n.language === 'ar' ? 'رِحلة' : 'Rihla'}</Text>
           <Text style={s.tagline}>{t('auth.loginSubtitle')}</Text>
         </View>
         <View style={s.form}>
           <View style={[s.headerArea, isRTL && s.headerAreaRtl]}>
-            <Text style={s.title}>{t('auth.loginTitle')}</Text>
-            <Text style={s.subtitle}>{t('auth.loginSubtitle')}</Text>
+            <Text style={[s.title, isRTL && s.textRtl]}>{t('auth.loginTitle')}</Text>
+            <Text style={[s.subtitle, isRTL && s.textRtl]}>{t('auth.loginSubtitle')}</Text>
           </View>
           <View style={s.fields}>
             <View style={[s.toggle, isRTL && s.rowRtl]}>
@@ -112,7 +112,8 @@ export default function LoginScreen() {
               />
             )}
             <Input label={t('auth.password')} placeholder={t('auth.password')} value={password}
-              onChangeText={setPassword} isPassword leftIcon="lock-closed-outline" error={errors.password} />
+              onChangeText={setPassword} isPassword leftIcon="lock-closed-outline" error={errors.password}
+              autoComplete="current-password" textContentType="password" />
           </View>
           <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={[s.forgotRow, isRTL && s.forgotRowRtl]}>
             <Text style={s.forgotText}>{t('auth.forgotPassword')}</Text>
@@ -153,6 +154,7 @@ function makeStyles(c: ThemeColors) {
     headerAreaRtl: { alignItems: 'flex-end' },
     title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary },
     subtitle: { fontSize: FontSize.md, color: c.textSecondary },
+    textRtl: { textAlign: 'right', writingDirection: 'rtl' },
     fields: { gap: 16, marginBottom: 12 },
     forgotRow: { alignSelf: 'flex-end', marginBottom: 24 },
     forgotRowRtl: { alignSelf: 'flex-start' },

@@ -17,7 +17,7 @@ def test_invite_team_member(mock_email, client: TestClient, session: Session) ->
     super_provider_user, super_provider_headers = user_authentication_headers(
         client=client, session=session, role=UserRole.SUPER_USER
     )
-    data = {"email": "test.new.member@example.com", "name": "Test New Member", "phone": "1234567890", "password": "password123"}
+    data = {"email": "test.new.member@example.com", "name": "Test New Member", "phone": "1234567890", "password": "TestPass1!"}
     response = client.post(f"{API}/team/invite", headers=super_provider_headers, json=data)
     assert response.status_code == 200
     content = response.json()
@@ -48,7 +48,7 @@ def test_list_team_members_normal_user(client: TestClient, session: Session) -> 
     )
     login = client.post(
         f"{API}/login/access-token",
-        data={"username": normal_user.email, "password": "password123"},
+        data={"username": normal_user.email, "password": "TestPass1!"},
         headers={"X-Source": "providers_panel"},
     )
     normal_headers = {"Authorization": f"Bearer {login.json()['access_token']}"}

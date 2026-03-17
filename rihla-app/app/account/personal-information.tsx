@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, Pressable,
 } from 'react-native';
+import Toast from '../../components/ui/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,8 @@ export default function PersonalInformationScreen() {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Add identifier modal state
   const [addType, setAddType] = useState<AddType>('email');
@@ -108,7 +111,8 @@ export default function PersonalInformationScreen() {
         updateUser(data);
       }
       setModalVisible(false);
-      Alert.alert('Success', `${addType === 'email' ? 'Email' : 'Phone number'} added successfully!`);
+      setToastMessage(addType === 'email' ? t('personalInfo.emailAdded', 'Email added successfully!') : t('personalInfo.phoneAdded', 'Phone number added successfully!'));
+      setToastVisible(true);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       setAddError(Array.isArray(detail) ? (detail[0]?.msg ?? 'Verification failed') : (typeof detail === 'string' ? detail : 'Verification failed'));
@@ -251,6 +255,13 @@ export default function PersonalInformationScreen() {
           </View>
         </SafeAreaView>
       </Modal>
+
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        type="success"
+        onHide={() => setToastVisible(false)}
+      />
     </SafeAreaView>
   );
 }

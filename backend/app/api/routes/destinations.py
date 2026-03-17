@@ -170,12 +170,45 @@ def admin_delete_place(
 @router.get("/destinations", response_model=List[DestinationReadWithChildren])
 def get_active_destinations(
     session: Session = Depends(get_session),
+    only_with_trips: bool = False,
 ):
     """
     Get active destinations tree for trip creation and browsing.
     Public endpoint - no authentication required.
+    Pass only_with_trips=true to return only destinations that have at least one active trip.
     """
     countries = crud.destination.get_countries(session=session, active_only=True)
+
+    if only_with_trips:
+        from sqlmodel import select
+        from app.models.trip_destination import TripDestination
+        from app.models.trip import Trip as TripModel
+        dest_ids_with_trips = set(
+            row[0] for row in session.exec(
+                select(TripDestination.destination_id)
+                .join(TripModel, TripModel.id == TripDestination.trip_id)
+                .where(TripModel.is_active == True)
+                .distinct()
+            ).all()
+        )
+        starting_city_ids_with_trips = set(
+            row[0] for row in session.exec(
+                select(TripModel.starting_city_id)
+                .where(TripModel.is_active == True)
+                .where(TripModel.starting_city_id != None)
+                .distinct()
+            ).all()
+        )
+        relevant_ids = dest_ids_with_trips | starting_city_ids_with_trips
+        result = []
+        for country in countries:
+            tree = _build_destination_tree(country, session, active_only=True)
+            filtered_children = [c for c in (tree.children or []) if c.id in relevant_ids]
+            if filtered_children or country.id in relevant_ids:
+                tree.children = filtered_children
+                result.append(tree)
+        return result
+
     result = []
     for country in countries:
         result.append(_build_destination_tree(country, session, active_only=True))

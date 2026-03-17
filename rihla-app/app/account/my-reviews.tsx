@@ -6,23 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import apiClient from '../../lib/api';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import StarRating from '../../components/ui/StarRating';
 import { Skeleton } from '../../components/ui/SkeletonLoader';
-import { Review } from '../../types/trip';
-
-function useMyReviews() {
-  return useQuery({
-    queryKey: ['reviews', 'me'],
-    queryFn: async () => {
-      const { data } = await apiClient.get<Review[]>('/reviews/my-reviews');
-      return data;
-    },
-  });
-}
+import { useMyReviews } from '../../hooks/useTrips';
 
 export default function MyReviewsScreen() {
   const { t, i18n } = useTranslation();

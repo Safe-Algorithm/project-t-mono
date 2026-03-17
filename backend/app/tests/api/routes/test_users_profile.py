@@ -35,7 +35,7 @@ def test_update_user_password(
     """Test updating user password."""
     response = client.patch(
         f"{settings.API_V1_STR}/users/me",
-        json={"password": "newpassword123"},
+        json={"password": "NewPass2@"},
         headers=user_authentication_headers
     )
     

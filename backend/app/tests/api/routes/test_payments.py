@@ -67,7 +67,7 @@ def test_trip(session: Session) -> Trip:
 def auth_headers(client: TestClient, test_user: User) -> dict:
     response = client.post(
         f"{settings.API_V1_STR}/login/access-token",
-        data={"username": test_user.email, "password": "password123"},
+        data={"username": test_user.email, "password": "TestPass1!"},
         headers={"X-Source": "mobile_app"},
     )
     token = response.json()["access_token"]

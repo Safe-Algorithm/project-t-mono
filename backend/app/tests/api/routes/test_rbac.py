@@ -54,7 +54,7 @@ def normal_provider(client: TestClient, session: Session, super_provider):
         role=UserRole.NORMAL,
         provider_id=super_user.provider_id,
     )
-    login_data = {"username": member.email, "password": "password123"}
+    login_data = {"username": member.email, "password": "TestPass1!"}
     r = client.post(
         f"{API}/login/access-token",
         data=login_data,

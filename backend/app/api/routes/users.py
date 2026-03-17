@@ -3,6 +3,7 @@ import secrets
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, UploadFile, File
+from app.core.security import validate_password_strength
 from sqlmodel import Session, select
 from app import crud
 from app.api import deps
@@ -162,6 +163,9 @@ def update_user_me(
     
     if user_in.password is not None:
         from app.core.security import get_password_hash
+        pw_errors = validate_password_strength(user_in.password)
+        if pw_errors:
+            raise HTTPException(status_code=400, detail=" ".join(pw_errors))
         current_user.hashed_password = get_password_hash(user_in.password)
 
     if user_in.preferred_language is not None and user_in.preferred_language in ("en", "ar"):

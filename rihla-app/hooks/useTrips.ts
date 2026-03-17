@@ -83,7 +83,7 @@ export function useDestinations() {
   return useQuery<DestinationOption[]>({
     queryKey: ['destinations', 'active'],
     queryFn: async () => {
-      const { data } = await apiClient.get<DestinationOption[]>('/destinations');
+      const { data } = await apiClient.get<DestinationOption[]>('/destinations?only_with_trips=true');
       return data;
     },
     staleTime: 1000 * 60 * 30,
@@ -209,6 +209,17 @@ export function useMyRegistrations() {
     },
     refetchOnMount: 'always',
     staleTime: 0,
+  });
+}
+
+export function useMyReviews() {
+  return useQuery({
+    queryKey: ['reviews', 'me'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<Review[]>('/reviews/my-reviews');
+      return data;
+    },
+    staleTime: 1000 * 60 * 5,
   });
 }
 

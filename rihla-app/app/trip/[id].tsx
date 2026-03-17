@@ -7,7 +7,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useTrip, useTripRating, useTripReviews, useFavorites, useToggleFavorite } from '../../hooks/useTrips';
+import { useTrip, useTripRating, useTripReviews, useFavorites, useToggleFavorite, useMyRegistrations } from '../../hooks/useTrips';
 import apiClient from '../../lib/api';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -32,9 +32,12 @@ const AMENITY_ICONS: Record<string, string> = {
   omra_assistance: 'moon-outline',
 };
 
-function formatDate(d: string, locale = 'en-US', tz = 'Asia/Riyadh') {
+function formatDate(d: string, _locale = 'en-US', tz = 'Asia/Riyadh') {
   const dt = new Date(d.endsWith('Z') ? d : d + 'Z');
-  return dt.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric', timeZone: tz });
+  const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz };
+  const parts = new Intl.DateTimeFormat('en-CA', opts).formatToParts(dt);
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '';
+  return `${get('year')}/${get('month')}/${get('day')}`;
 }
 
 export default function TripDetailScreen() {
@@ -42,7 +45,7 @@ export default function TripDetailScreen() {
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const insets = useSafeAreaInsets();
-  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
+  const locale = 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [imageIndex, setImageIndex] = useState(0);
   const [showTripTypeInfo, setShowTripTypeInfo] = useState(false);
@@ -53,8 +56,12 @@ export default function TripDetailScreen() {
   const { data: reviews } = useTripReviews(id);
   const { data: favorites } = useFavorites();
   const toggleFav = useToggleFavorite();
+  const { data: myRegistrations } = useMyRegistrations();
 
   const isFav = favorites?.some((t) => t.id === id) ?? false;
+  const activeBooking = myRegistrations?.find(
+    (r) => r.trip_id === id && !['cancelled', 'completed'].includes(r.status)
+  ) ?? null;
 
   const handleShare = async () => {
     try {
@@ -156,7 +163,7 @@ export default function TripDetailScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={s.overlayBtn}
-                onPress={() => toggleFav.mutate({ tripId: id, isFav })}
+                onPress={() => { if (!toggleFav.isPending) toggleFav.mutate({ tripId: id, isFav }); }}
               >
                 <Ionicons
                   name={isFav ? 'heart' : 'heart-outline'}
@@ -169,6 +176,19 @@ export default function TripDetailScreen() {
         </View>
 
         <View style={s.content}>
+          {/* Already booked banner */}
+          {activeBooking && (
+            <TouchableOpacity
+              style={s.bookedBanner}
+              onPress={() => router.push(`/booking/${activeBooking.id}` as any)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={s.bookedBannerText}>{t('trip.alreadyBooked')}</Text>
+              <Ionicons name={i18n.language === 'ar' ? 'chevron-back' : 'chevron-forward'} size={16} color={colors.success} />
+            </TouchableOpacity>
+          )}
+
           {/* Title & provider */}
           <View style={s.titleRow}>
             <View style={{ flex: 1 }}>
@@ -243,6 +263,14 @@ export default function TripDetailScreen() {
               value={trip.available_spots === 0 ? t('trip.soldOut') : t('trip.spotsLeft', { count: trip.available_spots })}
               colors={colors} s={s}
             />
+            {trip.registration_deadline && (
+              <InfoChip
+                icon="time-outline"
+                label={t('trip.registrationDeadline')}
+                value={formatDate(trip.registration_deadline, locale, trip.timezone)}
+                colors={colors} s={s}
+              />
+            )}
           </View>
 
           {/* Refundability banner */}
@@ -398,7 +426,7 @@ export default function TripDetailScreen() {
           {/* Tiers — only shown for packaged trips */}
           {trip.is_packaged_trip && (
             <View style={s.section}>
-              <Text style={s.sectionTitle}>{t('trip.chooseTier')}</Text>
+              <Text style={s.sectionTitle}>{t('trip.tiers')}</Text>
               {activePackages.length === 0 ? (
                 <Text style={s.noPackages}>{t('trip.noTiers')}</Text>
               ) : (
@@ -500,7 +528,13 @@ export default function TripDetailScreen() {
 
       {/* Bottom CTA */}
       <View style={[s.bottomBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-        {isTripEnded ? (
+        {activeBooking ? (
+          <Button
+            title={t('trip.viewMyBooking')}
+            onPress={() => router.push(`/booking/${activeBooking.id}` as any)}
+            fullWidth size="lg"
+          />
+        ) : isTripEnded ? (
           <Text style={s.selectHint}>{t('trip.tripEnded')}</Text>
         ) : isPastDeadline ? (
           <Text style={s.selectHint}>{t('trip.registrationClosed')}</Text>
@@ -733,6 +767,13 @@ function makeStyles(c: ThemeColors) {
   bottomPrice: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary },
   bookBtn: { minWidth: 140 },
     selectHint: { fontSize: FontSize.md, color: c.textTertiary, textAlign: 'center', fontWeight: '500' },
+  bookedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F0FDF4', borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: '#BBF7D0',
+    paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
+  },
+  bookedBannerText: { flex: 1, fontSize: FontSize.sm, fontWeight: '700', color: '#166534' },
 
   nonRefundableBanner: {
     backgroundColor: '#DC2626', borderRadius: Radius.xl,

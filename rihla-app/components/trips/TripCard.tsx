@@ -47,13 +47,12 @@ function getDestLabel(trip: Trip, lang: string): string | null {
   return to;
 }
 
-function formatDate(dateStr: string, lang: string, tz?: string): string {
-  const locale = lang === 'ar' ? 'ar-SA' : 'en-US';
+function formatDate(dateStr: string, _lang: string, tz?: string): string {
   const d = new Date(dateStr.endsWith('Z') ? dateStr : dateStr + 'Z');
-  return d.toLocaleDateString(locale, {
-    month: 'short', day: 'numeric', year: 'numeric',
-    timeZone: tz ?? 'Asia/Riyadh',
-  });
+  const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz ?? 'Asia/Riyadh' };
+  const parts = new Intl.DateTimeFormat('en-CA', opts).formatToParts(d);
+  const get = (t: string) => parts.find(p => p.type === t)?.value ?? '';
+  return `${get('year')}/${get('month')}/${get('day')}`;
 }
 
 function getMinPrice(trip: Trip): number | null {
@@ -142,7 +141,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           </TouchableOpacity>
         )}
         {minPrice !== null && (
-          <View style={s.priceBadge}>
+          <View style={[s.priceBadge, i18n.language === 'ar' && s.priceBadgeRtl]}>
             <Text style={s.priceBadgeText}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
           </View>
         )}
@@ -230,6 +229,7 @@ function makeStyles(c: ThemeColors) {
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'transparent' },
     favoriteBtn: { position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
     priceBadge: { position: 'absolute', bottom: 12, left: 12, backgroundColor: c.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
+    priceBadgeRtl: { left: undefined, right: 12 },
     priceBadgeText: { color: c.white, fontSize: FontSize.sm, fontWeight: '700' },
     content: { padding: 14, gap: 8 },
     name: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, lineHeight: 22 },

@@ -302,7 +302,7 @@ def test_register_with_phone_verification_token(
         json={
             "name": "New User",
             "phone": phone,
-            "password": "testpassword123"
+            "password": "TestPass1!"
         },
         params={"verification_token": verification_token},
         headers={"X-Source": "mobile_app"}
@@ -327,7 +327,7 @@ def test_register_with_invalid_verification_token(
         json={
             "name": "New User 2",
             "phone": "+966501234576",
-            "password": "testpassword123"
+            "password": "TestPass1!"
         },
         params={"verification_token": "invalid_token"},
         headers={"X-Source": "mobile_app"}
@@ -361,7 +361,7 @@ def test_register_with_mismatched_phone(
         json={
             "name": "New User 3",
             "phone": phone2,  # Different phone
-            "password": "testpassword123"
+            "password": "TestPass1!"
         },
         params={"verification_token": verification_token},
         headers={"X-Source": "mobile_app"}

@@ -27,7 +27,7 @@ def test_invite_team_member_sends_email(client: TestClient, session: Session) ->
                 "email": "newmember@example.com",
                 "name": "New Member",
                 "phone": "+966501234567",
-                "password": "password123"
+                "password": "TestPass1!"
             }
         )
         
@@ -52,7 +52,7 @@ def test_invite_existing_user_fails(client: TestClient, session: Session) -> Non
             "email": user.email,
             "name": "Duplicate User",
             "phone": "+966501234568",
-            "password": "password123"
+            "password": "TestPass1!"
         }
     )
     
@@ -122,7 +122,7 @@ def test_only_super_provider_can_invite(client: TestClient, session: Session) ->
             "email": "newmember@example.com",
             "name": "New Member",
             "phone": "+966501234567",
-            "password": "password123"
+            "password": "TestPass1!"
         }
     )
     
@@ -142,7 +142,7 @@ def test_invite_team_member_duplicate_phone_fails(client: TestClient, session: S
             "email": "differentemail@example.com",
             "name": "Different Member",
             "phone": user.phone,  # Same phone as existing user
-            "password": "password123"
+            "password": "TestPass1!"
         }
     )
     
@@ -158,7 +158,7 @@ def test_invite_user_same_email_different_source_succeeds(client: TestClient, se
         email="shared@example.com",
         name="Admin User",
         phone="+966501111111",
-        hashed_password=get_password_hash("password123"),
+        hashed_password=get_password_hash("TestPass1!"),
         role=UserRole.SUPER_USER,
         source=RequestSource.ADMIN_PANEL,
         is_active=True
@@ -178,7 +178,7 @@ def test_invite_user_same_email_different_source_succeeds(client: TestClient, se
                 "email": "shared@example.com",  # Same email as admin user
                 "name": "Provider User",
                 "phone": "+966501111111",  # Same phone as admin user
-                "password": "password123"
+                "password": "TestPass1!"
             }
         )
         
@@ -200,7 +200,7 @@ def test_team_invitation_creates_correct_user_type(client: TestClient, session: 
                 "email": "teammember@example.com",
                 "name": "Team Member",
                 "phone": "+966501234571",
-                "password": "password123"
+                "password": "TestPass1!"
             }
         )
         
