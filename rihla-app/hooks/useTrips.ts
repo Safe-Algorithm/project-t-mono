@@ -1,5 +1,4 @@
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Alert } from 'react-native';
 import i18n from '../lib/i18n';
 import apiClient from '../lib/api';
 import { Trip, TripRating, Review, TripRegistration, ProviderProfile, TripUpdate } from '../types/trip';
@@ -275,7 +274,7 @@ export function useToggleFavorite() {
       if (context?.previous !== undefined) {
         qc.setQueryData(['favorites'], context.previous);
       }
-      Alert.alert(i18n.t('common.error'), i18n.t('favorites.errorUpdate'));
+      console.warn('favorites toggle failed — rolled back');
     },
     onSettled: () => {
       qc.invalidateQueries({ queryKey: ['favorites'] });

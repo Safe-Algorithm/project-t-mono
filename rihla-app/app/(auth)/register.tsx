@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -144,7 +143,7 @@ export default function RegisterScreen() {
       const msg = Array.isArray(detail)
         ? (detail[0]?.msg ?? t('auth.genericError'))
         : (typeof detail === 'string' ? detail : t('auth.genericError'));
-      Alert.alert(t('auth.registrationFailedTitle'), msg);
+      setErrors({ form: msg });
     } finally {
       setLoading(false);
     }
@@ -235,6 +234,11 @@ export default function RegisterScreen() {
           )}
           {step === 'details' && (
             <>
+              {errors.form ? (
+                <View style={s.errorBanner}>
+                  <Text style={s.errorBannerText}>{errors.form}</Text>
+                </View>
+              ) : null}
               <Input label={t('auth.name')} placeholder={t('auth.name')} value={name} onChangeText={setName}
                 autoCapitalize="words" leftIcon="person-outline" error={errors.name} />
               <Input label={t('auth.password')} placeholder={t('auth.passwordMin')} value={password} onChangeText={setPassword}
@@ -328,5 +332,7 @@ function makeStyles(c: ThemeColors) {
     pwRule: { flexDirection: 'row', alignItems: 'center', gap: 6 },
     pwRuleText: { fontSize: FontSize.xs, color: c.textTertiary },
     pwRuleOk: { color: '#16A34A' },
+    errorBanner: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
+    errorBannerText: { fontSize: FontSize.sm, color: '#DC2626', lineHeight: 20 },
   });
 }

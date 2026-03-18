@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert,
+  View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -39,7 +39,7 @@ export default function ChangePasswordScreen() {
 
   const sendOtp = async () => {
     if (!email) {
-      Alert.alert(t('common.error'), t('changePassword.noEmail'));
+      setErrors({ otp: t('changePassword.noEmail') });
       return;
     }
     setLoading(true);

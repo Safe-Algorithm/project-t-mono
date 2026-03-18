@@ -227,6 +227,20 @@ def _always_on_errors(field_type: TripFieldType, value: str, lang: str) -> List[
         elif len(value) > 254:
             errors.append("البريد الإلكتروني طويل جداً" if ar else "Email address is too long")
 
+    elif field_type == TripFieldType.DATE_OF_BIRTH:
+        try:
+            birth_date = datetime.strptime(value, "%Y-%m-%d").date()
+            if birth_date >= date.today():
+                errors.append(
+                    "تاريخ الميلاد لا يمكن أن يكون في المستقبل" if ar
+                    else "Date of birth cannot be in the future"
+                )
+        except ValueError:
+            errors.append(
+                "تنسيق تاريخ الميلاد غير صحيح، يجب أن يكون YYYY-MM-DD" if ar
+                else "Date of birth must be in YYYY-MM-DD format"
+            )
+
     elif field_type == TripFieldType.NAME:
         if len(value) > 100:
             errors.append("الاسم يجب أن لا يتجاوز 100 حرف" if ar else "Name must not exceed 100 characters")

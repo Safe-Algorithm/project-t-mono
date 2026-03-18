@@ -34,9 +34,11 @@ interface Props {
   nationalityOptions?: NationalityOption[];
   /** Optional validation_config for the field (used to filter phone country codes) */
   validationConfig?: Record<string, any> | null;
+  /** Inline error message shown below the field */
+  error?: string | null;
 }
 
-export default function ParticipantField({ fieldType, value, onChange, isRequired, metadata, allowedGenders, nationalityOptions, validationConfig }: Props) {
+export default function ParticipantField({ fieldType, value, onChange, isRequired, metadata, allowedGenders, nationalityOptions, validationConfig, error }: Props) {
   const { colors } = useTheme();
   const s = makeStyles(colors);
 
@@ -44,7 +46,7 @@ export default function ParticipantField({ fieldType, value, onChange, isRequire
   const uiType = metadata?.ui_type ?? 'text';
 
   if (uiType === 'date') {
-    return <DateField label={label} value={value} onChange={onChange} isRequired={isRequired} colors={colors} s={s} />;
+    return <DateField label={label} value={value} onChange={onChange} isRequired={isRequired} error={error} colors={colors} s={s} />;
   }
 
   // Nationality — searchable select from dynamic list
@@ -54,7 +56,7 @@ export default function ParticipantField({ fieldType, value, onChange, isRequire
       label: n.name,
       labelAlt: n.name_ar ?? n.name_en,
     }));
-    return <SearchableSelectField label={label} value={value} onChange={onChange} options={natOptions} isRequired={isRequired} colors={colors} s={s} />;
+    return <SearchableSelectField label={label} value={value} onChange={onChange} options={natOptions} isRequired={isRequired} error={error} colors={colors} s={s} />;
   }
 
   if (uiType === 'select' && metadata?.options) {
@@ -62,37 +64,37 @@ export default function ParticipantField({ fieldType, value, onChange, isRequire
     if (fieldType === 'gender' && allowedGenders) {
       options = options.filter((o) => allowedGenders.includes(o.value));
     }
-    return <SelectField label={label} value={value} onChange={onChange} options={options} isRequired={isRequired} colors={colors} s={s} />;
+    return <SelectField label={label} value={value} onChange={onChange} options={options} isRequired={isRequired} error={error} colors={colors} s={s} />;
   }
 
   if (uiType === 'textarea') {
-    return <TextAreaField label={label} value={value} onChange={onChange} isRequired={isRequired} colors={colors} s={s} />;
+    return <TextAreaField label={label} value={value} onChange={onChange} isRequired={isRequired} error={error} colors={colors} s={s} />;
   }
 
   // text / email / phone
   switch (fieldType) {
     case 'email':
-      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="email-address" autoCapitalize="none" colors={colors} s={s} />;
+      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="email-address" autoCapitalize="none" error={error} colors={colors} s={s} />;
     case 'phone': {
       const allowedCodes: string[] | undefined = validationConfig?.phone_country_codes?.allowed_codes;
-      return <PhoneDialField label={label} value={value} onChange={onChange} isRequired={isRequired} allowedDialCodes={allowedCodes} colors={colors} s={s} />;
+      return <PhoneDialField label={label} value={value} onChange={onChange} isRequired={isRequired} allowedDialCodes={allowedCodes} error={error} colors={colors} s={s} />;
     }
     case 'id_iqama_number':
     case 'passport_number':
-      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="default" autoCapitalize="characters" colors={colors} s={s} />;
+      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} keyboardType="default" autoCapitalize="characters" error={error} colors={colors} s={s} />;
     default:
-      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} colors={colors} s={s} />;
+      return <PlainInput label={label} value={value} onChange={onChange} isRequired={isRequired} error={error} colors={colors} s={s} />;
   }
 }
 
 // ─── Plain text input ────────────────────────────────────────────────────────
-function PlainInput({ label, value, onChange, isRequired, keyboardType = 'default', autoCapitalize = 'words', colors, s }: any) {
+function PlainInput({ label, value, onChange, isRequired, keyboardType = 'default', autoCapitalize = 'words', error, colors, s }: any) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={s.fieldWrap}>
       <FieldLabel label={label} isRequired={isRequired} s={s} />
       <TextInput
-        style={[s.input, focused && s.inputFocused]}
+        style={[s.input, focused && s.inputFocused, error && s.inputError]}
         value={value}
         onChangeText={onChange}
         keyboardType={keyboardType}
@@ -102,14 +104,15 @@ function PlainInput({ label, value, onChange, isRequired, keyboardType = 'defaul
         placeholderTextColor={colors.textTertiary}
         placeholder={label}
       />
+      {!!error && <Text style={s.fieldError}>{error}</Text>}
     </View>
   );
 }
 
 // ─── Phone field with dial-code picker ───────────────────────────────────────
-function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, colors, s }: {
+function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, error, colors, s }: {
   label: string; value: string; onChange: (v: string) => void; isRequired?: boolean;
-  allowedDialCodes?: string[]; colors: ThemeColors; s: any;
+  allowedDialCodes?: string[]; error?: string | null; colors: ThemeColors; s: any;
 }) {
   const { t } = useTranslation();
   const { language } = useLanguageStore();
@@ -160,7 +163,7 @@ function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, 
   return (
     <View style={s.fieldWrap}>
       <FieldLabel label={label} isRequired={isRequired} s={s} />
-      <View style={[s.input, s.phoneRow, focused && s.inputFocused]}>
+      <View style={[s.input, s.phoneRow, focused && s.inputFocused, error && s.inputError]}>
         <TouchableOpacity style={s.dialPickerBtn} onPress={() => setPickerOpen(true)} activeOpacity={0.7}>
           <Text style={s.phoneFlag}>{selectedCountry.flag}</Text>
           <Text style={s.phoneDialCode}>{selectedCountry.dialCode}</Text>
@@ -178,8 +181,9 @@ function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, 
           onBlur={() => setFocused(false)}
         />
       </View>
+      {!!error && <Text style={s.fieldError}>{error}</Text>}
 
-      <BottomSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} maxHeight="70%">
+      <BottomSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} maxHeight={560}>
         <View style={s.selectSheetHandle} />
         <Text style={s.selectSheetTitle}>{t('booking.selectDialCode', { defaultValue: 'Select Country Code' })}</Text>
         <FlatList
@@ -210,13 +214,13 @@ function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, 
 }
 
 // ─── Multi-line textarea ─────────────────────────────────────────────────────
-function TextAreaField({ label, value, onChange, isRequired, colors, s }: any) {
+function TextAreaField({ label, value, onChange, isRequired, error, colors, s }: any) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={s.fieldWrap}>
       <FieldLabel label={label} isRequired={isRequired} s={s} />
       <TextInput
-        style={[s.input, s.textarea, focused && s.inputFocused]}
+        style={[s.input, s.textarea, focused && s.inputFocused, error && s.inputError]}
         value={value}
         onChangeText={onChange}
         multiline
@@ -227,6 +231,7 @@ function TextAreaField({ label, value, onChange, isRequired, colors, s }: any) {
         placeholderTextColor={colors.textTertiary}
         placeholder={label}
       />
+      {!!error && <Text style={s.fieldError}>{error}</Text>}
     </View>
   );
 }
@@ -235,6 +240,16 @@ function TextAreaField({ label, value, onChange, isRequired, colors, s }: any) {
 const ITEM_HEIGHT = 48;
 const VISIBLE_ITEMS = 5;
 const PICKER_HEIGHT = ITEM_HEIGHT * VISIBLE_ITEMS;
+
+const MONTHS_EN = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i, 1).toLocaleString('en-US', { month: 'long' })
+);
+const MONTHS_AR = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i, 1).toLocaleString('ar-SA', { month: 'long' })
+);
+const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
+const CURRENT_YEAR = new Date().getFullYear();
+const YEARS = Array.from({ length: 100 }, (_, i) => String(CURRENT_YEAR - i));
 
 function ScrollColumn({ items, selectedIndex, onSelect, s }: {
   items: string[];
@@ -280,55 +295,59 @@ function ScrollColumn({ items, selectedIndex, onSelect, s }: {
   );
 }
 
-function DateField({ label, value, onChange, isRequired, colors, s }: any) {
+function DateField({ label, value, onChange, isRequired, error, colors, s }: any) {
   const { t, i18n } = useTranslation();
   const [show, setShow] = useState(false);
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 100 }, (_, i) => String(currentYear - i));
-  const months = Array.from({ length: 12 }, (_, i) =>
-    new Date(2000, i, 1).toLocaleString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'long' })
-  );
-  const days = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
+  const months = i18n.language === 'ar' ? MONTHS_AR : MONTHS_EN;
 
   const parsed = value ? new Date(value + 'T12:00:00') : new Date(2000, 0, 1);
-  const [selYear, setSelYear] = useState(years.indexOf(String(parsed.getFullYear())));
+  const [selYear, setSelYear] = useState(YEARS.indexOf(String(parsed.getFullYear())));
   const [selMonth, setSelMonth] = useState(parsed.getMonth());
   const [selDay, setSelDay] = useState(parsed.getDate() - 1);
 
   const displayValue = value
-    ? new Date(value + 'T12:00:00').toLocaleDateString(
-        i18n.language === 'ar' ? 'ar-SA' : 'en-US',
-        { year: 'numeric', month: 'long', day: 'numeric' }
-      )
+    ? new Date(value + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
 
   const confirm = () => {
-    const y = years[selYear] ?? String(currentYear);
+    const y = YEARS[selYear] ?? String(CURRENT_YEAR);
     const m = String(selMonth + 1).padStart(2, '0');
-    const d = days[selDay] ?? '01';
-    onChange(`${y}-${m}-${d}`);
+    const d = DAYS[selDay] ?? '01';
+    // Clamp to today — DOB cannot be in the future
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const chosen = new Date(`${y}-${m}-${d}T12:00:00`);
+    if (chosen > today) {
+      const yy = String(today.getFullYear());
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      onChange(`${yy}-${mm}-${dd}`);
+    } else {
+      onChange(`${y}-${m}-${d}`);
+    }
     setShow(false);
   };
 
   return (
     <View style={s.fieldWrap}>
       <FieldLabel label={label} isRequired={isRequired} s={s} />
-      <TouchableOpacity style={s.selectBtn} onPress={() => setShow(true)} activeOpacity={0.7}>
+      <TouchableOpacity style={[s.selectBtn, error && s.inputError]} onPress={() => setShow(true)} activeOpacity={0.7}>
         <Ionicons name="calendar-outline" size={18} color={displayValue ? colors.textPrimary : colors.textTertiary} />
         <Text style={[s.selectBtnText, !displayValue && s.selectBtnPlaceholder]}>
           {displayValue || label}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
       </TouchableOpacity>
+      {!!error && <Text style={s.fieldError}>{error}</Text>}
 
       <BottomSheet visible={show} onClose={() => setShow(false)}>
         <View style={s.dateModalHandle} />
         <Text style={s.selectSheetTitle}>{label}</Text>
         <View style={s.dateColsRow}>
-          <ScrollColumn items={days} selectedIndex={selDay} onSelect={setSelDay} s={s} />
+          <ScrollColumn items={DAYS} selectedIndex={selDay} onSelect={setSelDay} s={s} />
           <ScrollColumn items={months} selectedIndex={selMonth} onSelect={setSelMonth} s={s} />
-          <ScrollColumn items={years} selectedIndex={selYear} onSelect={setSelYear} s={s} />
+          <ScrollColumn items={YEARS} selectedIndex={selYear} onSelect={setSelYear} s={s} />
         </View>
         <View style={s.dateModalActions}>
           <TouchableOpacity style={s.dateModalCancel} onPress={() => setShow(false)}>
@@ -344,7 +363,7 @@ function DateField({ label, value, onChange, isRequired, colors, s }: any) {
 }
 
 // ─── Select / dropdown ───────────────────────────────────────────────────────
-function SelectField({ label, value, onChange, options, isRequired, colors, s }: any) {
+function SelectField({ label, value, onChange, options, isRequired, error, colors, s }: any) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
@@ -354,13 +373,14 @@ function SelectField({ label, value, onChange, options, isRequired, colors, s }:
   return (
     <View style={s.fieldWrap}>
       <FieldLabel label={label} isRequired={isRequired} s={s} />
-      <TouchableOpacity style={s.selectBtn} onPress={() => setOpen(true)} activeOpacity={0.7}>
+      <TouchableOpacity style={[s.selectBtn, error && s.inputError]} onPress={() => setOpen(true)} activeOpacity={0.7}>
         <Ionicons name="chevron-expand-outline" size={18} color={displayLabel ? colors.textPrimary : colors.textTertiary} />
         <Text style={[s.selectBtnText, !displayLabel && s.selectBtnPlaceholder]}>
           {displayLabel || label}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
       </TouchableOpacity>
+      {!!error && <Text style={s.fieldError}>{error}</Text>}
 
       <BottomSheet visible={open} onClose={() => setOpen(false)}>
         <View style={s.selectSheetHandle} />
@@ -390,7 +410,7 @@ function SelectField({ label, value, onChange, options, isRequired, colors, s }:
 }
 
 // ─── Searchable select (nationality) ─────────────────────────────────────────
-function SearchableSelectField({ label, value, onChange, options, isRequired, colors, s }: any) {
+function SearchableSelectField({ label, value, onChange, options, isRequired, error, colors, s }: any) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -407,15 +427,16 @@ function SearchableSelectField({ label, value, onChange, options, isRequired, co
   return (
     <View style={s.fieldWrap}>
       <FieldLabel label={label} isRequired={isRequired} s={s} />
-      <TouchableOpacity style={s.selectBtn} onPress={() => { setSearch(''); setOpen(true); }} activeOpacity={0.7}>
+      <TouchableOpacity style={[s.selectBtn, error && s.inputError]} onPress={() => { setSearch(''); setOpen(true); }} activeOpacity={0.7}>
         <Ionicons name="earth-outline" size={18} color={selected ? colors.textPrimary : colors.textTertiary} />
         <Text style={[s.selectBtnText, !selected && s.selectBtnPlaceholder]}>
           {selected?.label ?? label}
         </Text>
         <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
       </TouchableOpacity>
+      {!!error && <Text style={s.fieldError}>{error}</Text>}
 
-      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight="75%">
+      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight={600}>
         <View style={s.selectSheetHandle} />
         <Text style={s.selectSheetTitle}>{label}</Text>
         <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
@@ -458,7 +479,7 @@ function BottomSheet({ visible, onClose, children, maxHeight }: {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  maxHeight?: string | number;
+  maxHeight?: number;
 }) {
   const { colors } = useTheme();
   const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
@@ -469,7 +490,7 @@ function BottomSheet({ visible, onClose, children, maxHeight }: {
         <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
         <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
         <Animated.View style={[
-          maxHeight ? { maxHeight } : {},
+          maxHeight ? { maxHeight } : undefined,
           { transform: [{ translateY }] },
         ]}>
           <View style={[sheetStyles.sheet, { backgroundColor: colors.surface }]} {...panHandlers}>
@@ -501,7 +522,7 @@ function FieldLabel({ label, isRequired, s }: { label: string; isRequired?: bool
 // ─── Styles ──────────────────────────────────────────────────────────────────
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
-    fieldWrap: { gap: 6 },
+    fieldWrap: { gap: 4 },
     labelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     label: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary },
     required: { fontSize: FontSize.sm, color: c.error, fontWeight: '700' },
@@ -517,6 +538,8 @@ function makeStyles(c: ThemeColors) {
       backgroundColor: c.surface,
     },
     inputFocused: { borderColor: c.primary },
+    inputError: { borderColor: c.error },
+    fieldError: { fontSize: FontSize.xs, color: c.error, marginTop: 2, marginLeft: 2 },
     textarea: { minHeight: 80, paddingTop: 12 },
 
     phoneRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 0, paddingVertical: 0 },

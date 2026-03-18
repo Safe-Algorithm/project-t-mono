@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Alert, Image, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, Modal,
+  TouchableOpacity, Image, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -59,6 +59,7 @@ export default function ProfileScreen() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'error' | 'success' | 'info'>('error');
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const showToast = (msg: string, type: 'error' | 'success' | 'info' = 'error') => {
     setToastMessage(msg);
@@ -124,18 +125,12 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(t('profile.signOutConfirmTitle'), t('profile.signOutConfirmMessage'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('profile.signOut'),
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-          router.replace('/(auth)/login');
-        },
-      },
-    ]);
+  const handleLogout = () => setConfirmLogout(true);
+
+  const doLogout = async () => {
+    setConfirmLogout(false);
+    await logout();
+    router.replace('/(auth)/login');
   };
 
   const handleLanguageToggle = () => {
@@ -218,7 +213,7 @@ export default function ProfileScreen() {
             <View style={s.menuDivider} />
             <MenuItem icon="lock-closed-outline" label={t('profile.changePassword')} onPress={() => router.push('/account/change-password')} />
             <View style={s.menuDivider} />
-            <MenuItem icon="notifications-outline" label={t('profile.notifications')} onPress={() => Alert.alert(t('common.comingSoon'), t('profile.notificationsComingSoon'))} />
+            <MenuItem icon="notifications-outline" label={t('profile.notifications')} onPress={() => showToast(t('profile.notificationsComingSoon'), 'info')} />
             <View style={s.menuDivider} />
             <MenuItem icon="language-outline" label={t('profile.language')} value={language === 'ar' ? 'العربية' : 'English'} onPress={handleLanguageToggle} />
             <View style={s.menuDivider} />
@@ -240,9 +235,9 @@ export default function ProfileScreen() {
         <View style={s.section}>
           <Text style={s.sectionLabel}>{t('profile.support')}</Text>
           <View style={s.menuCard}>
-            <MenuItem icon="help-circle-outline" label={t('profile.helpSupport')} onPress={() => Alert.alert(t('profile.helpSupport'), t('profile.helpMessage'))} />
+            <MenuItem icon="help-circle-outline" label={t('profile.helpSupport')} onPress={() => showToast(t('profile.helpMessage'), 'info')} />
             <View style={s.menuDivider} />
-            <MenuItem icon="document-text-outline" label={t('profile.termsPrivacy')} onPress={() => Alert.alert(t('profile.termsPrivacy'), t('profile.termsMessage'))} />
+            <MenuItem icon="document-text-outline" label={t('profile.termsPrivacy')} onPress={() => showToast(t('profile.termsMessage'), 'info')} />
           </View>
         </View>
 
@@ -262,6 +257,23 @@ export default function ProfileScreen() {
         type={toastType}
         onHide={() => setToastVisible(false)}
       />
+
+      <Modal transparent visible={confirmLogout} animationType="fade" onRequestClose={() => setConfirmLogout(false)}>
+        <View style={s.modalOverlay}>
+          <View style={s.confirmSheet}>
+            <Text style={s.confirmTitle}>{t('profile.signOutConfirmTitle')}</Text>
+            <Text style={s.confirmMessage}>{t('profile.signOutConfirmMessage')}</Text>
+            <View style={s.confirmActions}>
+              <TouchableOpacity style={s.confirmCancel} onPress={() => setConfirmLogout(false)}>
+                <Text style={s.confirmCancelText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.confirmDestructive} onPress={doLogout}>
+                <Text style={s.confirmDestructiveText}>{t('profile.signOut')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -316,5 +328,14 @@ function makeStyles(c: ThemeColors) {
     menuValue: { fontSize: FontSize.sm, color: c.textTertiary },
     menuDivider: { height: 1, backgroundColor: c.border, marginLeft: 64 },
     version: { textAlign: 'center', fontSize: FontSize.xs, color: c.textTertiary, marginTop: 24 },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+    confirmSheet: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 28, gap: 8 },
+    confirmTitle: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary },
+    confirmMessage: { fontSize: FontSize.md, color: c.textSecondary, lineHeight: 22, marginBottom: 8 },
+    confirmActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+    confirmCancel: { flex: 1, paddingVertical: 14, borderRadius: Radius.lg, borderWidth: 1.5, borderColor: c.border, alignItems: 'center' },
+    confirmCancelText: { fontSize: FontSize.md, fontWeight: '700', color: c.textSecondary },
+    confirmDestructive: { flex: 1, paddingVertical: 14, borderRadius: Radius.lg, backgroundColor: c.error, alignItems: 'center' },
+    confirmDestructiveText: { fontSize: FontSize.md, fontWeight: '700', color: c.white },
   });
 }

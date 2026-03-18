@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Alert, KeyboardAvoidingView, Platform,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,8 @@ import ParticipantField, { FieldType } from '../../components/booking/Participan
 import apiClient from '../../lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { TripPackage } from '../../types/trip';
+import { useFieldValidation } from '../../hooks/useFieldValidation';
+import Toast from '../../components/ui/Toast';
 
 interface Participant {
   package_id?: string;
@@ -40,9 +42,15 @@ export default function BookingScreen() {
   const existingBooking = (myRegistrations ?? []).find(
     (r) => r.trip_id === tripId && !['cancelled', 'completed'].includes(r.status)
   ) ?? null;
+  const { validateAllParticipants } = useFieldValidation();
   const [loading, setLoading] = useState(false);
   const [alreadyRegistered, setAlreadyRegistered] = useState(false);
   const [step, setStep] = useState<'count' | 'fields' | 'confirm'>('count');
+  // fieldErrors[participantIndex][fieldType] = error string
+  const [fieldErrors, setFieldErrors] = useState<Record<number, Record<string, string>>>({});
+  const [bannerError, setBannerError] = useState<string | null>(null);
+  const [tripChangedVisible, setTripChangedVisible] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
 
   // Non-packaged state
   const [simpleCount, setSimpleCount] = useState(1);
@@ -163,62 +171,53 @@ export default function BookingScreen() {
     });
   };
 
-  const validateFields = () => {
-    const fieldLabel = (ft: string) =>
-      fieldMetadata?.[ft]?.display_name ?? ft.replace(/_/g, ' ');
-    const isEmpty = (v: string | undefined) => !v || (typeof v === 'string' && !v.trim());
+  const validateFields = (): boolean => {
+    let errors: Record<number, Record<string, string>> = {};
+    const nationalityCodes = nationalities?.map(n => n.code.toUpperCase());
 
     if (!isPackaged) {
-      for (let i = 0; i < simpleCount; i++) {
-        for (const field of simpleRequiredFields) {
-          if (field.is_required && isEmpty(simpleParticipants[i]?.[field.field_type])) {
-            Alert.alert(t('common.error'), `${fieldLabel(field.field_type)} — ${t('booking.participant', { number: i + 1 })}`);
-            return false;
-          }
-        }
-      }
+      const participants = simpleParticipants.slice(0, simpleCount);
+      errors = validateAllParticipants(participants, simpleRequiredFields, nationalityCodes);
     } else {
-      for (const { participant, pkg, globalIndex } of pkgFlatList) {
-        const details = pkg.required_fields_details ?? [];
-        for (const ft of (pkg.required_fields ?? [])) {
-          const detail = details.find(d => d.field_type === ft);
-          const isRequired = detail ? detail.is_required : true;
-          if (isRequired && isEmpty(participant[ft])) {
-            Alert.alert(t('common.error'), `${fieldLabel(ft)} — ${t('booking.participant', { number: globalIndex + 1 })}`);
-            return false;
-          }
+      pkgFlatList.forEach(({ participant, pkg, globalIndex }) => {
+        const fieldDefs = (pkg.required_fields ?? []).map(ft => {
+          const detail = pkg.required_fields_details?.find(d => d.field_type === ft);
+          return {
+            field_type: ft as FieldType,
+            is_required: detail ? detail.is_required : true,
+            validation_config: detail?.validation_config ?? null,
+          };
+        });
+        const pErrors = validateAllParticipants([participant], fieldDefs, nationalityCodes);
+        if (pErrors[0] && Object.keys(pErrors[0]).length > 0) {
+          errors[globalIndex] = pErrors[0];
         }
-      }
+      });
     }
-    return true;
+
+    setFieldErrors(errors);
+    const hasErrors = Object.keys(errors).length > 0;
+    if (hasErrors) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }
+    return !hasErrors;
+  };
+
+  const clearFieldError = (participantIndex: number, fieldType: string) => {
+    setFieldErrors(prev => {
+      if (!prev[participantIndex]?.[fieldType]) return prev;
+      const updated = { ...prev };
+      updated[participantIndex] = { ...updated[participantIndex] };
+      delete updated[participantIndex][fieldType];
+      if (Object.keys(updated[participantIndex]).length === 0) delete updated[participantIndex];
+      return updated;
+    });
   };
 
   const handleBook = async () => {
     setLoading(true);
     try {
-      let payload: any;
-      if (!isPackaged) {
-        payload = {
-          total_participants: simpleCount,
-          total_amount: totalAmount.toFixed(2),
-          trip_content_hash: trip?.content_hash ?? undefined,
-          participants: simpleParticipants.slice(0, simpleCount).map((p, i) => ({
-            is_registration_user: i === 0,
-            ...p,
-          })),
-        };
-      } else {
-        payload = {
-          total_participants: totalParticipants,
-          total_amount: totalAmount.toFixed(2),
-          trip_content_hash: trip?.content_hash ?? undefined,
-          participants: pkgFlatList.map(({ participant, pkg }, i) => ({
-            package_id: pkg.id,
-            is_registration_user: i === 0,
-            ...participant,
-          })),
-        };
-      }
+      const payload = buildPayload();
       const { data: registration } = await apiClient.post(`/trips/${tripId}/register`, payload);
       qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
       router.replace(`/booking/${registration.id}?autoPayment=true`);
@@ -230,38 +229,25 @@ export default function BookingScreen() {
         setAlreadyRegistered(true);
       } else if (status === 409 && typeof detail === 'string' && detail.includes('trip details have been updated')) {
         qc.invalidateQueries({ queryKey: ['trip', tripId] });
-        Alert.alert(
-          t('booking.tripChangedTitle'),
-          t('booking.tripChangedMessage'),
-          [{ text: t('booking.reviewTrip'), onPress: () => router.back() }],
-        );
+        setTripChangedVisible(true);
       } else if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
-        // Structured error from backend
-        const fieldLabel = detail.field
-          ? (fieldMetadata?.[detail.field]?.display_name ?? detail.field.replace(/_/g, ' '))
-          : '';
-        if (detail.code === 'required_field_missing') {
-          Alert.alert(
-            t('common.error'),
-            t('booking.requiredFieldMissing', { field: fieldLabel, package: detail.package ?? '' }),
-          );
-        } else if (detail.code === 'field_validation_failed') {
-          Alert.alert(
-            t('common.error'),
-            t('booking.fieldValidationFailed', {
-              field: fieldLabel,
-              package: detail.package ?? '',
-              messages: Array.isArray(detail.messages) ? detail.messages.join(', ') : '',
-            }),
-          );
+        // Structured field error — go back to fields step and show inline
+        if ((detail.code === 'field_validation_failed' || detail.code === 'required_field_missing') && detail.field) {
+          const fieldErrorMsg = Array.isArray(detail.messages)
+            ? detail.messages.join(', ')
+            : (detail.messages ?? t('fieldValidation.required'));
+          const participantIndex = detail.participant_index ?? 0;
+          setFieldErrors({ [participantIndex]: { [detail.field]: fieldErrorMsg } });
+          if (hasRequiredFields) setStep('fields');
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
         } else {
-          Alert.alert(t('booking.title'), t('common.error'));
+          setBannerError(t('common.error'));
         }
       } else {
         const msg = Array.isArray(detail)
           ? (detail[0]?.msg ?? t('common.error'))
           : (typeof detail === 'string' ? detail : t('common.error'));
-        Alert.alert(t('booking.title'), msg);
+        setBannerError(msg);
       }
     } finally {
       setLoading(false);
@@ -331,8 +317,74 @@ export default function BookingScreen() {
     }
   };
 
-  const handleProceedFromFields = () => {
-    if (validateFields()) setStep('confirm');
+  const handleProceedFromFields = async () => {
+    if (!validateFields()) return;
+    // Pre-confirm server-side dry run: try registering with a special header
+    // We use the same payload as handleBook but hit the validate endpoint
+    setLoading(true);
+    try {
+      const payload = buildPayload();
+      await apiClient.post(`/trips/${tripId}/validate-registration`, payload);
+      setStep('confirm');
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      if (detail && typeof detail === 'object' && !Array.isArray(detail)) {
+        if (detail.code === 'field_validation_failed' && detail.field) {
+          // Find participant index for this field error
+          const fieldErrorMsg = Array.isArray(detail.messages) ? detail.messages.join(', ') : detail.messages ?? t('common.error');
+          // For non-packaged trips participant indices map directly; for packaged use backend package info
+          const participantIndex = detail.participant_index ?? 0;
+          setFieldErrors(prev => ({
+            ...prev,
+            [participantIndex]: { ...(prev[participantIndex] ?? {}), [detail.field]: fieldErrorMsg },
+          }));
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
+          return;
+        }
+        if (detail.code === 'required_field_missing' && detail.field) {
+          const participantIndex = detail.participant_index ?? 0;
+          setFieldErrors(prev => ({
+            ...prev,
+            [participantIndex]: { ...(prev[participantIndex] ?? {}), [detail.field]: t('fieldValidation.required') },
+          }));
+          scrollRef.current?.scrollTo({ y: 0, animated: true });
+          return;
+        }
+      }
+      // 404 = validate endpoint not yet deployed — silently proceed
+      if (err?.response?.status === 404 || err?.response?.status === 405) {
+        setStep('confirm');
+        return;
+      }
+      const msg = typeof detail === 'string' ? detail : t('common.error');
+      setBannerError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const buildPayload = () => {
+    if (!isPackaged) {
+      return {
+        total_participants: simpleCount,
+        total_amount: totalAmount.toFixed(2),
+        trip_content_hash: trip?.content_hash ?? undefined,
+        participants: simpleParticipants.slice(0, simpleCount).map((p, i) => ({
+          is_registration_user: i === 0,
+          ...p,
+        })),
+      };
+    }
+    return {
+      total_participants: totalParticipants,
+      total_amount: totalAmount.toFixed(2),
+      trip_content_hash: trip?.content_hash ?? undefined,
+      participants: pkgFlatList.map(({ participant, pkg }, i) => ({
+        package_id: pkg.id,
+        is_registration_user: i === 0,
+        ...participant,
+      })),
+    };
   };
 
   return (
@@ -360,7 +412,7 @@ export default function BookingScreen() {
         </View>
       </SafeAreaView>
 
-      <ScrollView style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
+      <ScrollView ref={scrollRef} style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
 
         {/* Summary */}
         <View style={s.summaryCard}>
@@ -431,6 +483,12 @@ export default function BookingScreen() {
         {/* ── STEP 2: Fill Participant Fields ── */}
         {step === 'fields' && (
           <>
+            {Object.keys(fieldErrors).length > 0 && (
+              <View style={s.validationBanner}>
+                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Text style={s.validationBannerText}>{t('fieldValidation.validationErrorTitle')}</Text>
+              </View>
+            )}
             {!isPackaged ? (
               Array.from({ length: simpleCount }, (_, i) => (
                 <View key={i} style={s.section}>
@@ -441,12 +499,16 @@ export default function BookingScreen() {
                         key={field.field_type}
                         fieldType={field.field_type}
                         value={simpleParticipants[i]?.[field.field_type] ?? ''}
-                        onChange={v => updateSimpleParticipant(i, field.field_type, v)}
+                        onChange={v => {
+                          updateSimpleParticipant(i, field.field_type, v);
+                          clearFieldError(i, field.field_type);
+                        }}
                         isRequired={field.is_required}
                         metadata={fieldMetadata?.[field.field_type]}
                         allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
                         nationalityOptions={nationalities}
                         validationConfig={field.validation_config}
+                        error={fieldErrors[i]?.[field.field_type]}
                       />
                     ))}
                   </View>
@@ -473,12 +535,16 @@ export default function BookingScreen() {
                           key={field.field_type}
                           fieldType={field.field_type}
                           value={participant[field.field_type] ?? ''}
-                          onChange={v => updatePkgParticipant(globalIndex, field.field_type, v)}
+                          onChange={v => {
+                            updatePkgParticipant(globalIndex, field.field_type, v);
+                            clearFieldError(globalIndex, field.field_type);
+                          }}
                           isRequired={field.is_required}
                           metadata={fieldMetadata?.[field.field_type]}
                           allowedGenders={field.validation_config?.gender_restrictions?.allowed_genders}
                           nationalityOptions={nationalities}
                           validationConfig={field.validation_config}
+                          error={fieldErrors[globalIndex]?.[field.field_type]}
                         />
                       ))}
                     </View>
@@ -487,8 +553,8 @@ export default function BookingScreen() {
               })
             )}
             <View style={s.actionRow}>
-              <Button title={t('common.back')} variant="outline" onPress={() => setStep('count')} style={s.backActionBtn} />
-              <Button title={t('common.confirm')} onPress={handleProceedFromFields} style={s.payBtn} size="lg" />
+              <Button title={t('common.back')} variant="outline" onPress={() => { setFieldErrors({}); setStep('count'); }} style={s.backActionBtn} />
+              <Button title={t('common.next')} onPress={handleProceedFromFields} loading={loading} style={s.payBtn} size="lg" />
             </View>
           </>
         )}
@@ -519,6 +585,40 @@ export default function BookingScreen() {
                 )}
               </View>
             </View>
+
+            {/* Participants review */}
+            {!isPackaged
+              ? simpleParticipants.slice(0, simpleCount).map((p, i) => {
+                  const entries = Object.entries(p).filter(([k, v]) => k !== 'package_id' && v);
+                  if (entries.length === 0) return null;
+                  return (
+                    <View key={i} style={s.section}>
+                      <Text style={s.sectionTitle}>{t('booking.participant', { number: i + 1 })}</Text>
+                      <View style={s.confirmCard}>
+                        {entries.map(([k, v]) => (
+                          <ConfirmRow key={k} label={fieldMetadata?.[k]?.display_name ?? k.replace(/_/g, ' ')} value={String(v)} s={s} />
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })
+              : pkgFlatList.map(({ participant, pkg, globalIndex }) => {
+                  const entries = Object.entries(participant).filter(([k, v]) => k !== 'package_id' && v);
+                  if (entries.length === 0) return null;
+                  const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
+                  return (
+                    <View key={globalIndex} style={s.section}>
+                      <Text style={s.sectionTitle}>{t('booking.participant', { number: globalIndex + 1 })}</Text>
+                      <Text style={s.pkgBadge}>{pkgLabel}</Text>
+                      <View style={s.confirmCard}>
+                        {entries.map(([k, v]) => (
+                          <ConfirmRow key={k} label={fieldMetadata?.[k]?.display_name ?? k.replace(/_/g, ' ')} value={String(v)} s={s} />
+                        ))}
+                      </View>
+                    </View>
+                  );
+                })
+            }
             {/* Refund policy disclosure */}
             {trip && trip.is_refundable != null && (
               <View style={trip.is_refundable === false ? s.nonRefundableBox : s.refundableBox}>
@@ -568,6 +668,20 @@ export default function BookingScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+
+    <Toast
+      visible={!!bannerError}
+      message={bannerError ?? ''}
+      type="error"
+      onHide={() => setBannerError(null)}
+    />
+    <Toast
+      visible={tripChangedVisible}
+      message={t('booking.tripChangedMessage')}
+      type="warning"
+      duration={6000}
+      onHide={() => { setTripChangedVisible(false); router.back(); }}
+    />
     </View>
   );
 }
@@ -613,6 +727,8 @@ function makeStyles(c: ThemeColors) {
     counterBtnDisabled: { opacity: 0.4 },
     counterValue: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary, minWidth: 32, textAlign: 'center' },
     fields: { gap: 14 },
+    validationBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FEF2F2', borderRadius: Radius.lg, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#FECACA' },
+    validationBannerText: { fontSize: FontSize.sm, color: '#DC2626', fontWeight: '600', flex: 1 },
     noFields: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
     continueBtn: { marginTop: 8 },
     sectionSubtitle: { fontSize: FontSize.sm, color: c.textSecondary, marginBottom: 12, marginTop: -8 },

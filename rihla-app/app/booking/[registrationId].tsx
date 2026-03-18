@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import Constants from 'expo-constants';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Clipboard, Linking, Alert, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image,
+  Clipboard, Linking, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image, Animated,
 } from 'react-native';
+import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import Toast from '../../components/ui/Toast';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -124,6 +125,13 @@ export default function BookingDetailScreen() {
   const [cancelResult, setCancelResult] = useState<{ refundPct: number; refundAmt: number } | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'error' | 'success' | 'warning' | 'info'>('error');
+
+  const showToast = (msg: string, type: 'error' | 'success' | 'warning' | 'info' = 'error') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setToastVisible(true);
+  };
 
   // Auto-open card modal when arriving from the booking flow (one-tap pay)
   useEffect(() => {
@@ -199,8 +207,7 @@ export default function BookingDetailScreen() {
       setCancelResult({ refundPct: pct, refundAmt: amt });
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      setToastMessage(typeof detail === 'string' ? detail : t('booking.cancelError'));
-      setToastVisible(true);
+      showToast(typeof detail === 'string' ? detail : t('booking.cancelError'), 'error');
     } finally {
       setCancelling(false);
     }
@@ -276,7 +283,7 @@ export default function BookingDetailScreen() {
         };
         const displayMsg = Object.entries(knownErrors).find(([k]) => rawMsg.toLowerCase().includes(k.toLowerCase()))?.[1] ?? (rawMsg || t('common.error'));
         setShowCardModal(true);
-        Alert.alert(t('booking.paymentFailed', 'Payment Failed'), displayMsg);
+        showToast(displayMsg, 'error');
         return;
       }
 
@@ -296,7 +303,7 @@ export default function BookingDetailScreen() {
       }
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
-      Alert.alert(t('booking.title'), typeof detail === 'string' ? detail : t('common.error'));
+      showToast(typeof detail === 'string' ? detail : t('common.error'), 'error');
     } finally {
       setPayLoading(false);
     }
@@ -333,12 +340,11 @@ export default function BookingDetailScreen() {
   }
 
   const trip = registration.trip;
-  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const tripName = trip
     ? ((i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip')
     : 'Trip';
-  const startDate = trip ? new Date(trip.start_date).toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' }) : '';
-  const endDate = trip ? new Date(trip.end_date).toLocaleDateString(locale, { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const startDate = trip ? new Date(trip.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const endDate = trip ? new Date(trip.end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
   const statusVariant = STATUS_VARIANTS[registration.status] ?? 'neutral';
   const statusLabel = t(`bookings.status.${registration.status}` as any, { defaultValue: registration.status });
   const unreadCount = updates?.filter((u) => !u.read).length ?? 0;
@@ -617,47 +623,19 @@ export default function BookingDetailScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Cancel confirmation modal */}
-        <Modal visible={showCancelModal} transparent animationType="slide">
-          <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-            <Pressable style={s.modalOverlay} onPress={() => setShowCancelModal(false)}>
-              <Pressable style={s.cardModal} onPress={(e) => e.stopPropagation()}>
-                <View style={s.cardModalHandle} />
-                <View style={s.cancelModalTitleRow}>
-                  <Ionicons name="warning-outline" size={22} color="#DC2626" />
-                  <Text style={s.cancelModalTitle}>{t('booking.cancelConfirmTitle')}</Text>
-                </View>
-                <Text style={s.cancelModalMsg}>{t('booking.cancelConfirmMessage')}</Text>
-                <Text style={s.cardLabel}>{t('booking.cancelReason')}</Text>
-                <TextInput
-                  style={[s.cardInput, { minHeight: 80, textAlignVertical: 'top' }]}
-                  value={cancelReason}
-                  onChangeText={setCancelReason}
-                  placeholder={t('booking.cancelReasonPlaceholder')}
-                  placeholderTextColor={colors.textTertiary}
-                  multiline
-                />
-                <View style={{ gap: 10, marginTop: 4 }}>
-                  <Button
-                    title={cancelling ? t('booking.cancelling') : t('booking.cancelBooking')}
-                    onPress={handleCancelBooking}
-                    loading={cancelling}
-                    disabled={cancelling}
-                    fullWidth
-                    size="lg"
-                    variant="outline"
-                  />
-                  <Button
-                    title={t('common.back')}
-                    onPress={() => setShowCancelModal(false)}
-                    fullWidth
-                    size="lg"
-                  />
-                </View>
-              </Pressable>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Modal>
+        {/* Cancel confirmation bottom sheet */}
+        <CancelSheet
+          visible={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          tripDetail={tripDetail ?? null}
+          cancelReason={cancelReason}
+          setCancelReason={setCancelReason}
+          cancelling={cancelling}
+          onConfirm={handleCancelBooking}
+          t={t}
+          colors={colors}
+          s={s}
+        />
 
         {/* Cancellation result card — replaces popup Alert */}
         {cancelResult && (
@@ -715,10 +693,111 @@ export default function BookingDetailScreen() {
       <Toast
         visible={toastVisible}
         message={toastMessage}
-        type="error"
+        type={toastType}
         onHide={() => setToastVisible(false)}
       />
     </SafeAreaView>
+  );
+}
+
+function CancelSheet({ visible, onClose, tripDetail, cancelReason, setCancelReason, cancelling, onConfirm, t, colors, s }: {
+  visible: boolean;
+  onClose: () => void;
+  tripDetail: any;
+  cancelReason: string;
+  setCancelReason: (v: string) => void;
+  cancelling: boolean;
+  onConfirm: () => void;
+  t: any;
+  colors: ThemeColors;
+  s: any;
+}) {
+  const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
+  useEffect(() => { if (visible) openSheet(); }, [visible]);
+
+  const isRefundable = tripDetail?.is_refundable !== false;
+  const tripType = tripDetail?.trip_type;
+
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
+        <Animated.View style={[s.cancelSheet, { transform: [{ translateY }] }]}>
+          <View {...panHandlers} style={s.cancelSheetDragZone}>
+            <View style={s.cardModalHandle} />
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <View style={s.cancelModalTitleRow}>
+              <Ionicons name="warning-outline" size={22} color="#DC2626" />
+              <Text style={s.cancelModalTitle}>{t('booking.cancelConfirmTitle')}</Text>
+            </View>
+            <Text style={s.cancelModalMsg}>{t('booking.cancelConfirmMessage')}</Text>
+
+            {/* Refund policy inside cancel sheet */}
+            {tripDetail && (
+              <View style={isRefundable ? s.refundablePolicyCard : s.nonRefundableCard}>
+                <View style={s.policyTitleRow}>
+                  <Ionicons
+                    name={isRefundable ? 'shield-checkmark-outline' : 'close-circle'}
+                    size={16}
+                    color={isRefundable ? '#166534' : '#DC2626'}
+                  />
+                  <Text style={isRefundable ? s.refundablePolicyTitle : s.nonRefundablePolicyTitle}>
+                    {t('booking.refundPolicy')}
+                  </Text>
+                </View>
+                {!isRefundable ? (
+                  <Text style={s.policyBody}>{t('booking.nonRefundableCheckout')}</Text>
+                ) : tripType === 'self_arranged' ? (
+                  <>
+                    <Text style={s.policyBody}>{t('booking.refundableCheckout')}</Text>
+                    <Text style={s.policyRule}>{'• '}{t('booking.refundRuleSelfArrangedPre')}</Text>
+                    <Text style={s.policyRule}>{'• '}{t('booking.refundRuleSelfArrangedPost')}</Text>
+                    <Text style={s.policyCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Text style={s.policyBody}>{t('booking.refundableCheckout')}</Text>
+                    <Text style={s.policyRule}>{'• '}{t('booking.refundRule72h')}</Text>
+                    <Text style={s.policyRule}>{'• '}{t('booking.refundRule12to72h')}</Text>
+                    <Text style={s.policyRule}>{'• '}{t('booking.refundRuleLess12h')}</Text>
+                    <Text style={s.policyCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
+                  </>
+                )}
+              </View>
+            )}
+
+            <Text style={s.cardLabel}>{t('booking.cancelReason')}</Text>
+            <TextInput
+              style={[s.cardInput, { minHeight: 80, textAlignVertical: 'top', marginBottom: 16 }]}
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              placeholder={t('booking.cancelReasonPlaceholder')}
+              placeholderTextColor={colors.textTertiary}
+              multiline
+            />
+            <View style={{ gap: 10, marginBottom: 8 }}>
+              <Button
+                title={cancelling ? t('booking.cancelling') : t('booking.cancelBooking')}
+                onPress={onConfirm}
+                loading={cancelling}
+                disabled={cancelling}
+                fullWidth
+                size="lg"
+                variant="outline"
+              />
+              <Button
+                title={t('common.back')}
+                onPress={() => closeSheet()}
+                fullWidth
+                size="lg"
+              />
+            </View>
+          </ScrollView>
+        </Animated.View>
+      </View>
+    </Modal>
   );
 }
 
@@ -814,6 +893,8 @@ function makeStyles(c: ThemeColors) {
       paddingVertical: 14, marginBottom: 16, backgroundColor: '#FEF2F2',
     },
     cancelBtnText: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626' },
+    cancelSheet: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 24, paddingBottom: 40, ...Shadow.lg },
+    cancelSheetDragZone: { alignItems: 'center', paddingBottom: 8 },
     cancelModalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
     cancelModalTitle: { fontSize: FontSize.lg, fontWeight: '800', color: '#DC2626', flex: 1 },
     cancelModalMsg: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 12 },

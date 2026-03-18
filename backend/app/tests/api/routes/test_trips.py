@@ -674,9 +674,9 @@ def test_register_for_trip_with_package_specific_required_fields(mock_email, cli
                 "package_id": adult_package_id,
                 "name": "John Doe",
                 "date_of_birth": "1990-01-01",  # Mandatory field
-                "phone": "+1234567890",
+                "phone": "+966501234567",
                 "email": "john@example.com",
-                "id_iqama_number": "123456789"
+                "id_iqama_number": "1234567890"
             },
             {
                 "package_id": child_package_id,

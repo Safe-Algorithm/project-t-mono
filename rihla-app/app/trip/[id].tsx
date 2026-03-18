@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, Dimensions, FlatList, Alert, Linking, Share,
+  Image, Dimensions, FlatList, Linking, Share,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,7 @@ import StarRating from '../../components/ui/StarRating';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { TripPackage } from '../../types/trip';
+import Toast from '../../components/ui/Toast';
 
 const { width: W } = Dimensions.get('window');
 
@@ -49,6 +50,8 @@ export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [imageIndex, setImageIndex] = useState(0);
   const [showTripTypeInfo, setShowTripTypeInfo] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const isRTL = i18n.language === 'ar';
 
   const { data: trip, isLoading } = useTrip(id);
@@ -69,9 +72,10 @@ export default function TripDetailScreen() {
       const { data } = await apiClient.get<{ share_url: string }>(`/trips/${id}/share?lang=${shareLang}`);
       await Share.share({ message: data.share_url, url: data.share_url });
     } catch {
-      Alert.alert(t('common.error'), t('trip.shareError', 'Could not generate share link'));
+      setToastMessage(t('trip.shareError', 'Could not generate share link'));
+      setToastVisible(true);
     }
-  };
+  }
 
   if (isLoading) {
     return (
@@ -570,6 +574,12 @@ export default function TripDetailScreen() {
           />
         )}
       </View>
+    <Toast
+      visible={toastVisible}
+      message={toastMessage}
+      type="error"
+      onHide={() => setToastVisible(false)}
+    />
     </View>
   );
 }

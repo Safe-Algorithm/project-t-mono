@@ -31,7 +31,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
   const startDate = reg.trip?.start_date
     ? (() => {
         const d = new Date(reg.trip.start_date.endsWith('Z') ? reg.trip.start_date : reg.trip.start_date + 'Z');
-        return d.toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', {
+        return d.toLocaleDateString('en-US', {
           month: 'short', day: 'numeric', year: 'numeric',
           timeZone: (reg.trip as any).timezone ?? 'Asia/Riyadh',
         });

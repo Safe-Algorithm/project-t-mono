@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +31,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ contact?: string; password?: string }>({});
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login } = useAuthStore();
 
   const fullPhone = `${selectedCountry.dialCode}${localNumber.trim()}`;
@@ -51,6 +51,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!validate()) return;
+    setLoginError(null);
     setLoading(true);
     try {
       const username = loginType === 'email' ? email.trim().toLowerCase() : fullPhone;
@@ -59,7 +60,7 @@ export default function LoginScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail) ? (detail[0]?.msg ?? t('auth.loginFailed')) : (typeof detail === 'string' ? detail : t('auth.loginFailed'));
-      Alert.alert(t('auth.login'), msg);
+      setLoginError(msg);
     } finally {
       setLoading(false);
     }
@@ -84,6 +85,11 @@ export default function LoginScreen() {
             <Text style={[s.title, isRTL && s.textRtl]}>{t('auth.loginTitle')}</Text>
             <Text style={[s.subtitle, isRTL && s.textRtl]}>{t('auth.loginSubtitle')}</Text>
           </View>
+          {loginError ? (
+            <View style={s.errorBanner}>
+              <Text style={s.errorBannerText}>{loginError}</Text>
+            </View>
+          ) : null}
           <View style={s.fields}>
             <View style={[s.toggle, isRTL && s.rowRtl]}>
               <TouchableOpacity style={[s.toggleBtn, loginType === 'email' && s.toggleBtnActive]}
@@ -156,6 +162,8 @@ function makeStyles(c: ThemeColors) {
     subtitle: { fontSize: FontSize.md, color: c.textSecondary },
     textRtl: { textAlign: 'right', writingDirection: 'rtl' },
     fields: { gap: 16, marginBottom: 12 },
+    errorBanner: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
+    errorBannerText: { fontSize: FontSize.sm, color: '#DC2626', lineHeight: 20 },
     forgotRow: { alignSelf: 'flex-end', marginBottom: 24 },
     forgotRowRtl: { alignSelf: 'flex-start' },
     forgotText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600' },

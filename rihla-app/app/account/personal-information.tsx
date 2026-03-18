@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, Pressable, Animated,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable, Animated,
 } from 'react-native';
 import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import Toast from '../../components/ui/Toast';
@@ -69,7 +69,8 @@ export default function PersonalInformationScreen() {
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail) ? (detail[0]?.msg ?? t('personalInfo.updateFailed')) : (typeof detail === 'string' ? detail : t('personalInfo.updateFailed'));
-      Alert.alert(t('common.error'), msg);
+      setToastMessage(msg);
+      setToastVisible(true);
     } finally {
       setLoading(false);
     }

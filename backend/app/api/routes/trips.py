@@ -1329,6 +1329,81 @@ def get_package_required_fields(
 
 
 # Trip Registration Endpoints
+@router.post("/{trip_id}/validate-registration", status_code=200)
+async def validate_registration(
+    *,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    registration_in: TripRegistrationCreate,
+    current_user: User = Depends(get_current_active_user),
+    accept_language: Optional[str] = Header(default="en", alias="Accept-Language"),
+):
+    """Dry-run validation of registration payload. Returns 200 if valid, 400 with structured error if not."""
+    _lang = (accept_language or "en").split(",")[0].split(";")[0].strip()[:2].lower()
+    _reg_lang = _lang if _lang in ("ar", "en") else "en"
+
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from app.models.trip_package_field import TripPackageRequiredField
+
+    if not registration_in.participants:
+        raise HTTPException(status_code=400, detail={"code": "no_participants", "messages": ["At least one participant is required"]})
+
+    # For non-packaged trips, auto-assign the hidden package (same as register_for_trip)
+    any_has_package = any(p.package_id for p in registration_in.participants)
+    if not any_has_package:
+        hidden_pkg = session.query(TripPackageModel).filter(
+            TripPackageModel.trip_id == trip_id
+        ).first()
+        if hidden_pkg:
+            for participant in registration_in.participants:
+                participant.package_id = hidden_pkg.id
+
+    for idx, participant in enumerate(registration_in.participants):
+        if not participant.package_id:
+            continue
+        package = session.query(TripPackageModel).filter(
+            TripPackageModel.id == participant.package_id,
+            TripPackageModel.trip_id == trip_id,
+        ).first()
+        if not package:
+            raise HTTPException(status_code=400, detail=f"Package {participant.package_id} not found for this trip")
+
+        required_fields = session.query(TripPackageRequiredField).filter(
+            TripPackageRequiredField.package_id == participant.package_id
+        ).all()
+
+        for required_field in required_fields:
+            field_type = required_field.field_type
+            field_value = getattr(participant, field_type.value, None)
+
+            if required_field.is_required and (field_value is None or (isinstance(field_value, str) and not field_value.strip())):
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "code": "required_field_missing",
+                        "field": field_type.value,
+                        "package": get_name(package),
+                        "participant_index": idx,
+                    }
+                )
+
+            if field_value:
+                validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config, lang=_reg_lang)
+                if validation_errors:
+                    raise HTTPException(
+                        status_code=400,
+                        detail={
+                            "code": "field_validation_failed",
+                            "field": field_type.value,
+                            "package": get_name(package),
+                            "participant_index": idx,
+                            "messages": validation_errors,
+                        }
+                    )
+
+    return {"valid": True}
+
+
 @router.post("/{trip_id}/register", response_model=TripRegistration)
 async def register_for_trip(
     *,
@@ -1486,8 +1561,9 @@ async def register_for_trip(
                         }
                     )
 
-                # Validate field value: always for passport (auto format), config-driven otherwise
-                if field_value and (required_field.validation_config or field_type == TripFieldType.PASSPORT_NUMBER):
+                # Validate field value: always-on checks run for every non-empty value;
+                # provider-configurable restrictions (phase 2) only run when validation_config is set.
+                if field_value:
                     validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config, lang=_reg_lang)
                     if validation_errors:
                         raise HTTPException(
@@ -1834,8 +1910,6 @@ async def user_cancel_booking(
         raise HTTPException(status_code=403, detail="Not your booking")
     if reg.status == "cancelled":
         raise HTTPException(status_code=400, detail="Booking is already cancelled")
-    if reg.status == "pending_payment":
-        raise HTTPException(status_code=400, detail="Cannot cancel a booking that has not been paid yet")
 
     trip = crud.trip.get_trip(session=session, trip_id=trip_id)
     if not trip:
