@@ -1,12 +1,9 @@
-import 'dotenv/config';
+require('dotenv').config();
 
-export default ({ config }) => ({
+module.exports = ({ config }) => ({
   ...config,
   extra: {
-    router: {},
-    eas: {
-      projectId: 'f998b35d-5781-43cf-8591-fee070fbd5bb',
-    },
+    ...config.extra,
     EXPO_PUBLIC_API_URL: process.env.EXPO_PUBLIC_API_URL,
     EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_MOYASAR_PUBLISHABLE_KEY,
   },

@@ -184,7 +184,7 @@ def get_active_destinations(
         from app.models.trip_destination import TripDestination
         from app.models.trip import Trip as TripModel
         dest_ids_with_trips = set(
-            row[0] for row in session.exec(
+            session.exec(
                 select(TripDestination.destination_id)
                 .join(TripModel, TripModel.id == TripDestination.trip_id)
                 .where(TripModel.is_active == True)
@@ -192,7 +192,7 @@ def get_active_destinations(
             ).all()
         )
         starting_city_ids_with_trips = set(
-            row[0] for row in session.exec(
+            session.exec(
                 select(TripModel.starting_city_id)
                 .where(TripModel.is_active == True)
                 .where(TripModel.starting_city_id != None)

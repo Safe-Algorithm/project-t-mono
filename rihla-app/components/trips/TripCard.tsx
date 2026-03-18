@@ -141,8 +141,10 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           </TouchableOpacity>
         )}
         {minPrice !== null && (
-          <View style={[s.priceBadge, i18n.language === 'ar' && s.priceBadgeRtl]}>
-            <Text style={s.priceBadgeText}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
+          <View style={[s.priceBadgeRow, i18n.language === 'ar' && s.priceBadgeRowRtl]}>
+            <View style={s.priceBadge}>
+              <Text style={s.priceBadgeText}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
+            </View>
           </View>
         )}
       </View>
@@ -228,8 +230,9 @@ function makeStyles(c: ThemeColors) {
     imagePlaceholder: { backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'transparent' },
     favoriteBtn: { position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
-    priceBadge: { position: 'absolute', bottom: 12, left: 12, backgroundColor: c.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
-    priceBadgeRtl: { left: undefined, right: 12 },
+    priceBadgeRow: { position: 'absolute', bottom: 12, left: 12, right: 12, flexDirection: 'row', justifyContent: 'flex-start' },
+    priceBadgeRowRtl: {},
+    priceBadge: { backgroundColor: c.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
     priceBadgeText: { color: c.white, fontSize: FontSize.sm, fontWeight: '700' },
     content: { padding: 14, gap: 8 },
     name: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, lineHeight: 22 },

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,9 +7,10 @@ import {
   Modal,
   FlatList,
   StyleSheet,
-  SafeAreaView,
   Pressable,
+  Animated,
 } from 'react-native';
+import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import { Ionicons } from '@expo/vector-icons';
 import { FontSize, Radius, Spacing, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -124,12 +125,43 @@ export default function PhoneInput({
           })}
         </Text>
       )}
-      <Modal visible={pickerVisible} animationType="slide" transparent>
-        <Pressable style={s.backdrop} onPress={() => setPickerVisible(false)} />
-        <SafeAreaView style={s.sheet}>
-          <View style={[s.sheetHeader, isRTL && s.sheetHeaderRtl]}>
+      <PhonePickerSheet
+        visible={pickerVisible}
+        onClose={() => setPickerVisible(false)}
+        isRTL={isRTL}
+        language={language}
+        selectedCountry={selectedCountry}
+        onSelectCountry={(item) => { onSelectCountry(item); setPickerVisible(false); }}
+        colors={colors}
+        s={s}
+        t={t}
+      />
+    </View>
+  );
+}
+
+function PhonePickerSheet({ visible, onClose, isRTL, language, selectedCountry, onSelectCountry, colors, s, t }: {
+  visible: boolean;
+  onClose: () => void;
+  isRTL: boolean;
+  language: string;
+  selectedCountry: Country;
+  onSelectCountry: (item: Country) => void;
+  colors: ThemeColors;
+  s: ReturnType<typeof makeStyles>;
+  t: (key: string) => string;
+}) {
+  const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
+  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <Animated.View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
+        <Animated.View style={[s.sheet, { transform: [{ translateY }] }]}>
+          <View style={[s.sheetHeader, isRTL && s.sheetHeaderRtl]} {...panHandlers}>
             <Text style={[s.sheetTitle, isRTL && s.textRtl]}>{t('auth.selectCountry')}</Text>
-            <TouchableOpacity onPress={() => setPickerVisible(false)}>
+            <TouchableOpacity onPress={() => closeSheet()}>
               <Ionicons name="close" size={22} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
@@ -141,25 +173,20 @@ export default function PhoneInput({
               return (
                 <TouchableOpacity
                   style={[s.countryRow, isSelected && s.countryRowSelected, isRTL && s.countryRowRtl]}
-                  onPress={() => {
-                    onSelectCountry(item);
-                    setPickerVisible(false);
-                  }}
+                  onPress={() => onSelectCountry(item)}
                   activeOpacity={0.7}
                 >
                   <Text style={s.countryFlag}>{item.flag}</Text>
                   <Text style={[s.countryName, isRTL && s.textRtl]}>{language === 'ar' ? item.name_ar : item.name}</Text>
                   <Text style={s.countryDial}>{item.dialCode}</Text>
-                  {isSelected && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
+                  {isSelected && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
                 </TouchableOpacity>
               );
             }}
           />
-        </SafeAreaView>
-      </Modal>
-    </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
   );
 }
 
@@ -188,11 +215,11 @@ function makeStyles(c: ThemeColors) {
     error: { fontSize: FontSize.xs, color: c.error, fontWeight: '500' },
     hint: { fontSize: FontSize.xs, color: c.textTertiary },
 
-    backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
     sheet: {
       backgroundColor: c.surface,
       borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl,
       maxHeight: '50%',
+      overflow: 'hidden',
     },
     sheetHeader: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

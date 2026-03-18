@@ -1,8 +1,10 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, FlatList,
   TextInput, Pressable, ScrollView, NativeSyntheticEvent, NativeScrollEvent,
+  Animated,
 } from 'react-native';
+import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
@@ -177,36 +179,32 @@ function PhoneDialField({ label, value, onChange, isRequired, allowedDialCodes, 
         />
       </View>
 
-      <Modal visible={pickerOpen} transparent animationType="slide">
-        <Pressable style={s.modalOverlay} onPress={() => setPickerOpen(false)}>
-          <Pressable style={[s.selectSheet, { maxHeight: '70%' }]} onPress={e => e.stopPropagation()}>
-            <View style={s.selectSheetHandle} />
-            <Text style={s.selectSheetTitle}>{t('booking.selectDialCode', { defaultValue: 'Select Country Code' })}</Text>
-            <FlatList
-              data={availableCountries}
-              keyExtractor={item => `${item.dialCode}-${item.name}`}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => {
-                const isSelected = item.dialCode === selectedCountry.dialCode && item.name === selectedCountry.name;
-                return (
-                  <TouchableOpacity
-                    style={[s.selectOption, isSelected && s.selectOptionActive]}
-                    onPress={() => handleCountryChange(item)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={s.phoneFlag}>{item.flag}</Text>
-                    <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive, { flex: 1, marginLeft: 10 }]}>
-                      {language === 'ar' ? item.name_ar : item.name}
-                    </Text>
-                    <Text style={{ fontSize: FontSize.md, color: colors.textSecondary, fontWeight: '600' }}>{item.dialCode}</Text>
-                    {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} style={{ marginLeft: 8 }} />}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={pickerOpen} onClose={() => setPickerOpen(false)} maxHeight="70%">
+        <View style={s.selectSheetHandle} />
+        <Text style={s.selectSheetTitle}>{t('booking.selectDialCode', { defaultValue: 'Select Country Code' })}</Text>
+        <FlatList
+          data={availableCountries}
+          keyExtractor={item => `${item.dialCode}-${item.name}`}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) => {
+            const isSelected = item.dialCode === selectedCountry.dialCode && item.name === selectedCountry.name;
+            return (
+              <TouchableOpacity
+                style={[s.selectOption, isSelected && s.selectOptionActive]}
+                onPress={() => handleCountryChange(item)}
+                activeOpacity={0.7}
+              >
+                <Text style={s.phoneFlag}>{item.flag}</Text>
+                <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive, { flex: 1, marginLeft: 10 }]}>
+                  {language === 'ar' ? item.name_ar : item.name}
+                </Text>
+                <Text style={{ fontSize: FontSize.md, color: colors.textSecondary, fontWeight: '600' }}>{item.dialCode}</Text>
+                {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} style={{ marginLeft: 8 }} />}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </BottomSheet>
     </View>
   );
 }
@@ -324,27 +322,23 @@ function DateField({ label, value, onChange, isRequired, colors, s }: any) {
         <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
       </TouchableOpacity>
 
-      <Modal visible={show} transparent animationType="slide">
-        <Pressable style={s.modalOverlay} onPress={() => setShow(false)}>
-          <Pressable style={s.dateModalSheet} onPress={(e) => e.stopPropagation()}>
-            <View style={s.dateModalHandle} />
-            <Text style={s.selectSheetTitle}>{label}</Text>
-            <View style={s.dateColsRow}>
-              <ScrollColumn items={days} selectedIndex={selDay} onSelect={setSelDay} s={s} />
-              <ScrollColumn items={months} selectedIndex={selMonth} onSelect={setSelMonth} s={s} />
-              <ScrollColumn items={years} selectedIndex={selYear} onSelect={setSelYear} s={s} />
-            </View>
-            <View style={s.dateModalActions}>
-              <TouchableOpacity style={s.dateModalCancel} onPress={() => setShow(false)}>
-                <Text style={s.dateModalCancelText}>{t('common.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.dateModalDone} onPress={confirm}>
-                <Text style={s.dateModalDoneText}>{t('common.done')}</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={show} onClose={() => setShow(false)}>
+        <View style={s.dateModalHandle} />
+        <Text style={s.selectSheetTitle}>{label}</Text>
+        <View style={s.dateColsRow}>
+          <ScrollColumn items={days} selectedIndex={selDay} onSelect={setSelDay} s={s} />
+          <ScrollColumn items={months} selectedIndex={selMonth} onSelect={setSelMonth} s={s} />
+          <ScrollColumn items={years} selectedIndex={selYear} onSelect={setSelYear} s={s} />
+        </View>
+        <View style={s.dateModalActions}>
+          <TouchableOpacity style={s.dateModalCancel} onPress={() => setShow(false)}>
+            <Text style={s.dateModalCancelText}>{t('common.cancel')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.dateModalDone} onPress={confirm}>
+            <Text style={s.dateModalDoneText}>{t('common.done')}</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
@@ -368,33 +362,29 @@ function SelectField({ label, value, onChange, options, isRequired, colors, s }:
         <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="fade">
-        <Pressable style={s.modalOverlay} onPress={() => setOpen(false)}>
-          <Pressable style={s.selectSheet} onPress={(e) => e.stopPropagation()}>
-            <View style={s.selectSheetHandle} />
-            <Text style={s.selectSheetTitle}>{label}</Text>
-            <FlatList
-              data={options}
-              keyExtractor={(item: BackendOption) => item.value}
-              renderItem={({ item }: { item: BackendOption }) => {
-                const isSelected = item.value === value;
-                return (
-                  <TouchableOpacity
-                    style={[s.selectOption, isSelected && s.selectOptionActive]}
-                    onPress={() => { onChange(item.value); setOpen(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive]}>
-                      {item.label}
-                    </Text>
-                    {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={open} onClose={() => setOpen(false)}>
+        <View style={s.selectSheetHandle} />
+        <Text style={s.selectSheetTitle}>{label}</Text>
+        <FlatList
+          data={options}
+          keyExtractor={(item: BackendOption) => item.value}
+          renderItem={({ item }: { item: BackendOption }) => {
+            const isSelected = item.value === value;
+            return (
+              <TouchableOpacity
+                style={[s.selectOption, isSelected && s.selectOptionActive]}
+                onPress={() => { onChange(item.value); setOpen(false); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive]}>
+                  {item.label}
+                </Text>
+                {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </BottomSheet>
     </View>
   );
 }
@@ -425,48 +415,80 @@ function SearchableSelectField({ label, value, onChange, options, isRequired, co
         <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="fade">
-        <Pressable style={s.modalOverlay} onPress={() => setOpen(false)}>
-          <Pressable style={[s.selectSheet, { maxHeight: '75%' }]} onPress={(e) => e.stopPropagation()}>
-            <View style={s.selectSheetHandle} />
-            <Text style={s.selectSheetTitle}>{label}</Text>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
-              <TextInput
-                style={[s.input, { marginBottom: 0 }]}
-                value={search}
-                onChangeText={setSearch}
-                placeholder={t('common.search', 'Search...')}
-                placeholderTextColor={colors.textTertiary}
-                autoFocus
-              />
-            </View>
-            <FlatList
-              data={filtered}
-              keyExtractor={(item: BackendOption) => item.value}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }: { item: BackendOption }) => {
-                const isSelected = item.value === value;
-                return (
-                  <TouchableOpacity
-                    style={[s.selectOption, isSelected && s.selectOptionActive]}
-                    onPress={() => { onChange(item.value); setOpen(false); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive]}>{item.label}</Text>
-                    {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
-                  </TouchableOpacity>
-                );
-              }}
-              ListEmptyComponent={<Text style={{ padding: 16, color: colors.textTertiary }}>{t('common.noResults', 'No results')}</Text>}
-            />
-          </Pressable>
-        </Pressable>
-      </Modal>
+      <BottomSheet visible={open} onClose={() => setOpen(false)} maxHeight="75%">
+        <View style={s.selectSheetHandle} />
+        <Text style={s.selectSheetTitle}>{label}</Text>
+        <View style={{ paddingHorizontal: 16, paddingBottom: 8 }}>
+          <TextInput
+            style={[s.input, { marginBottom: 0 }]}
+            value={search}
+            onChangeText={setSearch}
+            placeholder={t('common.search', 'Search...')}
+            placeholderTextColor={colors.textTertiary}
+            autoFocus
+          />
+        </View>
+        <FlatList
+          data={filtered}
+          keyExtractor={(item: BackendOption) => item.value}
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }: { item: BackendOption }) => {
+            const isSelected = item.value === value;
+            return (
+              <TouchableOpacity
+                style={[s.selectOption, isSelected && s.selectOptionActive]}
+                onPress={() => { onChange(item.value); setOpen(false); }}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.selectOptionText, isSelected && s.selectOptionTextActive]}>{item.label}</Text>
+                {isSelected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+              </TouchableOpacity>
+            );
+          }}
+          ListEmptyComponent={<Text style={{ padding: 16, color: colors.textTertiary }}>{t('common.noResults', 'No results')}</Text>}
+        />
+      </BottomSheet>
     </View>
   );
 }
 
 // ─── Shared label ────────────────────────────────────────────────────────────
+// ─── Reusable drag-to-dismiss bottom sheet wrapper ───────────────────────────
+function BottomSheet({ visible, onClose, children, maxHeight }: {
+  visible: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  maxHeight?: string | number;
+}) {
+  const { colors } = useTheme();
+  const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
+  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <Animated.View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
+        <Animated.View style={[
+          maxHeight ? { maxHeight } : {},
+          { transform: [{ translateY }] },
+        ]}>
+          <View style={[sheetStyles.sheet, { backgroundColor: colors.surface }]} {...panHandlers}>
+            {children}
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+const sheetStyles = StyleSheet.create({
+  sheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+  },
+});
+
 function FieldLabel({ label, isRequired, s }: { label: string; isRequired?: boolean; s: any }) {
   return (
     <View style={s.labelRow}>
@@ -520,7 +542,6 @@ function makeStyles(c: ThemeColors) {
 
     modalOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.45)',
       justifyContent: 'flex-end',
     },
 

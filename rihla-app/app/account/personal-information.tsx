@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, Pressable,
+  View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, Pressable, Animated,
 } from 'react-native';
+import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import Toast from '../../components/ui/Toast';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -25,8 +26,8 @@ export default function PersonalInformationScreen() {
   const { user, updateUser } = useAuthStore();
   const [name, setName] = useState(user?.name ?? '');
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const hasChanges = name.trim() !== (user?.name ?? '').trim();
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -63,8 +64,8 @@ export default function PersonalInformationScreen() {
       const { data } = await apiClient.patch('/users/me', { name: name.trim() });
       updateUser(data);
       setErrors({});
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setToastMessage(t('personalInfo.updateSuccess'));
+      setToastVisible(true);
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       const msg = Array.isArray(detail) ? (detail[0]?.msg ?? t('personalInfo.updateFailed')) : (typeof detail === 'string' ? detail : t('personalInfo.updateFailed'));
@@ -133,7 +134,7 @@ export default function PersonalInformationScreen() {
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
         <Input label={t('personalInfo.name')} value={name}
-          onChangeText={(v) => { setName(v); setSaved(false); }}
+          onChangeText={(v) => { setName(v); }}
           placeholder={t('personalInfo.name')} error={errors.name} />
 
         <View style={s.readonlyCard}>
@@ -184,13 +185,13 @@ export default function PersonalInformationScreen() {
           </View>
         </View>
 
-        <Button title={saved ? t('common.done') : t('personalInfo.saveChanges')} onPress={handleSave} loading={loading} style={{ marginTop: 8 }} />
+        {hasChanges && (
+          <Button title={t('personalInfo.saveChanges')} onPress={handleSave} loading={loading} style={{ marginTop: 8 }} />
+        )}
       </ScrollView>
 
       {/* Add identifier modal */}
-      <Modal visible={modalVisible} animationType="slide" transparent>
-        <Pressable style={s.backdrop} onPress={() => setModalVisible(false)} />
-        <SafeAreaView style={s.sheet}>
+      <AddIdentifierSheet visible={modalVisible} onClose={() => setModalVisible(false)} colors={colors} s={s}>
           <View style={s.sheetHeader}>
             <Text style={s.sheetTitle}>
               {addType === 'email' ? 'Add Email Address' : 'Add Phone Number'}
@@ -253,8 +254,7 @@ export default function PersonalInformationScreen() {
               </>
             )}
           </View>
-        </SafeAreaView>
-      </Modal>
+      </AddIdentifierSheet>
 
       <Toast
         visible={toastVisible}
@@ -263,6 +263,28 @@ export default function PersonalInformationScreen() {
         onHide={() => setToastVisible(false)}
       />
     </SafeAreaView>
+  );
+}
+
+function AddIdentifierSheet({ visible, onClose, children, s }: {
+  visible: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  colors?: ThemeColors;
+  s: any;
+}) {
+  const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
+  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  return (
+    <Modal visible={visible} transparent animationType="none">
+      <Animated.View style={{ flex: 1, justifyContent: 'flex-end' }}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
+        <Animated.View style={[s.sheet, { transform: [{ translateY }] }]} {...panHandlers}>
+          {children}
+        </Animated.View>
+      </Animated.View>
+    </Modal>
   );
 }
 
@@ -283,7 +305,7 @@ function makeStyles(c: ThemeColors) {
     addBtnText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '700' },
     divider: { height: 1, backgroundColor: c.border, marginLeft: 46 },
     backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
-    sheet: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl },
+    sheet: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, overflow: 'hidden' },
     sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: c.border },
     sheetTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary },
     sheetContent: { padding: 20, gap: 16 },
