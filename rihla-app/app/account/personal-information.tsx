@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Pressable, Animated,
 } from 'react-native';
@@ -275,7 +275,7 @@ function AddIdentifierSheet({ visible, onClose, children, s }: {
   s: any;
 }) {
   const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
-  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  useLayoutEffect(() => { if (visible) openSheet(); }, [visible]);
   return (
     <Modal visible={visible} transparent animationType="none">
       <Animated.View style={{ flex: 1, justifyContent: 'flex-end' }}>

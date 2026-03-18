@@ -28,12 +28,14 @@ export function useDragToDismiss(onClose: () => void) {
   });
 
   const openSheet = () => {
+    // Always reset to off-screen first so repeated opens start from the same position
     translateY.setValue(SHEET_OFFSCREEN);
     Animated.spring(translateY, {
       toValue: 0,
       useNativeDriver: true,
-      damping: 20,
-      stiffness: 200,
+      damping: 22,
+      stiffness: 280,
+      mass: 0.8,
     }).start();
   };
 
@@ -71,11 +73,17 @@ export function useDragToDismiss(onClose: () => void) {
     })
   ).current;
 
+  // Call this synchronously in the onPress that opens the sheet,
+  // BEFORE setting the visible state. This ensures translateY is at
+  // SHEET_OFFSCREEN when Modal first mounts so there is no visible flash.
+  const resetForOpen = () => { translateY.setValue(SHEET_OFFSCREEN); };
+
   return {
     translateY,
     backdropOpacity,
     panHandlers: panResponder.panHandlers,
     openSheet,
     closeSheet,
+    resetForOpen,
   };
 }

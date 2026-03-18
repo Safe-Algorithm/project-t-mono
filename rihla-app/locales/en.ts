@@ -40,7 +40,7 @@ export default {
   explore: {
     greeting: 'Hello, {{name}} 👋',
     subtitle: 'Find your next adventure',
-    searchPlaceholder: 'Search trips, destinations...',
+    searchPlaceholder: 'Search trips...',
     tripsFound_one: '{{count}} trip found',
     tripsFound_other: '{{count}} trips found',
     noTripsTitle: 'No trips found',

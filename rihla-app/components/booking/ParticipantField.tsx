@@ -1,10 +1,10 @@
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo, useEffect, useLayoutEffect } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, StyleSheet, TouchableOpacity, Modal, FlatList,
-  TextInput, Pressable, ScrollView, NativeSyntheticEvent, NativeScrollEvent,
-  Animated,
+  TextInput, Pressable, NativeSyntheticEvent, NativeScrollEvent,
+  Animated, PanResponder,
 } from 'react-native';
-import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
@@ -247,9 +247,11 @@ const MONTHS_EN = Array.from({ length: 12 }, (_, i) =>
 const MONTHS_AR = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleString('ar-SA', { month: 'long' })
 );
-const DAYS = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 100 }, (_, i) => String(CURRENT_YEAR - i));
+function daysInMonth(month: number, year: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
 
 function ScrollColumn({ items, selectedIndex, onSelect, s }: {
   items: string[];
@@ -257,7 +259,7 @@ function ScrollColumn({ items, selectedIndex, onSelect, s }: {
   onSelect: (index: number) => void;
   s: any;
 }) {
-  const ref = useRef<ScrollView>(null);
+  const ref = useRef<FlatList>(null);
 
   const handleMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
@@ -266,23 +268,24 @@ function ScrollColumn({ items, selectedIndex, onSelect, s }: {
   };
 
   return (
-    <ScrollView
+    <FlatList
       ref={ref}
+      data={items}
+      keyExtractor={(item) => item}
       style={{ height: PICKER_HEIGHT, flex: 1 }}
       contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * 2 }}
       showsVerticalScrollIndicator={false}
       snapToInterval={ITEM_HEIGHT}
       decelerationRate="fast"
+      getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
+      initialScrollIndex={Math.max(0, selectedIndex - 2)}
       onMomentumScrollEnd={handleMomentumEnd}
-      contentOffset={{ x: 0, y: selectedIndex * ITEM_HEIGHT }}
-    >
-      {items.map((item, i) => (
+      renderItem={({ item, index: i }) => (
         <TouchableOpacity
-          key={item}
           style={[s.scrollColItem, i === selectedIndex && s.scrollColItemActive]}
           onPress={() => {
             onSelect(i);
-            ref.current?.scrollTo({ y: i * ITEM_HEIGHT, animated: true });
+            ref.current?.scrollToIndex({ index: i, animated: true, viewOffset: ITEM_HEIGHT * 2 });
           }}
           activeOpacity={0.7}
         >
@@ -290,8 +293,8 @@ function ScrollColumn({ items, selectedIndex, onSelect, s }: {
             {item}
           </Text>
         </TouchableOpacity>
-      ))}
-    </ScrollView>
+      )}
+    />
   );
 }
 
@@ -306,6 +309,24 @@ function DateField({ label, value, onChange, isRequired, error, colors, s }: any
   const [selMonth, setSelMonth] = useState(parsed.getMonth());
   const [selDay, setSelDay] = useState(parsed.getDate() - 1);
 
+  const yearNum = parseInt(YEARS[selYear] ?? String(CURRENT_YEAR), 10);
+  const days = useMemo(
+    () => Array.from({ length: daysInMonth(selMonth, yearNum) }, (_, i) => String(i + 1).padStart(2, '0')),
+    [selMonth, yearNum]
+  );
+
+  const handleMonthSelect = (i: number) => {
+    setSelMonth(i);
+    const maxDay = daysInMonth(i, yearNum) - 1;
+    if (selDay > maxDay) setSelDay(maxDay);
+  };
+  const handleYearSelect = (i: number) => {
+    setSelYear(i);
+    const y = parseInt(YEARS[i] ?? String(CURRENT_YEAR), 10);
+    const maxDay = daysInMonth(selMonth, y) - 1;
+    if (selDay > maxDay) setSelDay(maxDay);
+  };
+
   const displayValue = value
     ? new Date(value + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : '';
@@ -313,7 +334,7 @@ function DateField({ label, value, onChange, isRequired, error, colors, s }: any
   const confirm = () => {
     const y = YEARS[selYear] ?? String(CURRENT_YEAR);
     const m = String(selMonth + 1).padStart(2, '0');
-    const d = DAYS[selDay] ?? '01';
+    const d = days[selDay] ?? '01';
     // Clamp to today — DOB cannot be in the future
     const today = new Date();
     today.setHours(23, 59, 59, 999);
@@ -345,9 +366,9 @@ function DateField({ label, value, onChange, isRequired, error, colors, s }: any
         <View style={s.dateModalHandle} />
         <Text style={s.selectSheetTitle}>{label}</Text>
         <View style={s.dateColsRow}>
-          <ScrollColumn items={DAYS} selectedIndex={selDay} onSelect={setSelDay} s={s} />
-          <ScrollColumn items={months} selectedIndex={selMonth} onSelect={setSelMonth} s={s} />
-          <ScrollColumn items={YEARS} selectedIndex={selYear} onSelect={setSelYear} s={s} />
+          <ScrollColumn items={days} selectedIndex={Math.min(selDay, days.length - 1)} onSelect={setSelDay} s={s} />
+          <ScrollColumn items={months} selectedIndex={selMonth} onSelect={handleMonthSelect} s={s} />
+          <ScrollColumn items={YEARS} selectedIndex={selYear} onSelect={handleYearSelect} s={s} />
         </View>
         <View style={s.dateModalActions}>
           <TouchableOpacity style={s.dateModalCancel} onPress={() => setShow(false)}>
@@ -475,6 +496,10 @@ function SearchableSelectField({ label, value, onChange, options, isRequired, er
 
 // ─── Shared label ────────────────────────────────────────────────────────────
 // ─── Reusable drag-to-dismiss bottom sheet wrapper ───────────────────────────
+// Uses animationType="slide" so the OS handles the open animation natively
+// (zero JS-timing flash). Drag-to-dismiss is handled by a PanResponder that
+// only activates on downward drag, translating the sheet and dismissing if
+// the user pulls far enough or fast enough.
 function BottomSheet({ visible, onClose, children, maxHeight }: {
   visible: boolean;
   onClose: () => void;
@@ -482,27 +507,43 @@ function BottomSheet({ visible, onClose, children, maxHeight }: {
   maxHeight?: number;
 }) {
   const { colors } = useTheme();
-  const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
-  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderMove: (_, g) => { if (g.dy > 0) translateY.setValue(g.dy); },
+      onPanResponderRelease: (_, g) => {
+        if (g.dy > 80 || g.vy > 0.8) {
+          Animated.timing(translateY, { toValue: 600, duration: 200, useNativeDriver: true })
+            .start(() => { translateY.setValue(0); onClose(); });
+        } else {
+          Animated.spring(translateY, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
+        }
+      },
+    })
+  ).current;
+
   return (
-    <Modal visible={visible} transparent animationType="none">
-      <Animated.View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
-        <Animated.View style={[
-          maxHeight ? { maxHeight } : undefined,
-          { transform: [{ translateY }] },
-        ]}>
-          <View style={[sheetStyles.sheet, { backgroundColor: colors.surface }]} {...panHandlers}>
-            {children}
-          </View>
-        </Animated.View>
+    <Modal visible={visible} transparent animationType="slide">
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      <Animated.View style={[
+        maxHeight ? { maxHeight } : undefined,
+        { transform: [{ translateY }] },
+        sheetStyles.sheetContainer,
+      ]}>
+        <View style={[sheetStyles.sheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom || 16 }]} {...panResponder.panHandlers}>
+          {children}
+        </View>
       </Animated.View>
     </Modal>
   );
 }
 
 const sheetStyles = StyleSheet.create({
+  sheetContainer: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

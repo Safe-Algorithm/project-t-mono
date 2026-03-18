@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -115,16 +115,12 @@ function DatePickerRow({ label, value, onChange, colors, s }: {
   const [show, setShow] = useState(false);
   const { translateY: dateTY, backdropOpacity: dateBgOp, panHandlers: datePan, openSheet: openDate, closeSheet: closeDate } = useDragToDismiss(() => setShow(false));
 
-  useEffect(() => { if (show) openDate(); }, [show]);
+  useLayoutEffect(() => { if (show) openDate(); }, [show]);
 
   const today = new Date();
   const currentYear = today.getFullYear();
   const years = Array.from({ length: 4 }, (_, i) => String(currentYear + i));
-  const months = Array.from({ length: 12 }, (_, i) =>
-    new Date(2000, i, 1).toLocaleString('en-US', { month: 'long' })
-  );
-  const days = Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0'));
-
+  const months = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
   const parsed = value ? new Date(value + 'T12:00:00') : today;
   const [selYear, setSelYear] = useState(() => {
     const idx = years.indexOf(String(value ? parsed.getFullYear() : currentYear));
@@ -132,6 +128,24 @@ function DatePickerRow({ label, value, onChange, colors, s }: {
   });
   const [selMonth, setSelMonth] = useState(value ? parsed.getMonth() : today.getMonth());
   const [selDay, setSelDay] = useState(value ? parsed.getDate() - 1 : today.getDate() - 1);
+
+  const yearNum = parseInt(years[selYear] ?? String(currentYear), 10);
+  const days = Array.from(
+    { length: new Date(yearNum, selMonth + 1, 0).getDate() },
+    (_, i) => String(i + 1).padStart(2, '0')
+  );
+
+  const handleMonthSelect = (i: number) => {
+    setSelMonth(i);
+    const maxDay = new Date(yearNum, i + 1, 0).getDate() - 1;
+    if (selDay > maxDay) setSelDay(maxDay);
+  };
+  const handleYearSelect = (i: number) => {
+    setSelYear(i);
+    const y = parseInt(years[i] ?? String(currentYear), 10);
+    const maxDay = new Date(y, selMonth + 1, 0).getDate() - 1;
+    if (selDay > maxDay) setSelDay(maxDay);
+  };
 
   const displayValue = value
     ? new Date(value + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -172,9 +186,9 @@ function DatePickerRow({ label, value, onChange, colors, s }: {
               <Text style={s.dateModalTitle}>{label}</Text>
             </View>
             <View style={s.dateColsRow}>
-              <ScrollCol items={days} selectedIndex={selDay} onSelect={setSelDay} s={s} />
-              <ScrollCol items={months} selectedIndex={selMonth} onSelect={setSelMonth} s={s} />
-              <ScrollCol items={years} selectedIndex={selYear} onSelect={setSelYear} s={s} />
+              <ScrollCol items={days} selectedIndex={Math.min(selDay, days.length - 1)} onSelect={setSelDay} s={s} />
+              <ScrollCol items={months} selectedIndex={selMonth} onSelect={handleMonthSelect} s={s} />
+              <ScrollCol items={years} selectedIndex={selYear} onSelect={handleYearSelect} s={s} />
             </View>
             <View style={s.dateModalActions}>
               <TouchableOpacity style={s.dateModalCancel} onPress={() => closeDate()}>
@@ -209,7 +223,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
   // Drag-to-dismiss
   const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
 
-  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  useLayoutEffect(() => { if (visible) openSheet(); }, [visible]);
 
   // Flatten all cities from the destination tree for the picker
   const allCities: DestinationOption[] = destinationTree.flatMap(

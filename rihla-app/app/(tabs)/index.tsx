@@ -73,7 +73,7 @@ export default function ExploreScreen() {
   ) : null;
 
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.container} edges={['top', 'left', 'right']}>
       <View style={s.header}>
         <View>
           <Text style={s.greeting}>{t('explore.greeting', { name: user?.name?.split(' ')[0] ?? 'Traveler' })}</Text>

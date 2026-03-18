@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -152,7 +152,7 @@ function PhonePickerSheet({ visible, onClose, isRTL, language, selectedCountry, 
   t: (key: string) => string;
 }) {
   const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
-  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  useLayoutEffect(() => { if (visible) openSheet(); }, [visible]);
   return (
     <Modal visible={visible} transparent animationType="none">
       <Animated.View style={{ flex: 1, justifyContent: 'flex-end' }}>

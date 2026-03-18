@@ -40,7 +40,7 @@ export default {
   explore: {
     greeting: 'مرحباً، {{name}} 👋',
     subtitle: 'ابحث عن مغامرتك القادمة',
-    searchPlaceholder: 'ابحث عن رحلات ووجهات...',
+    searchPlaceholder: 'ابحث عن رحلات...',
     tripsFound_one: 'رحلة واحدة',
     tripsFound_other: '{{count}} رحلات',
     noTripsTitle: 'لا توجد رحلات',

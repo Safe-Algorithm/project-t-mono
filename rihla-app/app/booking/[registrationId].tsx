@@ -1,14 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Constants from 'expo-constants';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Clipboard, Linking, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image, Animated,
+  Clipboard, Linking, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image, Animated, PanResponder,
 } from 'react-native';
-import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 import Toast from '../../components/ui/Toast';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, CardDetails } from '../../hooks/useTrips';
 import apiClient from '../../lib/api';
@@ -113,6 +112,10 @@ export default function BookingDetailScreen() {
   const [card, setCard] = useState<CardDetails>({ name: '', number: '', month: 0, year: 0, cvc: '' });
   const [cardErrors, setCardErrors] = useState<Partial<Record<keyof CardDetails, string>>>({});
   const [cardNumberDisplay, setCardNumberDisplay] = useState('');
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showYearPicker, setShowYearPicker] = useState(false);
+  const CARD_MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
+  const CARD_YEARS = Array.from({ length: 95 }, (_, i) => (new Date().getFullYear() % 100) + i);
   const preparePayment = usePreparePayment();
   const confirmPayment = useConfirmPayment();
   const autoPaymentTriggered = useRef(false);
@@ -438,89 +441,29 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
-        {/* Card Input Modal */}
-        <Modal visible={showCardModal} transparent animationType="slide">
-          <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-            <Pressable style={s.modalOverlay} onPress={() => setShowCardModal(false)}>
-              <Pressable style={s.cardModal} onPress={(e) => e.stopPropagation()}>
-                <View style={s.cardModalHandle} />
-                <Text style={s.cardModalTitle}>{t('booking.cardDetails')}</Text>
-                <View style={s.cardFields}>
-                  <Text style={s.cardLabel}>{t('booking.cardName')}</Text>
-                  <TextInput
-                    style={[s.cardInput, cardErrors.name ? s.cardInputError : undefined]}
-                    value={card.name}
-                    onChangeText={(v) => { setCard((c) => ({ ...c, name: v })); setCardErrors((e) => ({ ...e, name: undefined })); }}
-                    placeholder="John Doe"
-                    placeholderTextColor={colors.textTertiary}
-                    autoCapitalize="words"
-                  />
-                  {cardErrors.name ? <Text style={s.cardFieldError}>{cardErrors.name}</Text> : null}
-                  <Text style={s.cardLabel}>{t('booking.cardNumber')}</Text>
-                  <TextInput
-                    style={[s.cardInput, cardErrors.number ? s.cardInputError : undefined]}
-                    value={cardNumberDisplay}
-                    onChangeText={(v) => {
-                      const digits = v.replace(/\D/g, '').slice(0, 16);
-                      const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-                      setCardNumberDisplay(formatted);
-                      setCard((c) => ({ ...c, number: digits }));
-                      setCardErrors((e) => ({ ...e, number: undefined }));
-                    }}
-                    placeholder="1234 5678 9012 3456"
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType="number-pad"
-                    maxLength={19}
-                  />
-                  {cardErrors.number ? <Text style={s.cardFieldError}>{cardErrors.number}</Text> : null}
-                  <View style={s.cardRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardLabel}>{t('booking.cardMonth')}</Text>
-                      <TextInput
-                        style={[s.cardInput, cardErrors.month ? s.cardInputError : undefined]}
-                        value={card.month ? String(card.month).padStart(2, '0') : ''}
-                        onChangeText={(v) => { setCard((c) => ({ ...c, month: parseInt(v) || 0 })); setCardErrors((e) => ({ ...e, month: undefined })); }}
-                        placeholder="MM"
-                        placeholderTextColor={colors.textTertiary}
-                        keyboardType="number-pad"
-                        maxLength={2}
-                      />
-                      {cardErrors.month ? <Text style={s.cardFieldError}>{cardErrors.month}</Text> : null}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardLabel}>{t('booking.cardYear')}</Text>
-                      <TextInput
-                        style={[s.cardInput, cardErrors.year ? s.cardInputError : undefined]}
-                        value={card.year ? String(card.year) : ''}
-                        onChangeText={(v) => { setCard((c) => ({ ...c, year: parseInt(v) || 0 })); setCardErrors((e) => ({ ...e, year: undefined })); }}
-                        placeholder="YY"
-                        placeholderTextColor={colors.textTertiary}
-                        keyboardType="number-pad"
-                        maxLength={2}
-                      />
-                      {cardErrors.year ? <Text style={s.cardFieldError}>{cardErrors.year}</Text> : null}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardLabel}>{t('booking.cardCvc')}</Text>
-                      <TextInput
-                        style={[s.cardInput, cardErrors.cvc ? s.cardInputError : undefined]}
-                        value={card.cvc}
-                        onChangeText={(v) => { setCard((c) => ({ ...c, cvc: v })); setCardErrors((e) => ({ ...e, cvc: undefined })); }}
-                        placeholder="CVV"
-                        placeholderTextColor={colors.textTertiary}
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        secureTextEntry
-                      />
-                      {cardErrors.cvc ? <Text style={s.cardFieldError}>{cardErrors.cvc}</Text> : null}
-                    </View>
-                  </View>
-                </View>
-                <Button title={t('booking.payNow')} onPress={handlePayNow} loading={payLoading} disabled={payLoading} fullWidth size="lg" />
-              </Pressable>
-            </Pressable>
-          </KeyboardAvoidingView>
-        </Modal>
+        {/* Card Input Modal — drag-to-dismiss */}
+        <CardSheet
+          visible={showCardModal}
+          onClose={() => setShowCardModal(false)}
+          card={card}
+          setCard={setCard}
+          cardErrors={cardErrors}
+          setCardErrors={setCardErrors}
+          cardNumberDisplay={cardNumberDisplay}
+          setCardNumberDisplay={setCardNumberDisplay}
+          showMonthPicker={showMonthPicker}
+          setShowMonthPicker={setShowMonthPicker}
+          showYearPicker={showYearPicker}
+          setShowYearPicker={setShowYearPicker}
+          CARD_MONTHS={CARD_MONTHS}
+          CARD_YEARS={CARD_YEARS}
+          handlePayNow={handlePayNow}
+          payLoading={payLoading}
+          colors={colors}
+          s={s}
+          t={t}
+        />
+
 
         {/* Trip Details */}
         <View style={s.section}>
@@ -700,6 +643,182 @@ export default function BookingDetailScreen() {
   );
 }
 
+function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors, cardNumberDisplay, setCardNumberDisplay, showMonthPicker, setShowMonthPicker, showYearPicker, setShowYearPicker, CARD_MONTHS, CARD_YEARS, handlePayNow, payLoading, colors, s, t }: {
+  visible: boolean;
+  onClose: () => void;
+  card: CardDetails;
+  setCard: React.Dispatch<React.SetStateAction<CardDetails>>;
+  cardErrors: Partial<Record<keyof CardDetails, string>>;
+  setCardErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof CardDetails, string>>>>;
+  cardNumberDisplay: string;
+  setCardNumberDisplay: (v: string) => void;
+  showMonthPicker: boolean;
+  setShowMonthPicker: (v: boolean) => void;
+  showYearPicker: boolean;
+  setShowYearPicker: (v: boolean) => void;
+  CARD_MONTHS: number[];
+  CARD_YEARS: number[];
+  handlePayNow: () => void;
+  payLoading: boolean;
+  colors: ThemeColors;
+  s: any;
+  t: any;
+}) {
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
+    onPanResponderMove: (_, g) => { if (g.dy > 0) translateY.setValue(g.dy); },
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 80 || g.vy > 0.8) {
+        Animated.timing(translateY, { toValue: 600, duration: 200, useNativeDriver: true })
+          .start(() => { translateY.setValue(0); onClose(); });
+      } else {
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
+      }
+    },
+  })).current;
+
+  return (
+    <>
+      <Modal visible={visible} transparent animationType="slide">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+          <Animated.View style={[s.cardModal, { paddingBottom: insets.bottom || 16, position: 'absolute', bottom: 0, left: 0, right: 0, transform: [{ translateY }] }]}>
+              <View {...panResponder.panHandlers}>
+                <View style={s.cardModalHandle} />
+              </View>
+              <Text style={s.cardModalTitle}>{t('booking.cardDetails')}</Text>
+              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                <View style={s.cardFields}>
+                  <Text style={s.cardLabel}>{t('booking.cardName')}</Text>
+                  <TextInput
+                    style={[s.cardInput, cardErrors.name ? s.cardInputError : undefined]}
+                    value={card.name}
+                    onChangeText={(v) => { setCard((c) => ({ ...c, name: v })); setCardErrors((e) => ({ ...e, name: undefined })); }}
+                    placeholder="John Doe"
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="words"
+                  />
+                  {cardErrors.name ? <Text style={s.cardFieldError}>{cardErrors.name}</Text> : null}
+                  <Text style={s.cardLabel}>{t('booking.cardNumber')}</Text>
+                  <TextInput
+                    style={[s.cardInput, cardErrors.number ? s.cardInputError : undefined]}
+                    value={cardNumberDisplay}
+                    onChangeText={(v) => {
+                      const digits = v.replace(/\D/g, '').slice(0, 16);
+                      const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+                      setCardNumberDisplay(formatted);
+                      setCard((c) => ({ ...c, number: digits }));
+                      setCardErrors((e) => ({ ...e, number: undefined }));
+                    }}
+                    placeholder="1234 5678 9012 3456"
+                    placeholderTextColor={colors.textTertiary}
+                    keyboardType="number-pad"
+                    maxLength={19}
+                  />
+                  {cardErrors.number ? <Text style={s.cardFieldError}>{cardErrors.number}</Text> : null}
+                  <View style={s.cardRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardLabel}>{t('booking.cardMonth')}</Text>
+                      <TouchableOpacity
+                        style={[s.cardInput, s.cardDropdown, cardErrors.month ? s.cardInputError : undefined]}
+                        onPress={() => setShowMonthPicker(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={card.month ? s.cardDropdownValue : s.cardDropdownPlaceholder}>
+                          {card.month ? String(card.month).padStart(2, '0') : 'MM'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                      </TouchableOpacity>
+                      {cardErrors.month ? <Text style={s.cardFieldError}>{cardErrors.month}</Text> : null}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardLabel}>{t('booking.cardYear')}</Text>
+                      <TouchableOpacity
+                        style={[s.cardInput, s.cardDropdown, cardErrors.year ? s.cardInputError : undefined]}
+                        onPress={() => setShowYearPicker(true)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={card.year ? s.cardDropdownValue : s.cardDropdownPlaceholder}>
+                          {card.year ? String(card.year % 100).padStart(2, '0') : 'YY'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                      </TouchableOpacity>
+                      {cardErrors.year ? <Text style={s.cardFieldError}>{cardErrors.year}</Text> : null}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={s.cardLabel}>{t('booking.cardCvc')}</Text>
+                      <TextInput
+                        style={[s.cardInput, cardErrors.cvc ? s.cardInputError : undefined]}
+                        value={card.cvc}
+                        onChangeText={(v) => { setCard((c) => ({ ...c, cvc: v })); setCardErrors((e) => ({ ...e, cvc: undefined })); }}
+                        placeholder="CVV"
+                        placeholderTextColor={colors.textTertiary}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        secureTextEntry
+                      />
+                      {cardErrors.cvc ? <Text style={s.cardFieldError}>{cardErrors.cvc}</Text> : null}
+                    </View>
+                  </View>
+                </View>
+                <Button title={t('booking.payNow')} onPress={handlePayNow} loading={payLoading} disabled={payLoading} fullWidth size="lg" />
+              </ScrollView>
+            </Animated.View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Month picker */}
+      <Modal visible={showMonthPicker} transparent animationType="fade">
+        <Pressable style={s.pickerOverlay} onPress={() => setShowMonthPicker(false)}>
+          <Pressable style={s.pickerSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={s.pickerTitle}>{t('booking.cardMonth')}</Text>
+            <ScrollView style={s.pickerList} keyboardShouldPersistTaps="handled">
+              {CARD_MONTHS.map((m) => (
+                <TouchableOpacity
+                  key={m}
+                  style={[s.pickerItem, card.month === m && s.pickerItemActive]}
+                  onPress={() => { setCard((c) => ({ ...c, month: m })); setCardErrors((e) => ({ ...e, month: undefined })); setShowMonthPicker(false); }}
+                >
+                  <Text style={[s.pickerItemText, card.month === m && s.pickerItemTextActive]}>
+                    {String(m).padStart(2, '0')}
+                  </Text>
+                  {card.month === m && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Year picker */}
+      <Modal visible={showYearPicker} transparent animationType="fade">
+        <Pressable style={s.pickerOverlay} onPress={() => setShowYearPicker(false)}>
+          <Pressable style={s.pickerSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={s.pickerTitle}>{t('booking.cardYear')}</Text>
+            <ScrollView style={s.pickerList} keyboardShouldPersistTaps="handled">
+              {CARD_YEARS.map((y) => (
+                <TouchableOpacity
+                  key={y}
+                  style={[s.pickerItem, card.year === y && s.pickerItemActive]}
+                  onPress={() => { setCard((c) => ({ ...c, year: y })); setCardErrors((e) => ({ ...e, year: undefined })); setShowYearPicker(false); }}
+                >
+                  <Text style={[s.pickerItemText, card.year === y && s.pickerItemTextActive]}>
+                    {String(y).padStart(2, '0')}
+                  </Text>
+                  {card.year === y && <Ionicons name="checkmark" size={16} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
 function CancelSheet({ visible, onClose, tripDetail, cancelReason, setCancelReason, cancelling, onConfirm, t, colors, s }: {
   visible: boolean;
   onClose: () => void;
@@ -712,19 +831,30 @@ function CancelSheet({ visible, onClose, tripDetail, cancelReason, setCancelReas
   colors: ThemeColors;
   s: any;
 }) {
-  const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
-  useEffect(() => { if (visible) openSheet(); }, [visible]);
+  const insets = useSafeAreaInsets();
+  const translateY = useRef(new Animated.Value(0)).current;
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
+    onPanResponderMove: (_, g) => { if (g.dy > 0) translateY.setValue(g.dy); },
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 80 || g.vy > 0.8) {
+        Animated.timing(translateY, { toValue: 600, duration: 200, useNativeDriver: true })
+          .start(() => { translateY.setValue(0); onClose(); });
+      } else {
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, damping: 20, stiffness: 200 }).start();
+      }
+    },
+  })).current;
 
   const isRefundable = tripDetail?.is_refundable !== false;
   const tripType = tripDetail?.trip_type;
 
   return (
-    <Modal visible={visible} transparent animationType="none">
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: backdropOpacity }]} />
-        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
-        <Animated.View style={[s.cancelSheet, { transform: [{ translateY }] }]}>
-          <View {...panHandlers} style={s.cancelSheetDragZone}>
+    <Modal visible={visible} transparent animationType="slide">
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      <Animated.View style={[s.cancelSheet, { transform: [{ translateY }], paddingBottom: insets.bottom || 16, position: 'absolute', bottom: 0, left: 0, right: 0 }]}>
+          <View {...panResponder.panHandlers} style={s.cancelSheetDragZone}>
             <View style={s.cardModalHandle} />
           </View>
           <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -789,14 +919,13 @@ function CancelSheet({ visible, onClose, tripDetail, cancelReason, setCancelReas
               />
               <Button
                 title={t('common.back')}
-                onPress={() => closeSheet()}
+                onPress={onClose}
                 fullWidth
                 size="lg"
               />
             </View>
           </ScrollView>
         </Animated.View>
-      </View>
     </Modal>
   );
 }
@@ -878,6 +1007,17 @@ function makeStyles(c: ThemeColors) {
     cardInputError: { borderColor: c.error },
     cardFieldError: { fontSize: FontSize.xs, color: c.error, marginTop: 2 },
     cardRow: { flexDirection: 'row', gap: 10 },
+    cardDropdown: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    cardDropdownValue: { fontSize: FontSize.md, color: c.textPrimary },
+    cardDropdownPlaceholder: { fontSize: FontSize.md, color: c.textTertiary },
+    pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 32 },
+    pickerSheet: { backgroundColor: c.surface, borderRadius: Radius.xl, paddingVertical: 8, width: '100%', ...Shadow.lg },
+    pickerTitle: { fontSize: FontSize.md, fontWeight: '700', color: c.textPrimary, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+    pickerList: { maxHeight: 280 },
+    pickerItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 13 },
+    pickerItemActive: { backgroundColor: c.primarySurface },
+    pickerItemText: { fontSize: FontSize.md, color: c.textPrimary },
+    pickerItemTextActive: { color: c.primary, fontWeight: '700' },
 
     cancelResultCard: { backgroundColor: '#F0FDF4', borderRadius: Radius.xl, padding: 20, marginBottom: 20, borderWidth: 1.5, borderColor: '#16A34A20', gap: 12 },
     cancelResultIconRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
