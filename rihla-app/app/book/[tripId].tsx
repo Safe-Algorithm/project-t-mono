@@ -587,38 +587,47 @@ export default function BookingScreen() {
             </View>
 
             {/* Participants review */}
-            {!isPackaged
-              ? simpleParticipants.slice(0, simpleCount).map((p, i) => {
-                  const entries = Object.entries(p).filter(([k, v]) => k !== 'package_id' && v);
-                  if (entries.length === 0) return null;
-                  return (
-                    <View key={i} style={s.section}>
-                      <Text style={s.sectionTitle}>{t('booking.participant', { number: i + 1 })}</Text>
-                      <View style={s.confirmCard}>
-                        {entries.map(([k, v]) => (
-                          <ConfirmRow key={k} label={fieldMetadata?.[k]?.display_name ?? k.replace(/_/g, ' ')} value={String(v)} s={s} />
-                        ))}
+            {(() => {
+              const resolveLabel = (fieldKey: string, rawValue: string): string => {
+                const meta = fieldMetadata?.[fieldKey];
+                if (meta?.options) {
+                  const opt = meta.options.find(o => o.value === rawValue);
+                  if (opt) return opt.label;
+                }
+                return rawValue;
+              };
+              return !isPackaged
+                ? simpleParticipants.slice(0, simpleCount).map((p, i) => {
+                    const entries = Object.entries(p).filter(([k, v]) => k !== 'package_id' && v);
+                    if (entries.length === 0) return null;
+                    return (
+                      <View key={i} style={s.section}>
+                        <Text style={s.sectionTitle}>{t('booking.participant', { number: i + 1 })}</Text>
+                        <View style={s.confirmCard}>
+                          {entries.map(([k, v]) => (
+                            <ConfirmRow key={k} label={fieldMetadata?.[k]?.display_name ?? k.replace(/_/g, ' ')} value={resolveLabel(k, String(v))} s={s} />
+                          ))}
+                        </View>
                       </View>
-                    </View>
-                  );
-                })
-              : pkgFlatList.map(({ participant, pkg, globalIndex }) => {
-                  const entries = Object.entries(participant).filter(([k, v]) => k !== 'package_id' && v);
-                  if (entries.length === 0) return null;
-                  const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
-                  return (
-                    <View key={globalIndex} style={s.section}>
-                      <Text style={s.sectionTitle}>{t('booking.participant', { number: globalIndex + 1 })}</Text>
-                      <Text style={s.pkgBadge}>{pkgLabel}</Text>
-                      <View style={s.confirmCard}>
-                        {entries.map(([k, v]) => (
-                          <ConfirmRow key={k} label={fieldMetadata?.[k]?.display_name ?? k.replace(/_/g, ' ')} value={String(v)} s={s} />
-                        ))}
+                    );
+                  })
+                : pkgFlatList.map(({ participant, pkg, globalIndex }) => {
+                    const entries = Object.entries(participant).filter(([k, v]) => k !== 'package_id' && v);
+                    if (entries.length === 0) return null;
+                    const pkgLabel = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
+                    return (
+                      <View key={globalIndex} style={s.section}>
+                        <Text style={s.sectionTitle}>{t('booking.participant', { number: globalIndex + 1 })}</Text>
+                        <Text style={s.pkgBadge}>{pkgLabel}</Text>
+                        <View style={s.confirmCard}>
+                          {entries.map(([k, v]) => (
+                            <ConfirmRow key={k} label={fieldMetadata?.[k]?.display_name ?? k.replace(/_/g, ' ')} value={resolveLabel(k, String(v))} s={s} />
+                          ))}
+                        </View>
                       </View>
-                    </View>
-                  );
-                })
-            }
+                    );
+                  });
+            })()}
             {/* Refund policy disclosure */}
             {trip && trip.is_refundable != null && (
               <View style={trip.is_refundable === false ? s.nonRefundableBox : s.refundableBox}>

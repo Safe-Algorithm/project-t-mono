@@ -240,7 +240,7 @@ export default {
     title: 'My Trips',
     noBookingsTitle: 'No trips booked yet',
     noBookingsText: 'Explore and book your first adventure!',
-    booked: 'Booked {{date}}',
+    booked: 'Booked At',
     participants_one: '{{count}} participant',
     participants_other: '{{count}} participants',
     status: {

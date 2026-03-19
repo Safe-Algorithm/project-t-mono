@@ -65,7 +65,7 @@ function BookingCard({ reg }: { reg: TripRegistration }) {
       </View>
       <View style={s.cardFooter}>
         <Text style={s.dateBooked}>
-          {t('bookings.booked', { date: new Date(reg.registration_date).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' }) })}
+          {(() => { const d = new Date(reg.registration_date); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${t('bookings.booked')} ${y}/${m}/${day}`; })()}
         </Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} />
       </View>

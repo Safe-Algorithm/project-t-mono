@@ -240,7 +240,7 @@ export default {
     title: 'رحلاتي',
     noBookingsTitle: 'لا توجد رحلات محجوزة',
     noBookingsText: 'استكشف واحجز مغامرتك الأولى!',
-    booked: 'محجوز {{date}}',
+    booked: 'تاريخ الحجز',
     participants_one: 'مشارك واحد',
     participants_other: '{{count}} مشاركين',
     status: {

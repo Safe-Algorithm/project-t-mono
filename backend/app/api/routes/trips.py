@@ -1444,7 +1444,8 @@ async def validate_registration(
                 )
 
             if field_value:
-                validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config, lang=_reg_lang)
+                field_str = field_value.value if hasattr(field_value, 'value') else str(field_value)
+                validation_errors = validate_field_value(field_type, field_str, required_field.validation_config, lang=_reg_lang)
                 if validation_errors:
                     raise HTTPException(
                         status_code=400,
@@ -1620,7 +1621,8 @@ async def register_for_trip(
                 # Validate field value: always-on checks run for every non-empty value;
                 # provider-configurable restrictions (phase 2) only run when validation_config is set.
                 if field_value:
-                    validation_errors = validate_field_value(field_type, str(field_value), required_field.validation_config, lang=_reg_lang)
+                    field_str = field_value.value if hasattr(field_value, 'value') else str(field_value)
+                    validation_errors = validate_field_value(field_type, field_str, required_field.validation_config, lang=_reg_lang)
                     if validation_errors:
                         raise HTTPException(
                             status_code=400,

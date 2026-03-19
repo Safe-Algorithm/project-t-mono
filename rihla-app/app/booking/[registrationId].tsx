@@ -9,7 +9,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, CardDetails } from '../../hooks/useTrips';
+import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, useFieldMetadata, CardDetails } from '../../hooks/useTrips';
 import apiClient from '../../lib/api';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -104,6 +104,7 @@ export default function BookingDetailScreen() {
   const { data: registration, isLoading } = useRegistration(registrationId ?? null);
   const { data: updates } = useTripUpdates(registration?.trip_id ?? null);
   const { data: tripDetail } = useTrip(registration?.trip_id ?? null);
+  const { data: fieldMetadata } = useFieldMetadata();
   const markRead = useMarkUpdateRead();
   const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
@@ -346,8 +347,9 @@ export default function BookingDetailScreen() {
   const tripName = trip
     ? ((i18n.language === 'ar' ? (trip.name_ar || trip.name_en) : (trip.name_en || trip.name_ar)) || 'Trip')
     : 'Trip';
-  const startDate = trip ? new Date(trip.start_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
-  const endDate = trip ? new Date(trip.end_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+  const formatDate = (iso: string) => { const d = new Date(iso); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}/${m}/${day}`; };
+  const startDate = trip ? formatDate(trip.start_date) : '';
+  const endDate = trip ? formatDate(trip.end_date) : '';
   const statusVariant = STATUS_VARIANTS[registration.status] ?? 'neutral';
   const statusLabel = t(`bookings.status.${registration.status}` as any, { defaultValue: registration.status });
   const unreadCount = updates?.filter((u) => !u.read).length ?? 0;
@@ -475,7 +477,7 @@ export default function BookingDetailScreen() {
                 <View style={s.divider} />
               </>
             )}
-            <InfoRow label={t('bookings.booked', { date: '' }).replace(' ', '')} value={new Date(registration.registration_date).toLocaleDateString()} />
+            <InfoRow label={t('bookings.booked')} value={(() => { const d = new Date(registration.registration_date); const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0'); return `${y}/${m}/${day}`; })()} />
             <View style={s.divider} />
             <InfoRow label={t('trip.startDate') ?? 'Start Date'} value={startDate} />
             <View style={s.divider} />
@@ -513,7 +515,7 @@ export default function BookingDetailScreen() {
                   {p.email && <InfoRow label="Email" value={p.email} />}
                   {p.phone && <InfoRow label={t('common.phone')} value={p.phone} />}
                   {p.date_of_birth && <InfoRow label={t('common.dob')} value={p.date_of_birth} />}
-                  {p.gender && <InfoRow label={t('common.gender')} value={p.gender} />}
+                  {p.gender && <InfoRow label={t('common.gender')} value={(() => { const opts = fieldMetadata?.['gender']?.options; return opts?.find(o => o.value === p.gender)?.label ?? p.gender; })()} />}
                   {p.passport_number && <InfoRow label={t('common.passport')} value={p.passport_number} />}
                   {p.id_iqama_number && <InfoRow label={t('common.nationalId')} value={p.id_iqama_number} />}
                 </View>
