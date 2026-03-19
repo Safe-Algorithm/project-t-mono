@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from .trip_bookmark import TripBookmark
     from .provider_rating import ProviderRating
     from .rbac import Role
+    from .user_push_token import UserPushToken
 
 
 class UserRole(str, Enum):
@@ -63,3 +64,4 @@ class User(SQLModel, table=True):
     bookmarked_trips: List["TripBookmark"] = Relationship(back_populates="user")
     provider_ratings: List["ProviderRating"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     rbac_roles: List["Role"] = Relationship(back_populates="users", link_model=UserRoleLink)
+    push_tokens: List["UserPushToken"] = Relationship(back_populates="user", sa_relationship_kwargs={"cascade": "all, delete-orphan"})

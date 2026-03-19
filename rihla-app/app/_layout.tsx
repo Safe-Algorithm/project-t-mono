@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import { useLanguageStore } from '../store/languageStore';
 import { useThemeStore } from '../store/themeStore';
 import { useTheme } from '../hooks/useTheme';
+import { usePushNotifications } from '../hooks/usePushNotifications';
 
 
 export { ErrorBoundary } from 'expo-router';
@@ -28,8 +29,13 @@ const queryClient = new QueryClient({
   },
 });
 
+function PushNotificationInit() {
+  usePushNotifications();
+  return null;
+}
+
 export default function RootLayout() {
-  const { loadFromStorage, isLoading } = useAuthStore();
+  const { loadFromStorage, isLoading, isAuthenticated } = useAuthStore();
   const { loadFromStorage: loadLanguage, isRTL, language } = useLanguageStore();
   const { loadFromStorage: loadTheme } = useThemeStore();
   const { isDark } = useTheme();
@@ -47,6 +53,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <GestureHandlerRootView style={{ flex: 1, direction: isRTL ? 'rtl' : 'ltr' }}>
         <StatusBar style={isDark ? 'light' : 'dark'} />
+        {isAuthenticated && <PushNotificationInit />}
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />

@@ -25,3 +25,4 @@ from .rbac import Permission, PermissionRule, Role, RolePermissionLink, UserRole
 from .provider_image import ProviderImage
 from .trip_share import TripShare
 from .refund_record import RefundRecord
+from .user_push_token import UserPushToken

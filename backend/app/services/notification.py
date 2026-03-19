@@ -1,8 +1,8 @@
 """
 Notification Service
 
-Handles sending notifications via SMS and/or email based on user's verified contact methods.
-Routes notifications intelligently based on what the user has verified.
+Handles sending notifications via SMS, email, and FCM push based on user's verified
+contact methods. Push notifications are localized using user.preferred_language.
 """
 
 from typing import Optional
@@ -11,6 +11,15 @@ from sqlmodel import Session
 from app.models.user import User
 from app.services.email import email_service
 from app.services.sms import sms_service
+from app.services.fcm import fcm_service
+
+
+def _get_push_tokens(user: User) -> list[str]:
+    """Return all FCM tokens stored for this user."""
+    try:
+        return [pt.token for pt in (user.push_tokens or [])]
+    except Exception:
+        return []
 
 
 class NotificationService:
@@ -83,7 +92,23 @@ class NotificationService:
                 results["methods_used"].append("email")
             except Exception as e:
                 print(f"Failed to send email: {e}")
-        
+
+        lang = getattr(user, "preferred_language", "en") or "en"
+        registration_id = str(trip_details.get("registration_id", "")) or None
+        for token in _get_push_tokens(user):
+            try:
+                await fcm_service.notify_booking_confirmed(
+                    fcm_token=token,
+                    trip_name=trip_name,
+                    reference=booking_reference,
+                    lang=lang,
+                    registration_id=registration_id,
+                )
+                if "push" not in results["methods_used"]:
+                    results["methods_used"].append("push")
+            except Exception as e:
+                print(f"Failed to send push: {e}")
+
         return results
     
     async def send_trip_reminder(
@@ -144,7 +169,23 @@ class NotificationService:
                 results["methods_used"].append("email")
             except Exception as e:
                 print(f"Failed to send email: {e}")
-        
+
+        lang = getattr(user, "preferred_language", "en") or "en"
+        trip_id = str(trip_details.get("trip_id", "")) or None
+        for token in _get_push_tokens(user):
+            try:
+                await fcm_service.notify_trip_update(
+                    fcm_token=token,
+                    trip_name=trip_name,
+                    message=start_date,
+                    lang=lang,
+                    trip_id=trip_id,
+                )
+                if "push" not in results["methods_used"]:
+                    results["methods_used"].append("push")
+            except Exception as e:
+                print(f"Failed to send push: {e}")
+
         return results
     
     async def send_payment_confirmation(
@@ -206,7 +247,21 @@ class NotificationService:
                 results["methods_used"].append("email")
             except Exception as e:
                 print(f"Failed to send email: {e}")
-        
+
+        lang = getattr(user, "preferred_language", "en") or "en"
+        for token in _get_push_tokens(user):
+            try:
+                await fcm_service.notify_payment_confirmed(
+                    fcm_token=token,
+                    trip_name=trip_name,
+                    amount=amount,
+                    lang=lang,
+                )
+                if "push" not in results["methods_used"]:
+                    results["methods_used"].append("push")
+            except Exception as e:
+                print(f"Failed to send push: {e}")
+
         return results
     
     async def send_cancellation_confirmation(
@@ -268,7 +323,20 @@ class NotificationService:
                 results["methods_used"].append("email")
             except Exception as e:
                 print(f"Failed to send email: {e}")
-        
+
+        lang = getattr(user, "preferred_language", "en") or "en"
+        for token in _get_push_tokens(user):
+            try:
+                await fcm_service.notify_booking_cancelled(
+                    fcm_token=token,
+                    trip_name=trip_name,
+                    lang=lang,
+                )
+                if "push" not in results["methods_used"]:
+                    results["methods_used"].append("push")
+            except Exception as e:
+                print(f"Failed to send push: {e}")
+
         return results
 
 

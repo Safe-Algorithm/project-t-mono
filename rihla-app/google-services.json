@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "601508048922",
+    "project_id": "rihla-9a491",
+    "storage_bucket": "rihla-9a491.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:601508048922:android:44f941b102481b83cc21a3",
+        "android_client_info": {
+          "package_name": "com.safealgo.rihlaapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyACmyYeI6oSDGzaCI6ti_kqVNejzEh_hDA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

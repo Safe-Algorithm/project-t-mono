@@ -257,6 +257,68 @@ async def upload_avatar(
         )
 
 
+@router.post("/me/push-token", status_code=204)
+def upsert_push_token(
+    *,
+    session: Session = Depends(deps.get_session),
+    current_user: User = Depends(deps.get_current_active_user),
+    body: dict,
+):
+    """
+    Register or update the FCM push token for the current user.
+    Expects JSON: {"token": "<fcm_token>", "platform": "android"|"ios"}
+    One token per user per platform — upserts in place.
+    """
+    from app.models.user_push_token import UserPushToken
+    from datetime import datetime
+    from sqlmodel import select as sql_select
+
+    token_str = body.get("token", "").strip()
+    platform = body.get("platform", "android")
+    if not token_str:
+        raise HTTPException(status_code=400, detail="token is required")
+
+    existing = session.exec(
+        sql_select(UserPushToken).where(
+            UserPushToken.user_id == current_user.id,
+            UserPushToken.platform == platform,
+        )
+    ).first()
+
+    if existing:
+        existing.token = token_str
+        existing.updated_at = datetime.utcnow()
+        session.add(existing)
+    else:
+        session.add(UserPushToken(user_id=current_user.id, token=token_str, platform=platform))
+
+    session.commit()
+    return None
+
+
+@router.delete("/me/push-token", status_code=204)
+def delete_push_token(
+    *,
+    session: Session = Depends(deps.get_session),
+    current_user: User = Depends(deps.get_current_active_user),
+    platform: str = "android",
+):
+    """Remove the FCM push token for the current user/platform (e.g. on logout)."""
+    from app.models.user_push_token import UserPushToken
+    from sqlmodel import select as sql_select
+
+    existing = session.exec(
+        sql_select(UserPushToken).where(
+            UserPushToken.user_id == current_user.id,
+            UserPushToken.platform == platform,
+        )
+    ).first()
+    if existing:
+        session.delete(existing)
+        session.commit()
+    return None
+
+
 @router.get("/me/registrations", response_model=List[RegistrationHistoryItem])
 def get_my_registration_history(
     *,

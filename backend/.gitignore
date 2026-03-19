@@ -101,6 +101,9 @@ celerybeat.pid
 # Environments
 .env
 .venv
+
+# Firebase service account keys (contain private keys — never commit)
+*-firebase-adminsdk-*.json
 env/
 venv/
 ENV/

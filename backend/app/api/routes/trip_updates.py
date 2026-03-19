@@ -10,9 +10,11 @@ Sections:
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
 from sqlmodel import Session, select
 from app.services.storage import storage_service
+from app.services.fcm import fcm_service
+from app.models.user_push_token import UserPushToken
 
 from app.api.deps import (
     get_session,
@@ -72,6 +74,7 @@ async def _save_attachment(file: UploadFile) -> dict:
 )
 async def provider_send_update_to_all(
     trip_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     message: str = Form(...),
     is_important: str = Form("false"),
@@ -95,6 +98,31 @@ async def provider_send_update_to_all(
         provider_id=current_user.id,
         data=data,
     )
+
+    # Push to all registrants in the background
+    registrations = list(session.exec(
+        select(TripRegistration).where(TripRegistration.trip_id == trip_id)
+    ).all())
+    trip_name = trip.name_en or trip.name_ar or ""
+    for reg in registrations:
+        user = session.get(User, reg.user_id)
+        if not user:
+            continue
+        lang = getattr(user, "preferred_language", "en") or "en"
+        tokens = [pt.token for pt in session.exec(
+            select(UserPushToken).where(UserPushToken.user_id == user.id)
+        ).all()]
+        for token in tokens:
+            background_tasks.add_task(
+                fcm_service.notify_trip_update,
+                fcm_token=token,
+                trip_name=trip_name,
+                message=message,
+                lang=lang,
+                trip_id=str(trip_id),
+                registration_id=str(reg.id),
+            )
+
     return TripUpdateRead.model_validate(update)
 
 
@@ -104,6 +132,7 @@ async def provider_send_update_to_all(
 )
 async def provider_send_update_to_registration(
     registration_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     message: str = Form(...),
     is_important: str = Form("false"),
@@ -130,6 +159,26 @@ async def provider_send_update_to_registration(
         data=data,
         registration_id=registration_id,
     )
+
+    # Push to the specific user in the background
+    user = session.get(User, reg.user_id)
+    if user:
+        lang = getattr(user, "preferred_language", "en") or "en"
+        trip_name = trip.name_en or trip.name_ar or ""
+        tokens = [pt.token for pt in session.exec(
+            select(UserPushToken).where(UserPushToken.user_id == user.id)
+        ).all()]
+        for token in tokens:
+            background_tasks.add_task(
+                fcm_service.notify_trip_update,
+                fcm_token=token,
+                trip_name=trip_name,
+                message=message,
+                lang=lang,
+                trip_id=str(reg.trip_id),
+                registration_id=str(registration_id),
+            )
+
     return TripUpdateRead.model_validate(update)
 
 
