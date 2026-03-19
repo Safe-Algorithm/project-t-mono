@@ -15,6 +15,7 @@ from app.models.user import User
 from app.models.trip_package import TripPackage
 from app.models.links import TripRating as TripRatingModel
 from app.models.trip_destination import TripDestination
+from app.models.destination import Destination
 
 
 def _compute_is_international(session: Session, trip: Trip) -> bool:
@@ -153,9 +154,11 @@ def search_and_filter_trips(
     is_active: Optional[bool] = None,
     # New filters
     starting_city_id: Optional[uuid.UUID] = None,
+    starting_country_code: Optional[str] = None,
     is_international: Optional[bool] = None,
     trip_type: Optional[TripType] = None,
     destination_ids: Optional[List[uuid.UUID]] = None,
+    destination_country_codes: Optional[List[str]] = None,
     single_destination: Optional[bool] = None,
     amenities: Optional[List[str]] = None,
     only_future: bool = False,
@@ -206,6 +209,25 @@ def search_and_filter_trips(
 
     if starting_city_id is not None:
         conditions.append(Trip.starting_city_id == starting_city_id)
+
+    if starting_country_code is not None:
+        sc_subq = (
+            select(Destination.id)
+            .where(Destination.country_code == starting_country_code.upper())
+            .subquery()
+        )
+        conditions.append(Trip.starting_city_id.in_(select(sc_subq.c.id)))
+
+    if destination_country_codes:
+        codes_upper = [c.upper() for c in destination_country_codes]
+        dest_country_subq = (
+            select(TripDestination.trip_id)
+            .join(Destination, TripDestination.destination_id == Destination.id)
+            .where(Destination.country_code.in_(codes_upper))
+            .distinct()
+            .subquery()
+        )
+        conditions.append(Trip.id.in_(select(dest_country_subq.c.trip_id)))
 
     if is_international is not None:
         conditions.append(Trip.is_international == is_international)

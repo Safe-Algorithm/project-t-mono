@@ -45,6 +45,8 @@ export interface StartingCity {
   name_en: string;
   name_ar: string;
   country_code: string;
+  country_name_en?: string | null;
+  country_name_ar?: string | null;
 }
 
 export interface DestinationInfo {
@@ -52,6 +54,10 @@ export interface DestinationInfo {
   name_en: string;
   name_ar: string;
   country_code: string;
+  country_name_en?: string | null;
+  country_name_ar?: string | null;
+  place_name_en?: string | null;
+  place_name_ar?: string | null;
   type: string;
 }
 

@@ -174,7 +174,62 @@ def _get_starting_city_info(session: Session, trip) -> Optional[dict]:
     sc = session.get(Destination, trip.starting_city_id)
     if not sc:
         return None
-    return {"id": sc.id, "name_en": sc.name_en, "name_ar": sc.name_ar, "country_code": sc.country_code}
+    country_name_en = None
+    country_name_ar = None
+    if sc.parent_id:
+        parent = session.get(Destination, sc.parent_id)
+        if parent:
+            country_name_en = parent.name_en
+            country_name_ar = parent.name_ar
+    return {
+        "id": sc.id,
+        "name_en": sc.name_en,
+        "name_ar": sc.name_ar,
+        "country_code": sc.country_code,
+        "country_name_en": country_name_en,
+        "country_name_ar": country_name_ar,
+    }
+
+
+def _get_destinations_info(session: Session, trip) -> list:
+    from app.models.destination import Destination
+    from app.models.trip_destination import TripDestination
+    from sqlmodel import select as sql_select
+    links = session.exec(
+        sql_select(TripDestination).where(TripDestination.trip_id == trip.id)
+    ).all()
+    from app.models.place import Place
+    result = []
+    for link in links:
+        dest = session.get(Destination, link.destination_id)
+        if not dest:
+            continue
+        country_name_en = None
+        country_name_ar = None
+        if dest.parent_id:
+            parent = session.get(Destination, dest.parent_id)
+            if parent:
+                country_name_en = parent.name_en
+                country_name_ar = parent.name_ar
+        place_name_en = None
+        place_name_ar = None
+        if link.place_id:
+            place = session.get(Place, link.place_id)
+            if place:
+                place_name_en = place.name_en
+                place_name_ar = place.name_ar
+        result.append({
+            "id": dest.id,
+            "name_en": dest.name_en,
+            "name_ar": dest.name_ar,
+            "country_code": dest.country_code,
+            "country_name_en": country_name_en,
+            "country_name_ar": country_name_ar,
+            "place_name_en": place_name_en,
+            "place_name_ar": place_name_ar,
+            "type": dest.type.value if hasattr(dest.type, "value") else str(dest.type),
+        })
+    return result
 
 
 def _build_package_with_fields(session: Session, package) -> TripPackageWithRequiredFields:
@@ -314,6 +369,7 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         registration_deadline=trip.registration_deadline,
         starting_city_id=trip.starting_city_id,
         starting_city=_get_starting_city_info(session, trip),
+        destinations=_get_destinations_info(session, trip),
         is_international=trip.is_international, is_packaged_trip=trip.is_packaged_trip,
         trip_type=trip.trip_type,
         timezone=trip.timezone,

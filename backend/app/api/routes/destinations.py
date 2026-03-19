@@ -215,6 +215,98 @@ def get_active_destinations(
     return result
 
 
+@router.get("/filter-options/starting-cities")
+def get_starting_cities_for_filter(session: Session = Depends(get_session)):
+    """Return distinct cities used as starting_city_id in active future trips."""
+    from sqlmodel import select
+    from app.models.trip import Trip as TripModel
+    from app.models.destination import Destination
+    from datetime import datetime, timezone as _tz
+    now = datetime.now(_tz.utc).replace(tzinfo=None)
+    city_ids = session.exec(
+        select(TripModel.starting_city_id)
+        .where(TripModel.is_active == True)
+        .where(TripModel.starting_city_id != None)
+        .where(TripModel.start_date > now)
+        .distinct()
+    ).all()
+    cities = []
+    for cid in city_ids:
+        city = session.get(Destination, cid)
+        if city:
+            parent = session.get(Destination, city.parent_id) if city.parent_id else None
+            cities.append({
+                "id": str(city.id),
+                "name_en": city.name_en,
+                "name_ar": city.name_ar,
+                "country_code": city.country_code,
+                "country_name_en": parent.name_en if parent else None,
+                "country_name_ar": parent.name_ar if parent else None,
+            })
+    return sorted(cities, key=lambda c: c["name_en"] or "")
+
+
+@router.get("/filter-options/starting-countries")
+def get_starting_countries_for_filter(session: Session = Depends(get_session)):
+    """Return distinct countries of starting cities in active future trips."""
+    from sqlmodel import select
+    from app.models.trip import Trip as TripModel
+    from app.models.destination import Destination
+    from datetime import datetime, timezone as _tz
+    now = datetime.now(_tz.utc).replace(tzinfo=None)
+    city_ids = session.exec(
+        select(TripModel.starting_city_id)
+        .where(TripModel.is_active == True)
+        .where(TripModel.starting_city_id != None)
+        .where(TripModel.start_date > now)
+        .distinct()
+    ).all()
+    seen = set()
+    countries = []
+    for cid in city_ids:
+        city = session.get(Destination, cid)
+        if city and city.country_code not in seen:
+            seen.add(city.country_code)
+            parent = session.get(Destination, city.parent_id) if city.parent_id else None
+            countries.append({
+                "country_code": city.country_code,
+                "name_en": parent.name_en if parent else city.country_code,
+                "name_ar": parent.name_ar if parent else city.country_code,
+            })
+    return sorted(countries, key=lambda c: c["name_en"] or "")
+
+
+@router.get("/filter-options/destination-countries")
+def get_destination_countries_for_filter(session: Session = Depends(get_session)):
+    """Return distinct countries of destinations in active future trips."""
+    from sqlmodel import select
+    from app.models.trip import Trip as TripModel
+    from app.models.trip_destination import TripDestination
+    from app.models.destination import Destination
+    from datetime import datetime, timezone as _tz
+    now = datetime.now(_tz.utc).replace(tzinfo=None)
+    dest_ids = session.exec(
+        select(TripDestination.destination_id)
+        .join(TripModel, TripModel.id == TripDestination.trip_id)
+        .where(TripModel.is_active == True)
+        .where(TripModel.start_date > now)
+        .distinct()
+    ).all()
+    seen = set()
+    countries = []
+    for did in dest_ids:
+        dest = session.get(Destination, did)
+        if dest and dest.country_code not in seen:
+            seen.add(dest.country_code)
+            parent = session.get(Destination, dest.parent_id) if dest.parent_id else None
+            countries.append({
+                "country_code": dest.country_code,
+                "name_en": parent.name_en if parent else dest.country_code,
+                "name_ar": parent.name_ar if parent else dest.country_code,
+            })
+    return sorted(countries, key=lambda c: c["name_en"] or "")
+
+
 @router.get("/destinations/{destination_id}/places", response_model=List[PlaceRead])
 def get_destination_places(
     destination_id: uuid.UUID,

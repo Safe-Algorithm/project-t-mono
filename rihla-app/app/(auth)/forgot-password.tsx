@@ -15,7 +15,9 @@ import { useLanguageStore } from '../../store/languageStore';
 
 type Step = 'email' | 'otp' | 'success';
 
-function extractError(err: any, fallback: string): string {
+function extractError(err: any, t: (key: string) => string, fallback: string): string {
+  if (!err?.response) return t('auth.networkError');
+  if (err.response?.status >= 500) return t('auth.serverError');
   const detail = err?.response?.data?.detail;
   return Array.isArray(detail)
     ? (detail[0]?.msg ?? fallback)
@@ -37,13 +39,14 @@ export default function ForgotPasswordScreen() {
 
   const handleSendOtp = async () => {
     if (!email.trim()) { setErrors({ email: t('auth.emailRequired') }); return; }
+    if (!/\S+@\S+\.\S+/.test(email)) { setErrors({ email: t('auth.emailInvalid') }); return; }
     setLoading(true);
     try {
       await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
       setErrors({});
       setStep('otp');
     } catch (err: any) {
-      setErrors({ email: extractError(err, t('changePassword.failed')) });
+      setErrors({ email: extractError(err, t, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }
@@ -55,7 +58,7 @@ export default function ForgotPasswordScreen() {
       await apiClient.post('/otp/send-password-reset-otp', { email: email.trim() });
       setErrors({ otp: '' });
     } catch (err: any) {
-      setErrors({ otp: extractError(err, t('changePassword.failed')) });
+      setErrors({ otp: extractError(err, t, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }
@@ -79,7 +82,7 @@ export default function ForgotPasswordScreen() {
       setErrors({});
       setStep('success');
     } catch (err: any) {
-      setErrors({ otp: extractError(err, t('changePassword.failed')) });
+      setErrors({ otp: extractError(err, t, t('changePassword.failed')) });
     } finally {
       setLoading(false);
     }

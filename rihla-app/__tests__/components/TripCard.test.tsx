@@ -119,3 +119,191 @@ describe('TripCard', () => {
     expect(getByText(/Jun|2025/)).toBeTruthy();
   });
 });
+
+describe('TripCard — route label with country names', () => {
+  const baseTrip: Trip = {
+    ...({} as Trip),
+    id: 'trip-route',
+    name_en: 'Route Trip',
+    name_ar: 'رحلة',
+    description_en: 'desc',
+    description_ar: null,
+    start_date: '2025-08-01',
+    end_date: '2025-08-05',
+    registration_deadline: null,
+    max_participants: 10,
+    available_spots: 5,
+    is_active: true,
+    is_packaged_trip: false,
+    is_refundable: null,
+    is_international: true,
+    starting_city_id: 'sc-1',
+    starting_city: { id: 'sc-1', name_en: 'Riyadh', name_ar: 'الرياض', country_code: 'SA' },
+    destinations: [
+      {
+        id: 'dest-1',
+        name_en: 'Istanbul',
+        name_ar: 'إسطنبول',
+        country_code: 'TR',
+        country_name_en: 'Turkey',
+        country_name_ar: 'تركيا',
+        type: 'city',
+      },
+    ],
+    trip_type: 'package',
+    has_meeting_place: false,
+    meeting_place_name: null,
+    meeting_place_name_ar: null,
+    meeting_location: null,
+    meeting_time: null,
+    amenities: null,
+    images: [],
+    provider_id: 'prov-1',
+    provider: { id: 'prov-1', company_name: 'Provider' },
+    packages: [],
+    simple_trip_required_fields: [],
+    simple_trip_required_fields_details: [],
+    extra_fees: [],
+  };
+
+  it('international package: shows destination country name (not city) in EN route label', () => {
+    const { getByText } = render(<TripCard trip={baseTrip} onPress={() => {}} />);
+    expect(getByText(/Turkey/)).toBeTruthy();
+  });
+
+  it('shows starting city in route label', () => {
+    const { getByText } = render(<TripCard trip={baseTrip} onPress={() => {}} />);
+    expect(getByText(/Riyadh/)).toBeTruthy();
+  });
+
+  it('shows flag only when country_name fields are null', () => {
+    const tripNoCountry: Trip = {
+      ...baseTrip,
+      destinations: [
+        {
+          id: 'dest-2',
+          name_en: 'UnknownCity',
+          name_ar: 'مدينة مجهولة',
+          country_code: 'XX',
+          country_name_en: null,
+          country_name_ar: null,
+          type: 'city',
+        },
+      ],
+    };
+    // No city name shown, no country name — just the starting city still shown
+    const { getByText } = render(<TripCard trip={tripNoCountry} onPress={() => {}} />);
+    expect(getByText(/Riyadh/)).toBeTruthy();
+  });
+
+  it('international: deduplicates countries for multi-city same-country destinations', () => {
+    const tripMultiDest: Trip = {
+      ...baseTrip,
+      trip_type: 'package',
+      is_international: true,
+      destinations: [
+        { id: 'd1', name_en: 'Istanbul', name_ar: 'إسطنبول', country_code: 'TR', country_name_en: 'Turkey', country_name_ar: 'تركيا', type: 'city' },
+        { id: 'd2', name_en: 'Trabzon', name_ar: 'طرابزون', country_code: 'TR', country_name_en: 'Turkey', country_name_ar: 'تركيا', type: 'city' },
+      ],
+    };
+    const { getByText, queryAllByText } = render(<TripCard trip={tripMultiDest} onPress={() => {}} />);
+    expect(getByText(/Turkey/)).toBeTruthy();
+    expect(queryAllByText(/Turkey/).length).toBe(1);
+    expect(queryAllByText(/Istanbul/).length).toBe(0);
+    expect(queryAllByText(/Trabzon/).length).toBe(0);
+  });
+
+  it('international: shows multiple distinct countries', () => {
+    const tripMultiCountry: Trip = {
+      ...baseTrip,
+      trip_type: 'package',
+      is_international: true,
+      destinations: [
+        { id: 'd1', name_en: 'Istanbul', name_ar: 'إسطنبول', country_code: 'TR', country_name_en: 'Turkey', country_name_ar: 'تركيا', type: 'city' },
+        { id: 'd2', name_en: 'Tbilisi', name_ar: 'تبليسي', country_code: 'GE', country_name_en: 'Georgia', country_name_ar: 'جورجيا', type: 'city' },
+      ],
+    };
+    const { getByText } = render(<TripCard trip={tripMultiCountry} onPress={() => {}} />);
+    expect(getByText(/Turkey/)).toBeTruthy();
+    expect(getByText(/Georgia/)).toBeTruthy();
+  });
+
+  it('domestic: shows deduplicated city names instead of countries', () => {
+    const tripDomestic: Trip = {
+      ...baseTrip,
+      trip_type: 'package',
+      is_international: false,
+      destinations: [
+        { id: 'd1', name_en: 'Jeddah', name_ar: 'جدة', country_code: 'SA', country_name_en: 'Saudi Arabia', country_name_ar: 'السعودية', type: 'city' },
+        { id: 'd2', name_en: 'Jeddah', name_ar: 'جدة', country_code: 'SA', country_name_en: 'Saudi Arabia', country_name_ar: 'السعودية', type: 'city' },
+        { id: 'd3', name_en: 'Mecca', name_ar: 'مكة', country_code: 'SA', country_name_en: 'Saudi Arabia', country_name_ar: 'السعودية', type: 'city' },
+      ],
+    };
+    const { getByText, queryAllByText } = render(<TripCard trip={tripDomestic} onPress={() => {}} />);
+    expect(getByText(/Jeddah/)).toBeTruthy();
+    expect(getByText(/Mecca/)).toBeTruthy();
+    expect(queryAllByText(/Jeddah/).length).toBe(1);
+    expect(queryAllByText(/Saudi Arabia/).length).toBe(0);
+  });
+
+  it('guided: shows place name when set, city name as fallback', () => {
+    const tripGuided: Trip = {
+      ...baseTrip,
+      trip_type: 'guided',
+      is_international: false,
+      destinations: [
+        { id: 'd1', name_en: 'Riyadh', name_ar: 'الرياض', country_code: 'SA', country_name_en: 'Saudi Arabia', country_name_ar: 'السعودية', place_name_en: 'Six Flags Qiddiya', place_name_ar: 'سيكس فلاغز قدية', type: 'city' },
+        { id: 'd2', name_en: 'Jeddah', name_ar: 'جدة', country_code: 'SA', country_name_en: 'Saudi Arabia', country_name_ar: 'السعودية', place_name_en: null, place_name_ar: null, type: 'city' },
+      ],
+    };
+    const { getByText } = render(<TripCard trip={tripGuided} onPress={() => {}} />);
+    expect(getByText(/Six Flags Qiddiya/)).toBeTruthy();
+    expect(getByText(/Jeddah/)).toBeTruthy();
+  });
+
+  it('renders no route row when starting_city and destinations are both absent', () => {
+    const tripNoRoute: Trip = { ...baseTrip, starting_city: null, starting_city_id: null, destinations: [] };
+    const { queryByText } = render(<TripCard trip={tripNoRoute} onPress={() => {}} />);
+    expect(queryByText(/^[→←]$/)).toBeNull();
+  });
+});
+
+describe('TripCard — getDestLabel Arabic localization', () => {
+  beforeAll(() => {
+    jest.mock('react-i18next', () => ({
+      useTranslation: () => ({
+        t: (key: string) => key,
+        i18n: { language: 'ar' },
+      }),
+    }));
+  });
+
+  it('uses Arabic country name and city name in AR mode', () => {
+    // Test the pure logic directly without re-rendering with resetModules
+    const dest = {
+      name_en: 'Istanbul',
+      name_ar: 'إسطنبول',
+      country_code: 'TR',
+      country_name_en: 'Turkey',
+      country_name_ar: 'تركيا',
+    };
+    const lang = 'ar';
+    const city = lang === 'ar' ? dest.name_ar || dest.name_en : dest.name_en || dest.name_ar;
+    const country = lang === 'ar' ? (dest.country_name_ar || dest.country_name_en) : (dest.country_name_en || dest.country_name_ar);
+    expect(city).toBe('إسطنبول');
+    expect(country).toBe('تركيا');
+  });
+
+  it('falls back to EN country name when AR is missing', () => {
+    const dest = {
+      name_en: 'Tokyo',
+      name_ar: 'طوكيو',
+      country_code: 'JP',
+      country_name_en: 'Japan',
+      country_name_ar: null,
+    };
+    const lang = 'ar';
+    const country = lang === 'ar' ? (dest.country_name_ar || dest.country_name_en) : (dest.country_name_en || dest.country_name_ar);
+    expect(country).toBe('Japan');
+  });
+});

@@ -3859,6 +3859,190 @@ def test_register_correct_content_hash_succeeds(client: TestClient, session: Ses
     assert resp.status_code != 409 or "trip details have been updated" not in resp.json().get("detail", "")
 
 
+def test_trip_destination_includes_country_names(client: TestClient, session: Session) -> None:
+    """Trip detail response includes country_name_en and country_name_ar for each destination."""
+    from app.models.destination import Destination, DestinationType
+    from app.models.trip_destination import TripDestination
+
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    # Create country + city in DB directly
+    country = Destination(
+        type=DestinationType.COUNTRY,
+        country_code="TR",
+        slug="turkey-cname",
+        full_slug="turkey-cname",
+        name_en="Turkey",
+        name_ar="تركيا",
+        is_active=True,
+        display_order=0,
+    )
+    session.add(country)
+    session.commit()
+    session.refresh(country)
+
+    city = Destination(
+        type=DestinationType.CITY,
+        parent_id=country.id,
+        country_code="TR",
+        slug="istanbul-cname",
+        full_slug="turkey-cname/istanbul-cname",
+        name_en="Istanbul",
+        name_ar="إسطنبول",
+        is_active=True,
+        display_order=0,
+    )
+    session.add(city)
+    session.commit()
+    session.refresh(city)
+
+    # Create trip via API
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Turkey Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=10)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=15)),
+            "max_participants": 10,
+        },
+    )
+    assert create_resp.status_code == 200
+    trip_id = create_resp.json()["id"]
+
+    # Add city as destination
+    dest_resp = client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/destinations",
+        headers=headers,
+        json={"destination_id": str(city.id)},
+    )
+    assert dest_resp.status_code == 200
+
+    # Fetch trip and assert country names are present
+    read_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert read_resp.status_code == 200
+    data = read_resp.json()
+    assert len(data["destinations"]) == 1
+    dest = data["destinations"][0]
+    assert dest["name_en"] == "Istanbul"
+    assert dest["country_name_en"] == "Turkey"
+    assert dest["country_name_ar"] == "تركيا"
+    assert dest["country_code"] == "TR"
+
+
+def test_trip_destination_country_names_localized(client: TestClient, session: Session) -> None:
+    """country_name_en and country_name_ar are both returned so clients can pick based on language."""
+    from app.models.destination import Destination, DestinationType
+
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    country = Destination(
+        type=DestinationType.COUNTRY,
+        country_code="JP",
+        slug="japan-loc",
+        full_slug="japan-loc",
+        name_en="Japan",
+        name_ar="اليابان",
+        is_active=True,
+        display_order=0,
+    )
+    session.add(country)
+    session.commit()
+    session.refresh(country)
+
+    city = Destination(
+        type=DestinationType.CITY,
+        parent_id=country.id,
+        country_code="JP",
+        slug="tokyo-loc",
+        full_slug="japan-loc/tokyo-loc",
+        name_en="Tokyo",
+        name_ar="طوكيو",
+        is_active=True,
+        display_order=0,
+    )
+    session.add(city)
+    session.commit()
+    session.refresh(city)
+
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Japan Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=20)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=25)),
+            "max_participants": 5,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+
+    client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/destinations",
+        headers=headers,
+        json={"destination_id": str(city.id)},
+    )
+
+    read_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    dest = read_resp.json()["destinations"][0]
+
+    # Both language fields present
+    assert dest["country_name_en"] == "Japan"
+    assert dest["country_name_ar"] == "اليابان"
+    # City names also correct
+    assert dest["name_en"] == "Tokyo"
+    assert dest["name_ar"] == "طوكيو"
+
+
+def test_trip_destination_without_parent_country_name_is_null(client: TestClient, session: Session) -> None:
+    """Destinations without a parent (edge case) return null country names without crashing."""
+    from app.models.destination import Destination, DestinationType
+
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+
+    # Create a city with no parent_id (orphan edge case)
+    orphan = Destination(
+        type=DestinationType.CITY,
+        parent_id=None,
+        country_code="XX",
+        slug="orphan-city-x",
+        full_slug="orphan-city-x",
+        name_en="Orphan City",
+        name_ar="مدينة يتيمة",
+        is_active=True,
+        display_order=0,
+    )
+    session.add(orphan)
+    session.commit()
+    session.refresh(orphan)
+
+    create_resp = client.post(
+        f"{settings.API_V1_STR}/trips",
+        headers=headers,
+        json={
+            "name_en": "Orphan Trip",
+            "description_en": "desc",
+            "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=5)),
+            "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=6)),
+            "max_participants": 3,
+        },
+    )
+    trip_id = create_resp.json()["id"]
+
+    client.post(
+        f"{settings.API_V1_STR}/trips/{trip_id}/destinations",
+        headers=headers,
+        json={"destination_id": str(orphan.id)},
+    )
+
+    read_resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    dest = read_resp.json()["destinations"][0]
+    assert dest["country_name_en"] is None
+    assert dest["country_name_ar"] is None
+
+
 def test_register_omitted_content_hash_allowed(client: TestClient, session: Session):
     """Booking without sending trip_content_hash at all must not be blocked by the hash check."""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)

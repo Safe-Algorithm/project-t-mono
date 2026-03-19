@@ -39,12 +39,12 @@ export default function LoginScreen() {
   const validate = () => {
     const e: typeof errors = {};
     if (loginType === 'email') {
-      if (!email.trim()) e.contact = t('auth.email');
-      else if (!/\S+@\S+\.\S+/.test(email)) e.contact = t('auth.email');
+      if (!email.trim()) e.contact = t('auth.emailRequired');
+      else if (!/\S+@\S+\.\S+/.test(email)) e.contact = t('auth.emailInvalid');
     } else {
       if (!localNumber.trim()) e.contact = t('auth.phoneRequired');
     }
-    if (!password) e.password = t('auth.password');
+    if (!password) e.password = t('auth.passwordRequired');
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -58,9 +58,13 @@ export default function LoginScreen() {
       await login(username, password);
       router.replace('/(tabs)');
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      const msg = Array.isArray(detail) ? (detail[0]?.msg ?? t('auth.loginFailed')) : (typeof detail === 'string' ? detail : t('auth.loginFailed'));
-      setLoginError(msg);
+      if (!err?.response) {
+        setLoginError(t('auth.networkError'));
+      } else if (err.response?.status === 400 || err.response?.status === 401 || err.response?.status === 422) {
+        setLoginError(loginType === 'email' ? t('auth.loginInvalidCredentials') : t('auth.loginInvalidCredentialsPhone'));
+      } else {
+        setLoginError(t('auth.serverError'));
+      }
     } finally {
       setLoading(false);
     }
@@ -87,7 +91,7 @@ export default function LoginScreen() {
           </View>
           {loginError ? (
             <View style={s.errorBanner}>
-              <Text style={s.errorBannerText}>{loginError}</Text>
+              <Text style={[s.errorBannerText, isRTL && s.errorBannerTextRtl]}>{loginError}</Text>
             </View>
           ) : null}
           <View style={s.fields}>
@@ -163,7 +167,8 @@ function makeStyles(c: ThemeColors) {
     textRtl: { textAlign: 'right', writingDirection: 'rtl' },
     fields: { gap: 16, marginBottom: 12 },
     errorBanner: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
-    errorBannerText: { fontSize: FontSize.sm, color: '#DC2626', lineHeight: 20 },
+    errorBannerText: { fontSize: FontSize.sm, color: '#DC2626', lineHeight: 20, textAlign: 'left' as const },
+    errorBannerTextRtl: { textAlign: 'right' as const },
     forgotRow: { alignSelf: 'flex-end', marginBottom: 24 },
     forgotRowRtl: { alignSelf: 'flex-start' },
     forgotText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600' },

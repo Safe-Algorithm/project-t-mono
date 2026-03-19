@@ -78,6 +78,7 @@ def create_user(session: Session, *, user_in: UserCreate, source: RequestSource 
         role=user_in.role,
         provider_id=user_in.provider_id,
         source=source,
+        preferred_language=user_in.preferred_language if user_in.preferred_language in ("en", "ar") else "en",
     )
     session.add(db_user)
     session.commit()

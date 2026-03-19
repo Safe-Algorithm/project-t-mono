@@ -19,7 +19,16 @@ import i18n from '../../lib/i18n';
 import { Radius, FontSize, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
 import Button from '../ui/Button';
-import { TripFilters, useDestinations, DestinationOption } from '../../hooks/useTrips';
+import {
+  TripFilters,
+  useDestinations,
+  useFilterStartingCities,
+  useFilterStartingCountries,
+  useFilterDestinationCountries,
+  DestinationOption,
+  CountryOption,
+  StartingCityOption,
+} from '../../hooks/useTrips';
 import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 
 /**
@@ -61,6 +70,238 @@ const RATING_STAR_OPTIONS = [
 
 function getDestName(d: DestinationOption) {
   return i18n.language === 'ar' ? d.name_ar || d.name_en : d.name_en || d.name_ar;
+}
+
+function getCountryName(c: CountryOption) {
+  return i18n.language === 'ar' ? c.name_ar || c.name_en : c.name_en || c.name_ar;
+}
+
+function getStartingCityName(c: StartingCityOption) {
+  return i18n.language === 'ar' ? c.name_ar || c.name_en : c.name_en || c.name_ar;
+}
+
+const LIST_PAGE = 20;
+
+function makeStyles(c: ThemeColors) {
+  return StyleSheet.create({
+    backdrop: { flex: 1, justifyContent: 'flex-end' },
+    backdropDim: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000' },
+    backdropTouch: { ...StyleSheet.absoluteFillObject },
+    sheet: { backgroundColor: c.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '92%', flexDirection: 'column', ...Shadow.lg },
+    dragZone: { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', backgroundColor: c.surface },
+    handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 40 },
+    handle: { width: 40, height: 4, backgroundColor: c.gray300, borderRadius: 2 },
+    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
+    title: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
+    body: { flexShrink: 1, paddingHorizontal: 20, paddingTop: 16 },
+    bodyContent: { paddingBottom: 24 },
+    sectionLabel: { fontSize: FontSize.sm, fontWeight: '700', color: c.textPrimary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 16 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    priceInput: { flex: 1 },
+    inputLabel: { fontSize: FontSize.xs, color: c.textSecondary, marginBottom: 4, fontWeight: '600' },
+    input: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.surface },
+    inputError: { borderColor: c.error },
+    priceDash: { paddingTop: 18 },
+    dashText: { color: c.textTertiary, fontSize: FontSize.lg },
+    sectionHint: { fontSize: FontSize.xs, color: c.textSecondary, marginBottom: 10, marginTop: -6 },
+    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+    ratingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    ratingChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
+    ratingChipActive: { borderColor: c.primary, backgroundColor: c.primary },
+    ratingChipText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary },
+    ratingChipTextActive: { color: c.white },
+    actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28, borderTopWidth: 1, borderTopColor: c.border },
+    resetBtn: { flex: 1 },
+    applyBtn: { flex: 2 },
+    emptyHint: { fontSize: FontSize.sm, color: c.textTertiary, fontStyle: 'italic', marginBottom: 4 },
+    listRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 13, paddingHorizontal: 14, borderRadius: Radius.md, marginBottom: 3, backgroundColor: c.gray50 },
+    listRowActive: { backgroundColor: c.primarySurface },
+    listRowText: { fontSize: FontSize.md, color: c.textPrimary, fontWeight: '500', flex: 1 },
+    listRowTextActive: { color: c.primary, fontWeight: '700' },
+    loadMoreBtn: { paddingVertical: 12, alignItems: 'center' },
+    loadMoreText: { fontSize: FontSize.sm, color: c.primary, fontWeight: '600' },
+    dateSelectBtnActive: { borderColor: c.primary, backgroundColor: c.primarySurface },
+    locSheet: { backgroundColor: c.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, height: '75%', flexDirection: 'column', ...Shadow.lg },
+    locSearchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, marginHorizontal: 20, marginBottom: 8, backgroundColor: c.background },
+    locSearchInput: { flex: 1, fontSize: FontSize.md, color: c.textPrimary, padding: 0 },
+    locList: { flex: 1 },
+    locListContent: { paddingHorizontal: 20, paddingBottom: 8 },
+    locDoneRow: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 28, borderTopWidth: 1, borderTopColor: c.border },
+    locDoneBtn: { backgroundColor: c.primary, borderRadius: Radius.lg, paddingVertical: 14, alignItems: 'center' },
+    locDoneBtnText: { fontSize: FontSize.md, fontWeight: '700', color: c.white },
+    dateSelectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: c.surface, marginBottom: 4 },
+    dateSelectBtnText: { flex: 1, fontSize: FontSize.md, color: c.textPrimary, fontWeight: '500' },
+    dateModalOverlay: { flex: 1, justifyContent: 'flex-end' },
+    dateModalSheet: { backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, paddingHorizontal: 20 },
+    dateModalDragZone: { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', backgroundColor: c.surface, alignItems: 'center', paddingBottom: 8 },
+    dateModalHandle: { width: 40, height: 4, backgroundColor: c.gray300, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
+    dateModalTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, textAlign: 'center', marginBottom: 8 },
+    dateColsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+    scrollColItem: { height: ITEM_H, justifyContent: 'center', alignItems: 'center', borderRadius: Radius.md },
+    scrollColItemActive: { backgroundColor: c.primarySurface },
+    scrollColText: { fontSize: FontSize.md, color: c.textSecondary, fontWeight: '500' },
+    scrollColTextActive: { fontSize: FontSize.md, color: c.primary, fontWeight: '700' },
+    dateModalActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
+    dateModalCancel: { flex: 1, paddingVertical: 14, borderRadius: Radius.lg, borderWidth: 1.5, borderColor: c.border, alignItems: 'center' },
+    dateModalCancelText: { fontSize: FontSize.md, fontWeight: '600', color: c.textSecondary },
+    dateModalDone: { flex: 2, paddingVertical: 14, borderRadius: Radius.lg, backgroundColor: c.primary, alignItems: 'center' },
+    dateModalDoneText: { fontSize: FontSize.md, fontWeight: '700', color: c.white },
+  });
+}
+
+function PickerButton({
+  label,
+  selectedSummary,
+  onPress,
+  onClear,
+  colors,
+  s,
+}: {
+  label: string;
+  selectedSummary: string;
+  onPress: () => void;
+  onClear: () => void;
+  colors: ThemeColors;
+  s: ReturnType<typeof makeStyles>;
+}) {
+  const hasSelection = !!selectedSummary;
+  return (
+    <TouchableOpacity
+      style={[s.dateSelectBtn, hasSelection && s.dateSelectBtnActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <Ionicons name="location-outline" size={18} color={hasSelection ? colors.primary : colors.textTertiary} />
+      <Text style={[s.dateSelectBtnText, !hasSelection && { color: colors.textTertiary }]} numberOfLines={1}>
+        {hasSelection ? selectedSummary : label}
+      </Text>
+      {hasSelection ? (
+        <TouchableOpacity
+          onPress={(e) => { e.stopPropagation?.(); onClear(); }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="close-circle" size={18} color={colors.primary} />
+        </TouchableOpacity>
+      ) : (
+        <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+function PickerModal<T>({
+  visible,
+  onClose,
+  label,
+  items,
+  getKey,
+  getName,
+  isSelected,
+  onToggle,
+  searchPlaceholder,
+  multiSelect,
+  colors,
+  s,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  label: string;
+  items: T[];
+  getKey: (item: T) => string;
+  getName: (item: T) => string;
+  isSelected: (item: T) => boolean;
+  onToggle: (item: T) => void;
+  searchPlaceholder: string;
+  multiSelect?: boolean;
+  colors: ThemeColors;
+  s: ReturnType<typeof makeStyles>;
+}) {
+  const { t } = useTranslation();
+  const [search, setSearch] = React.useState('');
+  const [page, setPage] = React.useState(1);
+  const { translateY: sheetTY, backdropOpacity: sheetBgOp, panHandlers: sheetPan, openSheet, closeSheet } =
+    useDragToDismiss(onClose);
+
+  useLayoutEffect(() => {
+    if (visible) { setSearch(''); setPage(1); openSheet(); }
+  }, [visible]);
+
+  const filtered = search.trim()
+    ? items.filter((item) => getName(item).toLowerCase().includes(search.toLowerCase()))
+    : items;
+  const visible2 = filtered.slice(0, page * LIST_PAGE);
+  const hasMore = visible2.length < filtered.length;
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={() => closeSheet()}>
+      <Animated.View style={[s.dateModalOverlay, { backgroundColor: 'transparent' }]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: '#000', opacity: sheetBgOp }]} />
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => closeSheet()} />
+        <Animated.View style={[s.locSheet, { transform: [{ translateY: sheetTY }] }]}>
+          <View style={s.dateModalDragZone} {...sheetPan}>
+            <View style={s.dateModalHandle} />
+            <Text style={s.dateModalTitle}>{label}</Text>
+          </View>
+          <View style={s.locSearchRow}>
+            <Ionicons name="search" size={16} color={colors.textTertiary} />
+            <TextInput
+              style={s.locSearchInput}
+              placeholder={searchPlaceholder}
+              placeholderTextColor={colors.textTertiary}
+              value={search}
+              onChangeText={(v) => { setSearch(v); setPage(1); }}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => { setSearch(''); setPage(1); }}>
+                <Ionicons name="close-circle" size={16} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <ScrollView
+            style={s.locList}
+            contentContainerStyle={s.locListContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {visible2.length === 0 ? (
+              <Text style={[s.emptyHint, { textAlign: 'center', marginTop: 16 }]}>
+                {t('filters.noOptions', 'No options available')}
+              </Text>
+            ) : (
+              visible2.map((item) => {
+                const selected = isSelected(item);
+                return (
+                  <TouchableOpacity
+                    key={getKey(item)}
+                    style={[s.listRow, selected && s.listRowActive]}
+                    onPress={() => { onToggle(item); if (!multiSelect) closeSheet(); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[s.listRowText, selected && s.listRowTextActive]}>{getName(item)}</Text>
+                    {selected && <Ionicons name="checkmark" size={18} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })
+            )}
+            {hasMore && (
+              <TouchableOpacity style={s.loadMoreBtn} onPress={() => setPage((p) => p + 1)}>
+                <Text style={s.loadMoreText}>
+                  {t('filters.showMore', 'Show more')} ({filtered.length - visible2.length})
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+          {multiSelect && (
+            <View style={s.locDoneRow}>
+              <TouchableOpacity style={s.locDoneBtn} onPress={() => closeSheet()}>
+                <Text style={s.locDoneBtnText}>{t('common.done', 'Done')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
 }
 
 // ─── Drum-scroll date picker (same as DOB field) ─────────────────────────────
@@ -211,36 +452,26 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
   const s = makeStyles(colors);
   const [local, setLocal] = useState<TripFilters>(filters);
   const { data: destinationTree = [] } = useDestinations();
+  const { data: startingCities = [] } = useFilterStartingCities();
+  const { data: startingCountries = [] } = useFilterStartingCountries();
+  const { data: destCountries = [] } = useFilterDestinationCountries();
+
+  // Location picker open state (lifted out of nested Modal)
+  const [pickerOpen, setPickerOpen] = useState<'startCountry' | 'startCity' | 'destCountry' | 'destCity' | null>(null);
 
   // Local YYYY-MM-DD strings for the date inputs (display only; converted to UTC ISO on apply)
   const [startDateStr, setStartDateStr] = useState('');
   const [endDateStr, setEndDateStr] = useState('');
-
-  // Search state for city pickers
-  const [destSearch, setDestSearch] = useState('');
-  const [startCitySearch, setStartCitySearch] = useState('');
 
   // Drag-to-dismiss
   const { translateY, backdropOpacity, panHandlers, openSheet, closeSheet } = useDragToDismiss(onClose);
 
   useLayoutEffect(() => { if (visible) openSheet(); }, [visible]);
 
-  // Flatten all cities from the destination tree for the picker
-  const allCities: DestinationOption[] = destinationTree.flatMap(
+  // Flatten all destination cities from the tree
+  const allDestCities: DestinationOption[] = destinationTree.flatMap(
     (country) => country.children?.filter((c) => c.type === 'city') ?? []
   );
-
-  const filteredDestCities = destSearch.trim()
-    ? allCities.filter((c) =>
-        getDestName(c).toLowerCase().includes(destSearch.toLowerCase())
-      )
-    : allCities;
-
-  const filteredStartCities = startCitySearch.trim()
-    ? allCities.filter((c) =>
-        getDestName(c).toLowerCase().includes(startCitySearch.toLowerCase())
-      )
-    : allCities;
 
   const update = (key: keyof TripFilters, value: any) => {
     setLocal((prev) => ({ ...prev, [key]: value }));
@@ -291,13 +522,72 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
     setLocal({});
     setStartDateStr('');
     setEndDateStr('');
-    setDestSearch('');
-    setStartCitySearch('');
     onApply({});
     closeSheet();
   };
 
   return (
+    <>
+    <PickerModal
+      visible={pickerOpen === 'startCountry'}
+      onClose={() => setPickerOpen(null)}
+      label={t('filters.startingCountry', 'Starting Country')}
+      items={startingCountries}
+      getKey={(c) => c.country_code}
+      getName={getCountryName}
+      isSelected={(c) => local.starting_country_code === c.country_code}
+      onToggle={(c) => update('starting_country_code', local.starting_country_code === c.country_code ? undefined : c.country_code)}
+      searchPlaceholder={t('filters.searchCountry', 'Search country...')}
+      colors={colors}
+      s={s}
+    />
+    <PickerModal
+      visible={pickerOpen === 'startCity'}
+      onClose={() => setPickerOpen(null)}
+      label={t('filters.startingCity', 'Starting City')}
+      items={startingCities}
+      getKey={(c) => c.id}
+      getName={getStartingCityName}
+      isSelected={(c) => local.starting_city_id === c.id}
+      onToggle={(c) => update('starting_city_id', local.starting_city_id === c.id ? undefined : c.id)}
+      searchPlaceholder={t('filters.searchCity', 'Search city...')}
+      colors={colors}
+      s={s}
+    />
+    <PickerModal
+      visible={pickerOpen === 'destCountry'}
+      onClose={() => setPickerOpen(null)}
+      label={t('filters.destinationCountry', 'Destination Country')}
+      items={destCountries}
+      getKey={(c) => c.country_code}
+      getName={getCountryName}
+      isSelected={(c) => (local.destination_country_codes ?? []).includes(c.country_code)}
+      onToggle={(c) => {
+        const current = local.destination_country_codes ?? [];
+        const next = current.includes(c.country_code)
+          ? current.filter((x) => x !== c.country_code)
+          : [...current, c.country_code];
+        update('destination_country_codes', next.length ? next : undefined);
+      }}
+      searchPlaceholder={t('filters.searchCountry', 'Search country...')}
+      multiSelect
+      colors={colors}
+      s={s}
+    />
+    <PickerModal
+      visible={pickerOpen === 'destCity'}
+      onClose={() => setPickerOpen(null)}
+      label={t('filters.destinationCity', 'Destination City')}
+      items={allDestCities}
+      getKey={(c) => c.id}
+      getName={getDestName}
+      isSelected={(c) => (local.destination_ids ?? []).includes(c.id)}
+      onToggle={(c) => toggleDestination(c.id)}
+      searchPlaceholder={t('filters.searchCity', 'Search city...')}
+      multiSelect
+      colors={colors}
+      s={s}
+    />
     <Modal visible={visible} animationType="none" transparent onRequestClose={handleClose}>
       <Animated.View style={[s.backdrop, { backgroundColor: 'transparent' }]}>
         <Animated.View style={[s.backdropDim, { opacity: backdropOpacity }]} />
@@ -316,95 +606,55 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
           </View>
           <ScrollView showsVerticalScrollIndicator={false} style={s.body} contentContainerStyle={s.bodyContent}>
 
-            {/* Destinations (OR multi-select) */}
-            <Text style={s.sectionLabel}>{t('filters.destinations')}</Text>
-            <Text style={s.sectionHint}>{t('filters.destinationsHint')}</Text>
-            {allCities.length === 0 ? (
-              <Text style={s.emptyHint}>{t('filters.noDestinations', 'No destinations available')}</Text>
-            ) : (
-              <>
-                {allCities.length > 6 && (
-                  <View style={s.searchRow}>
-                    <Ionicons name="search" size={15} color={colors.textTertiary} />
-                    <TextInput
-                      style={s.searchInput}
-                      placeholder={t('filters.searchDestinations', 'Search destinations...')}
-                      placeholderTextColor={colors.textTertiary}
-                      value={destSearch}
-                      onChangeText={setDestSearch}
-                    />
-                    {destSearch.length > 0 && (
-                      <TouchableOpacity onPress={() => setDestSearch('')}>
-                        <Ionicons name="close-circle" size={15} color={colors.textTertiary} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-                <View style={s.chipWrap}>
-                  {filteredDestCities.length === 0 ? (
-                    <Text style={s.emptyHint}>{t('filters.noResults', 'No results')}</Text>
-                  ) : (
-                    filteredDestCities.map((city) => {
-                      const selected = (local.destination_ids ?? []).includes(city.id);
-                      return (
-                        <TouchableOpacity
-                          key={city.id}
-                          style={[s.ratingChip, selected && s.ratingChipActive]}
-                          onPress={() => toggleDestination(city.id)}
-                        >
-                          <Text style={[s.ratingChipText, selected && s.ratingChipTextActive]}>
-                            {getDestName(city)}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })
-                  )}
-                </View>
-              </>
-            )}
+            {/* Starting Country */}
+            <Text style={s.sectionLabel}>{t('filters.startingCountry', 'Starting Country')}</Text>
+            <PickerButton
+              label={t('filters.startingCountry', 'Starting Country')}
+              selectedSummary={startingCountries.find((c) => c.country_code === local.starting_country_code) ? getCountryName(startingCountries.find((c) => c.country_code === local.starting_country_code)!) : ''}
+              onPress={() => setPickerOpen('startCountry')}
+              onClear={() => update('starting_country_code', undefined)}
+              colors={colors}
+              s={s}
+            />
 
-            {/* Starting City (single-select) */}
+            {/* Starting City */}
             <Text style={s.sectionLabel}>{t('filters.startingCity', 'Starting City')}</Text>
-            <Text style={s.sectionHint}>{t('filters.startingCityHint', 'Filter by where the trip departs from')}</Text>
-            {allCities.length === 0 ? (
-              <Text style={s.emptyHint}>{t('filters.noDestinations', 'No destinations available')}</Text>
-            ) : (
-              <>
-                {allCities.length > 6 && (
-                  <View style={s.searchRow}>
-                    <Ionicons name="search" size={15} color={colors.textTertiary} />
-                    <TextInput
-                      style={s.searchInput}
-                      placeholder={t('filters.searchStartingCity', 'Search city...')}
-                      placeholderTextColor={colors.textTertiary}
-                      value={startCitySearch}
-                      onChangeText={setStartCitySearch}
-                    />
-                    {startCitySearch.length > 0 && (
-                      <TouchableOpacity onPress={() => setStartCitySearch('')}>
-                        <Ionicons name="close-circle" size={15} color={colors.textTertiary} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-                <View style={s.chipWrap}>
-                  {[{ id: undefined as string | undefined, name_en: t('filters.any', 'Any'), name_ar: t('filters.any', 'Any'), type: 'city', country_code: '' }, ...filteredStartCities].map((city) => {
-                    const selected = local.starting_city_id === city.id;
-                    return (
-                      <TouchableOpacity
-                        key={city.id ?? 'any'}
-                        style={[s.ratingChip, selected && s.ratingChipActive]}
-                        onPress={() => update('starting_city_id', city.id)}
-                      >
-                        <Text style={[s.ratingChipText, selected && s.ratingChipTextActive]}>
-                          {getDestName(city as DestinationOption)}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
-            )}
+            <PickerButton
+              label={t('filters.startingCity', 'Starting City')}
+              selectedSummary={startingCities.find((c) => c.id === local.starting_city_id) ? getStartingCityName(startingCities.find((c) => c.id === local.starting_city_id)!) : ''}
+              onPress={() => setPickerOpen('startCity')}
+              onClear={() => update('starting_city_id', undefined)}
+              colors={colors}
+              s={s}
+            />
+
+            {/* Destination Country */}
+            <Text style={s.sectionLabel}>{t('filters.destinationCountry', 'Destination Country')}</Text>
+            <PickerButton
+              label={t('filters.destinationCountry', 'Destination Country')}
+              selectedSummary={(local.destination_country_codes ?? []).map((code) => {
+                const c = destCountries.find((x) => x.country_code === code);
+                return c ? getCountryName(c) : code;
+              }).join(', ')}
+              onPress={() => setPickerOpen('destCountry')}
+              onClear={() => update('destination_country_codes', undefined)}
+              colors={colors}
+              s={s}
+            />
+
+            {/* Destination City */}
+            <Text style={s.sectionLabel}>{t('filters.destinationCity', 'Destination City')}</Text>
+            <PickerButton
+              label={t('filters.destinationCity', 'Destination City')}
+              selectedSummary={(local.destination_ids ?? []).map((id) => {
+                const c = allDestCities.find((x) => x.id === id);
+                return c ? getDestName(c) : id;
+              }).join(', ')}
+              onPress={() => setPickerOpen('destCity')}
+              onClear={() => update('destination_ids', undefined)}
+              colors={colors}
+              s={s}
+            />
 
             {/* Single / Multiple destinations */}
             <Text style={s.sectionLabel}>{t('filters.numberOfDestinations')}</Text>
@@ -562,59 +812,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
         </Animated.View>
       </Animated.View>
     </Modal>
+    </>
   );
 }
 
-function makeStyles(c: ThemeColors) {
-  return StyleSheet.create({
-    backdrop: { flex: 1, justifyContent: 'flex-end' },
-    backdropDim: { ...StyleSheet.absoluteFillObject, backgroundColor: '#000' },
-    backdropTouch: { ...StyleSheet.absoluteFillObject },
-    sheet: { backgroundColor: c.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '92%', flexDirection: 'column', ...Shadow.lg },
-    dragZone: { borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden', backgroundColor: c.surface },
-    handleBar: { alignItems: 'center', paddingTop: 12, paddingBottom: 4, paddingHorizontal: 40 },
-    handle: { width: 40, height: 4, backgroundColor: c.gray300, borderRadius: 2 },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
-    title: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
-    body: { flexShrink: 1, paddingHorizontal: 20, paddingTop: 16 },
-    bodyContent: { paddingBottom: 24 },
-    sectionLabel: { fontSize: FontSize.sm, fontWeight: '700', color: c.textPrimary, textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 10, marginTop: 16 },
-    row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    priceInput: { flex: 1 },
-    inputLabel: { fontSize: FontSize.xs, color: c.textSecondary, marginBottom: 4, fontWeight: '600' },
-    input: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.surface },
-    inputError: { borderColor: c.error },
-    priceDash: { paddingTop: 18 },
-    dashText: { color: c.textTertiary, fontSize: FontSize.lg },
-    sectionHint: { fontSize: FontSize.xs, color: c.textSecondary, marginBottom: 10, marginTop: -6 },
-    chipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
-    ratingRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-    ratingChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.full, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.surface },
-    ratingChipActive: { borderColor: c.primary, backgroundColor: c.primary },
-    ratingChipText: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary },
-    ratingChipTextActive: { color: c.white },
-    actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 28, borderTopWidth: 1, borderTopColor: c.border },
-    resetBtn: { flex: 1 },
-    applyBtn: { flex: 2 },
-    emptyHint: { fontSize: FontSize.sm, color: c.textTertiary, fontStyle: 'italic', marginBottom: 4 },
-    searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: c.surface, marginBottom: 10 },
-    searchInput: { flex: 1, fontSize: FontSize.sm, color: c.textPrimary, padding: 0 },
-    dateSelectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, backgroundColor: c.surface, marginBottom: 4 },
-    dateSelectBtnText: { flex: 1, fontSize: FontSize.md, color: c.textPrimary, fontWeight: '500' },
-    dateModalOverlay: { flex: 1, justifyContent: 'flex-end' },
-    dateModalSheet: { backgroundColor: c.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, paddingHorizontal: 20 },
-    dateModalDragZone: { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', backgroundColor: c.surface, alignItems: 'center', paddingBottom: 8 },
-    dateModalHandle: { width: 40, height: 4, backgroundColor: c.gray300, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 8 },
-    dateModalTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, textAlign: 'center', marginBottom: 8 },
-    dateColsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-    scrollColItem: { height: ITEM_H, justifyContent: 'center', alignItems: 'center', borderRadius: Radius.md },
-    scrollColItemActive: { backgroundColor: c.primarySurface },
-    scrollColText: { fontSize: FontSize.md, color: c.textSecondary, fontWeight: '500' },
-    scrollColTextActive: { fontSize: FontSize.md, color: c.primary, fontWeight: '700' },
-    dateModalActions: { flexDirection: 'row', gap: 12, marginTop: 4 },
-    dateModalCancel: { flex: 1, paddingVertical: 14, borderRadius: Radius.lg, borderWidth: 1.5, borderColor: c.border, alignItems: 'center' },
-    dateModalCancelText: { fontSize: FontSize.md, fontWeight: '600', color: c.textSecondary },
-    dateModalDone: { flex: 2, paddingVertical: 14, borderRadius: Radius.lg, backgroundColor: c.primary, alignItems: 'center' },
-    dateModalDoneText: { fontSize: FontSize.md, fontWeight: '700', color: c.white },
-  });
-}

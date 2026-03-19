@@ -209,6 +209,8 @@ class StartingCityInfo(BaseModel):
     name_en: str
     name_ar: str
     country_code: str
+    country_name_en: Optional[str] = None
+    country_name_ar: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -219,6 +221,10 @@ class DestinationInfo(BaseModel):
     name_en: str
     name_ar: str
     country_code: str
+    country_name_en: Optional[str] = None
+    country_name_ar: Optional[str] = None
+    place_name_en: Optional[str] = None
+    place_name_ar: Optional[str] = None
     type: str
 
     class Config:

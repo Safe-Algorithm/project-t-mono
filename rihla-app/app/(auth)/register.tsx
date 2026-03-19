@@ -43,9 +43,9 @@ export default function RegisterScreen() {
   const stepOrder: Step[] = ['contact', 'otp', 'details'];
 
   const sendOtp = async () => {
-    if (contactType === 'email' && !contact.trim()) {
-      setErrors({ contact: t('auth.emailRequired') });
-      return;
+    if (contactType === 'email') {
+      if (!contact.trim()) { setErrors({ contact: t('auth.emailRequired') }); return; }
+      if (!/\S+@\S+\.\S+/.test(contact)) { setErrors({ contact: t('auth.emailInvalid') }); return; }
     }
     if (contactType === 'phone' && !localNumber.trim()) {
       setErrors({ contact: t('auth.phoneRequired') });
@@ -127,7 +127,7 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const registerPayload: any = { name: name.trim(), password };
+      const registerPayload: any = { name: name.trim(), password, preferred_language: language };
       if (contactType === 'email') {
         registerPayload.email = contact.trim();
         registerPayload.email_verification_token = verificationToken;
@@ -139,11 +139,17 @@ export default function RegisterScreen() {
       await useAuthStore.getState().register(registerPayload);
       router.replace('/(tabs)');
     } catch (err: any) {
-      const detail = err?.response?.data?.detail;
-      const msg = Array.isArray(detail)
-        ? (detail[0]?.msg ?? t('auth.genericError'))
-        : (typeof detail === 'string' ? detail : t('auth.genericError'));
-      setErrors({ form: msg });
+      if (!err?.response) {
+        setErrors({ form: t('auth.networkError') });
+      } else if (err.response?.status >= 500) {
+        setErrors({ form: t('auth.serverError') });
+      } else {
+        const detail = err?.response?.data?.detail;
+        const msg = Array.isArray(detail)
+          ? (detail[0]?.msg ?? t('auth.genericError'))
+          : (typeof detail === 'string' ? detail : t('auth.genericError'));
+        setErrors({ form: msg });
+      }
     } finally {
       setLoading(false);
     }
@@ -236,7 +242,7 @@ export default function RegisterScreen() {
             <>
               {errors.form ? (
                 <View style={s.errorBanner}>
-                  <Text style={s.errorBannerText}>{errors.form}</Text>
+                  <Text style={[s.errorBannerText, isRTL && s.errorBannerTextRtl]}>{errors.form}</Text>
                 </View>
               ) : null}
               <Input label={t('auth.name')} placeholder={t('auth.name')} value={name} onChangeText={setName}
@@ -333,6 +339,7 @@ function makeStyles(c: ThemeColors) {
     pwRuleText: { fontSize: FontSize.xs, color: c.textTertiary },
     pwRuleOk: { color: '#16A34A' },
     errorBanner: { backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FCA5A5', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 },
-    errorBannerText: { fontSize: FontSize.sm, color: '#DC2626', lineHeight: 20 },
+    errorBannerText: { fontSize: FontSize.sm, color: '#DC2626', lineHeight: 20, textAlign: 'left' as const },
+    errorBannerTextRtl: { textAlign: 'right' as const },
   });
 }

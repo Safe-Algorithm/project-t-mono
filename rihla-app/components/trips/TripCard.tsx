@@ -29,6 +29,10 @@ interface TripCardProps {
   testID?: string;
 }
 
+function countryCodeToFlag(code: string): string {
+  return code.toUpperCase().replace(/./g, c => String.fromCodePoint(0x1F1E6 - 65 + c.charCodeAt(0)));
+}
+
 function getLocalizedName(trip: Trip, lang: string): string {
   if (lang === 'ar') return trip.name_ar || trip.name_en || 'Unnamed Trip';
   return trip.name_en || trip.name_ar || 'Unnamed Trip';
@@ -37,14 +41,67 @@ function getLocalizedName(trip: Trip, lang: string): string {
 function getDestLabel(trip: Trip, lang: string): string | null {
   const dests = trip.destinations ?? [];
   if (!trip.starting_city && dests.length === 0) return null;
-  const getName = (obj: { name_en: string; name_ar: string }) =>
-    lang === 'ar' ? obj.name_ar || obj.name_en : obj.name_en || obj.name_ar;
-  const from = trip.starting_city ? getName(trip.starting_city) : null;
-  const to = dests.map(getName).join(', ') || null;
-  const arrow = lang === 'ar' ? ' ← ' : ' → ';
-  if (from && to) return `${from}${arrow}${to}`;
-  if (from) return from;
-  return to;
+  const isAr = lang === 'ar';
+  const getName = (en: string | null, ar: string | null) =>
+    isAr ? ar || en || '' : en || ar || '';
+
+  // Starting city: flag + city name (always city, never place/country)
+  let from: string | null = null;
+  if (trip.starting_city) {
+    const sc = trip.starting_city;
+    const flag = sc.country_code ? countryCodeToFlag(sc.country_code) : '';
+    const city = getName(sc.name_en, sc.name_ar);
+    from = `${flag} ${city}`;
+  }
+
+  let to: string | null = null;
+  if (dests.length > 0) {
+    const isGuided = trip.trip_type === 'guided';
+    const isDomestic = !trip.is_international;
+
+    if (isGuided) {
+      // Guided: show place name if set, else city name — each destination individually
+      const labels = dests.map(dest => {
+        const place = getName(dest.place_name_en ?? null, dest.place_name_ar ?? null);
+        const city = getName(dest.name_en, dest.name_ar);
+        return place || city;
+      }).filter(Boolean);
+      to = labels.join(' · ') || null;
+    } else if (isDomestic) {
+      // Domestic: deduplicated city names
+      const seen = new Set<string>();
+      const labels: string[] = [];
+      for (const dest of dests) {
+        const city = getName(dest.name_en, dest.name_ar);
+        if (city && !seen.has(city)) {
+          seen.add(city);
+          labels.push(city);
+        }
+      }
+      to = labels.join(' · ') || null;
+    } else {
+      // International: deduplicated country names with flag
+      const seen = new Set<string>();
+      const labels: string[] = [];
+      for (const dest of dests) {
+        const key = dest.country_code || '';
+        if (key && !seen.has(key)) {
+          seen.add(key);
+          const country = getName(dest.country_name_en ?? null, dest.country_name_ar ?? null);
+          const flag = countryCodeToFlag(key);
+          const label = country ? `${flag} ${country}` : flag;
+          if (label) labels.push(label);
+        }
+      }
+      to = labels.join(' · ') || null;
+    }
+  }
+
+  const arrow = isAr ? ' \u203a ' : ' \u2192 ';
+  const RLM = '\u200f';
+  if (from && to) return isAr ? `${RLM}${from}${arrow}${to}` : `${from}${arrow}${to}`;
+  if (from) return isAr ? `${RLM}${from}` : from;
+  return isAr && to ? `${RLM}${to}` : to;
 }
 
 function formatDate(dateStr: string, _lang: string, tz?: string): string {
@@ -176,7 +233,12 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
         {routeLabel && (
           <View style={s.routeRow}>
             <Ionicons name="navigate-outline" size={13} color={colors.primary} />
-            <Text style={s.routeText} numberOfLines={1}>{routeLabel}</Text>
+            <Text
+              style={[s.routeText, i18n.language === 'ar' && s.routeTextRtl]}
+              numberOfLines={1}
+            >
+              {routeLabel}
+            </Text>
           </View>
         )}
         <View style={s.metaRow}>
@@ -240,6 +302,7 @@ function makeStyles(c: ThemeColors) {
     provider: { fontSize: FontSize.sm, color: c.textTertiary, flex: 1 },
     routeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     routeText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '600', flex: 1 },
+    routeTextRtl: { writingDirection: 'rtl' },
     metaRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
     metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     metaText: { fontSize: FontSize.xs, color: c.textSecondary, fontWeight: '500' },

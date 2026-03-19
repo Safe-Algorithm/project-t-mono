@@ -5,16 +5,6 @@ import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import apiClient from '../lib/api';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
-
 async function registerForPushNotifications(): Promise<string | null> {
   if (!Device.isDevice) return null;
 
@@ -53,39 +43,57 @@ export function usePushNotifications() {
   const tokenListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
-    registerForPushNotifications().then((token) => {
-      if (token) sendTokenToServer(token);
-    });
+    // Expo Go (SDK 53+) removed remote notification support — skip silently
+    let cleanup: (() => void) | undefined;
+    try {
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
 
-    // Handle cold-start: app was killed and user tapped a notification to open it
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
+      registerForPushNotifications().then((token) => {
+        if (token) sendTokenToServer(token);
+      });
+
+      // Handle cold-start: app was killed and user tapped a notification to open it
+      Notifications.getLastNotificationResponseAsync().then((response) => {
+        if (response) {
+          const data = response.notification.request.content.data as Record<string, string> | undefined;
+          navigateFromData(data);
+        }
+      });
+
+      // Token rotation: OS can invalidate and issue a new FCM token at any time
+      // (e.g. app reinstall, OS update, Firebase token refresh cycle)
+      tokenListener.current = Notifications.addPushTokenListener((newToken) => {
+        sendTokenToServer(newToken.data);
+      });
+
+      // Fires when a notification is received while app is foregrounded
+      notificationListener.current = Notifications.addNotificationReceivedListener((_notification) => {
+        // Foreground notification received — setNotificationHandler above shows it automatically
+      });
+
+      // Fires when user taps a notification while app is foregrounded or backgrounded
+      responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
         const data = response.notification.request.content.data as Record<string, string> | undefined;
         navigateFromData(data);
-      }
-    });
+      });
 
-    // Token rotation: OS can invalidate and issue a new FCM token at any time
-    // (e.g. app reinstall, OS update, Firebase token refresh cycle)
-    tokenListener.current = Notifications.addPushTokenListener((newToken) => {
-      sendTokenToServer(newToken.data);
-    });
+      cleanup = () => {
+        notificationListener.current?.remove();
+        responseListener.current?.remove();
+        tokenListener.current?.remove();
+      };
+    } catch {
+      // Push notifications not supported in this environment (e.g. Expo Go SDK 53+)
+    }
 
-    // Fires when a notification is received while app is foregrounded
-    notificationListener.current = Notifications.addNotificationReceivedListener((_notification) => {
-      // Foreground notification received — setNotificationHandler above shows it automatically
-    });
-
-    // Fires when user taps a notification while app is foregrounded or backgrounded
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as Record<string, string> | undefined;
-      navigateFromData(data);
-    });
-
-    return () => {
-      notificationListener.current?.remove();
-      responseListener.current?.remove();
-      tokenListener.current?.remove();
-    };
+    return () => cleanup?.();
   }, []);
 }

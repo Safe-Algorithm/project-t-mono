@@ -22,6 +22,7 @@ class UserCreate(UserBase):
     password: str
     role: UserRole = UserRole.NORMAL
     provider_id: uuid.UUID | None = None
+    preferred_language: str = "en"
     
     @model_validator(mode='after')
     def validate_email_or_phone(self):

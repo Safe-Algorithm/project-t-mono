@@ -298,42 +298,57 @@ export default function TripDetailScreen() {
             )
           )}
 
-          {/* Route: Starting city → Destinations */}
-          {(trip.starting_city || (trip.destinations && trip.destinations.length > 0)) && (
-            <View style={s.routeBox}>
-              <Ionicons name="navigate-outline" size={18} color={colors.primary} />
-              <View style={{ flex: 1 }}>
+          {/* Route: Timeline */}
+          {(trip.starting_city || (trip.destinations && trip.destinations.length > 0)) && (() => {
+            const isAr = i18n.language === 'ar';
+            const allStops: { key: string; isStart: boolean; cityName: string; subName?: string; countryName?: string; flag: string }[] = [];
+            if (trip.starting_city) {
+              const sc = trip.starting_city;
+              const flag = sc.country_code ? sc.country_code.toUpperCase().replace(/./g, (c: string) => String.fromCodePoint(0x1F1E6 - 65 + c.charCodeAt(0))) : '';
+              allStops.push({
+                key: 'start',
+                isStart: true,
+                cityName: isAr ? sc.name_ar || sc.name_en : sc.name_en || sc.name_ar,
+                countryName: (isAr ? (sc.country_name_ar || sc.country_name_en) : (sc.country_name_en || sc.country_name_ar)) || undefined,
+                flag,
+              });
+            }
+            for (const dest of (trip.destinations ?? [])) {
+              const flag = dest.country_code ? dest.country_code.toUpperCase().replace(/./g, (c: string) => String.fromCodePoint(0x1F1E6 - 65 + c.charCodeAt(0))) : '';
+              const cityName = isAr ? dest.name_ar || dest.name_en : dest.name_en || dest.name_ar;
+              const placeName = isAr ? (dest.place_name_ar || dest.place_name_en) : (dest.place_name_en || dest.place_name_ar);
+              const countryName = isAr ? (dest.country_name_ar || dest.country_name_en) : (dest.country_name_en || dest.country_name_ar);
+              allStops.push({
+                key: dest.id,
+                isStart: false,
+                cityName: placeName || cityName,
+                subName: placeName ? cityName : undefined,
+                countryName: countryName || undefined,
+                flag,
+              });
+            }
+            return (
+              <View style={s.routeBox}>
                 <Text style={s.routeLabel}>{t('trip.route')}</Text>
-                <View style={s.routeRow}>
-                  {trip.starting_city && (
-                    <View style={s.routeChip}>
-                      <Ionicons name="location" size={12} color={colors.primary} />
-                      <Text style={s.routeChipText}>
-                        {i18n.language === 'ar'
-                          ? trip.starting_city.name_ar || trip.starting_city.name_en
-                          : trip.starting_city.name_en || trip.starting_city.name_ar}
-                      </Text>
-                    </View>
-                  )}
-                  {trip.starting_city && trip.destinations && trip.destinations.length > 0 && (
-                    <Ionicons
-                      name={i18n.language === 'ar' ? 'arrow-back' : 'arrow-forward'}
-                      size={14}
-                      color={colors.textTertiary}
-                    />
-                  )}
-                  {(trip.destinations ?? []).map((dest, i) => (
-                    <React.Fragment key={dest.id}>
-                      <View style={s.routeChip}>
-                        <Ionicons name="flag-outline" size={12} color={colors.accent} />
-                        <Text style={[s.routeChipText, { color: colors.accent }]}>
-                          {i18n.language === 'ar' ? dest.name_ar || dest.name_en : dest.name_en || dest.name_ar}
-                        </Text>
+                <View style={s.timelineContainer}>
+                  {allStops.map((stop, idx) => (
+                    <View key={stop.key} style={s.timelineRow}>
+                      <View style={s.timelineLeft}>
+                        <View style={[s.timelineDot, stop.isStart && s.timelineDotStart]} />
+                        {idx < allStops.length - 1 && <View style={s.timelineLine} />}
                       </View>
-                      {i < (trip.destinations?.length ?? 0) - 1 && (
-                        <Text style={s.routeSep}>·</Text>
-                      )}
-                    </React.Fragment>
+                      <View style={s.timelineContent}>
+                        <Text style={[s.timelineCityText, stop.isStart && s.timelineCityStart]}>
+                          {stop.flag} {stop.cityName}
+                        </Text>
+                        {stop.subName ? (
+                          <Text style={s.timelineSubText}>{stop.subName}</Text>
+                        ) : null}
+                        {stop.countryName ? (
+                          <Text style={s.timelineCountryText}>{stop.countryName}</Text>
+                        ) : null}
+                      </View>
+                    </View>
                   ))}
                 </View>
                 {trip.is_international && (
@@ -343,8 +358,8 @@ export default function TripDetailScreen() {
                   </View>
                 )}
               </View>
-            </View>
-          )}
+            );
+          })()}
 
           {/* Meeting place */}
           {trip.has_meeting_place && trip.meeting_location && (
@@ -652,16 +667,22 @@ function makeStyles(c: ThemeColors) {
   infoChipValue: { fontSize: FontSize.sm, color: c.textPrimary, fontWeight: '700' },
 
   routeBox: {
-    flexDirection: 'row', gap: 12, alignItems: 'flex-start',
     backgroundColor: c.gray50,
     borderRadius: Radius.lg, padding: 14, marginBottom: 20,
     borderLeftWidth: 3, borderLeftColor: c.primary,
   },
-  routeLabel: { fontSize: FontSize.xs, color: c.primary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  routeRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 6 },
-  routeChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: c.surface, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: c.border },
-  routeChipText: { fontSize: FontSize.xs, color: c.textPrimary, fontWeight: '600' },
-  routeSep: { fontSize: FontSize.sm, color: c.textTertiary },
+  routeLabel: { fontSize: FontSize.xs, color: c.primary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 },
+  timelineContainer: { gap: 0 },
+  timelineRow: { flexDirection: 'row', alignItems: 'flex-start', minHeight: 44 },
+  timelineLeft: { width: 20, alignItems: 'center', marginTop: 4 },
+  timelineDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: c.accent, borderWidth: 2, borderColor: c.accent + '60' },
+  timelineDotStart: { backgroundColor: c.primary, borderColor: c.primary + '60' },
+  timelineLine: { width: 2, flex: 1, backgroundColor: c.border, marginVertical: 2 },
+  timelineContent: { flex: 1, paddingBottom: 12, paddingStart: 10 },
+  timelineCityText: { fontSize: FontSize.sm, fontWeight: '700', color: c.accent },
+  timelineCityStart: { color: c.primary },
+  timelineSubText: { fontSize: FontSize.xs, color: c.textSecondary, marginTop: 1 },
+  timelineCountryText: { fontSize: FontSize.xs, color: c.textTertiary, marginTop: 1 },
   intlBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 },
   intlText: { fontSize: FontSize.xs, color: c.primary, fontWeight: '600' },
   meetingBox: {

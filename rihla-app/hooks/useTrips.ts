@@ -60,8 +60,10 @@ export interface TripFilters {
   max_participants?: number;
   min_rating?: number;
   starting_city_id?: string;
+  starting_country_code?: string;
   is_international?: boolean;
   destination_ids?: string[];
+  destination_country_codes?: string[];
   single_destination?: boolean;
   amenities?: string[];
   trip_type?: string;
@@ -78,6 +80,21 @@ export interface DestinationOption {
   children?: DestinationOption[];
 }
 
+export interface CountryOption {
+  country_code: string;
+  name_en: string;
+  name_ar: string;
+}
+
+export interface StartingCityOption {
+  id: string;
+  name_en: string;
+  name_ar: string;
+  country_code: string;
+  country_name_en?: string | null;
+  country_name_ar?: string | null;
+}
+
 export function useDestinations() {
   return useQuery<DestinationOption[]>({
     queryKey: ['destinations', 'active'],
@@ -89,13 +106,47 @@ export function useDestinations() {
   });
 }
 
+export function useFilterStartingCities() {
+  return useQuery<StartingCityOption[]>({
+    queryKey: ['filter-options', 'starting-cities'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<StartingCityOption[]>('/filter-options/starting-cities');
+      return data;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+}
+
+export function useFilterStartingCountries() {
+  return useQuery<CountryOption[]>({
+    queryKey: ['filter-options', 'starting-countries'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<CountryOption[]>('/filter-options/starting-countries');
+      return data;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+}
+
+export function useFilterDestinationCountries() {
+  return useQuery<CountryOption[]>({
+    queryKey: ['filter-options', 'destination-countries'],
+    queryFn: async () => {
+      const { data } = await apiClient.get<CountryOption[]>('/filter-options/destination-countries');
+      return data;
+    },
+    staleTime: 1000 * 60 * 30,
+  });
+}
+
 const PAGE_SIZE = 20;
 
 function buildTripParams(filters: TripFilters, skip: number, limit: number): URLSearchParams {
   const params = new URLSearchParams();
+  const arrayKeys = ['destination_ids', 'destination_country_codes', 'amenities'];
   Object.entries(filters).forEach(([k, v]) => {
     if (v === undefined || v === '') return;
-    if ((k === 'destination_ids' || k === 'amenities') && Array.isArray(v)) {
+    if (arrayKeys.includes(k) && Array.isArray(v)) {
       (v as string[]).forEach((val) => params.append(k, val));
     } else {
       params.append(k, String(v));

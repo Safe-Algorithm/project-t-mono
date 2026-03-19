@@ -188,11 +188,20 @@ def build_trip_read(trip, session: Session) -> TripRead:
         from app.models.destination import Destination
         sc = session.get(Destination, trip.starting_city_id)
         if sc:
+            sc_country_name_en = None
+            sc_country_name_ar = None
+            if sc.parent_id:
+                sc_parent = session.get(Destination, sc.parent_id)
+                if sc_parent:
+                    sc_country_name_en = sc_parent.name_en
+                    sc_country_name_ar = sc_parent.name_ar
             starting_city_info = {
                 "id": sc.id,
                 "name_en": sc.name_en,
                 "name_ar": sc.name_ar,
                 "country_code": sc.country_code,
+                "country_name_en": sc_country_name_en,
+                "country_name_ar": sc_country_name_ar,
             }
 
     # Build destinations list
@@ -202,15 +211,34 @@ def build_trip_read(trip, session: Session) -> TripRead:
     trip_dest_links = session.exec(
         sql_select(TripDestination).where(TripDestination.trip_id == trip.id)
     ).all()
+    from app.models.place import Place
     destinations_info = []
     for link in trip_dest_links:
         dest = session.get(Destination, link.destination_id)
         if dest:
+            country_name_en = None
+            country_name_ar = None
+            if dest.parent_id:
+                parent = session.get(Destination, dest.parent_id)
+                if parent:
+                    country_name_en = parent.name_en
+                    country_name_ar = parent.name_ar
+            place_name_en = None
+            place_name_ar = None
+            if link.place_id:
+                place = session.get(Place, link.place_id)
+                if place:
+                    place_name_en = place.name_en
+                    place_name_ar = place.name_ar
             destinations_info.append({
                 "id": dest.id,
                 "name_en": dest.name_en,
                 "name_ar": dest.name_ar,
                 "country_code": dest.country_code,
+                "country_name_en": country_name_en,
+                "country_name_ar": country_name_ar,
+                "place_name_en": place_name_en,
+                "place_name_ar": place_name_ar,
                 "type": dest.type.value if hasattr(dest.type, 'value') else str(dest.type),
             })
 
@@ -284,9 +312,11 @@ def list_public_trips(
     min_rating: Optional[float] = None,
     is_active: Optional[bool] = True,
     starting_city_id: Optional[uuid.UUID] = None,
+    starting_country_code: Optional[str] = None,
     is_international: Optional[bool] = None,
     trip_type: Optional[str] = None,
     destination_ids: Optional[List[uuid.UUID]] = Query(default=None),
+    destination_country_codes: Optional[List[str]] = Query(default=None),
     single_destination: Optional[bool] = None,
     amenities: Optional[List[str]] = Query(default=None),
 ):
@@ -334,9 +364,11 @@ def list_public_trips(
         min_rating=min_rating,
         is_active=is_active,
         starting_city_id=starting_city_id,
+        starting_country_code=starting_country_code,
         is_international=is_international,
         trip_type=trip_type_filter,
         destination_ids=destination_ids,
+        destination_country_codes=destination_country_codes,
         single_destination=single_destination,
         amenities=amenities,
         only_future=not is_provider_profile_view,
