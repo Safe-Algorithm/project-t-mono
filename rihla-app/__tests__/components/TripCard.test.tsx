@@ -246,7 +246,7 @@ describe('TripCard — route label with country names', () => {
     expect(queryAllByText(/Saudi Arabia/).length).toBe(0);
   });
 
-  it('guided: shows place name when set, city name as fallback', () => {
+  it('guided domestic: shows place name when set, city name as fallback', () => {
     const tripGuided: Trip = {
       ...baseTrip,
       trip_type: 'guided',
@@ -259,6 +259,24 @@ describe('TripCard — route label with country names', () => {
     const { getByText } = render(<TripCard trip={tripGuided} onPress={() => {}} />);
     expect(getByText(/Six Flags Qiddiya/)).toBeTruthy();
     expect(getByText(/Jeddah/)).toBeTruthy();
+  });
+
+  it('guided international: shows destination country names (not places/cities), deduplicated', () => {
+    const tripGuidedIntl: Trip = {
+      ...baseTrip,
+      trip_type: 'guided',
+      is_international: true,
+      destinations: [
+        { id: 'd1', name_en: 'Paris', name_ar: 'باريس', country_code: 'FR', country_name_en: 'France', country_name_ar: 'فرنسا', place_name_en: 'Eiffel Tower', place_name_ar: 'برج إيفل', type: 'city' },
+        { id: 'd2', name_en: 'Lyon', name_ar: 'ليون', country_code: 'FR', country_name_en: 'France', country_name_ar: 'فرنسا', place_name_en: null, place_name_ar: null, type: 'city' },
+        { id: 'd3', name_en: 'Nice', name_ar: 'نيس', country_code: 'FR', country_name_en: 'France', country_name_ar: 'فرنسا', place_name_en: null, place_name_ar: null, type: 'city' },
+      ],
+    };
+    const { getByText, queryAllByText } = render(<TripCard trip={tripGuidedIntl} onPress={() => {}} />);
+    expect(getByText(/France/)).toBeTruthy();
+    expect(queryAllByText(/France/).length).toBe(1);
+    expect(queryAllByText(/Paris/).length).toBe(0);
+    expect(queryAllByText(/Eiffel Tower/).length).toBe(0);
   });
 
   it('renders no route row when starting_city and destinations are both absent', () => {

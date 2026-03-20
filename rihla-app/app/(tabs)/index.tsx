@@ -79,9 +79,6 @@ export default function ExploreScreen() {
           <Text style={s.greeting}>{t('explore.greeting', { name: user?.name?.split(' ')[0] ?? 'Traveler' })}</Text>
           <Text style={s.headerTitle}>{t('explore.subtitle')}</Text>
         </View>
-        <TouchableOpacity style={s.avatarBtn} onPress={() => router.push('/(tabs)/profile')}>
-          <Ionicons name="person-circle-outline" size={36} color={colors.primary} />
-        </TouchableOpacity>
       </View>
 
       <View style={s.searchRow}>
@@ -162,10 +159,9 @@ export default function ExploreScreen() {
 function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
-    header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+    header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
     greeting: { fontSize: FontSize.sm, color: c.textTertiary, fontWeight: '500' },
     headerTitle: { fontSize: FontSize.xl, fontWeight: '800', color: c.textPrimary, marginTop: 2 },
-    avatarBtn: { padding: 4 },
     searchRow: { flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 8, gap: 10, alignItems: 'center' },
     searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: c.surface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11, gap: 8, ...Shadow.sm },
     searchInput: { flex: 1, fontSize: FontSize.md, color: c.textPrimary },

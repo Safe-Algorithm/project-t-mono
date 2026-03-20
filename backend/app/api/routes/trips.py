@@ -23,6 +23,8 @@ from app.schemas.trip_package import TripPackageCreate, TripPackage, TripPackage
 from app.schemas.trip_registration import TripRegistrationCreate, TripRegistration
 from app.schemas.trip_extra_fee import TripExtraFeeCreate, TripExtraFeeUpdate, TripExtraFeeResponse
 from app.crud import trip_extra_fee
+from app.services.fcm import fcm_service
+from app.models.user_push_token import UserPushToken
 
 router = APIRouter()
 logging.basicConfig(level=logging.INFO)
@@ -1798,6 +1800,19 @@ def flag_registration_processing(
     session.add(reg)
     session.commit()
     session.refresh(reg)
+
+    # Push: notify user that provider started arranging the trip
+    from sqlmodel import select as sql_select
+    reg_user = session.get(User, reg.user_id)
+    if reg_user:
+        lang = getattr(reg_user, "preferred_language", "en") or "en"
+        trip_name = trip.name_en or trip.name_ar or ""
+        tokens = [pt.token for pt in session.exec(sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)).all()]
+        for token in tokens:
+            asyncio.create_task(fcm_service.notify_registration_processing(
+                fcm_token=token, trip_name=trip_name, lang=lang, registration_id=str(reg.id),
+            ))
+
     return {"id": str(reg.id), "status": reg.status, "processing_started_at": reg.processing_started_at}
 
 
@@ -1837,6 +1852,19 @@ def flag_registration_confirmed(
     session.add(reg)
     session.commit()
     session.refresh(reg)
+
+    # Push: notify user that all arrangements are complete
+    from sqlmodel import select as sql_select
+    reg_user = session.get(User, reg.user_id)
+    if reg_user:
+        lang = getattr(reg_user, "preferred_language", "en") or "en"
+        trip_name = trip.name_en or trip.name_ar or ""
+        tokens = [pt.token for pt in session.exec(sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)).all()]
+        for token in tokens:
+            asyncio.create_task(fcm_service.notify_registration_confirmed(
+                fcm_token=token, trip_name=trip_name, lang=lang, registration_id=str(reg.id),
+            ))
+
     return {"id": str(reg.id), "status": reg.status}
 
 
@@ -2014,6 +2042,20 @@ async def user_cancel_booking(
     actual_pct = decision.refund_percentage if paid_payment else 0
     actual_amt = float(decision.refund_amount) if paid_payment else 0.0
 
+    # Push: notify user their cancellation is confirmed
+    from sqlmodel import select as sql_select_cancel
+    lang = getattr(current_user, "preferred_language", "en") or "en"
+    trip_name_cancel = trip.name_en or trip.name_ar or ""
+    tokens_cancel = [pt.token for pt in session.exec(sql_select_cancel(UserPushToken).where(UserPushToken.user_id == current_user.id)).all()]
+    for token in tokens_cancel:
+        asyncio.create_task(fcm_service.notify_booking_cancelled_with_refund(
+            fcm_token=token,
+            trip_name=trip_name_cancel,
+            refund_amount=str(int(actual_amt)),
+            lang=lang,
+            registration_id=str(reg.id),
+        ))
+
     return {
         "status": "cancelled",
         "refund_percentage": actual_pct,
@@ -2075,6 +2117,21 @@ async def provider_cancel_trip(
     trip.is_active = False
     session.add(trip)
     session.commit()
+
+    # Push: notify each affected user the trip was cancelled by provider
+    trip_name_cancel = trip.name_en or trip.name_ar or ""
+    for reg in active_regs:
+        reg_user = session.get(User, reg.user_id)
+        if not reg_user:
+            continue
+        lang = getattr(reg_user, "preferred_language", "en") or "en"
+        tokens = [pt.token for pt in session.exec(
+            sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
+        ).all()]
+        for token in tokens:
+            asyncio.create_task(fcm_service.notify_trip_cancelled_by_provider(
+                fcm_token=token, trip_name=trip_name_cancel, lang=lang, registration_id=str(reg.id),
+            ))
 
     return {
         "status": "trip_cancelled",
@@ -2155,6 +2212,23 @@ async def admin_cancel_booking(
     actual_pct = decision.refund_percentage if paid_payment else 0
     actual_amt = float(decision.refund_amount) if paid_payment else 0.0
 
+    # Push: notify user their booking was cancelled by admin
+    reg_owner = session.get(User, reg.user_id)
+    if reg_owner:
+        lang = getattr(reg_owner, "preferred_language", "en") or "en"
+        trip_name_cancel = trip.name_en or trip.name_ar or ""
+        tokens = [pt.token for pt in session.exec(
+            sql_select(UserPushToken).where(UserPushToken.user_id == reg_owner.id)
+        ).all()]
+        for token in tokens:
+            asyncio.create_task(fcm_service.notify_booking_cancelled_with_refund(
+                fcm_token=token,
+                trip_name=trip_name_cancel,
+                refund_amount=str(int(actual_amt)),
+                lang=lang,
+                registration_id=str(reg.id),
+            ))
+
     return {
         "status": "cancelled",
         "refund_percentage": actual_pct,
@@ -2216,6 +2290,21 @@ async def admin_cancel_trip(
     trip.is_active = False
     session.add(trip)
     session.commit()
+
+    # Push: notify each affected user the trip was cancelled by admin
+    trip_name_cancel = trip.name_en or trip.name_ar or ""
+    for reg in active_regs:
+        reg_user = session.get(User, reg.user_id)
+        if not reg_user:
+            continue
+        lang = getattr(reg_user, "preferred_language", "en") or "en"
+        tokens = [pt.token for pt in session.exec(
+            sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
+        ).all()]
+        for token in tokens:
+            asyncio.create_task(fcm_service.notify_trip_cancelled_by_provider(
+                fcm_token=token, trip_name=trip_name_cancel, lang=lang, registration_id=str(reg.id),
+            ))
 
     return {
         "status": "trip_cancelled",

@@ -30,7 +30,13 @@ async function sendTokenToServer(token: string) {
 
 function navigateFromData(data: Record<string, string> | undefined) {
   if (!data) return;
-  if (data.registrationId) {
+  // Trip update notification: open the booking screen focused on updates tab
+  if (data.registrationId && data.tripUpdateId) {
+    router.push({
+      pathname: '/booking/[registrationId]',
+      params: { registrationId: data.registrationId, focusUpdateId: data.tripUpdateId },
+    } as any);
+  } else if (data.registrationId) {
     router.push(`/booking/${data.registrationId}`);
   } else if (data.tripId) {
     router.push(`/trip/${data.tripId}`);

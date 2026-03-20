@@ -33,6 +33,7 @@ export interface TripExtraFee {
   description_ar: string | null;
   amount: string | number;
   currency: string;
+  is_required: boolean;
 }
 
 export interface TripProvider {

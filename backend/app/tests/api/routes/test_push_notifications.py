@@ -222,7 +222,7 @@ async def test_fcm_notify_booking_confirmed_arabic() -> None:
 
 @pytest.mark.asyncio
 async def test_fcm_notify_trip_update_carries_data() -> None:
-    """notify_trip_update passes trip_id and registration_id as data payload."""
+    """notify_trip_update passes tripId, registrationId, and tripUpdateId as data payload."""
     from app.services.fcm import FCMService
     svc = FCMService()
     sent: list[dict] = []
@@ -240,9 +240,221 @@ async def test_fcm_notify_trip_update_carries_data() -> None:
         lang="en",
         trip_id="trip-uuid-123",
         registration_id="reg-uuid-456",
+        trip_update_id="upd-uuid-789",
     )
     assert sent[0]["data"]["tripId"] == "trip-uuid-123"
     assert sent[0]["data"]["registrationId"] == "reg-uuid-456"
+    assert sent[0]["data"]["tripUpdateId"] == "upd-uuid-789"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# New FCM template tests (awaiting_provider, processing, confirmed, cancelled)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_fcm_notify_awaiting_provider_english() -> None:
+    """notify_awaiting_provider: English body mentions trip name; data has registrationId."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_awaiting_provider(
+        fcm_token="tok", trip_name="Desert Safari", lang="en", registration_id="reg-1"
+    )
+    assert len(sent) == 1
+    assert "Desert Safari" in sent[0]["body"]
+    assert sent[0]["data"]["registrationId"] == "reg-1"
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_awaiting_provider_arabic() -> None:
+    """notify_awaiting_provider: Arabic template used when lang='ar'."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_awaiting_provider(
+        fcm_token="tok", trip_name="رحلة الصحراء", lang="ar", registration_id="reg-ar"
+    )
+    assert "رحلة الصحراء" in sent[0]["body"]
+    assert "الدفع" in sent[0]["title"] or "دفع" in sent[0]["body"]
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_registration_processing_english() -> None:
+    """notify_registration_processing: English body mentions trip name; data has registrationId."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_registration_processing(
+        fcm_token="tok", trip_name="Japan Tour", lang="en", registration_id="reg-2"
+    )
+    assert "Japan Tour" in sent[0]["body"]
+    assert sent[0]["data"]["registrationId"] == "reg-2"
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_registration_processing_arabic() -> None:
+    """notify_registration_processing: Arabic template used when lang='ar'."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_registration_processing(
+        fcm_token="tok", trip_name="جولة اليابان", lang="ar", registration_id="reg-2-ar"
+    )
+    assert "جولة اليابان" in sent[0]["body"]
+    assert "ترتيب" in sent[0]["title"] or "بدأ" in sent[0]["title"]
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_registration_confirmed_english() -> None:
+    """notify_registration_confirmed: English body says arrangements complete."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_registration_confirmed(
+        fcm_token="tok", trip_name="Europe Trip", lang="en", registration_id="reg-3"
+    )
+    assert "Europe Trip" in sent[0]["body"]
+    assert "complete" in sent[0]["body"].lower() or "set" in sent[0]["body"].lower()
+    assert sent[0]["data"]["registrationId"] == "reg-3"
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_registration_confirmed_arabic() -> None:
+    """notify_registration_confirmed: Arabic template used when lang='ar'."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_registration_confirmed(
+        fcm_token="tok", trip_name="رحلة أوروبا", lang="ar", registration_id="reg-3-ar"
+    )
+    assert "رحلة أوروبا" in sent[0]["body"]
+    assert "اكتمل" in sent[0]["body"] or "تأكيد" in sent[0]["title"]
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_trip_cancelled_by_provider_english() -> None:
+    """notify_trip_cancelled_by_provider: English body mentions trip name and refund."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_trip_cancelled_by_provider(
+        fcm_token="tok", trip_name="Nile Cruise", lang="en", registration_id="reg-4"
+    )
+    assert "Nile Cruise" in sent[0]["body"]
+    assert "refund" in sent[0]["body"].lower()
+    assert sent[0]["data"]["registrationId"] == "reg-4"
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_trip_cancelled_by_provider_arabic() -> None:
+    """notify_trip_cancelled_by_provider: Arabic template used when lang='ar'."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_trip_cancelled_by_provider(
+        fcm_token="tok", trip_name="رحلة النيل", lang="ar", registration_id="reg-4-ar"
+    )
+    assert "رحلة النيل" in sent[0]["body"]
+    assert "إلغاء" in sent[0]["title"] or "ألغ" in sent[0]["body"]
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_booking_cancelled_with_refund_english() -> None:
+    """notify_booking_cancelled_with_refund: English body includes trip name and refund amount."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_booking_cancelled_with_refund(
+        fcm_token="tok", trip_name="Beach Retreat", refund_amount="750", lang="en", registration_id="reg-5"
+    )
+    assert "Beach Retreat" in sent[0]["body"]
+    assert "750" in sent[0]["body"]
+    assert "SAR" in sent[0]["body"]
+    assert sent[0]["data"]["registrationId"] == "reg-5"
+
+
+@pytest.mark.asyncio
+async def test_fcm_notify_booking_cancelled_with_refund_arabic() -> None:
+    """notify_booking_cancelled_with_refund: Arabic body includes trip name and refund amount in SAR."""
+    from app.services.fcm import FCMService
+    svc = FCMService()
+    sent: list[dict] = []
+
+    async def fake_send(*, fcm_token, title, body, data=None, project_id=None):
+        sent.append({"title": title, "body": body, "data": data})
+        return True
+
+    svc.send_to_token = fake_send  # type: ignore[method-assign]
+
+    await svc.notify_booking_cancelled_with_refund(
+        fcm_token="tok", trip_name="شاطئ المالديف", refund_amount="500", lang="ar", registration_id="reg-5-ar"
+    )
+    assert "شاطئ المالديف" in sent[0]["body"]
+    assert "500" in sent[0]["body"]
+    assert "ريال" in sent[0]["body"]
 
 
 @pytest.mark.asyncio

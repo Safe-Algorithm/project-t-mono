@@ -29,6 +29,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const [showPackageTooltip, setShowPackageTooltip] = useState(false);
   const errorRef = useRef<HTMLDivElement>(null);
 
+  // Timezone is auto-derived from the starting city on the backend.
+  // We keep it locally only so that datetime-local inputs show the correct wall-clock time
+  // when editing an existing trip. Falls back to Asia/Riyadh if city has no timezone.
   const [timezone, setTimezone] = useState('Asia/Riyadh');
 
   const [formData, setFormData] = useState({
@@ -158,6 +161,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       setTimezone(tz);
       // Convert UTC datetimes from DB into local wall-clock time for the trip's timezone
       // so the provider sees the time they originally entered, not browser-local time.
+      // (timezone is read-only here — it is always derived from the starting city on save)
       const toTzLocal = (utcStr: string) => {
         const d = new Date(utcStr + (utcStr.endsWith('Z') ? '' : 'Z'));
         // Format as YYYY-MM-DDTHH:mm in the trip's timezone
@@ -587,7 +591,6 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         meeting_place_name: tripTypeSelection === TripType.GUIDED ? formData.meeting_place_name : undefined,
         meeting_place_name_ar: tripTypeSelection === TripType.GUIDED && formData.meeting_place_name_ar.trim() ? formData.meeting_place_name_ar : undefined,
         meeting_location: tripTypeSelection === TripType.GUIDED ? formData.meeting_location : undefined,
-        timezone,
         max_participants: parseInt(formData.max_participants, 10),
         start_date: localToUtcIso(formData.start_date),
         end_date: localToUtcIso(formData.end_date),
@@ -669,55 +672,9 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       {/* ── Dates ── */}
       <div className={sectionCls}>
         <p className={sectionTitleCls}>{t('trip.datesCapacity')}</p>
-        <div className="mb-4">
-          <label className={labelCls}>
-            {t('trip.timezone', 'Trip Timezone')}
-            <span className="font-normal text-slate-400 ml-1">({t('trip.timezoneHint', 'dates are entered in this timezone')})</span>
-          </label>
-          <select className={inputCls} value={timezone} onChange={e => setTimezone(e.target.value)}>
-            <optgroup label="Middle East">
-              <option value="Asia/Riyadh">Saudi Arabia, Kuwait, Qatar (UTC+3)</option>
-              <option value="Asia/Dubai">UAE, Oman (UTC+4)</option>
-              <option value="Asia/Bahrain">Bahrain (UTC+3)</option>
-              <option value="Asia/Baghdad">Iraq (UTC+3)</option>
-              <option value="Asia/Beirut">Lebanon, Syria (UTC+2/+3)</option>
-              <option value="Asia/Amman">Jordan (UTC+2/+3)</option>
-              <option value="Asia/Jerusalem">Israel, Palestine (UTC+2/+3)</option>
-              <option value="Asia/Aden">Yemen (UTC+3)</option>
-            </optgroup>
-            <optgroup label="Africa">
-              <option value="Africa/Cairo">Egypt (UTC+2/+3)</option>
-              <option value="Africa/Casablanca">Morocco (UTC+0/+1)</option>
-              <option value="Africa/Tunis">Tunisia (UTC+1)</option>
-              <option value="Africa/Algiers">Algeria (UTC+1)</option>
-              <option value="Africa/Tripoli">Libya (UTC+2)</option>
-              <option value="Africa/Khartoum">Sudan (UTC+3)</option>
-            </optgroup>
-            <optgroup label="Europe">
-              <option value="Europe/London">UK (UTC+0/+1)</option>
-              <option value="Europe/Paris">France, Germany, Italy, Spain (UTC+1/+2)</option>
-              <option value="Europe/Istanbul">Turkey (UTC+3)</option>
-              <option value="Europe/Moscow">Russia/Moscow (UTC+3)</option>
-            </optgroup>
-            <optgroup label="Asia">
-              <option value="Asia/Kolkata">India (UTC+5:30)</option>
-              <option value="Asia/Karachi">Pakistan (UTC+5)</option>
-              <option value="Asia/Dhaka">Bangladesh (UTC+6)</option>
-              <option value="Asia/Bangkok">Thailand, Indonesia (UTC+7)</option>
-              <option value="Asia/Singapore">Singapore, Malaysia (UTC+8)</option>
-              <option value="Asia/Tokyo">Japan, Korea (UTC+9)</option>
-            </optgroup>
-            <optgroup label="Americas">
-              <option value="America/New_York">US Eastern (UTC-5/-4)</option>
-              <option value="America/Chicago">US Central (UTC-6/-5)</option>
-              <option value="America/Denver">US Mountain (UTC-7/-6)</option>
-              <option value="America/Los_Angeles">US Pacific (UTC-8/-7)</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option value="UTC">UTC (UTC+0)</option>
-            </optgroup>
-          </select>
-        </div>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 -mt-2">
+          {t('trip.timezoneAutoNote', 'Dates are entered in the timezone of the selected starting city ({{tz}}). This is set automatically.', { tz: timezone })}
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className={labelCls}>{t('trip.startDateTime')}</label>
@@ -752,7 +709,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
           </div>
           <div>
             <label className={labelCls}>{t('trip.city')}</label>
-            <select className={inputCls} value={startingCityId} onChange={e => setStartingCityId(e.target.value)} disabled={!selectedCountryId}>
+            <select className={inputCls} value={startingCityId} onChange={e => {
+              setStartingCityId(e.target.value);
+              const city = cities.find(c => c.id === e.target.value);
+              if (city?.timezone) setTimezone(city.timezone);
+            }} disabled={!selectedCountryId}>
               <option value="">{t('trip.selectCity')}</option>
               {cities.map(c => <option key={c.id} value={c.id}>{c.name_en}</option>)}
             </select>

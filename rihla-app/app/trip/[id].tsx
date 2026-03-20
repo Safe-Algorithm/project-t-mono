@@ -33,7 +33,7 @@ const AMENITY_ICONS: Record<string, string> = {
   omra_assistance: 'moon-outline',
 };
 
-function formatDate(d: string, _locale = 'en-US', tz = 'Asia/Riyadh') {
+function formatDate(d: string, locale = 'en-US', tz = 'Asia/Riyadh') {
   const dt = new Date(d.endsWith('Z') ? d : d + 'Z');
   const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: tz };
   const parts = new Intl.DateTimeFormat('en-CA', opts).formatToParts(dt);
@@ -41,12 +41,19 @@ function formatDate(d: string, _locale = 'en-US', tz = 'Asia/Riyadh') {
   return `${get('year')}/${get('month')}/${get('day')}`;
 }
 
+function formatMeetingTime(d: string, locale: string, tz: string) {
+  const dt = new Date(d.endsWith('Z') ? d : d + 'Z');
+  return new Intl.DateTimeFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: tz,
+  }).format(dt);
+}
+
 export default function TripDetailScreen() {
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const insets = useSafeAreaInsets();
-  const locale = 'en-US';
+  const locale = i18n.language === 'ar' ? 'ar-SA' : 'en-US';
   const { id } = useLocalSearchParams<{ id: string }>();
   const [imageIndex, setImageIndex] = useState(0);
   const [showTripTypeInfo, setShowTripTypeInfo] = useState(false);
@@ -141,12 +148,10 @@ export default function TripDetailScreen() {
               {/* Image dots */}
               {images.length > 1 && (
                 <View style={s.imageDots}>
-                  {images.map((_, i) => (
-                    <View
-                      key={i}
-                      style={[s.imageDot, i === imageIndex && s.imageDotActive]}
-                    />
-                  ))}
+                  {images.map((_, i) => {
+                    const dotActive = isRTL ? i === (images.length - 1 - imageIndex) : i === imageIndex;
+                    return <View key={i} style={[s.imageDot, dotActive && s.imageDotActive]} />;
+                  })}
                 </View>
               )}
             </View>
@@ -276,6 +281,12 @@ export default function TripDetailScreen() {
               />
             )}
           </View>
+          {trip.timezone && (
+            <View style={s.tzChip}>
+              <Ionicons name="globe-outline" size={13} color={colors.textTertiary} />
+              <Text style={s.tzChipText}>{t('trip.allDatesIn', { tz: trip.timezone })}</Text>
+            </View>
+          )}
 
           {/* Refundability banner */}
           {trip.is_refundable != null && (
@@ -384,9 +395,7 @@ export default function TripDetailScreen() {
                 </TouchableOpacity>
                 {trip.meeting_time && (
                   <Text style={s.meetingTime}>
-                    {new Date(trip.meeting_time).toLocaleString(locale, {
-                      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                    })}
+                    {formatMeetingTime(trip.meeting_time, i18n.language, trip.timezone ?? 'Asia/Riyadh')}
                   </Text>
                 )}
               </View>
@@ -431,7 +440,14 @@ export default function TripDetailScreen() {
               {trip.extra_fees.map((fee) => (
                 <View key={fee.id} style={s.feeRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.feeName}>{i18n.language === 'ar' ? (fee.name_ar || fee.name_en) : (fee.name_en || fee.name_ar)}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={s.feeName}>{i18n.language === 'ar' ? (fee.name_ar || fee.name_en) : (fee.name_en || fee.name_ar)}</Text>
+                      <View style={[s.feeBadge, fee.is_required ? s.feeBadgeRequired : s.feeBadgeOptional]}>
+                        <Text style={[s.feeBadgeText, fee.is_required ? s.feeBadgeTextRequired : s.feeBadgeTextOptional]}>
+                          {fee.is_required ? t('trip.feeRequired') : t('trip.feeOptional')}
+                        </Text>
+                      </View>
+                    </View>
                     {(i18n.language === 'ar' ? (fee.description_ar || fee.description_en) : (fee.description_en || fee.description_ar)) ? (
                       <Text style={s.feeDesc}>{i18n.language === 'ar' ? (fee.description_ar || fee.description_en) : (fee.description_en || fee.description_ar)}</Text>
                     ) : null}
@@ -500,12 +516,6 @@ export default function TripDetailScreen() {
                               <Text style={[s.pkgMetaText, { color: pkg.is_refundable ? colors.success : colors.error }]}>
                                 {pkg.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
                               </Text>
-                            </View>
-                          )}
-                          {pkg.required_fields.length > 0 && (
-                            <View style={s.pkgMetaChip}>
-                              <Ionicons name="document-text-outline" size={12} color={colors.textTertiary} />
-                              <Text style={s.pkgMetaText}>{t('trip.requiredFields', { count: pkg.required_fields.length })}</Text>
                             </View>
                           )}
                         </View>
@@ -723,6 +733,12 @@ function makeStyles(c: ThemeColors) {
   feeName: { fontSize: FontSize.md, color: c.textPrimary, fontWeight: '600' },
   feeDesc: { fontSize: FontSize.sm, color: c.textTertiary, marginTop: 2 },
   feeAmount: { fontSize: FontSize.md, color: c.accent, fontWeight: '700' },
+  feeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+  feeBadgeRequired: { backgroundColor: c.errorLight, borderColor: c.error },
+  feeBadgeOptional: { backgroundColor: c.gray100 ?? c.background, borderColor: c.border },
+  feeBadgeText: { fontSize: FontSize.xs, fontWeight: '600' },
+  feeBadgeTextRequired: { color: c.error },
+  feeBadgeTextOptional: { color: c.textTertiary },
 
   packages: { gap: 12 },
   packageCard: {
@@ -822,5 +838,7 @@ function makeStyles(c: ThemeColors) {
   refundableTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   refundableBannerTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#166534', flex: 1 },
   refundableBannerBody: { fontSize: FontSize.sm, color: '#166534', lineHeight: 20, opacity: 0.85 },
+  tzChip: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 4 },
+  tzChipText: { fontSize: FontSize.xs, color: c.textTertiary, fontStyle: 'italic' },
   });
 }

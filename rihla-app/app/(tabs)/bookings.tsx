@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { useInfiniteRegistrations, useAllMyTripUpdates } from '../../hooks/useTrips';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -77,6 +78,7 @@ export default function BookingsScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const s = makeStyles(colors);
+  const qc = useQueryClient();
 
   const {
     data,
@@ -88,16 +90,23 @@ export default function BookingsScreen() {
     isRefetching,
   } = useInfiniteRegistrations();
 
-  // useMyRegistrations is still used by useAllMyTripUpdates internally
-  const { data: allUpdates } = useAllMyTripUpdates();
+  const { data: allUpdates, refetch: refetchUpdates } = useAllMyTripUpdates();
   const unreadCount = allUpdates?.filter((u) => !u.read).length ?? 0;
 
   const registrations = useMemo(() => data?.pages.flat() ?? [], [data]);
 
+  const handleRefresh = useCallback(async () => {
+    await qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
+    await refetch();
+    await refetchUpdates();
+  }, [qc, refetch, refetchUpdates]);
+
   useFocusEffect(
     useCallback(() => {
+      qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
       refetch();
-    }, [refetch])
+      refetchUpdates();
+    }, [qc, refetch, refetchUpdates])
   );
 
   const onEndReached = useCallback(() => {
@@ -111,20 +120,20 @@ export default function BookingsScreen() {
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
-        <Text style={s.title}>{t('bookings.title')}</Text>
-        <View style={s.headerRight}>
+        <View style={s.titleRow}>
+          <Text style={s.title}>{t('bookings.title')}</Text>
           {registrations.length > 0 && (
             <Text style={s.count}>{registrations.length}</Text>
           )}
-          <TouchableOpacity style={s.updatesBtn} onPress={() => router.push('/trip-updates')}>
-            <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
-            {unreadCount > 0 && (
-              <View style={s.unreadDot}>
-                <Text style={s.unreadDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
         </View>
+        <TouchableOpacity style={s.updatesBtn} onPress={() => router.push('/trip-updates')}>
+          <Ionicons name="notifications-outline" size={22} color={colors.textPrimary} />
+          {unreadCount > 0 && (
+            <View style={s.unreadDot}>
+              <Text style={s.unreadDotText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
       {isLoading ? (
         <View style={s.list}>
@@ -149,7 +158,7 @@ export default function BookingsScreen() {
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={handleRefresh}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
@@ -171,8 +180,8 @@ function makeStyles(c: ThemeColors) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+    titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     title: { fontSize: FontSize.xxl, fontWeight: '800', color: c.textPrimary },
-    headerRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
     count: { backgroundColor: c.primary, color: c.white, fontSize: FontSize.sm, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12, overflow: 'hidden' },
     updatesBtn: { position: 'relative', width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
     unreadDot: { position: 'absolute', top: 4, right: 4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: c.error, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },

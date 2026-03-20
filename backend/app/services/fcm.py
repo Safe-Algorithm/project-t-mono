@@ -58,6 +58,56 @@ _TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "body": "{trip_name}: {message}",
         },
     },
+    "awaiting_provider": {
+        "en": {
+            "title": "Payment Received – Arrangements in Progress 🗓️",
+            "body": "Your payment for {trip_name} is confirmed. The provider will begin arranging your trip shortly.",
+        },
+        "ar": {
+            "title": "تم استلام الدفع – جارٍ الترتيب 🗓️",
+            "body": "تم تأكيد دفعك لرحلة {trip_name}. سيبدأ المزود في ترتيب رحلتك قريباً.",
+        },
+    },
+    "registration_processing": {
+        "en": {
+            "title": "Your Trip Arrangements Have Started ✈️",
+            "body": "The provider has started booking flights and hotels for your {trip_name} trip.",
+        },
+        "ar": {
+            "title": "بدأت ترتيبات رحلتك ✈️",
+            "body": "بدأ المزود في حجز الرحلات والفنادق لرحلتك {trip_name}.",
+        },
+    },
+    "registration_confirmed": {
+        "en": {
+            "title": "Trip Fully Confirmed ✅",
+            "body": "All arrangements for your {trip_name} trip are complete. You're all set!",
+        },
+        "ar": {
+            "title": "تم تأكيد رحلتك بالكامل ✅",
+            "body": "اكتملت جميع ترتيبات رحلتك {trip_name}. كل شيء جاهز!",
+        },
+    },
+    "trip_cancelled_by_provider": {
+        "en": {
+            "title": "Trip Cancelled",
+            "body": "Unfortunately, {trip_name} has been cancelled by the provider. A full refund will be processed.",
+        },
+        "ar": {
+            "title": "تم إلغاء الرحلة",
+            "body": "نأسف لإبلاغك بأن رحلة {trip_name} أُلغيت من قبل المزود. سيتم معالجة استرداد كامل للمبلغ.",
+        },
+    },
+    "booking_cancelled_with_refund": {
+        "en": {
+            "title": "Booking Cancelled",
+            "body": "Your booking for {trip_name} has been cancelled. Refund: {refund_amount} SAR.",
+        },
+        "ar": {
+            "title": "تم إلغاء الحجز",
+            "body": "تم إلغاء حجزك لرحلة {trip_name}. المبلغ المسترد: {refund_amount} ريال.",
+        },
+    },
 }
 
 
@@ -203,6 +253,7 @@ class FCMService:
         lang: str = "en",
         trip_id: Optional[str] = None,
         registration_id: Optional[str] = None,
+        trip_update_id: Optional[str] = None,
     ) -> bool:
         tmpl = _TEMPLATES["trip_update"].get(lang, _TEMPLATES["trip_update"]["en"])
         content = _render(tmpl, trip_name=trip_name, message=message)
@@ -211,6 +262,69 @@ class FCMService:
             data["tripId"] = trip_id
         if registration_id:
             data["registrationId"] = registration_id
+        if trip_update_id:
+            data["tripUpdateId"] = trip_update_id
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_awaiting_provider(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        lang: str = "en",
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["awaiting_provider"].get(lang, _TEMPLATES["awaiting_provider"]["en"])
+        content = _render(tmpl, trip_name=trip_name)
+        data = {"registrationId": registration_id} if registration_id else {}
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_registration_processing(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        lang: str = "en",
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["registration_processing"].get(lang, _TEMPLATES["registration_processing"]["en"])
+        content = _render(tmpl, trip_name=trip_name)
+        data = {"registrationId": registration_id} if registration_id else {}
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_registration_confirmed(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        lang: str = "en",
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["registration_confirmed"].get(lang, _TEMPLATES["registration_confirmed"]["en"])
+        content = _render(tmpl, trip_name=trip_name)
+        data = {"registrationId": registration_id} if registration_id else {}
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_trip_cancelled_by_provider(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        lang: str = "en",
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["trip_cancelled_by_provider"].get(lang, _TEMPLATES["trip_cancelled_by_provider"]["en"])
+        content = _render(tmpl, trip_name=trip_name)
+        data = {"registrationId": registration_id} if registration_id else {}
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_booking_cancelled_with_refund(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        refund_amount: str,
+        lang: str = "en",
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["booking_cancelled_with_refund"].get(lang, _TEMPLATES["booking_cancelled_with_refund"]["en"])
+        content = _render(tmpl, trip_name=trip_name, refund_amount=refund_amount)
+        data = {"registrationId": registration_id} if registration_id else {}
         return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
 
 

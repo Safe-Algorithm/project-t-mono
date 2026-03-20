@@ -14,6 +14,7 @@ from app.models.provider import Provider
 from app.models.user import User
 from app.models.trip_package import TripPackage
 from app.models.links import TripRating as TripRatingModel
+from app.models.provider_rating import ProviderRating as ProviderRatingModel
 from app.models.trip_destination import TripDestination
 from app.models.destination import Destination
 
@@ -102,6 +103,17 @@ def _compute_content_hash(trip: Trip) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
+def _derive_timezone_from_city(session: Session, city_id) -> Optional[str]:
+    """Return the IANA timezone of the starting city, or None if not set."""
+    if not city_id:
+        return None
+    from app.models.destination import Destination
+    city = session.get(Destination, city_id)
+    if city and city.timezone:
+        return city.timezone
+    return None
+
+
 def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) -> Trip:
     trip_data = {k: v for k, v in trip_in.model_dump().items() if k not in _PACKAGE_ONLY_FIELDS}
     # Default registration_deadline to start_date if not explicitly provided
@@ -112,6 +124,10 @@ def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) ->
         trip_data["meeting_time"] = trip_data.get("start_date")
     else:
         trip_data["meeting_time"] = None
+    # Auto-derive timezone from starting city (overrides whatever was submitted)
+    city_tz = _derive_timezone_from_city(session, trip_data.get("starting_city_id"))
+    if city_tz:
+        trip_data["timezone"] = city_tz
     trip = Trip(**trip_data, provider_id=provider.id)
     session.add(trip)
     session.commit()
@@ -313,14 +329,14 @@ def search_and_filter_trips(
     if needs_rating_join:
         rating_subquery = (
             select(
-                TripRatingModel.trip_id,
-                func.avg(TripRatingModel.rating).label('avg_rating')
+                ProviderRatingModel.provider_id,
+                func.avg(ProviderRatingModel.rating).label('avg_rating')
             )
-            .group_by(TripRatingModel.trip_id)
-            .having(func.avg(TripRatingModel.rating) >= min_rating)
+            .group_by(ProviderRatingModel.provider_id)
+            .having(func.avg(ProviderRatingModel.rating) >= min_rating)
             .subquery()
         )
-        statement = statement.join(rating_subquery, Trip.id == rating_subquery.c.trip_id)
+        statement = statement.join(rating_subquery, Trip.provider_id == rating_subquery.c.provider_id)
 
     # Newest trips first (created_at desc)
     if needs_package_join or needs_provider_join or needs_rating_join:
@@ -345,6 +361,11 @@ def update_trip(*, session: Session, db_trip: Trip, trip_in: TripUpdate) -> Trip
             db_trip.meeting_time = db_trip.start_date
         else:
             db_trip.meeting_time = None
+    # If starting_city changed, re-derive timezone from the new city
+    if "starting_city_id" in trip_data:
+        city_tz = _derive_timezone_from_city(session, trip_data["starting_city_id"])
+        if city_tz:
+            db_trip.timezone = city_tz
     db_trip.updated_at = datetime.now(_tz.utc).replace(tzinfo=None)
     db_trip.content_hash = _compute_content_hash(db_trip)
     session.add(db_trip)

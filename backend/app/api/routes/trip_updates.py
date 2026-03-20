@@ -121,6 +121,7 @@ async def provider_send_update_to_all(
                 lang=lang,
                 trip_id=str(trip_id),
                 registration_id=str(reg.id),
+                trip_update_id=str(update.id),
             )
 
     return TripUpdateRead.model_validate(update)
@@ -177,6 +178,7 @@ async def provider_send_update_to_registration(
                 lang=lang,
                 trip_id=str(reg.trip_id),
                 registration_id=str(registration_id),
+                trip_update_id=str(update.id),
             )
 
     return TripUpdateRead.model_validate(update)

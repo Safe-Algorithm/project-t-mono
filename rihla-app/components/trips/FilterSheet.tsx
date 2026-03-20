@@ -33,16 +33,13 @@ import { useDragToDismiss } from '../../hooks/useDragToDismiss';
 
 /**
  * Convert a YYYY-MM-DD string to a UTC ISO string representing the start (00:00)
- * or end (23:59:59) of that day in the device's local timezone.
- * This matches the user's intent: "trips starting on June 1" means June 1 in
- * their local time, regardless of what timezone they are in.
+ * or end (23:59:59) of that day in UTC.
+ * Trip start_dates are stored as naive UTC in the DB (representing the trip's
+ * local departure time). Comparing against UTC boundaries gives consistent
+ * results regardless of what device timezone the user is on.
  */
 function localDateToUtcIso(dateStr: string, endOfDay = false): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const local = endOfDay
-    ? new Date(y, m - 1, d, 23, 59, 59, 999)
-    : new Date(y, m - 1, d, 0, 0, 0, 0);
-  return local.toISOString();
+  return endOfDay ? `${dateStr}T23:59:59Z` : `${dateStr}T00:00:00Z`;
 }
 
 
@@ -473,8 +470,41 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
     (country) => country.children?.filter((c) => c.type === 'city') ?? []
   );
 
+  // Cities filtered by selected countries (for linked pickers)
+  const filteredStartingCities = local.starting_country_code
+    ? startingCities.filter((c) => c.country_code === local.starting_country_code)
+    : startingCities;
+
+  const filteredDestCities = local.destination_country_codes?.length
+    ? allDestCities.filter((c) => local.destination_country_codes!.includes(c.country_code))
+    : allDestCities;
+
   const update = (key: keyof TripFilters, value: any) => {
-    setLocal((prev) => ({ ...prev, [key]: value }));
+    setLocal((prev) => {
+      const next = { ...prev, [key]: value };
+      // When starting country changes, clear the starting city if it no longer belongs to the new country
+      if (key === 'starting_country_code') {
+        const newCountry = value as string | undefined;
+        if (newCountry && prev.starting_city_id) {
+          const city = startingCities.find((c) => c.id === prev.starting_city_id);
+          if (city && city.country_code !== newCountry) delete next.starting_city_id;
+        } else if (!newCountry) {
+          // country cleared — keep city as-is (user may still want it)
+        }
+      }
+      // When destination countries change, remove any selected destination cities outside the new set
+      if (key === 'destination_country_codes') {
+        const newCodes = (value as string[] | undefined) ?? [];
+        if (newCodes.length > 0 && prev.destination_ids?.length) {
+          const kept = prev.destination_ids.filter((id) => {
+            const city = allDestCities.find((c) => c.id === id);
+            return city ? newCodes.includes(city.country_code) : true;
+          });
+          next.destination_ids = kept.length ? kept : undefined;
+        }
+      }
+      return next;
+    });
   };
 
   const toggleDestination = (id: string) => {
@@ -545,7 +575,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
       visible={pickerOpen === 'startCity'}
       onClose={() => setPickerOpen(null)}
       label={t('filters.startingCity', 'Starting City')}
-      items={startingCities}
+      items={filteredStartingCities}
       getKey={(c) => c.id}
       getName={getStartingCityName}
       isSelected={(c) => local.starting_city_id === c.id}
@@ -578,7 +608,7 @@ export default function FilterSheet({ visible, onClose, filters, onApply }: Filt
       visible={pickerOpen === 'destCity'}
       onClose={() => setPickerOpen(null)}
       label={t('filters.destinationCity', 'Destination City')}
-      items={allDestCities}
+      items={filteredDestCities}
       getKey={(c) => c.id}
       getName={getDestName}
       isSelected={(c) => (local.destination_ids ?? []).includes(c.id)}

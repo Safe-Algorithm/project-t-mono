@@ -56,31 +56,24 @@ function getDestLabel(trip: Trip, lang: string): string | null {
 
   let to: string | null = null;
   if (dests.length > 0) {
-    const isGuided = trip.trip_type === 'guided';
     const isDomestic = !trip.is_international;
 
-    if (isGuided) {
-      // Guided: show place name if set, else city name — each destination individually
-      const labels = dests.map(dest => {
-        const place = getName(dest.place_name_en ?? null, dest.place_name_ar ?? null);
-        const city = getName(dest.name_en, dest.name_ar);
-        return place || city;
-      }).filter(Boolean);
-      to = labels.join(' · ') || null;
-    } else if (isDomestic) {
-      // Domestic: deduplicated city names
+    if (isDomestic) {
+      // Domestic (guided or package): place name if set, else city name — deduplicated
       const seen = new Set<string>();
       const labels: string[] = [];
       for (const dest of dests) {
+        const place = getName(dest.place_name_en ?? null, dest.place_name_ar ?? null);
         const city = getName(dest.name_en, dest.name_ar);
-        if (city && !seen.has(city)) {
-          seen.add(city);
-          labels.push(city);
+        const label = place || city;
+        if (label && !seen.has(label)) {
+          seen.add(label);
+          labels.push(label);
         }
       }
       to = labels.join(' · ') || null;
     } else {
-      // International: deduplicated country names with flag
+      // International (guided or package): deduplicated country names with flag
       const seen = new Set<string>();
       const labels: string[] = [];
       for (const dest of dests) {

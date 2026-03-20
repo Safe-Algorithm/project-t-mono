@@ -25,6 +25,8 @@ from app.schemas.payment import (
     RefundRequest,
 )
 from app.services.moyasar import payment_service
+from app.services.fcm import fcm_service
+from app.models.user_push_token import UserPushToken
 from app.utils.localization import get_name
 
 router = APIRouter()
@@ -229,27 +231,43 @@ async def payment_callback(
                 session.add(payment)
                 session.commit()
 
-        # Send confirmation email after successful payment
+        # Send confirmation email + push after successful payment
         if registration and registration.status in ("confirmed", "awaiting_provider"):
             from app.models.user import User as UserModel
             from app.services.email import email_service
             from app.utils.localization import get_localized_field
             import asyncio
             user = session.get(UserModel, registration.user_id)
-            if user and user.email:
+            if user:
                 trip = registration.trip
                 lang = getattr(user, "preferred_language", "en") or "en"
                 trip_name = get_localized_field(trip, "name", lang) if trip else "Trip"
-                start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
-                asyncio.create_task(email_service.send_booking_confirmation_email(
-                    to_email=user.email,
-                    to_name=user.name,
-                    trip_name=trip_name,
-                    booking_reference=registration.booking_reference or str(registration.id)[:8].upper(),
-                    start_date=start_date,
-                    total_amount=f"{registration.total_amount} SAR",
-                    language=lang,
-                ))
+                reg_id = str(registration.id)
+                if user.email:
+                    start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
+                    asyncio.create_task(email_service.send_booking_confirmation_email(
+                        to_email=user.email,
+                        to_name=user.name,
+                        trip_name=trip_name,
+                        booking_reference=registration.booking_reference or str(registration.id)[:8].upper(),
+                        start_date=start_date,
+                        total_amount=f"{registration.total_amount} SAR",
+                        language=lang,
+                    ))
+                tokens = [pt.token for pt in session.exec(
+                    select(UserPushToken).where(UserPushToken.user_id == user.id)
+                ).all()]
+                for token in tokens:
+                    if registration.status == "awaiting_provider":
+                        asyncio.create_task(fcm_service.notify_awaiting_provider(
+                            fcm_token=token, trip_name=trip_name, lang=lang, registration_id=reg_id,
+                        ))
+                    else:
+                        asyncio.create_task(fcm_service.notify_booking_confirmed(
+                            fcm_token=token, trip_name=trip_name,
+                            reference=registration.booking_reference or str(registration.id)[:8].upper(),
+                            lang=lang, registration_id=reg_id,
+                        ))
 
         # Build the deep link using the redirect URL the app provided at /prepare.
         # Query params carry the result so the app can act accordingly.
@@ -381,27 +399,43 @@ async def payment_webhook(
     session.add(payment)
     session.commit()
 
-    # Send confirmation email after successful webhook payment (both confirmed and awaiting_provider)
+    # Send confirmation email + push after successful webhook payment
     if confirmed_registration:
         from app.models.user import User as UserModel
         from app.services.email import email_service
         from app.utils.localization import get_localized_field
         import asyncio
         user = session.get(UserModel, confirmed_registration.user_id)
-        if user and user.email:
+        if user:
             trip = confirmed_registration.trip
             lang = getattr(user, "preferred_language", "en") or "en"
             trip_name = get_localized_field(trip, "name", lang) if trip else "Trip"
-            start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
-            asyncio.create_task(email_service.send_booking_confirmation_email(
-                to_email=user.email,
-                to_name=user.name,
-                trip_name=trip_name,
-                booking_reference=confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper(),
-                start_date=start_date,
-                total_amount=f"{confirmed_registration.total_amount} SAR",
-                language=lang,
-            ))
+            reg_id = str(confirmed_registration.id)
+            if user.email:
+                start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
+                asyncio.create_task(email_service.send_booking_confirmation_email(
+                    to_email=user.email,
+                    to_name=user.name,
+                    trip_name=trip_name,
+                    booking_reference=confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper(),
+                    start_date=start_date,
+                    total_amount=f"{confirmed_registration.total_amount} SAR",
+                    language=lang,
+                ))
+            tokens = [pt.token for pt in session.exec(
+                select(UserPushToken).where(UserPushToken.user_id == user.id)
+            ).all()]
+            for token in tokens:
+                if confirmed_registration.status == "awaiting_provider":
+                    asyncio.create_task(fcm_service.notify_awaiting_provider(
+                        fcm_token=token, trip_name=trip_name, lang=lang, registration_id=reg_id,
+                    ))
+                else:
+                    asyncio.create_task(fcm_service.notify_booking_confirmed(
+                        fcm_token=token, trip_name=trip_name,
+                        reference=confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper(),
+                        lang=lang, registration_id=reg_id,
+                    ))
 
     return {"message": "Webhook processed"}
 
