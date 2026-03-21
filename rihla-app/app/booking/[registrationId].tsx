@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import * as WebBrowser from 'expo-web-browser';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Clipboard, Linking, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image, Animated, PanResponder,
+  Clipboard, Linking, Modal, TextInput, Keyboard, Platform, Pressable, Image, Animated, PanResponder, I18nManager,
 } from 'react-native';
 import Toast from '../../components/ui/Toast';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -681,12 +681,27 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
 }) {
   const insets = useSafeAreaInsets();
   const translateY = useRef(new Animated.Value(0)).current;
+  const [keyboardOffset, setKeyboardOffset] = React.useState(0);
+
+  React.useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e: { endCoordinates: { height: number } }) => setKeyboardOffset(e.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardOffset(0),
+    );
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
   const panResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => false,
     onMoveShouldSetPanResponder: (_, g) => g.dy > 8 && Math.abs(g.dy) > Math.abs(g.dx),
     onPanResponderMove: (_, g) => { if (g.dy > 0) translateY.setValue(g.dy); },
     onPanResponderRelease: (_, g) => {
       if (g.dy > 80 || g.vy > 0.8) {
+        Keyboard.dismiss();
         Animated.timing(translateY, { toValue: 600, duration: 200, useNativeDriver: true })
           .start(() => { translateY.setValue(0); onClose(); });
       } else {
@@ -697,11 +712,11 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
-          {/* Solid dimmed backdrop — no gap at bottom */}
-          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={onClose} />
-          <Animated.View style={[s.cardModal, { paddingBottom: Math.max(insets.bottom, 20), position: 'absolute', bottom: 0, left: 0, right: 0, transform: [{ translateY }] }]}>
+      <Modal visible={visible} transparent animationType="slide" statusBarTranslucent onRequestClose={onClose}>
+        <View style={{ flex: 1 }}>
+          {/* Full-screen solid backdrop — covers everything including nav bar */}
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.55)' }]} onPress={() => { Keyboard.dismiss(); onClose(); }} />
+          <Animated.View style={[s.cardModal, { paddingBottom: Math.max(insets.bottom, 20), position: 'absolute', bottom: keyboardOffset, left: 0, right: 0, transform: [{ translateY }] }]}>
             {/* Drag handle */}
             <View {...panResponder.panHandlers} style={s.cardModalHandleZone}>
               <View style={s.cardModalHandle} />
@@ -733,7 +748,7 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
                 </View>
                 <View>
                   <Text style={s.cardLabel}>{t('booking.cardNumber')}</Text>
-                  <View style={s.cardInputWrapper}>
+                  <View style={[s.cardInputWrapper, { direction: 'ltr' } as any]}>
                     <Ionicons name="card-outline" size={18} color={colors.textTertiary} style={{ marginRight: 8 }} />
                     <TextInput
                       style={[s.cardInputInner, cardErrors.number ? { color: colors.error } : undefined]}
@@ -749,6 +764,7 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
                       placeholderTextColor={colors.textTertiary}
                       keyboardType="number-pad"
                       maxLength={19}
+                      textAlign="left"
                     />
                   </View>
                   {cardErrors.number ? <Text style={s.cardFieldError}>{cardErrors.number}</Text> : null}
@@ -809,7 +825,7 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
               </View>
             </ScrollView>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* Month picker */}

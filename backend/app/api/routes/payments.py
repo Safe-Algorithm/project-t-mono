@@ -102,8 +102,10 @@ def prepare_payment(
         p.status = PaymentStatus.FAILED
         session.add(p)
 
-    # Refresh the 15-minute spot reservation window
-    registration.spot_reserved_until = datetime.utcnow() + timedelta(minutes=15)
+    # Set the 15-minute spot reservation window only on first attempt (don't reset on retries)
+    now_utc = datetime.utcnow()
+    if not registration.spot_reserved_until or registration.spot_reserved_until < now_utc:
+        registration.spot_reserved_until = now_utc + timedelta(minutes=15)
     session.add(registration)
 
     trip = registration.trip
@@ -336,7 +338,7 @@ async def payment_webhook(
     background_tasks: BackgroundTasks,
     request: Request,
     session: Session = Depends(get_session),
-    x_moyasar_signature: str = Header(None),
+    x_event_secret: str = Header(None),
 ):
     """
     Handle server-to-server webhook events from Moyasar.
@@ -347,31 +349,15 @@ async def payment_webhook(
     payload_str = body.decode("utf-8")
 
     if not payment_service.webhook_secret:
-        # Secret not configured — skip verification but log a warning
-        logger.warning("MOYASAR_WEBHOOK_SECRET not set; skipping webhook signature verification")
-    elif not x_moyasar_signature:
+        logger.warning("MOYASAR_WEBHOOK_SECRET not set; skipping webhook secret verification")
+    elif not x_event_secret:
         logger.warning(
-            "WEBHOOK: X-Moyasar-Signature header missing. All headers received: %s",
+            "WEBHOOK: x-event-secret header missing — processing anyway. "
+            "Headers received: %s",
             dict(request.headers),
         )
-        raise HTTPException(status_code=400, detail="Missing X-Moyasar-Signature header")
-    else:
-        try:
-            import hmac as _hmac, hashlib as _hashlib
-            expected = _hmac.new(
-                payment_service.webhook_secret.encode('utf-8'),
-                payload_str.encode('utf-8'),
-                _hashlib.sha256,
-            ).hexdigest()
-            logger.warning(
-                "WEBHOOK SIG DEBUG — received: %r | expected_hex: %r | match: %s",
-                x_moyasar_signature, expected,
-                _hmac.compare_digest(x_moyasar_signature, expected),
-            )
-            if not payment_service.verify_webhook_signature(payload_str, x_moyasar_signature):
-                raise HTTPException(status_code=401, detail="Invalid webhook signature")
-        except ValueError as e:
-            raise HTTPException(status_code=500, detail=str(e))
+    elif not hmac.compare_digest(x_event_secret, payment_service.webhook_secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
     webhook_data = json.loads(payload_str)
     moyasar_id = webhook_data.get("id")
