@@ -1766,6 +1766,7 @@ def get_trip_registrations(
 @router.post("/{trip_id}/registrations/{registration_id}/start-processing")
 def flag_registration_processing(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     registration_id: uuid.UUID,
@@ -1809,9 +1810,10 @@ def flag_registration_processing(
         trip_name = trip.name_en or trip.name_ar or ""
         tokens = [pt.token for pt in session.exec(sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)).all()]
         for token in tokens:
-            asyncio.create_task(fcm_service.notify_registration_processing(
+            background_tasks.add_task(
+                fcm_service.notify_registration_processing,
                 fcm_token=token, trip_name=trip_name, lang=lang, registration_id=str(reg.id),
-            ))
+            )
 
     return {"id": str(reg.id), "status": reg.status, "processing_started_at": reg.processing_started_at}
 
@@ -1819,6 +1821,7 @@ def flag_registration_processing(
 @router.post("/{trip_id}/registrations/{registration_id}/confirm-processing")
 def flag_registration_confirmed(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     registration_id: uuid.UUID,
@@ -1861,9 +1864,10 @@ def flag_registration_confirmed(
         trip_name = trip.name_en or trip.name_ar or ""
         tokens = [pt.token for pt in session.exec(sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)).all()]
         for token in tokens:
-            asyncio.create_task(fcm_service.notify_registration_confirmed(
+            background_tasks.add_task(
+                fcm_service.notify_registration_confirmed,
                 fcm_token=token, trip_name=trip_name, lang=lang, registration_id=str(reg.id),
-            ))
+            )
 
     return {"id": str(reg.id), "status": reg.status}
 
@@ -1970,6 +1974,7 @@ async def _execute_refund_and_record(
 @router.post("/{trip_id}/registrations/{registration_id}/cancel")
 async def user_cancel_booking(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     registration_id: uuid.UUID,
@@ -2048,13 +2053,14 @@ async def user_cancel_booking(
     trip_name_cancel = trip.name_en or trip.name_ar or ""
     tokens_cancel = [pt.token for pt in session.exec(sql_select_cancel(UserPushToken).where(UserPushToken.user_id == current_user.id)).all()]
     for token in tokens_cancel:
-        asyncio.create_task(fcm_service.notify_booking_cancelled_with_refund(
+        background_tasks.add_task(
+            fcm_service.notify_booking_cancelled_with_refund,
             fcm_token=token,
             trip_name=trip_name_cancel,
             refund_amount=str(int(actual_amt)),
             lang=lang,
             registration_id=str(reg.id),
-        ))
+        )
 
     return {
         "status": "cancelled",
@@ -2068,6 +2074,7 @@ async def user_cancel_booking(
 @router.post("/{trip_id}/cancel")
 async def provider_cancel_trip(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     body: ProviderCancelTripRequest = ProviderCancelTripRequest(),
@@ -2129,9 +2136,10 @@ async def provider_cancel_trip(
             sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
         ).all()]
         for token in tokens:
-            asyncio.create_task(fcm_service.notify_trip_cancelled_by_provider(
+            background_tasks.add_task(
+                fcm_service.notify_trip_cancelled_by_provider,
                 fcm_token=token, trip_name=trip_name_cancel, lang=lang, registration_id=str(reg.id),
-            ))
+            )
 
     return {
         "status": "trip_cancelled",
@@ -2143,6 +2151,7 @@ async def provider_cancel_trip(
 @router.post("/{trip_id}/registrations/{registration_id}/admin-cancel")
 async def admin_cancel_booking(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     registration_id: uuid.UUID,
@@ -2221,13 +2230,14 @@ async def admin_cancel_booking(
             sql_select(UserPushToken).where(UserPushToken.user_id == reg_owner.id)
         ).all()]
         for token in tokens:
-            asyncio.create_task(fcm_service.notify_booking_cancelled_with_refund(
+            background_tasks.add_task(
+                fcm_service.notify_booking_cancelled_with_refund,
                 fcm_token=token,
                 trip_name=trip_name_cancel,
                 refund_amount=str(int(actual_amt)),
                 lang=lang,
                 registration_id=str(reg.id),
-            ))
+            )
 
     return {
         "status": "cancelled",
@@ -2241,6 +2251,7 @@ async def admin_cancel_booking(
 @router.post("/{trip_id}/admin-cancel")
 async def admin_cancel_trip(
     *,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     trip_id: uuid.UUID,
     body: AdminCancelTripRequest = AdminCancelTripRequest(),
@@ -2302,9 +2313,10 @@ async def admin_cancel_trip(
             sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
         ).all()]
         for token in tokens:
-            asyncio.create_task(fcm_service.notify_trip_cancelled_by_provider(
+            background_tasks.add_task(
+                fcm_service.notify_trip_cancelled_by_provider,
                 fcm_token=token, trip_name=trip_name_cancel, lang=lang, registration_id=str(reg.id),
-            ))
+            )
 
     return {
         "status": "trip_cancelled",

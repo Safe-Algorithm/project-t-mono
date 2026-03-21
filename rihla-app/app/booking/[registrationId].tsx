@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Constants from 'expo-constants';
+import * as WebBrowser from 'expo-web-browser';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Clipboard, Linking, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Image, Animated, PanResponder,
@@ -9,7 +10,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, useFieldMetadata, CardDetails } from '../../hooks/useTrips';
+import { useRegistration, useTripUpdates, useMarkUpdateRead, usePreparePayment, useConfirmPayment, useTrip, useFieldMetadata, useNationalities, CardDetails } from '../../hooks/useTrips';
 import apiClient from '../../lib/api';
 import { FontSize, Radius, Shadow, ThemeColors } from '../../constants/Theme';
 import { useTheme } from '../../hooks/useTheme';
@@ -105,6 +106,7 @@ export default function BookingDetailScreen() {
   const { data: updates } = useTripUpdates(registration?.trip_id ?? null);
   const { data: tripDetail } = useTrip(registration?.trip_id ?? null);
   const { data: fieldMetadata } = useFieldMetadata();
+  const { data: nationalities } = useNationalities();
   const markRead = useMarkUpdateRead();
   const qc = useQueryClient();
   const [copied, setCopied] = useState(false);
@@ -297,10 +299,16 @@ export default function BookingDetailScreen() {
         moyasarPaymentId: moyasarData.id,
       });
 
-      // Step 4: If 3DS required, open transaction_url; otherwise mark confirmed locally
+      // Step 4: If 3DS required, open transaction_url in the in-app browser;
+      // WebBrowser.openAuthSessionAsync returns when the browser is dismissed or
+      // when Moyasar redirects back to our deep-link scheme (rihlaapp://).
       const transactionUrl = moyasarData?.source?.transaction_url;
       if (transactionUrl) {
-        await Linking.openURL(transactionUrl);
+        await WebBrowser.openAuthSessionAsync(transactionUrl, 'rihlaapp://payment-callback');
+        // After the in-app browser closes (redirect or user dismiss), refresh the
+        // registration so the UI reflects whatever Moyasar's webhook has processed.
+        qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
+        qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
       } else if (moyasarData.status === 'paid') {
         qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
         qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
@@ -516,8 +524,13 @@ export default function BookingDetailScreen() {
                   {p.phone && <InfoRow label={t('common.phone')} value={p.phone} />}
                   {p.date_of_birth && <InfoRow label={t('common.dob')} value={p.date_of_birth} />}
                   {p.gender && <InfoRow label={t('common.gender')} value={(() => { const opts = fieldMetadata?.['gender']?.options; return opts?.find(o => o.value === p.gender)?.label ?? p.gender; })()} />}
+                  {p.nationality && <InfoRow label={t('common.nationality')} value={(() => { const nat = nationalities?.find(n => n.code.toUpperCase() === p.nationality!.toUpperCase()); return nat ? (i18n.language === 'ar' ? (nat.name_ar || nat.name_en) : (nat.name_en || nat.name)) : p.nationality!; })()} />}
                   {p.passport_number && <InfoRow label={t('common.passport')} value={p.passport_number} />}
                   {p.id_iqama_number && <InfoRow label={t('common.nationalId')} value={p.id_iqama_number} />}
+                  {p.address && <InfoRow label={t('common.address')} value={p.address} />}
+                  {p.disability && <InfoRow label={t('common.disability')} value={p.disability} />}
+                  {p.medical_conditions && <InfoRow label={t('common.medicalConditions')} value={p.medical_conditions} />}
+                  {p.allergies && <InfoRow label={t('common.allergies')} value={p.allergies} />}
                 </View>
               );
             })}
@@ -684,16 +697,28 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
 
   return (
     <>
-      <Modal visible={visible} transparent animationType="slide">
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-          <Animated.View style={[s.cardModal, { paddingBottom: insets.bottom || 16, position: 'absolute', bottom: 0, left: 0, right: 0, transform: [{ translateY }] }]}>
-              <View {...panResponder.panHandlers}>
-                <View style={s.cardModalHandle} />
+      <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}>
+          {/* Solid dimmed backdrop — no gap at bottom */}
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={onClose} />
+          <Animated.View style={[s.cardModal, { paddingBottom: Math.max(insets.bottom, 20), position: 'absolute', bottom: 0, left: 0, right: 0, transform: [{ translateY }] }]}>
+            {/* Drag handle */}
+            <View {...panResponder.panHandlers} style={s.cardModalHandleZone}>
+              <View style={s.cardModalHandle} />
+            </View>
+            {/* Header */}
+            <View style={s.cardModalHeader}>
+              <View>
+                <Text style={s.cardModalTitle}>{t('booking.cardDetails')}</Text>
+                <Text style={s.cardModalSubtitle}>{t('booking.cardDetailsHint', 'Your card data is sent directly to Moyasar')}</Text>
               </View>
-              <Text style={s.cardModalTitle}>{t('booking.cardDetails')}</Text>
-              <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-                <View style={s.cardFields}>
+              <TouchableOpacity onPress={onClose} style={s.cardModalClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Ionicons name="close" size={20} color={colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 16 }}>
+              <View style={s.cardFields}>
+                <View>
                   <Text style={s.cardLabel}>{t('booking.cardName')}</Text>
                   <TextInput
                     style={[s.cardInput, cardErrors.name ? s.cardInputError : undefined]}
@@ -702,73 +727,88 @@ function CardSheet({ visible, onClose, card, setCard, cardErrors, setCardErrors,
                     placeholder="John Doe"
                     placeholderTextColor={colors.textTertiary}
                     autoCapitalize="words"
+                    returnKeyType="next"
                   />
                   {cardErrors.name ? <Text style={s.cardFieldError}>{cardErrors.name}</Text> : null}
+                </View>
+                <View>
                   <Text style={s.cardLabel}>{t('booking.cardNumber')}</Text>
-                  <TextInput
-                    style={[s.cardInput, cardErrors.number ? s.cardInputError : undefined]}
-                    value={cardNumberDisplay}
-                    onChangeText={(v) => {
-                      const digits = v.replace(/\D/g, '').slice(0, 16);
-                      const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
-                      setCardNumberDisplay(formatted);
-                      setCard((c) => ({ ...c, number: digits }));
-                      setCardErrors((e) => ({ ...e, number: undefined }));
-                    }}
-                    placeholder="1234 5678 9012 3456"
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType="number-pad"
-                    maxLength={19}
-                  />
+                  <View style={s.cardInputWrapper}>
+                    <Ionicons name="card-outline" size={18} color={colors.textTertiary} style={{ marginRight: 8 }} />
+                    <TextInput
+                      style={[s.cardInputInner, cardErrors.number ? { color: colors.error } : undefined]}
+                      value={cardNumberDisplay}
+                      onChangeText={(v) => {
+                        const digits = v.replace(/\D/g, '').slice(0, 16);
+                        const formatted = digits.replace(/(\d{4})(?=\d)/g, '$1 ');
+                        setCardNumberDisplay(formatted);
+                        setCard((c) => ({ ...c, number: digits }));
+                        setCardErrors((e) => ({ ...e, number: undefined }));
+                      }}
+                      placeholder="1234 5678 9012 3456"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="number-pad"
+                      maxLength={19}
+                    />
+                  </View>
                   {cardErrors.number ? <Text style={s.cardFieldError}>{cardErrors.number}</Text> : null}
-                  <View style={s.cardRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardLabel}>{t('booking.cardMonth')}</Text>
-                      <TouchableOpacity
-                        style={[s.cardInput, s.cardDropdown, cardErrors.month ? s.cardInputError : undefined]}
-                        onPress={() => setShowMonthPicker(true)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={card.month ? s.cardDropdownValue : s.cardDropdownPlaceholder}>
-                          {card.month ? String(card.month).padStart(2, '0') : 'MM'}
-                        </Text>
-                        <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
-                      </TouchableOpacity>
-                      {cardErrors.month ? <Text style={s.cardFieldError}>{cardErrors.month}</Text> : null}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardLabel}>{t('booking.cardYear')}</Text>
-                      <TouchableOpacity
-                        style={[s.cardInput, s.cardDropdown, cardErrors.year ? s.cardInputError : undefined]}
-                        onPress={() => setShowYearPicker(true)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={card.year ? s.cardDropdownValue : s.cardDropdownPlaceholder}>
-                          {card.year ? String(card.year % 100).padStart(2, '0') : 'YY'}
-                        </Text>
-                        <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
-                      </TouchableOpacity>
-                      {cardErrors.year ? <Text style={s.cardFieldError}>{cardErrors.year}</Text> : null}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.cardLabel}>{t('booking.cardCvc')}</Text>
-                      <TextInput
-                        style={[s.cardInput, cardErrors.cvc ? s.cardInputError : undefined]}
-                        value={card.cvc}
-                        onChangeText={(v) => { setCard((c) => ({ ...c, cvc: v })); setCardErrors((e) => ({ ...e, cvc: undefined })); }}
-                        placeholder="CVV"
-                        placeholderTextColor={colors.textTertiary}
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        secureTextEntry
-                      />
-                      {cardErrors.cvc ? <Text style={s.cardFieldError}>{cardErrors.cvc}</Text> : null}
-                    </View>
+                </View>
+                <View style={s.cardRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardLabel}>{t('booking.cardMonth')}</Text>
+                    <TouchableOpacity
+                      style={[s.cardInput, s.cardDropdown, cardErrors.month ? s.cardInputError : undefined]}
+                      onPress={() => setShowMonthPicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={card.month ? s.cardDropdownValue : s.cardDropdownPlaceholder}>
+                        {card.month ? String(card.month).padStart(2, '0') : 'MM'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                    </TouchableOpacity>
+                    {cardErrors.month ? <Text style={s.cardFieldError}>{cardErrors.month}</Text> : null}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardLabel}>{t('booking.cardYear')}</Text>
+                    <TouchableOpacity
+                      style={[s.cardInput, s.cardDropdown, cardErrors.year ? s.cardInputError : undefined]}
+                      onPress={() => setShowYearPicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={card.year ? s.cardDropdownValue : s.cardDropdownPlaceholder}>
+                        {card.year ? String(card.year % 100).padStart(2, '0') : 'YY'}
+                      </Text>
+                      <Ionicons name="chevron-down" size={14} color={colors.textTertiary} />
+                    </TouchableOpacity>
+                    {cardErrors.year ? <Text style={s.cardFieldError}>{cardErrors.year}</Text> : null}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.cardLabel}>{t('booking.cardCvc')}</Text>
+                    <TextInput
+                      style={[s.cardInput, cardErrors.cvc ? s.cardInputError : undefined]}
+                      value={card.cvc}
+                      onChangeText={(v) => { setCard((c) => ({ ...c, cvc: v })); setCardErrors((e) => ({ ...e, cvc: undefined })); }}
+                      placeholder="CVV"
+                      placeholderTextColor={colors.textTertiary}
+                      keyboardType="number-pad"
+                      maxLength={4}
+                      secureTextEntry
+                    />
+                    {cardErrors.cvc ? <Text style={s.cardFieldError}>{cardErrors.cvc}</Text> : null}
                   </View>
                 </View>
+              </View>
+              {/* Security note */}
+              <View style={s.cardSecurityNote}>
+                <Ionicons name="lock-closed" size={12} color={colors.textTertiary} />
+                <Text style={s.cardSecurityNoteText}>{t('booking.cardSecured', 'Secured by Moyasar · 256-bit SSL')}</Text>
+              </View>
+              {/* Pay button with breathing room */}
+              <View style={s.cardPayButtonWrapper}>
                 <Button title={t('booking.payNow')} onPress={handlePayNow} loading={payLoading} disabled={payLoading} fullWidth size="lg" />
-              </ScrollView>
-            </Animated.View>
+              </View>
+            </ScrollView>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
 
@@ -1000,18 +1040,27 @@ function makeStyles(c: ThemeColors) {
     statusInfoText: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20 },
     autoCancelText: { fontSize: FontSize.xs, color: '#EA580C', lineHeight: 18, fontStyle: 'italic' },
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-    cardModal: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 24, paddingBottom: 40, gap: 16, ...Shadow.lg },
-    cardModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.gray200, alignSelf: 'center', marginBottom: 8 },
-    cardModalTitle: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
-    cardFields: { gap: 12 },
-    cardLabel: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary, marginBottom: 4 },
-    cardInput: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 12, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.background },
+    cardModal: { backgroundColor: c.surface, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 8, ...Shadow.lg },
+    cardModalHandleZone: { alignItems: 'center', paddingBottom: 12 },
+    cardModalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: c.gray200 },
+    cardModalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
+    cardModalTitle: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary, marginBottom: 2 },
+    cardModalSubtitle: { fontSize: FontSize.xs, color: c.textTertiary },
+    cardModalClose: { width: 32, height: 32, borderRadius: 16, backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
+    cardFields: { gap: 14 },
+    cardLabel: { fontSize: FontSize.sm, fontWeight: '600', color: c.textSecondary, marginBottom: 6 },
+    cardInput: { borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 13, fontSize: FontSize.md, color: c.textPrimary, backgroundColor: c.background },
+    cardInputWrapper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: c.border, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 13, backgroundColor: c.background },
+    cardInputInner: { flex: 1, fontSize: FontSize.md, color: c.textPrimary, padding: 0 },
     cardInputError: { borderColor: c.error },
-    cardFieldError: { fontSize: FontSize.xs, color: c.error, marginTop: 2 },
+    cardFieldError: { fontSize: FontSize.xs, color: c.error, marginTop: 4 },
     cardRow: { flexDirection: 'row', gap: 10 },
     cardDropdown: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     cardDropdownValue: { fontSize: FontSize.md, color: c.textPrimary },
     cardDropdownPlaceholder: { fontSize: FontSize.md, color: c.textTertiary },
+    cardSecurityNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+    cardSecurityNoteText: { fontSize: FontSize.xs, color: c.textTertiary },
+    cardPayButtonWrapper: { paddingTop: 4, paddingBottom: 8 },
     pickerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 32 },
     pickerSheet: { backgroundColor: c.surface, borderRadius: Radius.xl, paddingVertical: 8, width: '100%', ...Shadow.lg },
     pickerTitle: { fontSize: FontSize.md, fontWeight: '700', color: c.textPrimary, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },

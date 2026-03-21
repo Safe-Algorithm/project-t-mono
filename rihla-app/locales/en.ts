@@ -28,6 +28,11 @@ export default {
     gender: 'Gender',
     passport: 'Passport Number',
     nationalId: 'National ID',
+    nationality: 'Nationality',
+    address: 'Address',
+    disability: 'Disability',
+    medicalConditions: 'Medical Conditions',
+    allergies: 'Allergies',
   },
 
   tabs: {

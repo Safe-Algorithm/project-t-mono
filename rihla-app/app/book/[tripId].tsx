@@ -589,6 +589,10 @@ export default function BookingScreen() {
             {/* Participants review */}
             {(() => {
               const resolveLabel = (fieldKey: string, rawValue: string): string => {
+                if (fieldKey === 'nationality' && nationalities) {
+                  const nat = nationalities.find(n => n.code.toUpperCase() === rawValue.toUpperCase());
+                  if (nat) return i18n.language === 'ar' ? (nat.name_ar || nat.name_en) : (nat.name_en || nat.name);
+                }
                 const meta = fieldMetadata?.[fieldKey];
                 if (meta?.options) {
                   const opt = meta.options.find(o => o.value === rawValue);
