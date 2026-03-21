@@ -250,15 +250,30 @@ async def payment_callback(
                 reg_id = str(registration.id)
                 if user.email:
                     start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
-                    asyncio.create_task(email_service.send_booking_confirmation_email(
-                        to_email=user.email,
-                        to_name=user.name,
-                        trip_name=trip_name,
-                        booking_reference=registration.booking_reference or str(registration.id)[:8].upper(),
-                        start_date=start_date,
-                        total_amount=f"{registration.total_amount} SAR",
-                        language=lang,
-                    ))
+                    end_date = trip.end_date.strftime("%Y-%m-%d") if trip and trip.end_date else ""
+                    booking_ref = registration.booking_reference or str(registration.id)[:8].upper()
+                    total_amt = f"{registration.total_amount} SAR"
+                    if registration.status == "awaiting_provider":
+                        asyncio.create_task(email_service.send_package_payment_received_email(
+                            to_email=user.email,
+                            to_name=user.name,
+                            trip_name=trip_name,
+                            booking_reference=booking_ref,
+                            start_date=start_date,
+                            end_date=end_date,
+                            total_amount=total_amt,
+                            language=lang,
+                        ))
+                    else:
+                        asyncio.create_task(email_service.send_booking_confirmation_email(
+                            to_email=user.email,
+                            to_name=user.name,
+                            trip_name=trip_name,
+                            booking_reference=booking_ref,
+                            start_date=start_date,
+                            total_amount=total_amt,
+                            language=lang,
+                        ))
                 tokens = [pt.token for pt in session.exec(
                     select(UserPushToken).where(UserPushToken.user_id == user.id)
                 ).all()]
@@ -342,21 +357,18 @@ async def payment_webhook(
 ):
     """
     Handle server-to-server webhook events from Moyasar.
-    Verifies the HMAC-SHA256 signature when a webhook secret is configured.
-    If no secret is configured, the signature check is skipped with a warning.
+    Moyasar sends the secret token in the X-Event-Secret header.
+    We compare it against MOYASAR_WEBHOOK_SECRET — must always be present and match.
     """
     body = await request.body()
     payload_str = body.decode("utf-8")
 
+    if not x_event_secret:
+        raise HTTPException(status_code=400, detail="Missing X-Event-Secret header")
     if not payment_service.webhook_secret:
-        logger.warning("MOYASAR_WEBHOOK_SECRET not set; skipping webhook secret verification")
-    elif not x_event_secret:
-        logger.warning(
-            "WEBHOOK: x-event-secret header missing — processing anyway. "
-            "Headers received: %s",
-            dict(request.headers),
-        )
-    elif not hmac.compare_digest(x_event_secret, payment_service.webhook_secret):
+        logger.error("MOYASAR_WEBHOOK_SECRET is not configured")
+        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+    if not hmac.compare_digest(x_event_secret, payment_service.webhook_secret):
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
 
     webhook_data = json.loads(payload_str)
@@ -421,16 +433,32 @@ async def payment_webhook(
             reg_id = str(confirmed_registration.id)
             if user.email:
                 start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
-                background_tasks.add_task(
-                    email_service.send_booking_confirmation_email,
-                    to_email=user.email,
-                    to_name=user.name,
-                    trip_name=trip_name,
-                    booking_reference=confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper(),
-                    start_date=start_date,
-                    total_amount=f"{confirmed_registration.total_amount} SAR",
-                    language=lang,
-                )
+                end_date = trip.end_date.strftime("%Y-%m-%d") if trip and trip.end_date else ""
+                booking_ref = confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper()
+                total_amt = f"{confirmed_registration.total_amount} SAR"
+                if confirmed_registration.status == "awaiting_provider":
+                    background_tasks.add_task(
+                        email_service.send_package_payment_received_email,
+                        to_email=user.email,
+                        to_name=user.name,
+                        trip_name=trip_name,
+                        booking_reference=booking_ref,
+                        start_date=start_date,
+                        end_date=end_date,
+                        total_amount=total_amt,
+                        language=lang,
+                    )
+                else:
+                    background_tasks.add_task(
+                        email_service.send_booking_confirmation_email,
+                        to_email=user.email,
+                        to_name=user.name,
+                        trip_name=trip_name,
+                        booking_reference=booking_ref,
+                        start_date=start_date,
+                        total_amount=total_amt,
+                        language=lang,
+                    )
             tokens = [pt.token for pt in session.exec(
                 select(UserPushToken).where(UserPushToken.user_id == user.id)
             ).all()]

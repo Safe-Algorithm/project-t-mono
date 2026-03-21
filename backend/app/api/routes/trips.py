@@ -1856,17 +1856,33 @@ def flag_registration_confirmed(
     session.commit()
     session.refresh(reg)
 
-    # Push: notify user that all arrangements are complete
+    # Push + Email: notify user that all arrangements are complete
     from sqlmodel import select as sql_select
+    from app.services.email import email_service
+    from app.utils.localization import get_localized_field
     reg_user = session.get(User, reg.user_id)
     if reg_user:
         lang = getattr(reg_user, "preferred_language", "en") or "en"
-        trip_name = trip.name_en or trip.name_ar or ""
+        trip_name = get_localized_field(trip, "name", lang)
         tokens = [pt.token for pt in session.exec(sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)).all()]
         for token in tokens:
             background_tasks.add_task(
                 fcm_service.notify_registration_confirmed,
                 fcm_token=token, trip_name=trip_name, lang=lang, registration_id=str(reg.id),
+            )
+        if reg_user.email:
+            start_date = trip.start_date.strftime("%Y-%m-%d") if trip.start_date else ""
+            end_date = trip.end_date.strftime("%Y-%m-%d") if trip.end_date else ""
+            background_tasks.add_task(
+                email_service.send_package_trip_confirmed_email,
+                to_email=reg_user.email,
+                to_name=reg_user.name,
+                trip_name=trip_name,
+                booking_reference=reg.booking_reference or str(reg.id)[:8].upper(),
+                start_date=start_date,
+                end_date=end_date,
+                total_amount=f"{reg.total_amount} SAR",
+                language=lang,
             )
 
     return {"id": str(reg.id), "status": reg.status}
@@ -2136,7 +2152,7 @@ async def provider_cancel_single_booking(
         lang = getattr(reg_user, "preferred_language", "en") or "en"
         trip_name_val = trip.name_en or trip.name_ar or ""
         tokens = [pt.token for pt in session.exec(
-            select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
+            sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
         ).all()]
         for token in tokens:
             background_tasks.add_task(

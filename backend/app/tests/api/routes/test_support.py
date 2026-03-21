@@ -11,6 +11,7 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.models.user import UserRole
 from app.models.source import RequestSource
+from app.models.provider import Provider
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
 from app.models.support_ticket import SupportTicket, TripSupportTicket, TicketMessage, TicketStatus, SenderType, TicketCategory, TicketPriority
@@ -19,11 +20,29 @@ from app.tests.utils.user import user_authentication_headers, create_random_user
 API = settings.API_V1_STR
 
 
-def _create_trip_for_provider(session: Session, provider_id) -> Trip:
+def _create_trip_for_provider(session: Session, provider_user) -> Trip:
+    """Create a trip owned by provider_user, creating a Provider entity if needed."""
+    # Ensure the user has a Provider entity and user.provider_id is set
+    if provider_user.provider_id is None:
+        p = Provider(
+            company_name=f"Test Co {uuid.uuid4().hex[:6]}",
+            company_email=f"prov_{uuid.uuid4().hex[:6]}@test.com",
+            company_phone="0500000000",
+        )
+        session.add(p)
+        session.flush()  # get p.id without full commit
+        provider_user.provider_id = p.id
+        session.add(provider_user)
+        session.commit()
+        session.refresh(provider_user)
+        provider_entity_id = p.id
+    else:
+        provider_entity_id = provider_user.provider_id
+
     trip = Trip(
         name_en="Test Trip", description_en="Desc",
         start_date=datetime.utcnow(), end_date=datetime.utcnow() + timedelta(days=5),
-        max_participants=20, provider_id=provider_id, is_active=True,
+        max_participants=20, provider_id=provider_entity_id, is_active=True,
     )
     session.add(trip)
     session.commit()
@@ -152,7 +171,7 @@ class TestAdminSupportTickets:
 class TestTripSupportTickets:
     def test_user_create_trip_ticket(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={
@@ -160,11 +179,13 @@ class TestTripSupportTickets:
         }, headers=uh)
         assert r.status_code == 200
         assert r.json()["subject"] == "Trip issue"
-        assert r.json()["provider_id"] == str(provider.id)
+        # provider_id in the ticket is the Provider entity ID (not the User ID)
+        session.refresh(provider)
+        assert r.json()["provider_id"] == str(provider.provider_id)
 
     def test_unregistered_user_cannot_create_trip_ticket(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         r = client.post(f"{API}/trips/{trip.id}/support", json={
             "subject": "X", "description": "Y",
@@ -173,7 +194,7 @@ class TestTripSupportTickets:
 
     def test_user_list_trip_tickets(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         client.post(f"{API}/trips/{trip.id}/support", json={"subject": "T1", "description": "D1"}, headers=uh)
@@ -183,7 +204,7 @@ class TestTripSupportTickets:
 
     def test_user_reply_trip_ticket(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -193,7 +214,7 @@ class TestTripSupportTickets:
 
     def test_provider_list_tickets(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -203,7 +224,7 @@ class TestTripSupportTickets:
 
     def test_provider_get_ticket_detail(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -214,7 +235,7 @@ class TestTripSupportTickets:
 
     def test_provider_update_ticket(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -225,7 +246,7 @@ class TestTripSupportTickets:
 
     def test_provider_reply_ticket(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -236,7 +257,7 @@ class TestTripSupportTickets:
 
     def test_other_provider_cannot_see_ticket(self, client: TestClient, session: Session):
         provider1, ph1 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider1.id)
+        trip = _create_trip_for_provider(session, provider1)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -247,7 +268,7 @@ class TestTripSupportTickets:
 
     def test_provider_reply_closed_ticket_fails(self, client: TestClient, session: Session):
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip = _create_trip_for_provider(session, provider.id)
+        trip = _create_trip_for_provider(session, provider)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
@@ -255,3 +276,163 @@ class TestTripSupportTickets:
         client.patch(f"{API}/provider/support/tickets/{tid}", json={"status": "closed"}, headers=ph)
         r2 = client.post(f"{API}/provider/support/tickets/{tid}/messages", json={"message": "X"}, headers=ph)
         assert r2.status_code == 400
+
+    def test_user_list_all_trip_tickets(self, client: TestClient, session: Session):
+        """GET /support/trip-tickets — list all trip tickets for current user across all trips."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip1 = _create_trip_for_provider(session, provider)
+        trip2 = _create_trip_for_provider(session, provider)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip1.id, user.id)
+        _create_registration(session, trip2.id, user.id)
+        client.post(f"{API}/trips/{trip1.id}/support", json={"subject": "T1", "description": "D1"}, headers=uh)
+        client.post(f"{API}/trips/{trip2.id}/support", json={"subject": "T2", "description": "D2"}, headers=uh)
+        r = client.get(f"{API}/support/trip-tickets", headers=uh)
+        assert r.status_code == 200
+        assert len(r.json()) == 2
+        subjects = {t["subject"] for t in r.json()}
+        assert subjects == {"T1", "T2"}
+
+    def test_user_list_all_trip_tickets_excludes_others(self, client: TestClient, session: Session):
+        """GET /support/trip-tickets — does not return tickets from another user."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider)
+        user1, uh1 = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        user2, uh2 = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip.id, user1.id)
+        _create_registration(session, trip.id, user2.id)
+        client.post(f"{API}/trips/{trip.id}/support", json={"subject": "User1 ticket", "description": "D"}, headers=uh1)
+        r = client.get(f"{API}/support/trip-tickets", headers=uh2)
+        assert r.status_code == 200
+        assert len(r.json()) == 0
+
+    def test_user_get_trip_ticket_by_id(self, client: TestClient, session: Session):
+        """GET /support/trip-tickets/{id} — user can fetch their own ticket with messages."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip.id, user.id)
+        r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "Detail test", "description": "D"}, headers=uh)
+        tid = r.json()["id"]
+        client.post(f"{API}/support/trip-tickets/{tid}/messages", json={"message": "My reply"}, headers=uh)
+        r2 = client.get(f"{API}/support/trip-tickets/{tid}", headers=uh)
+        assert r2.status_code == 200
+        data = r2.json()
+        assert data["id"] == tid
+        assert data["subject"] == "Detail test"
+        assert len(data["messages"]) == 1
+        assert data["messages"][0]["message"] == "My reply"
+
+    def test_user_cannot_get_others_trip_ticket(self, client: TestClient, session: Session):
+        """GET /support/trip-tickets/{id} — 403 when accessing another user's ticket."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider)
+        user1, uh1 = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        user2, uh2 = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip.id, user1.id)
+        r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh1)
+        tid = r.json()["id"]
+        r2 = client.get(f"{API}/support/trip-tickets/{tid}", headers=uh2)
+        assert r2.status_code == 403
+
+
+# ===== Provider → Admin Support Tickets =====
+
+
+class TestProviderAdminTickets:
+    def test_provider_create_admin_ticket(self, client: TestClient, session: Session):
+        """POST /provider/support/admin-tickets — provider raises a ticket to admin."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={
+            "subject": "Billing issue", "description": "Charge incorrect", "category": "billing",
+        }, headers=ph)
+        assert r.status_code == 200
+        data = r.json()
+        assert data["subject"] == "Billing issue"
+        assert data["category"] == "billing"
+        assert data["status"] == "open"
+
+    def test_provider_list_admin_tickets(self, client: TestClient, session: Session):
+        """GET /provider/support/admin-tickets — provider only sees their own tickets."""
+        provider1, ph1 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        provider2, ph2 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        client.post(f"{API}/provider/support/admin-tickets", json={"subject": "P1", "description": "D"}, headers=ph1)
+        client.post(f"{API}/provider/support/admin-tickets", json={"subject": "P2", "description": "D"}, headers=ph1)
+        client.post(f"{API}/provider/support/admin-tickets", json={"subject": "Other", "description": "D"}, headers=ph2)
+        r = client.get(f"{API}/provider/support/admin-tickets", headers=ph1)
+        assert r.status_code == 200
+        assert len(r.json()) == 2
+        for t in r.json():
+            assert t["subject"] in {"P1", "P2"}
+
+    def test_provider_get_admin_ticket_with_messages(self, client: TestClient, session: Session):
+        """GET /provider/support/admin-tickets/{id} — returns ticket + messages."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph)
+        tid = r.json()["id"]
+        r2 = client.get(f"{API}/provider/support/admin-tickets/{tid}", headers=ph)
+        assert r2.status_code == 200
+        assert r2.json()["id"] == tid
+        assert r2.json()["messages"] == []
+
+    def test_provider_cannot_see_another_providers_admin_ticket(self, client: TestClient, session: Session):
+        """GET /provider/support/admin-tickets/{id} — 403 for tickets owned by another provider."""
+        provider1, ph1 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        provider2, ph2 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph1)
+        tid = r.json()["id"]
+        r2 = client.get(f"{API}/provider/support/admin-tickets/{tid}", headers=ph2)
+        assert r2.status_code == 403
+
+    def test_provider_reply_admin_ticket(self, client: TestClient, session: Session):
+        """POST /provider/support/admin-tickets/{id}/messages — provider can reply to their own ticket."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph)
+        tid = r.json()["id"]
+        r2 = client.post(f"{API}/provider/support/admin-tickets/{tid}/messages", json={"message": "More info"}, headers=ph)
+        assert r2.status_code == 200
+        assert r2.json()["message"] == "More info"
+        assert r2.json()["sender_type"] == "provider"
+
+    def test_provider_reply_appears_in_thread(self, client: TestClient, session: Session):
+        """Admin can see provider reply in the ticket thread via admin endpoint."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph)
+        tid = r.json()["id"]
+        client.post(f"{API}/provider/support/admin-tickets/{tid}/messages", json={"message": "Provider detail"}, headers=ph)
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        r2 = client.get(f"{API}/admin/support/tickets/{tid}", headers=ah)
+        assert r2.status_code == 200
+        assert len(r2.json()["messages"]) == 1
+        assert r2.json()["messages"][0]["sender_type"] == "provider"
+
+    def test_provider_reply_to_closed_admin_ticket_fails(self, client: TestClient, session: Session):
+        """POST /provider/support/admin-tickets/{id}/messages — 400 when ticket is closed."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph)
+        tid = r.json()["id"]
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "closed"}, headers=ah)
+        r2 = client.post(f"{API}/provider/support/admin-tickets/{tid}/messages", json={"message": "X"}, headers=ph)
+        assert r2.status_code == 400
+
+    def test_normal_user_cannot_access_provider_admin_endpoints(self, client: TestClient, session: Session):
+        """Provider→admin endpoints require provider auth — regular users are rejected."""
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=uh)
+        assert r.status_code in {401, 403}
+        r2 = client.get(f"{API}/provider/support/admin-tickets", headers=uh)
+        assert r2.status_code in {401, 403}
+
+    def test_provider_admin_ticket_visible_to_admin(self, client: TestClient, session: Session):
+        """Tickets created via /provider/support/admin-tickets appear in /admin/support/tickets."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        r = client.post(f"{API}/provider/support/admin-tickets", json={
+            "subject": "Provider complaint", "description": "Something wrong",
+        }, headers=ph)
+        tid = r.json()["id"]
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        r2 = client.get(f"{API}/admin/support/tickets", headers=ah)
+        assert r2.status_code == 200
+        ids = [t["id"] for t in r2.json()]
+        assert tid in ids

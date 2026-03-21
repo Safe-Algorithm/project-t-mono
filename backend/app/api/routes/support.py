@@ -11,8 +11,8 @@ Sections:
 import uuid
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from sqlmodel import Session, select
 
 from app.api.deps import (
     get_session,
@@ -25,6 +25,7 @@ from app.models.user import User
 from app.models.support_ticket import TicketStatus, SenderType
 from app.models.trip_registration import TripRegistration
 from app.models.trip import Trip
+from app.models.user_push_token import UserPushToken
 from app.crud import support_ticket as crud_support
 from app.schemas.support_ticket import (
     SupportTicketCreate,
@@ -38,6 +39,21 @@ from app.schemas.support_ticket import (
     TicketMessageCreate,
     TicketMessageRead,
 )
+from app.services.fcm import fcm_service
+
+
+def _push_tokens(session: Session, user_id: uuid.UUID) -> list[str]:
+    """Return all FCM tokens for a user."""
+    return [
+        pt.token for pt in session.exec(
+            select(UserPushToken).where(UserPushToken.user_id == user_id)
+        ).all()
+    ]
+
+
+def _user_lang(user: User) -> str:
+    return getattr(user, "preferred_language", "en") or "en"
+
 
 router = APIRouter()
 
@@ -132,9 +148,21 @@ def user_create_trip_support_ticket(
     current_user: User = Depends(get_current_active_user),
 ):
     """Create a trip support ticket. User must have a registration for this trip."""
-    # Verify registration exists
-    from sqlmodel import select
+    from datetime import datetime
 
+    # Get trip first so we can validate it
+    trip = session.get(Trip, trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+
+    # Block tickets for trips that have already ended
+    if trip.end_date and trip.end_date < datetime.utcnow():
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot open a support ticket for a trip that has already ended",
+        )
+
+    # Verify the user has a registration for this trip
     stmt = select(TripRegistration).where(
         TripRegistration.trip_id == trip_id,
         TripRegistration.user_id == current_user.id,
@@ -145,11 +173,6 @@ def user_create_trip_support_ticket(
             status_code=403,
             detail="You must be registered for this trip to create a support ticket",
         )
-
-    # Get trip to find provider
-    trip = session.get(Trip, trip_id)
-    if not trip:
-        raise HTTPException(status_code=404, detail="Trip not found")
 
     ticket = crud_support.create_trip_support_ticket(
         session,
@@ -171,8 +194,6 @@ def user_list_trip_support_tickets(
     current_user: User = Depends(get_current_active_user),
 ):
     """List user's support tickets for a specific trip."""
-    from sqlmodel import select
-
     stmt = select(TripRegistration).where(
         TripRegistration.trip_id == trip_id,
         TripRegistration.user_id == current_user.id,
@@ -183,6 +204,21 @@ def user_list_trip_support_tickets(
 
     tickets = crud_support.list_trip_support_tickets_by_registration(
         session, registration_id=registration.id
+    )
+    return [TripSupportTicketRead.model_validate(t) for t in tickets]
+
+
+@router.get(
+    "/support/trip-tickets",
+    response_model=List[TripSupportTicketRead],
+)
+def user_list_all_trip_support_tickets(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List all trip support tickets raised by the current user (across all trips)."""
+    tickets = crud_support.list_trip_support_tickets_by_user(
+        session, user_id=current_user.id
     )
     return [TripSupportTicketRead.model_validate(t) for t in tickets]
 
@@ -289,6 +325,7 @@ def admin_get_support_ticket(
 def admin_update_support_ticket(
     ticket_id: uuid.UUID,
     data: SupportTicketUpdate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
     _rbac: None = Depends(require_admin_permission),
@@ -298,6 +335,18 @@ def admin_update_support_ticket(
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     updated = crud_support.update_support_ticket(session, ticket=ticket, data=data)
+    # Notify ticket owner if status changed
+    if data.status is not None and data.status != ticket.status:
+        tokens = _push_tokens(session, ticket.user_id)
+        owner = session.get(User, ticket.user_id)
+        lang = _user_lang(owner) if owner else "en"
+        for token in tokens:
+            background_tasks.add_task(
+                fcm_service.notify_support_ticket_status,
+                fcm_token=token, subject=ticket.subject,
+                status=data.status.value, lang=lang,
+                ticket_id=str(ticket_id), ticket_type="admin",
+            )
     return SupportTicketRead.model_validate(updated)
 
 
@@ -308,6 +357,7 @@ def admin_update_support_ticket(
 def admin_reply_support_ticket(
     ticket_id: uuid.UUID,
     data: TicketMessageCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_admin),
     _rbac: None = Depends(require_admin_permission),
@@ -323,6 +373,17 @@ def admin_reply_support_ticket(
         data=data,
         support_ticket_id=ticket_id,
     )
+    # Notify ticket owner
+    tokens = _push_tokens(session, ticket.user_id)
+    owner = session.get(User, ticket.user_id)
+    lang = _user_lang(owner) if owner else "en"
+    for token in tokens:
+        background_tasks.add_task(
+            fcm_service.notify_support_ticket_message,
+            fcm_token=token, subject=ticket.subject,
+            preview=data.message, lang=lang,
+            ticket_id=str(ticket_id), ticket_type="admin",
+        )
     return TicketMessageRead.model_validate(msg)
 
 
@@ -369,7 +430,90 @@ def admin_get_trip_support_ticket(
 
 
 # =====================================================================
-# 4. Provider Panel – Trip Support Tickets
+# 4. Provider Panel – Admin Support Tickets (Provider → Admin)
+# =====================================================================
+
+
+@router.post("/provider/support/admin-tickets", response_model=SupportTicketRead)
+def provider_create_admin_ticket(
+    data: SupportTicketCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """Create a new support ticket directed to admin (provider → admin)."""
+    ticket = crud_support.create_support_ticket(
+        session, user_id=current_user.id, data=data
+    )
+    return SupportTicketRead.model_validate(ticket)
+
+
+@router.get("/provider/support/admin-tickets", response_model=List[SupportTicketRead])
+def provider_list_admin_tickets(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """List admin support tickets raised by this provider."""
+    tickets = crud_support.list_support_tickets_by_user(
+        session, user_id=current_user.id
+    )
+    return [SupportTicketRead.model_validate(t) for t in tickets]
+
+
+@router.get(
+    "/provider/support/admin-tickets/{ticket_id}",
+    response_model=SupportTicketReadWithMessages,
+)
+def provider_get_admin_ticket(
+    ticket_id: uuid.UUID,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """Get an admin support ticket with messages. Provider can only see their own."""
+    ticket = crud_support.get_support_ticket(session, ticket_id=ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if ticket.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your ticket")
+    messages = crud_support.get_messages_for_support_ticket(session, ticket_id=ticket_id)
+    result = SupportTicketReadWithMessages.model_validate(ticket)
+    result.messages = [TicketMessageRead.model_validate(m) for m in messages]
+    return result
+
+
+@router.post(
+    "/provider/support/admin-tickets/{ticket_id}/messages",
+    response_model=TicketMessageRead,
+)
+def provider_reply_admin_ticket(
+    ticket_id: uuid.UUID,
+    data: TicketMessageCreate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_active_provider),
+    _rbac: None = Depends(require_provider_permission),
+):
+    """Reply to an admin support ticket (provider side)."""
+    ticket = crud_support.get_support_ticket(session, ticket_id=ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    if ticket.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your ticket")
+    if ticket.status == TicketStatus.CLOSED:
+        raise HTTPException(status_code=400, detail="Ticket is closed")
+    msg = crud_support.add_message(
+        session,
+        sender_id=current_user.id,
+        sender_type=SenderType.PROVIDER,
+        data=data,
+        support_ticket_id=ticket_id,
+    )
+    return TicketMessageRead.model_validate(msg)
+
+
+# =====================================================================
+# 5. Provider Panel – Trip Support Tickets (User → Provider)
 # =====================================================================
 
 
@@ -386,8 +530,10 @@ def provider_list_trip_support_tickets(
     _rbac: None = Depends(require_provider_permission),
 ):
     """List trip support tickets for the current provider's trips."""
+    if not current_user.provider_id:
+        return []
     tickets = crud_support.list_trip_support_tickets_by_provider(
-        session, provider_id=current_user.id, status_filter=status, skip=skip, limit=limit
+        session, provider_id=current_user.provider_id, status_filter=status, skip=skip, limit=limit
     )
     return [TripSupportTicketRead.model_validate(t) for t in tickets]
 
@@ -406,7 +552,7 @@ def provider_get_trip_support_ticket(
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if ticket.provider_id != current_user.id:
+    if ticket.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not your ticket")
     messages = crud_support.get_messages_for_trip_support_ticket(
         session, ticket_id=ticket_id
@@ -423,6 +569,7 @@ def provider_get_trip_support_ticket(
 def provider_update_trip_support_ticket(
     ticket_id: uuid.UUID,
     data: TripSupportTicketUpdate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
     _rbac: None = Depends(require_provider_permission),
@@ -431,11 +578,23 @@ def provider_update_trip_support_ticket(
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if ticket.provider_id != current_user.id:
+    if ticket.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not your ticket")
     updated = crud_support.update_trip_support_ticket(
         session, ticket=ticket, data=data
     )
+    # Notify user if status changed
+    if data.status is not None and data.status != ticket.status:
+        tokens = _push_tokens(session, ticket.user_id)
+        user = session.get(User, ticket.user_id)
+        lang = _user_lang(user) if user else "en"
+        for token in tokens:
+            background_tasks.add_task(
+                fcm_service.notify_support_ticket_status,
+                fcm_token=token, subject=ticket.subject,
+                status=data.status.value, lang=lang,
+                ticket_id=str(ticket_id), ticket_type="trip",
+            )
     return TripSupportTicketRead.model_validate(updated)
 
 
@@ -446,6 +605,7 @@ def provider_update_trip_support_ticket(
 def provider_reply_trip_support_ticket(
     ticket_id: uuid.UUID,
     data: TicketMessageCreate,
+    background_tasks: BackgroundTasks,
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_provider),
     _rbac: None = Depends(require_provider_permission),
@@ -454,7 +614,7 @@ def provider_reply_trip_support_ticket(
     ticket = crud_support.get_trip_support_ticket(session, ticket_id=ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    if ticket.provider_id != current_user.id:
+    if ticket.provider_id != current_user.provider_id:
         raise HTTPException(status_code=403, detail="Not your ticket")
     if ticket.status == TicketStatus.CLOSED:
         raise HTTPException(status_code=400, detail="Ticket is closed")
@@ -465,4 +625,15 @@ def provider_reply_trip_support_ticket(
         data=data,
         trip_support_ticket_id=ticket_id,
     )
+    # Notify the user who raised the trip ticket
+    tokens = _push_tokens(session, ticket.user_id)
+    user = session.get(User, ticket.user_id)
+    lang = _user_lang(user) if user else "en"
+    for token in tokens:
+        background_tasks.add_task(
+            fcm_service.notify_support_ticket_message,
+            fcm_token=token, subject=ticket.subject,
+            preview=data.message, lang=lang,
+            ticket_id=str(ticket_id), ticket_type="trip",
+        )
     return TicketMessageRead.model_validate(msg)

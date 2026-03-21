@@ -592,6 +592,21 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
+        {/* Contact Provider button — shown for booked (non-pending) trips */}
+        {['awaiting_provider', 'processing', 'confirmed'].includes(registration.status) && (
+          <TouchableOpacity
+            style={s.contactProviderBtn}
+            onPress={() => router.push({
+              pathname: '/support/new-trip-ticket' as any,
+              params: { tripId: registration.trip_id, registrationId },
+            })}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+            <Text style={s.contactProviderBtnText}>{t('booking.contactProvider')}</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Cancel booking button — shown for active bookings and unpaid pending spots */}
         {['awaiting_provider', 'processing', 'confirmed', 'pending_payment'].includes(registration.status) && (
           <TouchableOpacity style={s.cancelBtn} onPress={() => setShowCancelModal(true)} activeOpacity={0.8}>
@@ -1121,6 +1136,12 @@ function makeStyles(c: ThemeColors) {
       paddingVertical: 14, marginBottom: 16, backgroundColor: '#FEF2F2',
     },
     cancelBtnText: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626' },
+    contactProviderBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      borderWidth: 1.5, borderColor: c.primary, borderRadius: Radius.xl,
+      paddingVertical: 14, marginBottom: 12, backgroundColor: c.primarySurface,
+    },
+    contactProviderBtnText: { fontSize: FontSize.md, fontWeight: '700', color: c.primary },
     cancelSheet: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 24, paddingBottom: 40, ...Shadow.lg },
     cancelSheetDragZone: { alignItems: 'center', paddingBottom: 8 },
     cancelModalTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },

@@ -1039,5 +1039,294 @@ Thank you for choosing Rihla!
         )
 
 
+    async def send_package_payment_received_email(
+        self,
+        to_email: str,
+        to_name: str,
+        trip_name: str,
+        booking_reference: str,
+        start_date: str,
+        end_date: str,
+        total_amount: str,
+        language: str = "en",
+    ) -> dict:
+        """
+        Sent for package/self-arranged trips right after payment is received.
+        Makes it clear the booking is awaiting provider acceptance — NOT yet confirmed.
+        """
+        ar = _is_ar(language)
+
+        if ar:
+            subject = f"تم استلام دفعتك - في انتظار موافقة المزود | {trip_name}"
+            html_content = f"""<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head><meta charset="utf-8"/>
+<style>
+  body{{font-family:'Segoe UI',Tahoma,Arial,sans-serif;line-height:1.8;color:#333;direction:rtl;}}
+  .container{{max-width:600px;margin:0 auto;padding:20px;}}
+  .header{{background:#0EA5E9;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0;}}
+  .content{{padding:30px;background:#f9fafb;}}
+  .details{{background:#fff;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #e5e7eb;}}
+  .detail-row{{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;}}
+  .detail-row:last-child{{border-bottom:none;}}
+  .status-box{{background:#FEF9C3;border:1px solid #FDE68A;border-radius:8px;padding:16px;margin:20px 0;text-align:center;}}
+  .status-box h3{{margin:0 0 8px;color:#92400E;}}
+  .status-box p{{margin:0;color:#78350F;font-size:14px;}}
+  .footer{{text-align:center;padding:20px;color:#9ca3af;font-size:12px;}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>💳 تم استلام دفعتك بنجاح</h1></div>
+    <div class="content">
+      <p>مرحباً {to_name}،</p>
+      <p>تم استلام دفعتك بنجاح لرحلة <strong>{trip_name}</strong>.</p>
+      <div class="details">
+        <h2>تفاصيل الحجز</h2>
+        <div class="detail-row"><strong>الرحلة:</strong><span>{trip_name}</span></div>
+        <div class="detail-row"><strong>رقم الحجز:</strong><span style="font-family:monospace;">{booking_reference}</span></div>
+        <div class="detail-row"><strong>تاريخ البدء:</strong><span>{start_date}</span></div>
+        <div class="detail-row"><strong>تاريخ الانتهاء:</strong><span>{end_date}</span></div>
+        <div class="detail-row"><strong>المبلغ الإجمالي:</strong><span>{total_amount}</span></div>
+      </div>
+      <div class="status-box">
+        <h3>⏳ في انتظار قبول المزود</h3>
+        <p>طلبك قيد المراجعة من قِبل المزود. بمجرد قبوله والبدء في ترتيب رحلتك، ستتلقى إشعاراً فورياً على تطبيق رحلة.</p>
+      </div>
+      <p>يمكنك متابعة حالة حجزك في أي وقت من خلال تطبيق رحلة.</p>
+      <p>شكراً لاختيارك رحلة! 🌟</p>
+    </div>
+    <div class="footer"><p>&copy; 2026 رحلة. جميع الحقوق محفوظة.</p></div>
+  </div>
+</body></html>"""
+            text_content = f"""مرحباً {to_name}،
+
+تم استلام دفعتك بنجاح لرحلة {trip_name}.
+
+تفاصيل الحجز:
+الرحلة: {trip_name}
+رقم الحجز: {booking_reference}
+تاريخ البدء: {start_date}
+تاريخ الانتهاء: {end_date}
+المبلغ الإجمالي: {total_amount}
+
+⏳ الحالة: في انتظار قبول المزود
+طلبك قيد المراجعة. بمجرد قبوله والبدء في الترتيب، ستتلقى إشعاراً على التطبيق.
+
+شكراً لاختيارك رحلة!
+© 2026 رحلة. جميع الحقوق محفوظة."""
+        else:
+            subject = f"Payment Received – Awaiting Provider | {trip_name}"
+            html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/>
+<style>
+  body{{font-family:'Segoe UI',Arial,sans-serif;line-height:1.6;color:#333;}}
+  .container{{max-width:600px;margin:0 auto;padding:20px;}}
+  .header{{background:#0EA5E9;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0;}}
+  .content{{padding:30px;background:#f9fafb;}}
+  .details{{background:#fff;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #e5e7eb;}}
+  .detail-row{{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;}}
+  .detail-row:last-child{{border-bottom:none;}}
+  .status-box{{background:#FEF9C3;border:1px solid #FDE68A;border-radius:8px;padding:16px;margin:20px 0;text-align:center;}}
+  .status-box h3{{margin:0 0 8px;color:#92400E;}}
+  .status-box p{{margin:0;color:#78350F;font-size:14px;}}
+  .footer{{text-align:center;padding:20px;color:#9ca3af;font-size:12px;}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>💳 Payment Received Successfully</h1></div>
+    <div class="content">
+      <p>Hello {to_name},</p>
+      <p>Your payment for <strong>{trip_name}</strong> has been successfully received.</p>
+      <div class="details">
+        <h2>Booking Details</h2>
+        <div class="detail-row"><strong>Trip:</strong><span>{trip_name}</span></div>
+        <div class="detail-row"><strong>Booking Reference:</strong><span style="font-family:monospace;">{booking_reference}</span></div>
+        <div class="detail-row"><strong>Start Date:</strong><span>{start_date}</span></div>
+        <div class="detail-row"><strong>End Date:</strong><span>{end_date}</span></div>
+        <div class="detail-row"><strong>Total Amount:</strong><span>{total_amount}</span></div>
+      </div>
+      <div class="status-box">
+        <h3>⏳ Awaiting Provider Acceptance</h3>
+        <p>Your request is being reviewed by the provider. Once they accept and start arranging your trip, you will receive an instant push notification on the Rihla app.</p>
+      </div>
+      <p>You can track your booking status at any time in the Rihla app.</p>
+      <p>Thank you for choosing Rihla! 🌟</p>
+    </div>
+    <div class="footer"><p>&copy; 2026 Rihla. All rights reserved.</p></div>
+  </div>
+</body></html>"""
+            text_content = f"""Hello {to_name},
+
+Your payment for {trip_name} has been successfully received.
+
+BOOKING DETAILS
+---------------
+Trip: {trip_name}
+Booking Reference: {booking_reference}
+Start Date: {start_date}
+End Date: {end_date}
+Total Amount: {total_amount}
+
+⏳ Status: Awaiting Provider Acceptance
+Your request is under review. Once the provider accepts and starts arranging your trip, you will receive a push notification.
+
+Thank you for choosing Rihla!
+© 2026 Rihla. All rights reserved."""
+
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name,
+        )
+
+    async def send_package_trip_confirmed_email(
+        self,
+        to_email: str,
+        to_name: str,
+        trip_name: str,
+        booking_reference: str,
+        start_date: str,
+        end_date: str,
+        total_amount: str,
+        language: str = "en",
+    ) -> dict:
+        """
+        Sent for package/self-arranged trips when the provider finishes all arrangements
+        (transitions booking to 'confirmed'). Congratulates the user and directs them
+        to check trip updates in the app for tickets and messages from the provider.
+        """
+        ar = _is_ar(language)
+
+        if ar:
+            subject = f"🎉 رحلتك مؤكدة بالكامل! كل شيء جاهز | {trip_name}"
+            html_content = f"""<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head><meta charset="utf-8"/>
+<style>
+  body{{font-family:'Segoe UI',Tahoma,Arial,sans-serif;line-height:1.8;color:#333;direction:rtl;}}
+  .container{{max-width:600px;margin:0 auto;padding:20px;}}
+  .header{{background:#10B981;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0;}}
+  .content{{padding:30px;background:#f9fafb;}}
+  .details{{background:#fff;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #e5e7eb;}}
+  .detail-row{{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;}}
+  .detail-row:last-child{{border-bottom:none;}}
+  .cta-box{{background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:16px;margin:20px 0;text-align:center;}}
+  .cta-box h3{{margin:0 0 8px;color:#065F46;}}
+  .cta-box p{{margin:0;color:#047857;font-size:14px;}}
+  .footer{{text-align:center;padding:20px;color:#9ca3af;font-size:12px;}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>✅ رحلتك مؤكدة بالكامل!</h1></div>
+    <div class="content">
+      <p>مرحباً {to_name}،</p>
+      <p>تهانينا! 🎉 اكتملت جميع ترتيبات رحلتك <strong>{trip_name}</strong>. كل شيء جاهز لك!</p>
+      <div class="details">
+        <h2>تفاصيل الرحلة</h2>
+        <div class="detail-row"><strong>الرحلة:</strong><span>{trip_name}</span></div>
+        <div class="detail-row"><strong>رقم الحجز:</strong><span style="font-family:monospace;">{booking_reference}</span></div>
+        <div class="detail-row"><strong>تاريخ البدء:</strong><span>{start_date}</span></div>
+        <div class="detail-row"><strong>تاريخ الانتهاء:</strong><span>{end_date}</span></div>
+        <div class="detail-row"><strong>المبلغ الإجمالي:</strong><span>{total_amount}</span></div>
+      </div>
+      <div class="cta-box">
+        <h3>📲 تحقق من تحديثات رحلتك</h3>
+        <p>افتح تطبيق رحلة وتوجه إلى صفحة حجزك للاطلاع على التذاكر والرسائل والمستندات التي أرسلها المزود.</p>
+      </div>
+      <p>استمتع برحلتك! 🌟</p>
+    </div>
+    <div class="footer"><p>&copy; 2026 رحلة. جميع الحقوق محفوظة.</p></div>
+  </div>
+</body></html>"""
+            text_content = f"""مرحباً {to_name}،
+
+تهانينا! 🎉 اكتملت جميع ترتيبات رحلتك {trip_name}. كل شيء جاهز!
+
+تفاصيل الرحلة:
+الرحلة: {trip_name}
+رقم الحجز: {booking_reference}
+تاريخ البدء: {start_date}
+تاريخ الانتهاء: {end_date}
+المبلغ الإجمالي: {total_amount}
+
+📲 تحقق من تحديثات رحلتك في تطبيق رحلة للاطلاع على التذاكر والرسائل من المزود.
+
+استمتع برحلتك!
+© 2026 رحلة. جميع الحقوق محفوظة."""
+        else:
+            subject = f"🎉 Your Trip is Fully Confirmed! All Set | {trip_name}"
+            html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"/>
+<style>
+  body{{font-family:'Segoe UI',Arial,sans-serif;line-height:1.6;color:#333;}}
+  .container{{max-width:600px;margin:0 auto;padding:20px;}}
+  .header{{background:#10B981;color:#fff;padding:24px;text-align:center;border-radius:8px 8px 0 0;}}
+  .content{{padding:30px;background:#f9fafb;}}
+  .details{{background:#fff;padding:20px;border-radius:8px;margin:20px 0;border:1px solid #e5e7eb;}}
+  .detail-row{{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6;}}
+  .detail-row:last-child{{border-bottom:none;}}
+  .cta-box{{background:#ECFDF5;border:1px solid #A7F3D0;border-radius:8px;padding:16px;margin:20px 0;text-align:center;}}
+  .cta-box h3{{margin:0 0 8px;color:#065F46;}}
+  .cta-box p{{margin:0;color:#047857;font-size:14px;}}
+  .footer{{text-align:center;padding:20px;color:#9ca3af;font-size:12px;}}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>✅ Your Trip is Fully Confirmed!</h1></div>
+    <div class="content">
+      <p>Hello {to_name},</p>
+      <p>Congratulations! 🎉 All arrangements for your <strong>{trip_name}</strong> trip are complete. You're all set!</p>
+      <div class="details">
+        <h2>Trip Details</h2>
+        <div class="detail-row"><strong>Trip:</strong><span>{trip_name}</span></div>
+        <div class="detail-row"><strong>Booking Reference:</strong><span style="font-family:monospace;">{booking_reference}</span></div>
+        <div class="detail-row"><strong>Start Date:</strong><span>{start_date}</span></div>
+        <div class="detail-row"><strong>End Date:</strong><span>{end_date}</span></div>
+        <div class="detail-row"><strong>Total Amount:</strong><span>{total_amount}</span></div>
+      </div>
+      <div class="cta-box">
+        <h3>📲 Check Your Trip Updates</h3>
+        <p>Open the Rihla app and go to your booking to view tickets, messages, and any documents sent by your provider.</p>
+      </div>
+      <p>Have an amazing trip! 🌟</p>
+    </div>
+    <div class="footer"><p>&copy; 2026 Rihla. All rights reserved.</p></div>
+  </div>
+</body></html>"""
+            text_content = f"""Hello {to_name},
+
+Congratulations! 🎉 All arrangements for your {trip_name} trip are complete. You're all set!
+
+TRIP DETAILS
+------------
+Trip: {trip_name}
+Booking Reference: {booking_reference}
+Start Date: {start_date}
+End Date: {end_date}
+Total Amount: {total_amount}
+
+📲 Check Your Trip Updates
+Open the Rihla app and go to your booking to view tickets, messages, and any documents sent by your provider.
+
+Have an amazing trip!
+© 2026 Rihla. All rights reserved."""
+
+        return await self.send_email(
+            to_email=to_email,
+            subject=subject,
+            html_content=html_content,
+            text_content=text_content,
+            to_name=to_name,
+        )
+
+
 # Singleton instance
 email_service = SendGridEmailService()

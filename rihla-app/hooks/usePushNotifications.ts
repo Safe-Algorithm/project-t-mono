@@ -16,8 +16,9 @@ async function registerForPushNotifications(): Promise<string | null> {
   }
   if (finalStatus !== 'granted') return null;
 
-  const token = (await Notifications.getExpoPushTokenAsync()).data;
-  return token;
+  // Use raw device FCM token — backend sends via Firebase HTTP v1 API directly
+  const deviceToken = await Notifications.getDevicePushTokenAsync();
+  return deviceToken.data as string;
 }
 
 async function sendTokenToServer(token: string) {
@@ -77,7 +78,7 @@ export function usePushNotifications() {
       // Token rotation: OS can invalidate and issue a new FCM token at any time
       // (e.g. app reinstall, OS update, Firebase token refresh cycle)
       tokenListener.current = Notifications.addPushTokenListener((newToken) => {
-        sendTokenToServer(newToken.data);
+        if (newToken.data) sendTokenToServer(newToken.data as string);
       });
 
       // Fires when a notification is received while app is foregrounded

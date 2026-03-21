@@ -235,10 +235,14 @@ def test_confirm_processing_transitions_processing_to_confirmed(
     trip = _create_self_arranged_trip(session, provider_user.provider)
     reg = _create_registration(session, trip.id, provider_user.id, status="processing")
 
-    resp = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/registrations/{reg.id}/confirm-processing",
-        headers=headers,
-    )
+    with patch("app.services.email.email_service") as mock_email, \
+         patch("app.services.fcm.fcm_service") as mock_fcm:
+        mock_email.send_package_trip_confirmed_email = AsyncMock(return_value=None)
+        mock_fcm.notify_registration_confirmed = AsyncMock(return_value=None)
+        resp = client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/registrations/{reg.id}/confirm-processing",
+            headers=headers,
+        )
     assert resp.status_code == 200
     assert resp.json()["status"] == "confirmed"
 
@@ -466,19 +470,24 @@ def test_full_processing_workflow(client: TestClient, session: Session):
     trip = _create_self_arranged_trip(session, provider_user.provider)
     reg = _create_registration(session, trip.id, provider_user.id, status="awaiting_provider")
 
-    # Step 1: start processing
-    r1 = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/registrations/{reg.id}/start-processing",
-        headers=headers,
-    )
-    assert r1.status_code == 200
-    assert r1.json()["status"] == "processing"
+    with patch("app.services.email.email_service") as mock_email, \
+         patch("app.services.fcm.fcm_service") as mock_fcm:
+        mock_email.send_package_trip_confirmed_email = AsyncMock(return_value=None)
+        mock_fcm.notify_registration_confirmed = AsyncMock(return_value=None)
 
-    # Step 2: confirm
-    r2 = client.post(
-        f"{settings.API_V1_STR}/trips/{trip.id}/registrations/{reg.id}/confirm-processing",
-        headers=headers,
-    )
+        # Step 1: start processing
+        r1 = client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/registrations/{reg.id}/start-processing",
+            headers=headers,
+        )
+        assert r1.status_code == 200
+        assert r1.json()["status"] == "processing"
+
+        # Step 2: confirm
+        r2 = client.post(
+            f"{settings.API_V1_STR}/trips/{trip.id}/registrations/{reg.id}/confirm-processing",
+            headers=headers,
+        )
     assert r2.status_code == 200
     assert r2.json()["status"] == "confirmed"
 

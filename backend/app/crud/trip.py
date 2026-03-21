@@ -327,20 +327,17 @@ def search_and_filter_trips(
             )
 
     if needs_rating_join:
-        rating_subquery = (
-            select(
-                ProviderRatingModel.provider_id,
-                func.avg(ProviderRatingModel.rating).label('avg_rating')
-            )
-            .group_by(ProviderRatingModel.provider_id)
-            .having(func.avg(ProviderRatingModel.rating) >= min_rating)
+        rated_trip_ids = (
+            select(TripRatingModel.trip_id)
+            .group_by(TripRatingModel.trip_id)
+            .having(func.avg(TripRatingModel.rating) >= min_rating)
             .subquery()
         )
-        statement = statement.join(rating_subquery, Trip.provider_id == rating_subquery.c.provider_id)
+        statement = statement.where(Trip.id.in_(select(rated_trip_ids.c.trip_id)))
 
-    # Newest trips first (created_at desc)
-    if needs_package_join or needs_provider_join or needs_rating_join:
-        statement = statement.distinct(Trip.id, Trip.created_at)
+    # Deduplicate rows that may arise from joins (portable across all DBs)
+    if needs_package_join or needs_provider_join:
+        statement = statement.group_by(Trip.id)
 
     statement = statement.order_by(Trip.created_at.desc())
     statement = statement.offset(skip).limit(limit)

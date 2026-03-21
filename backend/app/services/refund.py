@@ -14,8 +14,9 @@ GUIDED TRIPS (when refundable):
   - Deadline passed        → 0%
 
 SELF-ARRANGED TRIPS (when refundable):
-  - Before provider confirms (status == awaiting_provider) → 100%
-  - After provider confirms (status == processing)         → 0%
+  - Before provider accepts  (status == awaiting_provider) → 100%
+  - After provider accepts   (status == processing)        → 0%  (arrangements started)
+  - After provider finishes  (status == confirmed)         → 0%  (already arranged)
 
 NON-REFUNDABLE (either trip type):
   - Cooling-off still applies (100%)

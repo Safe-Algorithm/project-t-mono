@@ -77,7 +77,7 @@ class TripSupportTicket(SQLModel, table=True):
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     user_id: uuid.UUID = Field(foreign_key="user.id", index=True)
-    provider_id: uuid.UUID = Field(foreign_key="user.id", index=True)
+    provider_id: uuid.UUID = Field(foreign_key="provider.id", index=True)
     trip_id: uuid.UUID = Field(foreign_key="trip.id", index=True)
     registration_id: uuid.UUID = Field(foreign_key="tripregistration.id", index=True)
 

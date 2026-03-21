@@ -235,7 +235,7 @@ export default function ProfileScreen() {
         <View style={s.section}>
           <Text style={s.sectionLabel}>{t('profile.support')}</Text>
           <View style={s.menuCard}>
-            <MenuItem icon="help-circle-outline" label={t('profile.helpSupport')} onPress={() => showToast(t('profile.helpMessage'), 'info')} />
+            <MenuItem icon="chatbubble-ellipses-outline" label={t('profile.helpSupport')} onPress={() => router.push('/support' as any)} />
             <View style={s.menuDivider} />
             <MenuItem icon="document-text-outline" label={t('profile.termsPrivacy')} onPress={() => showToast(t('profile.termsMessage'), 'info')} />
           </View>

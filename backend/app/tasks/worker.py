@@ -19,6 +19,8 @@ from app.core.db import engine
 from app.models.trip import Trip
 from app.models.trip_registration import TripRegistration
 from app.services.notification import NotificationService
+from app.services.fcm import fcm_service
+from app.models.user_push_token import UserPushToken
 from app.utils.localization import get_name, get_description
 
 logger = logging.getLogger(__name__)
@@ -63,6 +65,7 @@ async def send_trip_reminders():
                     try:
                         # Send notification via NotificationService
                         trip_name = get_name(trip)
+                        lang = getattr(registration.user, "preferred_language", "en") or "en"
                         await notification_service.send_trip_reminder(
                             user=registration.user,
                             trip_name=trip_name,
@@ -72,6 +75,18 @@ async def send_trip_reminders():
                                 "description": get_description(trip)
                             }
                         )
+                        # Push notification
+                        tokens = [pt.token for pt in session.exec(
+                            select(UserPushToken).where(UserPushToken.user_id == registration.user_id)
+                        ).all()]
+                        for token in tokens:
+                            await fcm_service.notify_trip_reminder(
+                                fcm_token=token,
+                                trip_name=trip_name,
+                                start_date=trip.start_date.strftime("%Y-%m-%d"),
+                                lang=lang,
+                                registration_id=str(registration.id),
+                            )
                         logger.info(f"Sent trip reminder to user {registration.user_id} for trip {trip.id}")
                     except Exception as e:
                         logger.error(f"Failed to send trip reminder to user {registration.user_id}: {e}")
@@ -127,7 +142,7 @@ async def send_review_reminders():
                         existing_review = session.exec(review_statement).first()
                         
                         if not existing_review:
-                            # Send review reminder via SMS/Email
+                            # Send review reminder via SMS/Email/Push
                             trip_name = get_name(trip)
                             lang = getattr(registration.user, "preferred_language", "en") or "en"
                             
@@ -151,6 +166,21 @@ async def send_review_reminders():
                                     language=lang,
                                 )
                                 logger.info(f"Sent email review reminder to {registration.user.email}")
+                            
+                            # Push notification
+                            tokens = [pt.token for pt in session.exec(
+                                select(UserPushToken).where(UserPushToken.user_id == registration.user_id)
+                            ).all()]
+                            for token in tokens:
+                                await fcm_service.notify_review_reminder(
+                                    fcm_token=token,
+                                    trip_name=trip_name,
+                                    lang=lang,
+                                    trip_id=str(trip.id),
+                                    registration_id=str(registration.id),
+                                )
+                            if tokens:
+                                logger.info(f"Sent push review reminder to user {registration.user_id}")
                             
                             logger.info(f"Sent review reminder to user {registration.user_id} for trip {trip.id}")
                     

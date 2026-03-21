@@ -436,14 +436,16 @@ def test_webhook_paid_updates_registration(
         "source": {"type": "creditcard"},
     }
 
-    with patch(
-        "app.api.routes.payments.payment_service.verify_webhook_signature",
-        return_value=True,
-    ):
+    with patch("app.api.routes.payments.payment_service") as mock_svc, \
+         patch("app.services.email.email_service") as mock_email:
+        mock_svc.webhook_secret = "test-secret"
+        mock_svc.verify_webhook_signature = MagicMock(return_value=True)
+        mock_email.send_booking_confirmation_email = AsyncMock(return_value=None)
+        mock_email.send_package_payment_received_email = AsyncMock(return_value=None)
         response = client.post(
             "/api/v1/payments/webhook",
             json=payload,
-            headers={"X-Moyasar-Signature": "valid"},
+            headers={"X-Event-Secret": "test-secret"},
         )
 
     assert response.status_code == 200
@@ -494,23 +496,23 @@ def test_webhook_refunded_cancels_registration(
 
 
 def test_webhook_invalid_signature(client: TestClient, test_payment: Payment):
-    with patch(
-        "app.api.routes.payments.payment_service.verify_webhook_signature",
-        return_value=False,
-    ):
+    with patch("app.api.routes.payments.payment_service") as mock_svc:
+        mock_svc.webhook_secret = "test-secret"
         response = client.post(
             "/api/v1/payments/webhook",
             json={"id": test_payment.moyasar_payment_id, "status": "paid"},
-            headers={"X-Moyasar-Signature": "bad"},
+            headers={"X-Event-Secret": "wrong-secret"},
         )
     assert response.status_code == 401
 
 
 def test_webhook_missing_signature(client: TestClient, test_payment: Payment):
-    response = client.post(
-        "/api/v1/payments/webhook",
-        json={"id": test_payment.moyasar_payment_id, "status": "paid"},
-    )
+    with patch("app.api.routes.payments.payment_service") as mock_svc:
+        mock_svc.webhook_secret = "test-secret"
+        response = client.post(
+            "/api/v1/payments/webhook",
+            json={"id": test_payment.moyasar_payment_id, "status": "paid"},
+        )
     assert response.status_code == 400
 
 

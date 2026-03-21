@@ -108,6 +108,46 @@ _TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
             "body": "تم إلغاء حجزك لرحلة {trip_name}. المبلغ المسترد: {refund_amount} ريال.",
         },
     },
+    "review_reminder": {
+        "en": {
+            "title": "How was {trip_name}? ⭐",
+            "body": "Your trip has ended! Share your experience and help other travellers.",
+        },
+        "ar": {
+            "title": "كيف كانت رحلة {trip_name}؟ ⭐",
+            "body": "انتهت رحلتك! شارك تجربتك وساعد المسافرين الآخرين.",
+        },
+    },
+    "trip_reminder": {
+        "en": {
+            "title": "Your trip starts tomorrow! 🎒",
+            "body": "{trip_name} starts on {start_date}. Get ready!",
+        },
+        "ar": {
+            "title": "رحلتك تبدأ غداً! 🎒",
+            "body": "رحلة {trip_name} تبدأ بتاريخ {start_date}. استعد!",
+        },
+    },
+    "support_ticket_message": {
+        "en": {
+            "title": "New reply on your ticket 💬",
+            "body": "{subject}: {preview}",
+        },
+        "ar": {
+            "title": "رد جديد على تذكرتك 💬",
+            "body": "{subject}: {preview}",
+        },
+    },
+    "support_ticket_status": {
+        "en": {
+            "title": "Ticket status updated",
+            "body": "\"{subject}\" is now {status}.",
+        },
+        "ar": {
+            "title": "تم تحديث حالة التذكرة",
+            "body": "\"{subject}\" أصبحت الآن {status}.",
+        },
+    },
 }
 
 
@@ -325,6 +365,82 @@ class FCMService:
         tmpl = _TEMPLATES["booking_cancelled_with_refund"].get(lang, _TEMPLATES["booking_cancelled_with_refund"]["en"])
         content = _render(tmpl, trip_name=trip_name, refund_amount=refund_amount)
         data = {"registrationId": registration_id} if registration_id else {}
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_review_reminder(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        lang: str = "en",
+        trip_id: Optional[str] = None,
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["review_reminder"].get(lang, _TEMPLATES["review_reminder"]["en"])
+        content = _render(tmpl, trip_name=trip_name)
+        data: dict[str, str] = {}
+        if trip_id:
+            data["tripId"] = trip_id
+        if registration_id:
+            data["registrationId"] = registration_id
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_trip_reminder(
+        self,
+        fcm_token: str,
+        trip_name: str,
+        start_date: str,
+        lang: str = "en",
+        registration_id: Optional[str] = None,
+    ) -> bool:
+        tmpl = _TEMPLATES["trip_reminder"].get(lang, _TEMPLATES["trip_reminder"]["en"])
+        content = _render(tmpl, trip_name=trip_name, start_date=start_date)
+        data = {"registrationId": registration_id} if registration_id else {}
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_support_ticket_message(
+        self,
+        fcm_token: str,
+        subject: str,
+        preview: str,
+        lang: str = "en",
+        ticket_id: Optional[str] = None,
+        ticket_type: str = "admin",
+    ) -> bool:
+        """Notify user/provider that a new message was added to their support ticket."""
+        tmpl = _TEMPLATES["support_ticket_message"].get(lang, _TEMPLATES["support_ticket_message"]["en"])
+        short_preview = preview[:60] + "…" if len(preview) > 60 else preview
+        content = _render(tmpl, subject=subject, preview=short_preview)
+        data: dict[str, str] = {"ticketType": ticket_type}
+        if ticket_id:
+            data["ticketId"] = ticket_id
+        return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
+
+    async def notify_support_ticket_status(
+        self,
+        fcm_token: str,
+        subject: str,
+        status: str,
+        lang: str = "en",
+        ticket_id: Optional[str] = None,
+        ticket_type: str = "admin",
+    ) -> bool:
+        """Notify user that their support ticket status changed."""
+        tmpl = _TEMPLATES["support_ticket_status"].get(lang, _TEMPLATES["support_ticket_status"]["en"])
+        status_labels: dict[str, dict[str, str]] = {
+            "en": {
+                "open": "Open", "in_progress": "In Progress",
+                "waiting_on_user": "Waiting on You", "resolved": "Resolved", "closed": "Closed",
+            },
+            "ar": {
+                "open": "مفتوحة", "in_progress": "قيد المعالجة",
+                "waiting_on_user": "في انتظارك", "resolved": "محلولة", "closed": "مغلقة",
+            },
+        }
+        status_label = status_labels.get(lang, status_labels["en"]).get(status, status)
+        content = _render(tmpl, subject=subject, status=status_label)
+        data: dict[str, str] = {"ticketType": ticket_type}
+        if ticket_id:
+            data["ticketId"] = ticket_id
         return await self.send_to_token(title=content["title"], body=content["body"], fcm_token=fcm_token, data=data)
 
 
