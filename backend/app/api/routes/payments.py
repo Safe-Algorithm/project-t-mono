@@ -9,7 +9,9 @@ import hmac
 import hashlib
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Header
+import logging
+
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Header
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session, select
 
@@ -30,6 +32,7 @@ from app.models.user_push_token import UserPushToken
 from app.utils.localization import get_name
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Prepare — app calls this first to get payment details, then calls Moyasar
@@ -330,25 +333,45 @@ async def payment_callback(
 @router.post("/webhook")
 async def payment_webhook(
     *,
+    background_tasks: BackgroundTasks,
     request: Request,
     session: Session = Depends(get_session),
     x_moyasar_signature: str = Header(None),
 ):
     """
     Handle server-to-server webhook events from Moyasar.
-    Verifies the HMAC-SHA256 signature before processing.
+    Verifies the HMAC-SHA256 signature when a webhook secret is configured.
+    If no secret is configured, the signature check is skipped with a warning.
     """
     body = await request.body()
     payload_str = body.decode("utf-8")
 
-    if not x_moyasar_signature:
+    if not payment_service.webhook_secret:
+        # Secret not configured — skip verification but log a warning
+        logger.warning("MOYASAR_WEBHOOK_SECRET not set; skipping webhook signature verification")
+    elif not x_moyasar_signature:
+        logger.warning(
+            "WEBHOOK: X-Moyasar-Signature header missing. All headers received: %s",
+            dict(request.headers),
+        )
         raise HTTPException(status_code=400, detail="Missing X-Moyasar-Signature header")
-
-    try:
-        if not payment_service.verify_webhook_signature(payload_str, x_moyasar_signature):
-            raise HTTPException(status_code=401, detail="Invalid webhook signature")
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    else:
+        try:
+            import hmac as _hmac, hashlib as _hashlib
+            expected = _hmac.new(
+                payment_service.webhook_secret.encode('utf-8'),
+                payload_str.encode('utf-8'),
+                _hashlib.sha256,
+            ).hexdigest()
+            logger.warning(
+                "WEBHOOK SIG DEBUG — received: %r | expected_hex: %r | match: %s",
+                x_moyasar_signature, expected,
+                _hmac.compare_digest(x_moyasar_signature, expected),
+            )
+            if not payment_service.verify_webhook_signature(payload_str, x_moyasar_signature):
+                raise HTTPException(status_code=401, detail="Invalid webhook signature")
+        except ValueError as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
     webhook_data = json.loads(payload_str)
     moyasar_id = webhook_data.get("id")
@@ -404,7 +427,6 @@ async def payment_webhook(
         from app.models.user import User as UserModel
         from app.services.email import email_service
         from app.utils.localization import get_localized_field
-        import asyncio
         user = session.get(UserModel, confirmed_registration.user_id)
         if user:
             trip = confirmed_registration.trip
@@ -413,7 +435,8 @@ async def payment_webhook(
             reg_id = str(confirmed_registration.id)
             if user.email:
                 start_date = trip.start_date.strftime("%Y-%m-%d") if trip and trip.start_date else ""
-                asyncio.create_task(email_service.send_booking_confirmation_email(
+                background_tasks.add_task(
+                    email_service.send_booking_confirmation_email,
                     to_email=user.email,
                     to_name=user.name,
                     trip_name=trip_name,
@@ -421,21 +444,23 @@ async def payment_webhook(
                     start_date=start_date,
                     total_amount=f"{confirmed_registration.total_amount} SAR",
                     language=lang,
-                ))
+                )
             tokens = [pt.token for pt in session.exec(
                 select(UserPushToken).where(UserPushToken.user_id == user.id)
             ).all()]
             for token in tokens:
                 if confirmed_registration.status == "awaiting_provider":
-                    asyncio.create_task(fcm_service.notify_awaiting_provider(
+                    background_tasks.add_task(
+                        fcm_service.notify_awaiting_provider,
                         fcm_token=token, trip_name=trip_name, lang=lang, registration_id=reg_id,
-                    ))
+                    )
                 else:
-                    asyncio.create_task(fcm_service.notify_booking_confirmed(
+                    background_tasks.add_task(
+                        fcm_service.notify_booking_confirmed,
                         fcm_token=token, trip_name=trip_name,
                         reference=confirmed_registration.booking_reference or str(confirmed_registration.id)[:8].upper(),
                         lang=lang, registration_id=reg_id,
-                    ))
+                    )
 
     return {"message": "Webhook processed"}
 
