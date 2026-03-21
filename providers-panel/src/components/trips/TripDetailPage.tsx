@@ -224,7 +224,7 @@ const TripDetailPage: React.FC = () => {
     setCancellingBooking(reg.id);
     try {
       const result = await api.post<{ refund_percentage: number; refund_amount: number }>(
-        `/trips/${tripId}/registrations/${reg.id}/cancel`,
+        `/trips/${tripId}/registrations/${reg.id}/provider-cancel`,
         { reason: cancelReason || undefined },
       );
       setRegistrations(prev => prev.map(r => r.id === reg.id ? { ...r, status: 'cancelled' } : r));

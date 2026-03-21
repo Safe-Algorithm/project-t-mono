@@ -424,6 +424,27 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
+        {/* Cancellation banner — shown when booking is cancelled */}
+        {registration.status === 'cancelled' && (
+          <View style={s.cancellationCard}>
+            <View style={s.statusIconRow}>
+              <Ionicons name="close-circle" size={26} color="#DC2626" />
+              <Text style={s.cancellationTitle}>
+                {registration.cancelled_by === 'provider'
+                  ? t('booking.cancelledByProvider', 'Cancelled by provider')
+                  : registration.cancelled_by === 'admin'
+                    ? t('booking.cancelledByAdmin', 'Cancelled by admin')
+                    : t('booking.cancelledByYou', 'Booking cancelled')}
+              </Text>
+            </View>
+            {registration.cancellation_reason ? (
+              <Text style={s.cancellationReason}>
+                {t('booking.cancellationReason', 'Reason')}{': '}{registration.cancellation_reason}
+              </Text>
+            ) : null}
+          </View>
+        )}
+
         {/* Spot reserved + Pay card — shown when payment is still pending (retry after failure / return from 3DS) */}
         {registration.status === 'pending_payment' && (
           <View style={s.payNowCard}>
@@ -1122,5 +1143,8 @@ function makeStyles(c: ThemeColors) {
     policyBody: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 6 },
     policyRule: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginLeft: 4 },
     policyCooling: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18, marginTop: 6, fontStyle: 'italic' },
+    cancellationCard: { backgroundColor: '#FEF2F2', borderRadius: Radius.xl, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#FECACA', gap: 8 },
+    cancellationTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626', flex: 1 },
+    cancellationReason: { fontSize: FontSize.sm, color: '#7F1D1D', lineHeight: 20 },
   });
 }

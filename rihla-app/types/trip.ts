@@ -164,6 +164,9 @@ export interface TripRegistration {
   booking_reference: string;
   participants: RegistrationParticipant[];
   trip: RegistrationTripInfo;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_by?: string | null;
 }
 
 export interface TripUpdate {

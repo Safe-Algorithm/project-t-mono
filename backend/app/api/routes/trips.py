@@ -2071,6 +2071,88 @@ async def user_cancel_booking(
     }
 
 
+@router.post("/{trip_id}/registrations/{registration_id}/provider-cancel")
+async def provider_cancel_single_booking(
+    *,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+    trip_id: uuid.UUID,
+    registration_id: uuid.UUID,
+    body: UserCancelRequest = UserCancelRequest(),
+    current_user: User = Depends(get_current_active_provider),
+):
+    """
+    Provider cancels a single booking on their trip.
+    Checks that the trip belongs to the provider's account.
+    Refund is 100% when provider cancels regardless of policy.
+    """
+    from app.models.trip_registration import TripRegistration as TripRegistrationModel
+    from app.models.payment import Payment, PaymentStatus
+    from app.services.refund import compute_refund
+    from sqlmodel import select as sql_select
+
+    reg = session.get(TripRegistrationModel, registration_id)
+    if not reg or reg.trip_id != trip_id:
+        raise HTTPException(status_code=404, detail="Booking not found")
+    if reg.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Booking is already cancelled")
+
+    trip = crud.trip.get_trip(session=session, trip_id=trip_id)
+    if not trip:
+        raise HTTPException(status_code=404, detail="Trip not found")
+    if trip.provider_id != current_user.provider_id:
+        raise HTTPException(status_code=403, detail="Not your trip")
+
+    paid_payment = session.exec(
+        sql_select(Payment).where(
+            Payment.registration_id == reg.id,
+            Payment.status == PaymentStatus.PAID,
+        )
+    ).first()
+
+    decision = compute_refund(
+        total_amount=reg.total_amount,
+        is_refundable=True,  # provider cancel always 100%
+        trip_type=trip.trip_type.value,
+        registration_status=reg.status,
+        registration_deadline=trip.registration_deadline,
+        paid_at=paid_payment.paid_at if paid_payment else None,
+        cancelled_by="provider",
+    )
+
+    await _execute_refund_and_record(
+        session=session,
+        registration=reg,
+        decision=decision,
+        cancelled_by="provider",
+        actor_user_id=current_user.id,
+        reason=body.reason,
+    )
+    session.commit()
+
+    # Push: notify the user their booking was cancelled by the provider
+    reg_user = session.get(User, reg.user_id)
+    if reg_user:
+        lang = getattr(reg_user, "preferred_language", "en") or "en"
+        trip_name_val = trip.name_en or trip.name_ar or ""
+        tokens = [pt.token for pt in session.exec(
+            select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
+        ).all()]
+        for token in tokens:
+            background_tasks.add_task(
+                fcm_service.notify_trip_cancelled_by_provider,
+                fcm_token=token, trip_name=trip_name_val, lang=lang, registration_id=str(reg.id),
+            )
+
+    actual_amt = float(decision.refund_amount) if paid_payment else 0.0
+    return {
+        "status": "cancelled",
+        "refund_percentage": decision.refund_percentage if paid_payment else 0,
+        "refund_amount": actual_amt,
+        "refund_rule": decision.refund_rule if paid_payment else "no_payment_found",
+    }
+
+
 @router.post("/{trip_id}/cancel")
 async def provider_cancel_trip(
     *,
