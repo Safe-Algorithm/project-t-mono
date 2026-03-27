@@ -6,6 +6,7 @@ import { tripService, TripUpdatePayload } from '../../../services/tripService';
 import { imageCollectionService } from '../../../services/imageCollectionService';
 import { Trip, CreateTripPackage, CreateTripExtraFee, PackageRequiredField, ValidationConfig } from '../../../types/trip';
 import { DestinationSelection } from '../../../components/trips/DestinationSelector';
+import { downloadTripCsv } from '../../../services/tripCsvService';
 
 const TripEditPage = () => {
   const router = useRouter();
@@ -222,13 +223,25 @@ const TripEditPage = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{t('trip.editTrip')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 truncate">{trip.name_en || trip.name_ar}</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
           <button
             onClick={() => router.push(`/trips/${id}`)}
             className="px-3 py-2 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
           >
             {t('trip.viewDetails')}
           </button>
+          {trip && (
+            <button
+              type="button"
+              onClick={() => downloadTripCsv(trip)}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-semibold text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              {t('csv.exportCsv')}
+            </button>
+          )}
           <button
             onClick={handleDelete}
             disabled={isSubmitting}

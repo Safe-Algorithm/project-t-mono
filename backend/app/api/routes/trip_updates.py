@@ -99,9 +99,12 @@ async def provider_send_update_to_all(
         data=data,
     )
 
-    # Push to all registrants in the background
+    # Push to all active (non-cancelled) registrants in the background
     registrations = list(session.exec(
-        select(TripRegistration).where(TripRegistration.trip_id == trip_id)
+        select(TripRegistration).where(
+            TripRegistration.trip_id == trip_id,
+            TripRegistration.status != "cancelled",
+        )
     ).all())
     trip_name = trip.name_en or trip.name_ar or ""
     for reg in registrations:
@@ -146,6 +149,8 @@ async def provider_send_update_to_registration(
     reg = session.get(TripRegistration, registration_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")
+    if reg.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Cannot send updates to a cancelled registration")
 
     trip = session.get(Trip, reg.trip_id)
     if not trip or trip.provider_id != current_user.provider_id:
@@ -259,6 +264,7 @@ def user_list_trip_updates(
     stmt = select(TripRegistration).where(
         TripRegistration.trip_id == trip_id,
         TripRegistration.user_id == current_user.id,
+        TripRegistration.status != "cancelled",
     )
     registration = session.exec(stmt).first()
     if not registration:

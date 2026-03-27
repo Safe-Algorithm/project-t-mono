@@ -9,6 +9,7 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from .trip import Trip
     from .trip_package_field import TripPackageRequiredField
+    from .trip_pricing_tier import TripPricingTier
 
 
 class Currency(str, Enum):
@@ -38,5 +39,9 @@ class TripPackage(SQLModel, table=True):
     is_refundable: Optional[bool] = Field(default=None)
     amenities: Optional[List[str]] = Field(default=None, sa_column=Column(MutableList.as_mutable(JSON)))
 
+    # When True, pricing_tiers define marginal per-person rates instead of the flat price field
+    use_flexible_pricing: bool = Field(default=False)
+
     trip: "Trip" = Relationship(back_populates="packages")
     required_fields: List["TripPackageRequiredField"] = Relationship(back_populates="package", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    pricing_tiers: List["TripPricingTier"] = Relationship(back_populates="package", sa_relationship_kwargs={"cascade": "all, delete-orphan", "order_by": "TripPricingTier.from_participant"})

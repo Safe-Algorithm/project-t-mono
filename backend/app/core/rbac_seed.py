@@ -203,6 +203,29 @@ PROVIDER_PERMISSIONS: List[Tuple] = [
             ("GET", "/dashboard"),
         ],
     ),
+    # ── Financials ────────────────────────────────────────────────────────────
+    (
+        "View Financials",
+        "View earnings summary, earning lines, trip financials and payout history",
+        "Financials",
+        RoleSource.PROVIDER,
+        [
+            ("GET", "/provider/financials/summary"),
+            ("GET", "/provider/financials/earnings"),
+            ("GET", "/provider/financials/trips"),
+            ("GET", "/provider/financials/trips/*"),
+        ],
+    ),
+    (
+        "View Financial Payouts",
+        "View received payouts and download receipts",
+        "Financials",
+        RoleSource.PROVIDER,
+        [
+            ("GET", "/provider/financials/payouts"),
+            ("GET", "/provider/financials/payouts/*"),
+        ],
+    ),
 ]
 
 ADMIN_PERMISSIONS: List[Tuple] = [
@@ -306,6 +329,47 @@ ADMIN_PERMISSIONS: List[Tuple] = [
         [
             ("GET", "/admin/trip-updates"),
             ("GET", "/admin/trips/*/updates"),
+        ],
+    ),
+    # ── Financials ────────────────────────────────────────────────────────────
+    (
+        "View Financials Overview",
+        "View the admin financials overview — all providers' owed and paid totals",
+        "Financials",
+        RoleSource.ADMIN,
+        [
+            ("GET", "/admin/financials/overview"),
+            ("GET", "/admin/financials/trips/*"),
+        ],
+    ),
+    (
+        "View Provider Financials",
+        "View per-provider owed earnings, trip-level breakdowns and payout list",
+        "Financials",
+        RoleSource.ADMIN,
+        [
+            ("GET", "/admin/financials/providers/*"),
+            ("GET", "/admin/financials/payouts"),
+            ("GET", "/admin/financials/payouts/*"),
+        ],
+    ),
+    (
+        "Manage Payouts",
+        "Create and complete provider payouts — the actual pay action",
+        "Financials",
+        RoleSource.ADMIN,
+        [
+            ("POST", "/admin/financials/providers/*/payouts"),
+            ("PATCH", "/admin/financials/payouts/*/complete"),
+        ],
+    ),
+    (
+        "Manage Commission Rates",
+        "Update a provider's platform commission rate",
+        "Financials",
+        RoleSource.ADMIN,
+        [
+            ("PATCH", "/admin/providers/*/commission"),
         ],
     ),
     # ── File Definitions ─────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
-import { Trip, CreateTripPackage, CreateTripExtraFee, FieldMetadata, ValidationConfig, TripAmenity, TripType } from '../../types/trip';
+import { TripCsvImport } from '../../services/tripCsvService';
+import { Trip, CreateTripPackage, CreateTripExtraFee, FieldMetadata, ValidationConfig, TripAmenity, TripType, PricingTier } from '../../types/trip';
 import { TripCreatePayload, TripUpdatePayload, tripService } from '../../services/tripService';
 import ValidationConfigComponent from './ValidationConfig';
 import DestinationSelector, { DestinationSelection } from './DestinationSelector';
@@ -9,6 +10,8 @@ import { useTranslation } from 'react-i18next';
 
 interface TripFormProps {
   trip?: Trip;
+  pendingImport?: TripCsvImport | null;
+  onImport?: (data: TripCsvImport) => void;
   onSubmit: (
     payload: TripCreatePayload | TripUpdatePayload, 
     packages?: CreateTripPackage[] | null, 
@@ -21,7 +24,7 @@ interface TripFormProps {
   isSubmitting: boolean;
 }
 
-const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => {
+const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImport, pendingImport }) => {
   const { t, i18n } = useTranslation();
   const [isPackagedTrip, setIsPackagedTrip] = useState(false);
   const [tripTypeSelection, setTripTypeSelection] = useState<TripType>(TripType.GUIDED);
@@ -53,6 +56,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
   // Non-packaged trip: trip-level price and required fields (stored on hidden package)
   const [tripPrice, setTripPrice] = useState<string>('');
+  const [tripFlexiblePricing, setTripFlexiblePricing] = useState(false);
+  const [tripPricingTiers, setTripPricingTiers] = useState<PricingTier[]>([{ from_participant: 1, price_per_person: 0 }]);
   const [tripRequiredFields, setTripRequiredFields] = useState<string[]>(['name', 'date_of_birth']);
   const [tripValidationConfigs, setTripValidationConfigs] = useState<{ [fieldName: string]: ValidationConfig }>({});
   const [showTripFieldValidation, setShowTripFieldValidation] = useState<{ [fieldName: string]: boolean }>({});
@@ -81,6 +86,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     0: {} // Initialize with empty validation configs for first package
   });
 
+  const [packageFlexiblePricing, setPackageFlexiblePricing] = useState<{ [index: number]: boolean }>({ 0: false });
+  const [packagePricingTiers, setPackagePricingTiers] = useState<{ [index: number]: PricingTier[] }>({
+    0: [{ from_participant: 1, price_per_person: 0 }]
+  });
+
   const [availableFields, setAvailableFields] = useState<FieldMetadata[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [showValidationConfig, setShowValidationConfig] = useState<{ [packageIndex: number]: { [fieldName: string]: boolean } }>({});
@@ -90,6 +100,38 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
   // Extra fees (draft rows)
   const [extraFees, setExtraFees] = useState<CreateTripExtraFee[]>([]);
+
+  // Apply imported CSV data to form fields (new-trip mode only)
+  const applyImport = useCallback((data: TripCsvImport) => {
+    setFormData(prev => ({
+      ...prev,
+      name_en: data.name_en,
+      name_ar: data.name_ar,
+      description_en: data.description_en,
+      description_ar: data.description_ar,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      registration_deadline: data.registration_deadline,
+      max_participants: String(data.max_participants),
+      is_refundable: data.is_refundable,
+    }));
+    setTripTypeSelection(data.trip_nature === 'self_arranged' ? TripType.SELF_ARRANGED : TripType.GUIDED);
+    setIsPackagedTrip(data.tier_structure === 'multiple');
+    if (data.tier_structure === 'single' && data.price_sar != null) {
+      setTripPrice(String(data.price_sar));
+    }
+    if (data.amenities.length > 0) {
+      setSelectedAmenities(data.amenities);
+    }
+    if (onImport) onImport(data);
+  }, [onImport]);
+
+  // React to pendingImport prop changes (set by new.tsx when a CSV file is parsed)
+  useEffect(() => {
+    if (!trip && pendingImport) {
+      applyImport(pendingImport);
+    }
+  }, [pendingImport, applyImport, trip]);
 
   useEffect(() => {
     const loadCountries = async () => {
@@ -157,7 +199,15 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       setIsPackagedTrip(trip.is_packaged_trip ?? false);
       setTripTypeSelection((trip.trip_type as TripType) ?? TripType.GUIDED);
       // Populate trip form data
-      const tz = trip.timezone ?? 'Asia/Riyadh';
+      const rawTz = trip.timezone ?? 'Asia/Riyadh';
+      const tz = (() => {
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: rawTz });
+          return rawTz;
+        } catch {
+          return 'Asia/Riyadh';
+        }
+      })();
       setTimezone(tz);
       // Convert UTC datetimes from DB into local wall-clock time for the trip's timezone
       // so the provider sees the time they originally entered, not browser-local time.
@@ -215,6 +265,12 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
       if (!trip.is_packaged_trip) {
         // Non-packaged: price comes from the hidden package and is exposed via trip.price
         setTripPrice(trip.price != null ? String(trip.price) : '');
+        const useFlexible = (trip as any).simple_trip_use_flexible_pricing ?? false;
+        setTripFlexiblePricing(useFlexible);
+        const existingTiers = (trip as any).simple_trip_pricing_tiers ?? [];
+        setTripPricingTiers(existingTiers.length > 0
+          ? existingTiers.map((t: any) => ({ from_participant: t.from_participant, price_per_person: Number(t.price_per_person) }))
+          : [{ from_participant: 1, price_per_person: 0 }]);
         const mandatoryFields = ['name', 'date_of_birth'];
         const hiddenFields = trip.simple_trip_required_fields || [];
         setTripRequiredFields(Array.from(new Set([...mandatoryFields, ...hiddenFields])));
@@ -244,6 +300,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
 
         const existingPackageFields: { [index: number]: string[] } = {};
         const existingValidationConfigs: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } } = {};
+        const existingFlexiblePricing: { [index: number]: boolean } = {};
+        const existingPricingTiers: { [index: number]: PricingTier[] } = {};
         trip.packages.forEach((pkg, index) => {
           const fields = pkg.required_fields || [];
           const mandatoryFields = ['name', 'date_of_birth'];
@@ -257,9 +315,16 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
             });
           }
           existingValidationConfigs[index] = pkgValidationConfigs;
+          existingFlexiblePricing[index] = (pkg as any).use_flexible_pricing ?? false;
+          const tiers = (pkg as any).pricing_tiers ?? [];
+          existingPricingTiers[index] = tiers.length > 0
+            ? tiers.map((t: any) => ({ from_participant: t.from_participant, price_per_person: Number(t.price_per_person) }))
+            : [{ from_participant: 1, price_per_person: 0 }];
         });
         setPackageRequiredFields(existingPackageFields);
         setPackageValidationConfigs(existingValidationConfigs);
+        setPackageFlexiblePricing(existingFlexiblePricing);
+        setPackagePricingTiers(existingPricingTiers);
       }
     }
   }, [trip]);
@@ -302,31 +367,37 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
   const addPackage = () => {
     const newIndex = packages.length;
     setPackages([...packages, { name_en: '', name_ar: '', description_en: '', description_ar: '', price: 0, currency: 'SAR' }]);
-    // Always include mandatory fields for new packages
     setPackageRequiredFields(prev => ({ ...prev, [newIndex]: ['name', 'date_of_birth'] }));
-    // Initialize empty validation configs for new package
     setPackageValidationConfigs(prev => ({ ...prev, [newIndex]: {} }));
+    setPackageFlexiblePricing(prev => ({ ...prev, [newIndex]: false }));
+    setPackagePricingTiers(prev => ({ ...prev, [newIndex]: [{ from_participant: 1, price_per_person: 0 }] }));
   };
 
   const removePackage = (index: number) => {
     if (packages.length > 2) {
       setPackages(packages.filter((_, i) => i !== index));
-      // Remove the fields for this package and reindex
       const newFields: { [index: number]: string[] } = {};
       const newValidationConfigs: { [packageIndex: number]: { [fieldName: string]: ValidationConfig } } = {};
-      
+      const newFlexiblePricing: { [index: number]: boolean } = {};
+      const newPricingTiers: { [index: number]: PricingTier[] } = {};
       Object.keys(packageRequiredFields).forEach(key => {
         const keyIndex = parseInt(key);
         if (keyIndex < index) {
           newFields[keyIndex] = packageRequiredFields[keyIndex];
           newValidationConfigs[keyIndex] = packageValidationConfigs[keyIndex] || {};
+          newFlexiblePricing[keyIndex] = packageFlexiblePricing[keyIndex] ?? false;
+          newPricingTiers[keyIndex] = packagePricingTiers[keyIndex] ?? [{ from_participant: 1, price_per_person: 0 }];
         } else if (keyIndex > index) {
           newFields[keyIndex - 1] = packageRequiredFields[keyIndex];
           newValidationConfigs[keyIndex - 1] = packageValidationConfigs[keyIndex] || {};
+          newFlexiblePricing[keyIndex - 1] = packageFlexiblePricing[keyIndex] ?? false;
+          newPricingTiers[keyIndex - 1] = packagePricingTiers[keyIndex] ?? [{ from_participant: 1, price_per_person: 0 }];
         }
       });
       setPackageRequiredFields(newFields);
       setPackageValidationConfigs(newValidationConfigs);
+      setPackageFlexiblePricing(newFlexiblePricing);
+      setPackagePricingTiers(newPricingTiers);
     }
   };
 
@@ -522,7 +593,29 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         if (!(pkg.description_en ?? '').trim() && !(pkg.description_ar ?? '').trim()) {
           newErrors.push(t('trip.validation.packageNeedsDesc', 'Tier {{n}}: Description in at least one language is required', { n: index + 1 }));
         }
-        if (!pkg.price || Number(pkg.price) < 1) {
+        const pkgFlex = packageFlexiblePricing[index] ?? false;
+        const pkgTiers = packagePricingTiers[index] ?? [];
+        if (pkgFlex) {
+          if (pkgTiers.length === 0) {
+            newErrors.push(t('trip.validation.pkgTierRequired', { tier: index + 1 }));
+          } else {
+            if (pkgTiers[0].from_participant !== 1) {
+              newErrors.push(t('trip.validation.pkgTierFirstAt1', { tier: index + 1 }));
+            }
+            const seenFrom = new Set<number>();
+            pkgTiers.forEach((tier, ti) => {
+              if (!tier.price_per_person || tier.price_per_person <= 0) {
+                newErrors.push(t('trip.validation.pkgTierPrice', { tier: index + 1, band: ti + 1 }));
+              }
+              if (ti > 0 && tier.from_participant <= pkgTiers[ti - 1].from_participant) {
+                newErrors.push(t('trip.validation.pkgTierAscending', { tier: index + 1, band: ti + 1, prev: pkgTiers[ti - 1].from_participant }));
+              } else if (seenFrom.has(tier.from_participant)) {
+                newErrors.push(t('trip.validation.pkgTierDuplicate', { tier: index + 1, band: ti + 1, val: tier.from_participant }));
+              }
+              seenFrom.add(tier.from_participant);
+            });
+          }
+        } else if (!pkg.price || Number(pkg.price) < 1) {
           newErrors.push(t('trip.validation.packageMinPrice', 'Tier {{n}}: Price must be at least 1', { n: index + 1 }));
         }
         if (!pkg.max_participants || Number(pkg.max_participants) < 1) {
@@ -540,9 +633,30 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         }
       }
     } else {
-      // Non-packaged: validate trip-level price
-      if (!tripPrice || Number(tripPrice) < 1) {
+      // Non-packaged: validate trip-level price (skip if flexible pricing is on)
+      if (!tripFlexiblePricing && (!tripPrice || Number(tripPrice) < 1)) {
         newErrors.push(t('trip.validation.minPrice', 'Price must be at least 1'));
+      }
+      if (tripFlexiblePricing) {
+        if (tripPricingTiers.length === 0) {
+          newErrors.push(t('trip.validation.tierRequired'));
+        } else {
+          if (tripPricingTiers[0].from_participant !== 1) {
+            newErrors.push(t('trip.validation.tierFirstAt1'));
+          }
+          const seenSimpleFrom = new Set<number>();
+          tripPricingTiers.forEach((tier, ti) => {
+            if (!tier.price_per_person || tier.price_per_person <= 0) {
+              newErrors.push(t('trip.validation.tierPrice'));
+            }
+            if (ti > 0 && tier.from_participant <= tripPricingTiers[ti - 1].from_participant) {
+              newErrors.push(t('trip.validation.tierAscending', { n: ti + 1, prev: tripPricingTiers[ti - 1].from_participant }));
+            } else if (seenSimpleFrom.has(tier.from_participant)) {
+              newErrors.push(t('trip.validation.tierDuplicate', { n: ti + 1, val: tier.from_participant }));
+            }
+            seenSimpleFrom.add(tier.from_participant);
+          });
+        }
       }
     }
 
@@ -608,15 +722,22 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
     };
 
     if (isPackagedTrip) {
-      onSubmit(payload, packages, packageRequiredFields, packageValidationConfigs, imageData, destinationSelections, extraFees);
+      const packagesWithPricing: CreateTripPackage[] = packages.map((pkg, idx) => ({
+        ...pkg,
+        use_flexible_pricing: packageFlexiblePricing[idx] ?? false,
+        pricing_tiers: (packageFlexiblePricing[idx] ?? false) ? (packagePricingTiers[idx] ?? []) : [],
+      }));
+      onSubmit(payload, packagesWithPricing, packageRequiredFields, packageValidationConfigs, imageData, destinationSelections, extraFees);
     } else {
       // Non-packaged: include price/is_refundable/amenities in the trip payload
       // Backend auto-creates/syncs the hidden package from these fields
       const nonPackagedPayload = {
         ...payload,
-        price: parseFloat(tripPrice as string) || 0,
+        price: tripFlexiblePricing ? 0 : (parseFloat(tripPrice as string) || 0),
         is_refundable: formData.is_refundable,
         amenities: selectedAmenities.length > 0 ? selectedAmenities : undefined,
+        use_flexible_pricing: tripFlexiblePricing,
+        pricing_tiers: tripFlexiblePricing ? tripPricingTiers : [],
       };
       // Pass required fields as index 0 so new.tsx/edit.tsx can update the hidden package's fields
       const hiddenFields = { 0: tripRequiredFields };
@@ -818,8 +939,80 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
         <div className={sectionCls}>
           <p className={sectionTitleCls}>{t('trip.pricePolicyFields')}</p>
           <div className="mb-4">
-            <label className={labelCls}>{t('trip.pricePerPerson')}</label>
-            <input className={inputCls} type="number" value={tripPrice} onChange={e => setTripPrice(e.target.value)} placeholder={t('trip.pricePlaceholder')} min="1" step="0.01" />
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelCls + ' mb-0'}>{t('trip.pricePerPerson')} (SAR)</label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <span className="text-xs text-slate-500 dark:text-slate-400">{t('trip.flexiblePricing')}</span>
+                <button
+                  type="button"
+                  onClick={() => setTripFlexiblePricing(prev => !prev)}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${tripFlexiblePricing ? 'bg-sky-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${tripFlexiblePricing ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
+              </label>
+            </div>
+            {!tripFlexiblePricing ? (
+              <input className={inputCls} type="number" value={tripPrice} onChange={e => setTripPrice(e.target.value)} placeholder={t('trip.pricePlaceholder')} min="1" step="0.01" />
+            ) : (
+              <div className="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 p-3 space-y-2">
+                <p className="text-xs text-sky-700 dark:text-sky-300 font-medium">{t('trip.flexiblePricingHint')}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 italic">{t('trip.flexiblePricingExample')}</p>
+                {tripPricingTiers.map((tier, tierIdx) => (
+                  <div key={tierIdx} className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-0.5 block">{t('trip.fromParticipant')}</label>
+                      <input
+                        className={inputCls + ' py-2'}
+                        type="number" min="1"
+                        value={tier.from_participant}
+                        disabled={tierIdx === 0}
+                        onChange={(e) => {
+                          const updated = [...tripPricingTiers];
+                          updated[tierIdx] = { ...updated[tierIdx], from_participant: parseInt(e.target.value) || 1 };
+                          setTripPricingTiers(updated);
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <label className="text-xs text-slate-500 dark:text-slate-400 mb-0.5 block">{t('trip.pricePerPersonBand')}</label>
+                      <input
+                        className={inputCls + ' py-2'}
+                        type="number" min="0.01" step="0.01"
+                        value={tier.price_per_person || ''}
+                        onChange={(e) => {
+                          const updated = [...tripPricingTiers];
+                          updated[tierIdx] = { ...updated[tierIdx], price_per_person: parseFloat(e.target.value) || 0 };
+                          setTripPricingTiers(updated);
+                        }}
+                        placeholder="0.00"
+                      />
+                    </div>
+                    {tierIdx > 0 && (
+                      <button
+                        type="button"
+                        title={t('trip.removePricingBand')}
+                        onClick={() => setTripPricingTiers(prev => prev.filter((_, i) => i !== tierIdx))}
+                        className="mt-5 p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const lastFrom = tripPricingTiers[tripPricingTiers.length - 1]?.from_participant ?? 1;
+                    setTripPricingTiers(prev => [...prev, { from_participant: lastFrom + 1, price_per_person: 0 }]);
+                  }}
+                  className="text-xs text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-1 hover:underline mt-1"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  {t('trip.addPricingBand')}
+                </button>
+              </div>
+            )}
           </div>
           <label className="flex items-center gap-2 mb-4 cursor-pointer">
             <input type="checkbox" name="is_refundable" checked={formData.is_refundable} onChange={handleChange} className="w-4 h-4 accent-sky-500" />
@@ -1204,8 +1397,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                   : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
               }`}>
                 <span>{ok ? '✓' : '⚠'}</span>
-                <span>Tier total: {tierSum} / {isNaN(tripMax) ? '?' : tripMax} participants
-                  {!ok && !isNaN(tripMax) && ` — ${tripMax - tierSum > 0 ? `${tripMax - tierSum} remaining` : `${tierSum - tripMax} over limit`}`}
+                <span>{t('trip.tierTotal', { sum: tierSum, max: isNaN(tripMax) ? '?' : tripMax })}
+                  {!ok && !isNaN(tripMax) && ` — ${tripMax - tierSum > 0 ? t('trip.tierTotalRemaining', { count: tripMax - tierSum }) : t('trip.tierTotalOver', { count: tierSum - tripMax })}`}
                 </span>
               </div>
             );
@@ -1238,9 +1431,91 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting }) => 
                     <label className={labelCls}>{t('tier.descriptionAr')} <span className="font-normal text-slate-400">({t('common.optional')})</span></label>
                     <textarea className={inputCls} rows={2} value={pkg.description_ar} onChange={(e) => updatePackage(index, 'description_ar', e.target.value)} placeholder={t('tier.descriptionAr')} dir="rtl" maxLength={1000} />
                   </div>
-                  <div>
-                    <label className={labelCls}>{t('tier.price')} (SAR)</label>
-                    <input className={inputCls} type="number" value={pkg.price || ''} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder={t('package.pricePlaceholder')} min="1" step="0.01" required />
+                  <div className="sm:col-span-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className={labelCls + ' mb-0'}>{t('tier.price')} (SAR)</label>
+                      <label className="flex items-center gap-2 cursor-pointer select-none">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">{t('trip.flexiblePricing')}</span>
+                        <button
+                          type="button"
+                          onClick={() => setPackageFlexiblePricing(prev => ({ ...prev, [index]: !(prev[index] ?? false) }))}
+                          className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus:outline-none ${packageFlexiblePricing[index] ? 'bg-sky-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                        >
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${packageFlexiblePricing[index] ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                        </button>
+                      </label>
+                    </div>
+                    {!packageFlexiblePricing[index] ? (
+                      <input className={inputCls} type="number" value={pkg.price || ''} onChange={(e) => updatePackage(index, 'price', parseFloat(e.target.value) || 0)} placeholder={t('package.pricePlaceholder', 'e.g. 250')} min="1" step="0.01" required />
+                    ) : (
+                      <div className="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 p-3 space-y-2">
+                        <p className="text-xs text-sky-700 dark:text-sky-300 font-medium">{t('trip.flexiblePricingHint')}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 italic">{t('trip.flexiblePricingExample')}</p>
+                        {(packagePricingTiers[index] ?? [{ from_participant: 1, price_per_person: 0 }]).map((tier, tierIdx) => (
+                          <div key={tierIdx} className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <label className="text-xs text-slate-500 dark:text-slate-400 mb-0.5 block">{t('trip.fromParticipant')}</label>
+                              <input
+                                className={inputCls + ' py-2'}
+                                type="number"
+                                min="1"
+                                value={tier.from_participant}
+                                disabled={tierIdx === 0}
+                                onChange={(e) => {
+                                  const updated = [...(packagePricingTiers[index] ?? [])];
+                                  updated[tierIdx] = { ...updated[tierIdx], from_participant: parseInt(e.target.value) || 1 };
+                                  setPackagePricingTiers(prev => ({ ...prev, [index]: updated }));
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <label className="text-xs text-slate-500 dark:text-slate-400 mb-0.5 block">{t('trip.pricePerPersonBand')}</label>
+                              <input
+                                className={inputCls + ' py-2'}
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={tier.price_per_person || ''}
+                                onChange={(e) => {
+                                  const updated = [...(packagePricingTiers[index] ?? [])];
+                                  updated[tierIdx] = { ...updated[tierIdx], price_per_person: parseFloat(e.target.value) || 0 };
+                                  setPackagePricingTiers(prev => ({ ...prev, [index]: updated }));
+                                }}
+                                placeholder="0.00"
+                              />
+                            </div>
+                            {tierIdx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = (packagePricingTiers[index] ?? []).filter((_, i) => i !== tierIdx);
+                                  setPackagePricingTiers(prev => ({ ...prev, [index]: updated }));
+                                }}
+                                className="mt-5 p-1.5 text-red-400 hover:text-red-600 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                                title={t('trip.removePricingBand')}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = packagePricingTiers[index] ?? [{ from_participant: 1, price_per_person: 0 }];
+                            const lastFrom = current[current.length - 1]?.from_participant ?? 1;
+                            setPackagePricingTiers(prev => ({
+                              ...prev,
+                              [index]: [...current, { from_participant: lastFrom + 1, price_per_person: 0 }]
+                            }));
+                          }}
+                          className="text-xs text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-1 hover:underline mt-1"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                          {t('trip.addPricingBand')}
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className={labelCls}>{t('tier.maxParticipants')}</label>

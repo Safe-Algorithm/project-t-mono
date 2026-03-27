@@ -91,6 +91,17 @@ def _compute_content_hash(trip: Trip) -> str:
                         ],
                         key=lambda item: item["field_type"],
                     ),
+                    "use_flexible_pricing": getattr(p, "use_flexible_pricing", False),
+                    "pricing_tiers": sorted(
+                        [
+                            {
+                                "from_participant": t.from_participant,
+                                "price_per_person": str(t.price_per_person),
+                            }
+                            for t in (getattr(p, "pricing_tiers", None) or [])
+                        ],
+                        key=lambda item: item["from_participant"],
+                    ),
                 }
                 for p in (trip.packages or [])
             ],
@@ -104,14 +115,22 @@ def _compute_content_hash(trip: Trip) -> str:
 
 
 def _derive_timezone_from_city(session: Session, city_id) -> Optional[str]:
-    """Return the IANA timezone of the starting city, or None if not set."""
+    """Return the IANA timezone of the starting city, or None if not set or invalid."""
     if not city_id:
         return None
     from app.models.destination import Destination
     city = session.get(Destination, city_id)
-    if city and city.timezone:
-        return city.timezone
-    return None
+    if not city or not city.timezone:
+        return None
+    tz = city.timezone
+    # Reject UTC offset strings (e.g. "UTC+03:00") — they are not valid IANA names
+    # and will cause Intl.DateTimeFormat to throw a RangeError in the frontend.
+    try:
+        import zoneinfo
+        zoneinfo.ZoneInfo(tz)
+        return tz
+    except (KeyError, Exception):
+        return None
 
 
 def create_trip(*, session: Session, trip_in: TripCreate, provider: Provider) -> Trip:

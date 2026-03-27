@@ -129,6 +129,11 @@ export enum TripAmenity {
   OMRA_ASSISTANCE = 'omra_assistance',
 }
 
+export interface PricingTier {
+  from_participant: number;
+  price_per_person: number;
+}
+
 export interface CreateTripPackage {
   name_en: string;
   name_ar: string;
@@ -139,6 +144,8 @@ export interface CreateTripPackage {
   max_participants?: number | null;
   is_refundable?: boolean | null;
   amenities?: string[] | null;
+  use_flexible_pricing?: boolean;
+  pricing_tiers?: PricingTier[];
 }
 
 export interface UpdateTripPackage {
@@ -149,6 +156,8 @@ export interface UpdateTripPackage {
   price?: number;
   currency?: string;
   is_active?: boolean;
+  use_flexible_pricing?: boolean;
+  pricing_tiers?: PricingTier[];
 }
 
 export interface PackageRequiredField {

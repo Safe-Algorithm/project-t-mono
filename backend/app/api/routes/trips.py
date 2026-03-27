@@ -47,7 +47,12 @@ def _normalize_trip_value_for_compare(value):
     if isinstance(value, dict):
         return {k: _normalize_trip_value_for_compare(v) for k, v in sorted(value.items())}
     if isinstance(value, list):
-        return sorted(_normalize_trip_value_for_compare(item) for item in value)
+        import json as _json
+        normalized_items = [_normalize_trip_value_for_compare(item) for item in value]
+        try:
+            return sorted(normalized_items)
+        except TypeError:
+            return sorted(_json.dumps(item, sort_keys=True, default=str) for item in normalized_items)
     return value
 
 
@@ -77,13 +82,64 @@ def _filter_trip_update_changes(session: Session, db_trip, trip_in: TripUpdate) 
 
 
 def _filter_package_update_changes(package, package_in: TripPackageUpdate) -> Dict[str, Any]:
-    payload = package_in.model_dump(exclude_unset=True, exclude={"required_fields"})
+    payload = package_in.model_dump(exclude_unset=True, exclude={"required_fields", "pricing_tiers"})
     changed: Dict[str, Any] = {}
     for field, value in payload.items():
         current_value = getattr(package, field, None)
         if _normalize_trip_value_for_compare(value) != _normalize_trip_value_for_compare(current_value):
             changed[field] = value
     return changed
+
+
+def compute_package_price(package, n: int) -> Decimal:
+    """Compute the total price for n participants using marginal (waterfall) pricing.
+
+    If use_flexible_pricing is False (or no tiers), falls back to flat price * n.
+    Tiers must be sorted by from_participant ASC (the relationship orders by that column).
+    """
+    if not package.use_flexible_pricing or not package.pricing_tiers:
+        return package.price * n
+    tiers = sorted(package.pricing_tiers, key=lambda t: t.from_participant)
+    total = Decimal(0)
+    remaining = n
+    for i, tier in enumerate(tiers):
+        if remaining <= 0:
+            break
+        band_start = tier.from_participant
+        if i + 1 < len(tiers):
+            band_size = tiers[i + 1].from_participant - band_start
+        else:
+            band_size = remaining  # last band is open-ended
+        in_band = min(remaining, band_size)
+        total += tier.price_per_person * in_band
+        remaining -= in_band
+    return total
+
+
+def _validate_pricing_tiers(tiers) -> None:
+    """Raise HTTPException if the pricing tier list is invalid."""
+    if not tiers:
+        raise HTTPException(status_code=400, detail="Flexible pricing requires at least one pricing tier")
+    sorted_tiers = sorted(tiers, key=lambda t: t.from_participant)
+    if sorted_tiers[0].from_participant != 1:
+        raise HTTPException(status_code=400, detail="The first pricing tier must start at participant 1")
+    seen: set = set()
+    for i, tier in enumerate(sorted_tiers):
+        if tier.from_participant in seen:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Pricing tiers must have unique 'from_participant' values — "
+                       f"value {tier.from_participant} appears more than once",
+            )
+        seen.add(tier.from_participant)
+        if i > 0 and tier.from_participant <= sorted_tiers[i - 1].from_participant:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Pricing tier {i + 1} 'from_participant' ({tier.from_participant}) must be greater than "
+                       f"the previous tier ({sorted_tiers[i - 1].from_participant})",
+            )
+        if tier.price_per_person <= 0:
+            raise HTTPException(status_code=400, detail="All pricing tier rates must be greater than 0")
 
 
 def _trip_has_active_paid_bookings(session: Session, trip_id: uuid.UUID) -> bool:
@@ -260,6 +316,11 @@ def _build_package_with_fields(session: Session, package) -> TripPackageWithRequ
             .count()
         )
         available_spots = max(0, package.max_participants - booked_in_pkg)
+    from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
+    from app.schemas.trip_package import TripPricingTierRead
+    pkg_tiers = session.query(TripPricingTierModel).filter(
+        TripPricingTierModel.package_id == package.id
+    ).order_by(TripPricingTierModel.from_participant).all()
     return TripPackageWithRequiredFields(
         id=package.id, trip_id=package.trip_id,
         name_en=package.name_en, name_ar=package.name_ar,
@@ -271,6 +332,8 @@ def _build_package_with_fields(session: Session, package) -> TripPackageWithRequ
         amenities=package.amenities,
         required_fields=required_field_types,
         required_fields_details=required_fields_details,
+        use_flexible_pricing=package.use_flexible_pricing,
+        pricing_tiers=[TripPricingTierRead.model_validate(t) for t in pkg_tiers],
     )
 
 
@@ -278,10 +341,13 @@ def _sync_hidden_package(
     session: Session, trip,
     price=None, is_refundable=None, amenities=None,
     required_field_types=None,
+    use_flexible_pricing: bool = False,
+    pricing_tiers: list = None,
 ) -> None:
     """For non-packaged trips: ensure exactly one hidden package exists and is in sync."""
     from app.models.trip_package import TripPackage as TripPackageModel
     from app.models.trip_package_field import TripPackageRequiredField
+    from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
     from app.models.trip_field import TripFieldType
     from decimal import Decimal
     existing = session.query(TripPackageModel).filter(TripPackageModel.trip_id == trip.id).first()
@@ -293,6 +359,21 @@ def _sync_hidden_package(
             existing.is_refundable = is_refundable
         if amenities is not None:
             existing.amenities = list(amenities)
+        existing.use_flexible_pricing = use_flexible_pricing
+        # Sync pricing tiers only when explicitly provided (None = not sent, skip replacement)
+        if pricing_tiers is not None:
+            session.query(TripPricingTierModel).filter(
+                TripPricingTierModel.package_id == existing.id
+            ).delete()
+            if use_flexible_pricing and pricing_tiers:
+                for tier in pricing_tiers:
+                    _fp = tier.get('from_participant', 1) if isinstance(tier, dict) else tier.from_participant
+                    _pp = tier.get('price_per_person', 0) if isinstance(tier, dict) else tier.price_per_person
+                    session.add(TripPricingTierModel(
+                        package_id=existing.id,
+                        from_participant=int(_fp),
+                        price_per_person=Decimal(str(_pp)),
+                    ))
         session.add(existing)
     else:
         hidden = TripPackageModel(
@@ -303,9 +384,17 @@ def _sync_hidden_package(
             max_participants=trip.max_participants,
             is_refundable=is_refundable if is_refundable is not None else True,
             amenities=list(amenities) if amenities else None,
+            use_flexible_pricing=use_flexible_pricing,
         )
         session.add(hidden)
         session.flush()
+        if use_flexible_pricing and pricing_tiers:
+            for tier in pricing_tiers:
+                session.add(TripPricingTierModel(
+                    package_id=hidden.id,
+                    from_participant=int(tier.get('from_participant', 1)),
+                    price_per_person=Decimal(str(tier.get('price_per_person', 0))),
+                ))
         fields_to_add = required_field_types or [TripFieldType.NAME, TripFieldType.DATE_OF_BIRTH]
         for ft in fields_to_add:
             session.add(TripPackageRequiredField(package_id=hidden.id, field_type=ft))
@@ -327,6 +416,8 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
     resp_amenities = None
     simple_required_fields: list = []
     simple_required_fields_details: list = []
+    simple_use_flexible_pricing = False
+    simple_pricing_tiers_list: list = []
     if trip.is_packaged_trip:
         packages_with_fields = [_build_package_with_fields(session, p) for p in all_packages]
     else:
@@ -348,6 +439,13 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
                  "is_required": rf.is_required, "validation_config": rf.validation_config}
                 for rf in hp_fields
             ]
+            from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
+            from app.schemas.trip_package import TripPricingTierRead
+            simple_use_flexible_pricing = hp.use_flexible_pricing
+            hp_tiers = session.query(TripPricingTierModel).filter(
+                TripPricingTierModel.package_id == hp.id
+            ).order_by(TripPricingTierModel.from_participant).all()
+            simple_pricing_tiers_list = [TripPricingTierRead.model_validate(t) for t in hp_tiers]
     active_regs = session.exec(
         sql_select(TripRegistrationModel).where(
             TripRegistrationModel.trip_id == trip.id,
@@ -379,6 +477,8 @@ def _build_trip_read(session: Session, trip, provider_info: dict, extra_fees: li
         available_spots=max(0, trip.max_participants - booked),
         simple_trip_required_fields=simple_required_fields,
         simple_trip_required_fields_details=simple_required_fields_details,
+        simple_trip_use_flexible_pricing=simple_use_flexible_pricing,
+        simple_trip_pricing_tiers=simple_pricing_tiers_list,
     )
 
 
@@ -404,6 +504,8 @@ def create_trip(
                 price=trip_in.price,
                 is_refundable=trip_in.is_refundable,
                 amenities=trip_in.amenities,
+                use_flexible_pricing=getattr(trip_in, 'use_flexible_pricing', False) or False,
+                pricing_tiers=[t.dict() if hasattr(t, 'dict') else dict(t) for t in (getattr(trip_in, 'pricing_tiers', None) or [])],
             )
             session.refresh(trip)
             # Recompute hash now that the hidden package exists (packages are part of the hash)
@@ -583,6 +685,8 @@ def get_my_registration(
         registration_date=registration.registration_date,
         spot_reserved_until=registration.spot_reserved_until,
         booking_reference=registration.booking_reference,
+        cancelled_by=registration.cancelled_by,
+        cancellation_reason=registration.cancellation_reason,
         participants=list(registration.participants or []),
         trip=trip_info,
     )
@@ -696,6 +800,9 @@ def update_trip(
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     trip_changes = _filter_trip_update_changes(session, db_trip, trip_in)
+    # Extract flexible pricing fields — they apply to the hidden package, not the Trip model
+    _upd_use_flexible = trip_changes.pop("use_flexible_pricing", None)
+    _upd_pricing_tiers = trip_changes.pop("pricing_tiers", None)
     trip_in = TripUpdate(**trip_changes)
 
     if "is_refundable" in trip_changes:
@@ -757,11 +864,21 @@ def update_trip(
     if not trip.description_en and not trip.description_ar:
         raise HTTPException(status_code=400, detail="At least one of description_en or description_ar must be provided")
     if not trip.is_packaged_trip:
+        # When use_flexible_pricing was not sent in the payload, read existing state
+        # from the hidden package so we don't accidentally wipe tiers on unrelated updates.
+        if _upd_use_flexible is None:
+            from app.models.trip_package import TripPackage as _TripPackageModel
+            _hp = session.query(_TripPackageModel).filter(_TripPackageModel.trip_id == trip_id).first()
+            _upd_use_flexible = _hp.use_flexible_pricing if _hp else False
+            # Keep existing tiers (pass None so _sync_hidden_package skips tier replacement)
+            _upd_pricing_tiers = None
         _sync_hidden_package(
             session, trip,
             price=trip_in.price,
             is_refundable=trip_in.is_refundable,
             amenities=trip_in.amenities,
+            use_flexible_pricing=_upd_use_flexible,
+            pricing_tiers=[t if isinstance(t, dict) else dict(t) for t in (_upd_pricing_tiers or [])] if _upd_pricing_tiers is not None else None,
         )
         session.refresh(trip)
     from app.crud import provider as provider_crud
@@ -954,13 +1071,29 @@ def create_trip_package(
     
     from app.models.trip_package import TripPackage as TripPackageModel
     from app.models.trip_package_field import TripPackageRequiredField
-    
-    # Create package without required_fields
-    package_data = package_in.model_dump(exclude={"required_fields"})
+
+    # Validate pricing tiers BEFORE any DB write
+    if package_in.use_flexible_pricing and package_in.pricing_tiers:
+        _validate_pricing_tiers(package_in.pricing_tiers)
+
+    # Create package without required_fields or pricing_tiers (handled separately)
+    package_data = package_in.model_dump(exclude={"required_fields", "pricing_tiers"})
     package = TripPackageModel(trip_id=trip_id, **package_data)
     session.add(package)
     session.commit()
     session.refresh(package)
+
+    # Handle flexible pricing tiers
+    if package_in.use_flexible_pricing and package_in.pricing_tiers:
+        from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
+        for tier in package_in.pricing_tiers:
+            session.add(TripPricingTierModel(
+                package_id=package.id,
+                from_participant=tier.from_participant,
+                price_per_person=tier.price_per_person,
+            ))
+        session.commit()
+        session.refresh(package)
     
     # Add required fields - always include NAME and DATE_OF_BIRTH, plus any additional fields
     from app.models.trip_field import TripFieldType
@@ -992,7 +1125,13 @@ def create_trip_package(
     ).all()
     required_field_types = [rf.field_type.value for rf in required_fields]
     
-    # Create response with required fields
+    # Get pricing tiers for response
+    from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
+    from app.schemas.trip_package import TripPricingTierRead
+    resp_tiers = session.query(TripPricingTierModel).filter(
+        TripPricingTierModel.package_id == package.id
+    ).order_by(TripPricingTierModel.from_participant).all()
+
     return TripPackageWithRequiredFields(
         id=package.id,
         trip_id=package.trip_id,
@@ -1002,7 +1141,9 @@ def create_trip_package(
         description_ar=package.description_ar,
         price=package.price,
         is_active=package.is_active,
-        required_fields=required_field_types
+        required_fields=required_field_types,
+        use_flexible_pricing=package.use_flexible_pricing,
+        pricing_tiers=[TripPricingTierRead.model_validate(t) for t in resp_tiers],
     )
 
 
@@ -1139,7 +1280,31 @@ def update_trip_package(
             )
             session.add(required_field)
     
-    if package_changes or required_fields_changed:
+    # Handle flexible pricing tiers replacement
+    from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
+    pricing_tiers_changed = False
+    if package_in.pricing_tiers is not None:
+        if package_in.use_flexible_pricing or (package_in.use_flexible_pricing is None and package.use_flexible_pricing):
+            _validate_pricing_tiers(package_in.pricing_tiers)
+        # Atomically replace tiers
+        session.query(TripPricingTierModel).filter(
+            TripPricingTierModel.package_id == package_id
+        ).delete()
+        for tier in package_in.pricing_tiers:
+            session.add(TripPricingTierModel(
+                package_id=package_id,
+                from_participant=tier.from_participant,
+                price_per_person=tier.price_per_person,
+            ))
+        pricing_tiers_changed = True
+    # If use_flexible_pricing toggled off, clear tiers
+    if package_in.use_flexible_pricing is False:
+        session.query(TripPricingTierModel).filter(
+            TripPricingTierModel.package_id == package_id
+        ).delete()
+        pricing_tiers_changed = True
+
+    if package_changes or required_fields_changed or pricing_tiers_changed:
         session.commit()
         session.refresh(package)
         session.refresh(trip)
@@ -1153,8 +1318,13 @@ def update_trip_package(
         TripPackageRequiredField.package_id == package.id
     ).all()
     required_field_types = [rf.field_type.value for rf in required_fields]
-    
-    # Create response with required fields
+
+    # Get pricing tiers for response
+    from app.schemas.trip_package import TripPricingTierRead
+    resp_tiers = session.query(TripPricingTierModel).filter(
+        TripPricingTierModel.package_id == package.id
+    ).order_by(TripPricingTierModel.from_participant).all()
+
     return TripPackageWithRequiredFields(
         id=package.id,
         trip_id=package.trip_id,
@@ -1164,7 +1334,9 @@ def update_trip_package(
         description_ar=package.description_ar,
         price=package.price,
         is_active=package.is_active,
-        required_fields=required_field_types
+        required_fields=required_field_types,
+        use_flexible_pricing=package.use_flexible_pricing,
+        pricing_tiers=[TripPricingTierRead.model_validate(t) for t in resp_tiers],
     )
 
 
@@ -1636,6 +1808,40 @@ async def register_for_trip(
                             }
                         )
     
+    # Validate total_amount: recompute expected price server-side and reject mismatches.
+    # This prevents both price manipulation and app-side calculation bugs.
+    from app.models.trip_package import TripPackage as TripPackageModel
+    from collections import Counter as _Counter
+    _pkg_participant_counts: dict = _Counter(
+        str(p.package_id) for p in registration_in.participants if p.package_id
+    )
+    _expected_total = Decimal("0")
+    for _pkg_id_str, _count in _pkg_participant_counts.items():
+        import uuid as _uuid_mod
+        _pkg = session.get(TripPackageModel, _uuid_mod.UUID(_pkg_id_str))
+        if _pkg:
+            _expected_total += compute_package_price(_pkg, _count)
+    if not _pkg_participant_counts:
+        # Non-packaged, no participants have package_id yet — use hidden package
+        _hidden = session.query(TripPackageModel).filter(
+            TripPackageModel.trip_id == trip_id
+        ).first()
+        if _hidden:
+            _expected_total = compute_package_price(_hidden, registration_in.total_participants)
+    _price_validated = bool(_pkg_participant_counts) or bool(
+        not _pkg_participant_counts and session.query(TripPackageModel).filter(
+            TripPackageModel.trip_id == trip_id
+        ).first()
+    )
+    if _price_validated and abs(_expected_total - registration_in.total_amount) > Decimal("0.01"):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Price mismatch: expected {_expected_total:.2f} SAR but received "
+                f"{registration_in.total_amount:.2f} SAR. Please reload the trip and try again."
+            ),
+        )
+
     # Create registration with pending_payment status and 15-min spot reservation
     from app.models.trip_registration import TripRegistration as TripRegistrationModel, TripRegistrationParticipant as TripParticipantModel
     spot_reserved_until = datetime.utcnow() + timedelta(minutes=15)

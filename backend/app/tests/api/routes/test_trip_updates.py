@@ -195,6 +195,83 @@ class TestUserTripUpdates:
         assert r2.status_code == 403
 
 
+# ===== Cancelled Registration Behaviour =====
+
+
+class TestCancelledRegistrationUpdates:
+    def test_broadcast_skips_cancelled_registrations(self, client: TestClient, session: Session):
+        """Broadcast update must not be visible to users with only cancelled registrations."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider.provider_id)
+
+        # Active user
+        active_user, auh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip.id, active_user.id)
+
+        # Cancelled user
+        cancelled_user, cuh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        cancelled_reg = _create_registration(session, trip.id, cancelled_user.id)
+        cancelled_reg.status = "cancelled"
+        session.add(cancelled_reg)
+        session.commit()
+
+        client.post(f"{API}/provider/trips/{trip.id}/updates", data={
+            "title": "Broadcast", "message": "For everyone active",
+        }, headers=ph)
+
+        # Active user sees it
+        r_active = client.get(f"{API}/trips/{trip.id}/updates", headers=auh)
+        assert r_active.status_code == 200
+        assert len(r_active.json()) == 1
+
+        # Cancelled user gets 403 (no active registration)
+        r_cancelled = client.get(f"{API}/trips/{trip.id}/updates", headers=cuh)
+        assert r_cancelled.status_code == 403
+
+    def test_directed_update_to_active_booking_shows_in_app(self, client: TestClient, session: Session):
+        """User with a cancelled + an active registration sees directed update sent to their active registration."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider.provider_id)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+
+        # Old cancelled registration
+        old_reg = _create_registration(session, trip.id, user.id)
+        old_reg.status = "cancelled"
+        session.add(old_reg)
+        session.commit()
+
+        # New active registration
+        active_reg = _create_registration(session, trip.id, user.id)
+
+        # Provider sends directed update to the active registration
+        r = client.post(f"{API}/provider/registrations/{active_reg.id}/updates", data={
+            "title": "For you", "message": "Your active booking update",
+        }, headers=ph)
+        assert r.status_code == 200
+
+        # User should see the update (endpoint picks active registration, not the cancelled one)
+        r2 = client.get(f"{API}/trips/{trip.id}/updates", headers=uh)
+        assert r2.status_code == 200
+        assert len(r2.json()) == 1
+        assert r2.json()[0]["title"] == "For you"
+
+    def test_provider_cannot_send_directed_update_to_cancelled_registration(self, client: TestClient, session: Session):
+        """Provider should receive 400 when targeting a cancelled registration."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider.provider_id)
+        user, _ = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+
+        reg = _create_registration(session, trip.id, user.id)
+        reg.status = "cancelled"
+        session.add(reg)
+        session.commit()
+
+        r = client.post(f"{API}/provider/registrations/{reg.id}/updates", data={
+            "title": "Oops", "message": "Targeting cancelled reg",
+        }, headers=ph)
+        assert r.status_code == 400
+
+
 # ===== Admin Endpoints =====
 
 

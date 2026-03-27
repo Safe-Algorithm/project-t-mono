@@ -590,7 +590,7 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
     with patch("app.services.email.email_service.send_booking_confirmation_email", new_callable=AsyncMock):
         valid_registration = {
             "total_participants": 1,
-            "total_amount": 150.0,
+            "total_amount": 100.0,
             "status": "pending",
             "participants": [
                 {
@@ -613,7 +613,7 @@ def test_registration_with_validation_config_integration(client: TestClient, ses
         )
         invalid_registration = {
             "total_participants": 1,
-            "total_amount": 150.0,
+            "total_amount": 100.0,
             "status": "pending",
             "participants": [
                 {

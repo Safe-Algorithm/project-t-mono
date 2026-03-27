@@ -198,6 +198,36 @@ def update_trip_support_ticket(
     return ticket
 
 
+# ===== Open-ticket uniqueness helpers =====
+
+_OPEN_STATUSES = (TicketStatus.OPEN, TicketStatus.IN_PROGRESS, TicketStatus.WAITING_ON_USER)
+
+
+def get_open_admin_ticket_for_user(
+    session: Session, *, user_id: uuid.UUID
+) -> Optional[SupportTicket]:
+    """Return the first non-closed/resolved admin ticket for this user, or None."""
+    from sqlalchemy import or_
+    stmt = select(SupportTicket).where(
+        SupportTicket.user_id == user_id,
+        or_(*[SupportTicket.status == s for s in _OPEN_STATUSES]),
+    )
+    return session.exec(stmt).first()
+
+
+def get_open_trip_ticket_for_user_and_provider(
+    session: Session, *, user_id: uuid.UUID, provider_id: uuid.UUID
+) -> Optional[TripSupportTicket]:
+    """Return the first non-closed/resolved trip ticket the user has with a provider, or None."""
+    from sqlalchemy import or_
+    stmt = select(TripSupportTicket).where(
+        TripSupportTicket.user_id == user_id,
+        TripSupportTicket.provider_id == provider_id,
+        or_(*[TripSupportTicket.status == s for s in _OPEN_STATUSES]),
+    )
+    return session.exec(stmt).first()
+
+
 # ===== Ticket Messages =====
 
 

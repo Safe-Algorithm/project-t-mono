@@ -6,6 +6,7 @@ from .provider import Provider, ProviderRequest
 from .user import User
 from .trip import Trip
 from .trip_package import TripPackage
+from .trip_pricing_tier import TripPricingTier
 from .trip_package_field import TripPackageRequiredField
 from .trip_registration import TripRegistration, TripRegistrationParticipant
 from .provider_file import ProviderFile
@@ -26,3 +27,5 @@ from .provider_image import ProviderImage
 from .trip_share import TripShare
 from .refund_record import RefundRecord
 from .user_push_token import UserPushToken
+from .earning_line import EarningLine
+from .provider_payout import ProviderPayout, PayoutStatus

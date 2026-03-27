@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../hooks/useTheme';
 import { FontSize, Radius, Shadow } from '../../constants/Theme';
 import { ThemeColors } from '../../constants/Theme';
-import { listAdminTickets, listMyTripTickets, SupportTicket, TripSupportTicket } from '../../lib/supportApi';
+import { listAdminTickets, SupportTicket } from '../../lib/supportApi';
 
 const STATUS_COLORS: Record<string, string> = {
   open: '#3B82F6',
@@ -52,20 +52,14 @@ export default function SupportIndexScreen() {
       queryFn: async () => (await listAdminTickets()).data,
     });
 
-  const { data: tripTickets, isLoading: loadingTrip, refetch: refetchTrip } =
-    useQuery<TripSupportTicket[]>({
-      queryKey: ['support-trip-tickets'],
-      queryFn: async () => (await listMyTripTickets()).data,
-    });
-
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchAdmin(), refetchTrip()]);
+    await refetchAdmin();
     setRefreshing(false);
-  }, [refetchAdmin, refetchTrip]);
+  }, [refetchAdmin]);
 
-  const loading = loadingAdmin || loadingTrip;
+  const loading = loadingAdmin;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -130,44 +124,6 @@ export default function SupportIndexScreen() {
           )}
         </View>
 
-        {/* Trip tickets */}
-        <View style={s.section}>
-          <View style={s.sectionHeader}>
-            <Text style={s.sectionTitle}>{t('support.tripSectionTitle')}</Text>
-          </View>
-          <Text style={s.sectionDesc}>{t('support.tripSectionDesc')}</Text>
-
-          {!loading && (!tripTickets || tripTickets.length === 0) ? (
-            <View style={s.emptyBox}>
-              <Ionicons name="trail-sign-outline" size={32} color={colors.textTertiary} />
-              <Text style={s.emptyText}>{t('support.noTripTickets')}</Text>
-              <Text style={s.emptyHint}>{t('support.goToBooking')}</Text>
-            </View>
-          ) : (
-            <View style={s.card}>
-              {tripTickets?.slice(0, 5).map((t) => (
-                <TicketRow
-                  key={t.id}
-                  subject={t.subject}
-                  status={t.status}
-                  date={t.created_at}
-                  colors={colors}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/support/trip-ticket' as any,
-                      params: { ticketId: t.id },
-                    })
-                  }
-                />
-              ))}
-              {(tripTickets?.length ?? 0) > 5 && (
-                <TouchableOpacity style={s.seeAll}>
-                  <Text style={s.seeAllText}>{t('support.seeAll', { count: tripTickets!.length })}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

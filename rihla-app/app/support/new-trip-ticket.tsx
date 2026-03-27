@@ -19,7 +19,7 @@ export default function NewTripTicketScreen() {
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const { t } = useTranslation();
-  const { tripId, registrationId } = useLocalSearchParams<{ tripId: string; registrationId: string }>();
+  const { tripId, registrationId, providerName } = useLocalSearchParams<{ tripId: string; registrationId: string; providerName?: string }>();
   const qc = useQueryClient();
 
   const [subject, setSubject] = useState('');
@@ -31,6 +31,7 @@ export default function NewTripTicketScreen() {
       createTripTicket(tripId!, registrationId!, { subject, description, priority }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['support-trip-tickets'] });
+      qc.invalidateQueries({ queryKey: ['trip-tickets-booking', tripId] });
       router.replace({
         pathname: '/support/trip-ticket' as any,
         params: { ticketId: res.data.id },
@@ -57,7 +58,7 @@ export default function NewTripTicketScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={s.scroll}>
-          <Text style={s.formTitle}>{t('support.contactFormTitle')}</Text>
+          <Text style={s.formTitle}>{t('support.contactFormTitle', { providerName: providerName || t('booking.contactProvider') })}</Text>
           <Text style={s.formSubtitle}>{t('support.contactFormSubtitle')}</Text>
 
           <Text style={s.fieldLabel}>{t('support.subjectLabel')} *</Text>

@@ -70,6 +70,12 @@ def user_create_support_ticket(
     current_user: User = Depends(get_current_active_user),
 ):
     """Create a new support ticket (user → admin)."""
+    existing = crud_support.get_open_admin_ticket_for_user(session, user_id=current_user.id)
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have an open support ticket. Please wait for it to be resolved before opening a new one.",
+        )
     ticket = crud_support.create_support_ticket(
         session, user_id=current_user.id, data=data
     )
@@ -121,8 +127,10 @@ def user_reply_support_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     if ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not your ticket")
-    if ticket.status == TicketStatus.CLOSED:
+    if ticket.status in (TicketStatus.CLOSED, TicketStatus.RESOLVED):
         raise HTTPException(status_code=400, detail="Ticket is closed")
+    if ticket.status != TicketStatus.WAITING_ON_USER:
+        raise HTTPException(status_code=400, detail="You can only reply when the ticket is waiting on your response")
     msg = crud_support.add_message(
         session,
         sender_id=current_user.id,
@@ -162,16 +170,26 @@ def user_create_trip_support_ticket(
             detail="Cannot open a support ticket for a trip that has already ended",
         )
 
-    # Verify the user has a registration for this trip
+    # Verify the user has an active (non-cancelled) registration for this trip
     stmt = select(TripRegistration).where(
         TripRegistration.trip_id == trip_id,
         TripRegistration.user_id == current_user.id,
+        TripRegistration.status != "cancelled",
     )
     registration = session.exec(stmt).first()
     if not registration:
         raise HTTPException(
             status_code=403,
-            detail="You must be registered for this trip to create a support ticket",
+            detail="You must have an active booking for this trip to open a new support ticket",
+        )
+
+    existing = crud_support.get_open_trip_ticket_for_user_and_provider(
+        session, user_id=current_user.id, provider_id=trip.provider_id
+    )
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have an open ticket with this provider. Please wait for it to be resolved before opening a new one.",
         )
 
     ticket = crud_support.create_trip_support_ticket(
@@ -193,14 +211,20 @@ def user_list_trip_support_tickets(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_active_user),
 ):
-    """List user's support tickets for a specific trip."""
+    """List user's support tickets for a specific trip (works for cancelled bookings too)."""
+    # Prefer the active registration; fall back to any registration (e.g. cancelled booking)
     stmt = select(TripRegistration).where(
         TripRegistration.trip_id == trip_id,
         TripRegistration.user_id == current_user.id,
-    )
-    registration = session.exec(stmt).first()
-    if not registration:
+    ).order_by(TripRegistration.registration_date.desc())
+    registrations = list(session.exec(stmt).all())
+    if not registrations:
         raise HTTPException(status_code=403, detail="Not registered for this trip")
+
+    # Prefer active over cancelled
+    registration = next(
+        (r for r in registrations if r.status != "cancelled"), registrations[0]
+    )
 
     tickets = crud_support.list_trip_support_tickets_by_registration(
         session, registration_id=registration.id
@@ -262,8 +286,10 @@ def user_reply_trip_support_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     if ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not your ticket")
-    if ticket.status == TicketStatus.CLOSED:
+    if ticket.status in (TicketStatus.CLOSED, TicketStatus.RESOLVED):
         raise HTTPException(status_code=400, detail="Ticket is closed")
+    if ticket.status != TicketStatus.WAITING_ON_USER:
+        raise HTTPException(status_code=400, detail="You can only reply when the ticket is waiting on your response")
     msg = crud_support.add_message(
         session,
         sender_id=current_user.id,
@@ -442,6 +468,12 @@ def provider_create_admin_ticket(
     _rbac: None = Depends(require_provider_permission),
 ):
     """Create a new support ticket directed to admin (provider → admin)."""
+    existing = crud_support.get_open_admin_ticket_for_user(session, user_id=current_user.id)
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail="You already have an open support ticket. Please wait for it to be resolved before opening a new one.",
+        )
     ticket = crud_support.create_support_ticket(
         session, user_id=current_user.id, data=data
     )
@@ -500,8 +532,10 @@ def provider_reply_admin_ticket(
         raise HTTPException(status_code=404, detail="Ticket not found")
     if ticket.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not your ticket")
-    if ticket.status == TicketStatus.CLOSED:
+    if ticket.status in (TicketStatus.CLOSED, TicketStatus.RESOLVED):
         raise HTTPException(status_code=400, detail="Ticket is closed")
+    if ticket.status != TicketStatus.WAITING_ON_USER:
+        raise HTTPException(status_code=400, detail="You can only reply when the ticket is waiting on your response")
     msg = crud_support.add_message(
         session,
         sender_id=current_user.id,

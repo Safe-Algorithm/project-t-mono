@@ -18,9 +18,10 @@ from app.schemas.field_metadata import AvailableFieldsResponse, FieldMetadata, F
 from app.models.trip_field import TripFieldType, FIELD_METADATA
 from app.models.field_validation import NATIONALITY_LIST
 import app.crud as crud
-from app.schemas.trip_package import TripPackageWithRequiredFields
+from app.schemas.trip_package import TripPackageWithRequiredFields, TripPricingTierRead
 from app.models.trip_package import TripPackage as TripPackageModel
 from app.models.trip_package_field import TripPackageRequiredField
+from app.models.trip_pricing_tier import TripPricingTier as TripPricingTierModel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -112,6 +113,8 @@ def build_trip_read(trip, session: Session) -> TripRead:
     resp_amenities = None
     simple_required_fields: list = []
     simple_required_fields_details: list = []
+    simple_use_flexible_pricing = False
+    simple_pricing_tiers: list = []
 
     if is_packaged:
         from app.models.trip_registration import TripRegistration as TripRegistrationModel, TripRegistrationParticipant as TripParticipantModel
@@ -138,6 +141,9 @@ def build_trip_read(trip, session: Session) -> TripRead:
                     .count()
                 )
                 pkg_available_spots = max(0, package.max_participants - booked_in_pkg)
+            pkg_tiers = session.query(TripPricingTierModel).filter(
+                TripPricingTierModel.package_id == package.id
+            ).order_by(TripPricingTierModel.from_participant).all()
             packages_with_fields.append(TripPackageWithRequiredFields(
                 id=package.id,
                 trip_id=package.trip_id,
@@ -154,6 +160,8 @@ def build_trip_read(trip, session: Session) -> TripRead:
                 amenities=package.amenities,
                 required_fields=required_field_types,
                 required_fields_details=required_fields_details,
+                use_flexible_pricing=package.use_flexible_pricing,
+                pricing_tiers=[TripPricingTierRead.model_validate(t) for t in pkg_tiers],
             ))
     else:
         # Non-packaged: hide packages, surface hidden package fields in response only
@@ -174,6 +182,11 @@ def build_trip_read(trip, session: Session) -> TripRead:
                  "is_required": rf.is_required, "validation_config": rf.validation_config}
                 for rf in hp_fields
             ]
+            simple_use_flexible_pricing = hp.use_flexible_pricing
+            hp_tiers = session.query(TripPricingTierModel).filter(
+                TripPricingTierModel.package_id == hp.id
+            ).order_by(TripPricingTierModel.from_participant).all()
+            simple_pricing_tiers = [TripPricingTierRead.model_validate(t) for t in hp_tiers]
 
     from app.crud import provider as provider_crud
     provider = provider_crud.get_provider(session=session, provider_id=trip.provider_id)
@@ -290,6 +303,8 @@ def build_trip_read(trip, session: Session) -> TripRead:
         available_spots=available_spots,
         simple_trip_required_fields=simple_required_fields if not is_packaged else [],
         simple_trip_required_fields_details=simple_required_fields_details if not is_packaged else [],
+        simple_trip_use_flexible_pricing=simple_use_flexible_pricing if not is_packaged else False,
+        simple_trip_pricing_tiers=simple_pricing_tiers if not is_packaged else [],
     )
 
 

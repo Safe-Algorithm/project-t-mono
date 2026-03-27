@@ -8,6 +8,7 @@ Create Date: 2026-03-08 10:44:27.946210
 from typing import Sequence, Union
 
 from alembic import op
+import sqlalchemy as sa
 from sqlmodel import SQLModel
 
 from app.models import *  # noqa: F401,F403
@@ -28,5 +29,13 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
+    # SQLModel.metadata.drop_all() fails on circular FK cycles (e.g. user<->provider<->providerrequest).
+    # Instead, fetch all public tables and drop them with CASCADE to handle any FK order.
     bind = op.get_bind()
-    SQLModel.metadata.drop_all(bind=bind)
+    bind.execute(sa.text("SET session_replication_role = replica"))
+    tables = bind.execute(
+        sa.text("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename != 'alembic_version'")
+    ).fetchall()
+    for (table,) in tables:
+        bind.execute(sa.text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
+    bind.execute(sa.text("SET session_replication_role = DEFAULT"))

@@ -18,7 +18,8 @@ import { Skeleton } from '../../components/ui/SkeletonLoader';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { TripUpdate } from '../../types/trip';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { listTripTicketsByTrip, TripSupportTicket } from '../../lib/supportApi';
 
 const STATUS_VARIANTS: Record<string, 'success' | 'warning' | 'error' | 'neutral' | 'primary'> = {
   confirmed: 'success',
@@ -305,13 +306,33 @@ export default function BookingDetailScreen() {
       const transactionUrl = moyasarData?.source?.transaction_url;
       if (transactionUrl) {
         await WebBrowser.openAuthSessionAsync(transactionUrl, 'rihlaapp://payment-callback');
-        // After the in-app browser closes (redirect or user dismiss), refresh the
-        // registration so the UI reflects whatever Moyasar's webhook has processed.
+        // Browser closed — fetch real registration status from backend.
+        // Do NOT rely on result.url or cached data: on Android openAuthSessionAsync
+        // often returns type='cancel' even after a successful payment, and the
+        // React Query cache still holds the stale pending_payment value.
         qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
-        qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
+        try {
+          // Poll up to 3 times with 1 s delay in case the backend callback is still
+          // processing (HTML fires the deep link before the server responds).
+          let freshReg: any = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            if (attempt > 0) await new Promise(res => setTimeout(res, 1000));
+            const { data } = await apiClient.get(`/trips/registrations/${registrationId}`);
+            freshReg = data;
+            if (freshReg.status !== 'pending_payment') break;
+          }
+          qc.setQueryData(['registrations', registrationId], freshReg);
+          if (['confirmed', 'awaiting_provider', 'processing'].includes(freshReg.status)) {
+            router.replace({ pathname: '/booking/success', params: { registrationId } });
+          }
+          // For failed / dismissed — stay on the booking detail; cache is now fresh.
+        } catch {
+          qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
+        }
       } else if (moyasarData.status === 'paid') {
         qc.invalidateQueries({ queryKey: ['registrations', 'me'] });
         qc.invalidateQueries({ queryKey: ['registrations', registrationId] });
+        router.replace({ pathname: '/booking/success', params: { registrationId } });
       }
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
@@ -431,15 +452,15 @@ export default function BookingDetailScreen() {
               <Ionicons name="close-circle" size={26} color="#DC2626" />
               <Text style={s.cancellationTitle}>
                 {registration.cancelled_by === 'provider'
-                  ? t('booking.cancelledByProvider', 'Cancelled by provider')
+                  ? t('booking.cancelledByProvider')
                   : registration.cancelled_by === 'admin'
-                    ? t('booking.cancelledByAdmin', 'Cancelled by admin')
-                    : t('booking.cancelledByYou', 'Booking cancelled')}
+                    ? t('booking.cancelledByAdmin')
+                    : t('booking.cancelledByYou')}
               </Text>
             </View>
             {registration.cancellation_reason ? (
               <Text style={s.cancellationReason}>
-                {t('booking.cancellationReason', 'Reason')}{': '}{registration.cancellation_reason}
+                {t('booking.cancellationReason')}{': '}{registration.cancellation_reason}
               </Text>
             ) : null}
           </View>
@@ -558,53 +579,18 @@ export default function BookingDetailScreen() {
           </View>
         )}
 
-        {/* Refund policy disclosure — shown for active bookings */}
-        {registration.status !== 'cancelled' && registration.status !== 'pending_payment' && tripDetail && (
-          <View style={tripDetail.is_refundable === false ? s.nonRefundableCard : s.refundablePolicyCard}>
-            <View style={s.policyTitleRow}>
-              <Ionicons
-                name={tripDetail.is_refundable === false ? 'close-circle' : 'shield-checkmark-outline'}
-                size={18}
-                color={tripDetail.is_refundable === false ? '#DC2626' : '#166534'}
-              />
-              <Text style={tripDetail.is_refundable === false ? s.nonRefundablePolicyTitle : s.refundablePolicyTitle}>
-                {t('booking.refundPolicy')}
-              </Text>
-            </View>
-            {tripDetail.is_refundable === false ? (
-              <Text style={s.policyBody}>{t('booking.nonRefundableCheckout')}</Text>
-            ) : tripDetail.trip_type === 'self_arranged' ? (
-              <>
-                <Text style={s.policyBody}>{t('booking.refundableCheckout')}</Text>
-                <Text style={s.policyRule}>{'• '}{t('booking.refundRuleSelfArrangedPre')}</Text>
-                <Text style={s.policyRule}>{'• '}{t('booking.refundRuleSelfArrangedPost')}</Text>
-                <Text style={s.policyCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
-              </>
-            ) : (
-              <>
-                <Text style={s.policyBody}>{t('booking.refundableCheckout')}</Text>
-                <Text style={s.policyRule}>{'• '}{t('booking.refundRule72h')}</Text>
-                <Text style={s.policyRule}>{'• '}{t('booking.refundRule12to72h')}</Text>
-                <Text style={s.policyRule}>{'• '}{t('booking.refundRuleLess12h')}</Text>
-                <Text style={s.policyCooling}>{'⏱ '}{t('booking.coolingOff')}</Text>
-              </>
-            )}
-          </View>
-        )}
 
-        {/* Contact Provider button — shown for booked (non-pending) trips */}
-        {['awaiting_provider', 'processing', 'confirmed'].includes(registration.status) && (
-          <TouchableOpacity
-            style={s.contactProviderBtn}
-            onPress={() => router.push({
-              pathname: '/support/new-trip-ticket' as any,
-              params: { tripId: registration.trip_id, registrationId },
-            })}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
-            <Text style={s.contactProviderBtnText}>{t('booking.contactProvider')}</Text>
-          </TouchableOpacity>
+        {/* Provider support tickets — shown for active and cancelled bookings */}
+        {['awaiting_provider', 'processing', 'confirmed', 'cancelled'].includes(registration.status) && (
+          <ProviderSupportSection
+            tripId={registration.trip_id}
+            registrationId={registrationId!}
+            providerName={trip?.provider?.company_name ?? t('booking.contactProvider')}
+            isCancelled={registration.status === 'cancelled'}
+            colors={colors}
+            s={s}
+            t={t}
+          />
         )}
 
         {/* Cancel booking button — shown for active bookings and unpaid pending spots */}
@@ -691,6 +677,74 @@ export default function BookingDetailScreen() {
         onHide={() => setToastVisible(false)}
       />
     </SafeAreaView>
+  );
+}
+
+const TICKET_STATUS_COLORS: Record<string, string> = {
+  open: '#3B82F6',
+  in_progress: '#F59E0B',
+  waiting_on_user: '#F97316',
+  resolved: '#10B981',
+  closed: '#94A3B8',
+};
+
+function ProviderSupportSection({
+  tripId, registrationId, providerName, isCancelled, colors, s, t,
+}: {
+  tripId: string; registrationId: string; providerName: string; isCancelled?: boolean;
+  colors: ThemeColors; s: Record<string, any>; t: ReturnType<typeof useTranslation>['t'];
+}) {
+  const { data: tickets } = useQuery<TripSupportTicket[]>({
+    queryKey: ['trip-tickets-booking', tripId],
+    queryFn: async () => (await listTripTicketsByTrip(tripId)).data,
+    enabled: !!tripId,
+  });
+
+  const hasTickets = tickets && tickets.length > 0;
+
+  return (
+    <View style={s.section}>
+      <Text style={s.sectionTitle}>{t('booking.contactProvider')}</Text>
+
+      {hasTickets && (
+        <View style={s.ticketsList}>
+          {tickets!.map((ticket) => (
+            <TouchableOpacity
+              key={ticket.id}
+              style={s.ticketRow}
+              onPress={() => router.push({
+                pathname: '/support/trip-ticket' as any,
+                params: { ticketId: ticket.id },
+              })}
+              activeOpacity={0.7}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={s.ticketRowSubject} numberOfLines={1}>{ticket.subject}</Text>
+                <Text style={s.ticketRowDate}>{new Date(ticket.created_at).toLocaleDateString()}</Text>
+              </View>
+              <View style={[s.ticketStatusDot, { backgroundColor: TICKET_STATUS_COLORS[ticket.status] ?? '#94A3B8' }]} />
+              <Ionicons name="chevron-forward" size={16} color={colors.textTertiary} style={{ marginLeft: 4 }} />
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
+      {!isCancelled && (
+        <TouchableOpacity
+          style={s.contactProviderBtn}
+          onPress={() => router.push({
+            pathname: '/support/new-trip-ticket' as any,
+            params: { tripId, registrationId, providerName },
+          })}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
+          <Text style={s.contactProviderBtnText}>
+            {hasTickets ? t('booking.newMessage') : t('booking.contactProvider')}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
@@ -1139,7 +1193,7 @@ function makeStyles(c: ThemeColors) {
     contactProviderBtn: {
       flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
       borderWidth: 1.5, borderColor: c.primary, borderRadius: Radius.xl,
-      paddingVertical: 14, marginBottom: 12, backgroundColor: c.primarySurface,
+      paddingVertical: 14, marginTop: 12, marginBottom: 12, backgroundColor: c.primarySurface,
     },
     contactProviderBtnText: { fontSize: FontSize.md, fontWeight: '700', color: c.primary },
     cancelSheet: { backgroundColor: c.surface, borderTopLeftRadius: Radius.xxl, borderTopRightRadius: Radius.xxl, padding: 24, paddingBottom: 40, ...Shadow.lg },
@@ -1167,5 +1221,23 @@ function makeStyles(c: ThemeColors) {
     cancellationCard: { backgroundColor: '#FEF2F2', borderRadius: Radius.xl, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#FECACA', gap: 8 },
     cancellationTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#DC2626', flex: 1 },
     cancellationReason: { fontSize: FontSize.sm, color: '#7F1D1D', lineHeight: 20 },
+    newTicketBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: c.primary, paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: Radius.full,
+    },
+    newTicketBtnText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+    ticketsList: {
+      backgroundColor: c.surface, borderRadius: Radius.xl,
+      borderWidth: 1, borderColor: c.border, overflow: 'hidden', ...Shadow.sm,
+    },
+    ticketRow: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: c.border,
+    },
+    ticketRowSubject: { fontSize: FontSize.sm, fontWeight: '600', color: c.textPrimary, marginBottom: 2 },
+    ticketRowDate: { fontSize: 12, color: c.textTertiary },
+    ticketStatusDot: { width: 9, height: 9, borderRadius: 5, marginLeft: 8, flexShrink: 0 },
   });
 }

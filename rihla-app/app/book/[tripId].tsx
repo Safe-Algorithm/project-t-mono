@@ -15,6 +15,7 @@ import ParticipantField, { FieldType } from '../../components/booking/Participan
 import apiClient from '../../lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { TripPackage } from '../../types/trip';
+import { computePackagePrice, formatPrice, buildTierSummary, minPricePerPerson, buildTierBillingBreakdown } from '../../lib/pricingUtils';
 import { useFieldValidation } from '../../hooks/useFieldValidation';
 import Toast from '../../components/ui/Toast';
 
@@ -116,8 +117,22 @@ export default function BookingScreen() {
 
   const nonPackagedPrice = trip?.price ?? 0;
   const totalAmount = isPackaged
-    ? pkgSelections.reduce((acc, sel) => acc + Number(sel.package.price) * sel.count, 0)
-    : nonPackagedPrice * simpleCount;
+    ? pkgSelections.reduce((acc, sel) => acc + computePackagePrice(sel.package, sel.count), 0)
+    : (() => {
+        if (trip?.simple_trip_use_flexible_pricing && trip?.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0) {
+          // Build a synthetic TripPackage-like object for the simple trip tiers
+          const syntheticPkg: TripPackage = {
+            id: '', trip_id: trip.id,
+            name_en: null, name_ar: null, description_en: null, description_ar: null,
+            price: 0, currency: 'SAR', is_active: true,
+            required_fields: [],
+            use_flexible_pricing: true,
+            pricing_tiers: trip.simple_trip_pricing_tiers,
+          };
+          return computePackagePrice(syntheticPkg, simpleCount);
+        }
+        return nonPackagedPrice * simpleCount;
+      })();
 
   const updateSimpleParticipant = (index: number, field: string, value: string) => {
     setSimpleParticipants(prev => {
@@ -435,6 +450,20 @@ export default function BookingScreen() {
                     <Ionicons name="add" size={20} color={simpleCount >= Math.min(10, trip?.available_spots ?? 10) ? colors.gray300 : colors.textPrimary} />
                   </TouchableOpacity>
                 </View>
+                {trip?.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 ? (
+                  <View style={s.simplePriceBox}>
+                    <Text style={s.simplePriceTotal}>{formatPrice(totalAmount)}</Text>
+                    <View style={s.tierBreakdownContainer}>
+                      {buildTierSummary(trip.simple_trip_pricing_tiers).map((line, i) => (
+                        <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
+                      ))}
+                    </View>
+                  </View>
+                ) : nonPackagedPrice > 0 ? (
+                  <Text style={s.simplePriceTotal}>
+                    {simpleCount} × {formatPrice(nonPackagedPrice)} = {formatPrice(totalAmount)}
+                  </Text>
+                ) : null}
               </View>
             ) : (
               <View style={s.section}>
@@ -444,11 +473,24 @@ export default function BookingScreen() {
                   const sel = pkgSelections.find(s => s.package.id === pkg.id);
                   const count = sel?.count ?? 0;
                   const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
+                  const isFlexPkg = pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0;
+                  const pkgSubtotal = count > 0 ? computePackagePrice(pkg, count) : 0;
+                  const billingLines = isFlexPkg && count > 0 ? buildTierBillingBreakdown(pkg.pricing_tiers!, count) : [];
                   return (
                     <View key={pkg.id} style={s.pkgCard}>
                       <View style={s.pkgInfo}>
                         <Text style={s.pkgName}>{pkgName}</Text>
-                        <Text style={s.pkgPrice}>{t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}</Text>
+                        {isFlexPkg ? (
+                          <Text style={s.pkgPrice}>
+                            {count > 0 ? formatPrice(pkgSubtotal) : `${t('trip.from', 'From')} ${formatPrice(minPricePerPerson(pkg))}`}
+                          </Text>
+                        ) : (
+                          <Text style={s.pkgPrice}>
+                            {count > 0
+                              ? `${count} × ${formatPrice(Number(pkg.price))} = ${formatPrice(pkgSubtotal)}`
+                              : t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}
+                          </Text>
+                        )}
                       </View>
                       <View style={s.counterRow}>
                         <TouchableOpacity style={[s.counterBtn, count <= 0 && s.counterBtnDisabled]} onPress={() => removePkgCount(pkg.id)} disabled={count <= 0}>
@@ -463,6 +505,13 @@ export default function BookingScreen() {
                           <Ionicons name="add" size={18} color={(pkg.available_spots === 0 || pkgSelections.reduce((acc, s) => acc + s.count, 0) >= (trip?.available_spots ?? Infinity)) ? colors.gray300 : colors.textPrimary} />
                         </TouchableOpacity>
                       </View>
+                      {billingLines.length > 0 && (
+                        <View style={s.tierBreakdownContainer}>
+                          {billingLines.map((line, i) => (
+                            <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
+                          ))}
+                        </View>
+                      )}
                     </View>
                   );
                 })}
@@ -567,6 +616,13 @@ export default function BookingScreen() {
               <View style={s.confirmCard}>
                 <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
                 <ConfirmRow label={t('booking.participants')} value={String(totalParticipants)} s={s} />
+                {!isPackaged && trip?.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 && (
+                  <View style={s.tierBreakdownContainer}>
+                    {buildTierBillingBreakdown(trip.simple_trip_pricing_tiers, simpleCount).map((line, i) => (
+                      <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
+                    ))}
+                  </View>
+                )}
                 {!isPackaged && (
                   <View style={s.totalRow}>
                     <Text style={s.totalLabel}>{t('booking.totalAmount')}</Text>
@@ -575,7 +631,23 @@ export default function BookingScreen() {
                 )}
                 {isPackaged && pkgSelections.map(sel => {
                   const pName = (i18n.language === 'ar' ? (sel.package.name_ar || sel.package.name_en) : (sel.package.name_en || sel.package.name_ar)) || 'Tier';
-                  return <ConfirmRow key={sel.package.id} label={pName} value={`${sel.count} × ${Number(sel.package.price).toLocaleString()} SAR`} s={s} />;
+                  const pkgTotal = computePackagePrice(sel.package, sel.count);
+                  const isFlexSel = sel.package.use_flexible_pricing && sel.package.pricing_tiers && sel.package.pricing_tiers.length > 0;
+                  const valueLabel = isFlexSel
+                    ? `${sel.count} pax → ${formatPrice(pkgTotal)}`
+                    : `${sel.count} × ${formatPrice(Number(sel.package.price))} = ${formatPrice(pkgTotal)}`;
+                  return (
+                    <View key={sel.package.id}>
+                      <ConfirmRow label={pName} value={valueLabel} s={s} />
+                      {isFlexSel && (
+                        <View style={s.tierBreakdownContainer}>
+                          {buildTierBillingBreakdown(sel.package.pricing_tiers!, sel.count).map((line, i) => (
+                            <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  );
                 })}
                 {isPackaged && (
                   <View style={s.totalRow}>
@@ -780,5 +852,9 @@ function makeStyles(c: ThemeColors) {
     refundBoxBody: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 6 },
     refundBoxRule: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginLeft: 4 },
     refundBoxCooling: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18, marginTop: 6, fontStyle: 'italic' },
+    tierBreakdownContainer: { paddingLeft: 12, paddingBottom: 6, gap: 2 },
+    tierBreakdownText: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18 },
+    simplePriceBox: { marginTop: 16, backgroundColor: c.primarySurface, borderRadius: Radius.lg, padding: 12 },
+    simplePriceTotal: { fontSize: FontSize.lg, fontWeight: '800', color: c.accent, marginTop: 12, textAlign: 'center' },
   });
 }

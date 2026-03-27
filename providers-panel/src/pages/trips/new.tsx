@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import TripForm from '../../components/trips/TripForm';
@@ -7,12 +7,42 @@ import { destinationService } from '../../services/destinationService';
 import { imageCollectionService } from '../../services/imageCollectionService';
 import { DestinationSelection } from '../../components/trips/DestinationSelector';
 import { CreateTripPackage, CreateTripExtraFee, PackageRequiredField, ValidationConfig } from '../../types/trip';
+import { readAndParseCsvFile, CsvFieldError } from '../../services/tripCsvService';
 
 const NewTripPage = () => {
   const router = useRouter();
   const { t } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [csvErrors, setCsvErrors] = useState<CsvFieldError[]>([]);
+  const [csvSuccess, setCsvSuccess] = useState(false);
+  const [csvParsing, setCsvParsing] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setCsvErrors([]);
+    setCsvSuccess(false);
+    setCsvParsing(true);
+    try {
+      const result = await readAndParseCsvFile(file);
+      if ('errors' in result) {
+        setCsvErrors(result.errors);
+      } else {
+        setCsvSuccess(true);
+        setPendingImport(result.data);
+        setTimeout(() => setCsvSuccess(false), 4000);
+      }
+    } catch {
+      setCsvErrors([{ field: 'name_en', messageKey: 'csv.error.readFailed' }]);
+    } finally {
+      setCsvParsing(false);
+    }
+  };
+
+  const [pendingImport, setPendingImport] = useState<import('../../services/tripCsvService').TripCsvImport | null>(null);
 
   const handleSubmit = async (
     payload: TripCreatePayload | TripUpdatePayload, 
@@ -141,13 +171,71 @@ const NewTripPage = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">{t('trip.createNew')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('trip.createNewSubtitle')}</p>
         </div>
-        <button
-          onClick={() => router.push('/trips')}
-          className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
-        >
-          {t('trip.cancelCreate')}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Hidden file input for CSV import */}
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleCsvImport}
+          />
+          <button
+            type="button"
+            disabled={csvParsing}
+            onClick={() => { setCsvErrors([]); setCsvSuccess(false); csvInputRef.current?.click(); }}
+            className="self-start sm:self-auto flex items-center gap-2 px-4 py-2 text-sm font-semibold text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 rounded-xl hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {csvParsing ? (
+              <span className="w-4 h-4 border-2 border-sky-500 border-t-transparent rounded-full animate-spin inline-block" />
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+            )}
+            {csvParsing ? t('csv.importing') : t('csv.importFromCsv')}
+          </button>
+          <button
+            onClick={() => router.push('/trips')}
+            className="self-start sm:self-auto px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+          >
+            {t('trip.cancelCreate')}
+          </button>
+        </div>
       </div>
+
+      {/* CSV import success banner */}
+      {csvSuccess && (
+        <div className="flex items-center gap-2 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl text-sm text-green-700 dark:text-green-400">
+          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          {t('csv.importSuccess')}
+        </div>
+      )}
+
+      {/* CSV import error banner */}
+      {csvErrors.length > 0 && (
+        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-red-700 dark:text-red-400">{t('csv.importErrors')}</p>
+            <button
+              type="button"
+              onClick={() => setCsvErrors([])}
+              className="text-xs text-red-500 hover:text-red-700 dark:hover:text-red-300 underline"
+            >
+              {t('common.dismiss')}
+            </button>
+          </div>
+          <ul className="list-disc list-inside space-y-1">
+            {csvErrors.map((err, i) => (
+              <li key={i} className="text-sm text-red-600 dark:text-red-300">
+                {String(t(err.messageKey, err.params ?? {}))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {error && (
         <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
@@ -158,7 +246,7 @@ const NewTripPage = () => {
         </div>
       )}
 
-      <TripForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+      <TripForm onSubmit={handleSubmit} isSubmitting={isSubmitting} pendingImport={pendingImport} />
     </div>
   );
 };

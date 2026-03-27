@@ -477,14 +477,12 @@ def test_webhook_refunded_cancels_registration(
         "source": {"type": "creditcard"},
     }
 
-    with patch(
-        "app.api.routes.payments.payment_service.verify_webhook_signature",
-        return_value=True,
-    ):
+    with patch("app.api.routes.payments.payment_service") as mock_svc:
+        mock_svc.webhook_secret = "test-secret"
         response = client.post(
             "/api/v1/payments/webhook",
             json=payload,
-            headers={"X-Moyasar-Signature": "valid"},
+            headers={"X-Event-Secret": "test-secret"},
         )
 
     assert response.status_code == 200
@@ -518,14 +516,12 @@ def test_webhook_missing_signature(client: TestClient, test_payment: Payment):
 
 def test_webhook_unknown_payment_acknowledged(client: TestClient):
     """Valid signature but unknown Moyasar ID — should return 200 and acknowledge."""
-    with patch(
-        "app.api.routes.payments.payment_service.verify_webhook_signature",
-        return_value=True,
-    ):
+    with patch("app.api.routes.payments.payment_service") as mock_svc:
+        mock_svc.webhook_secret = "test-secret"
         response = client.post(
             "/api/v1/payments/webhook",
             json={"id": "unknown_moy_id", "status": "paid"},
-            headers={"X-Moyasar-Signature": "valid"},
+            headers={"X-Event-Secret": "test-secret"},
         )
     assert response.status_code == 200
 
@@ -722,20 +718,16 @@ def test_webhook_paid_triggers_confirmation_email(
         "source": {"type": "creditcard"},
     }
 
-    with patch(
-        "app.api.routes.payments.payment_service.verify_webhook_signature",
-        return_value=True,
-    ), patch(
-        "app.services.email.email_service.send_booking_confirmation_email",
-        new_callable=AsyncMock,
-    ) as mock_email, patch(
-        "asyncio.create_task",
-        side_effect=lambda coro: coro,
-    ):
+    with patch("app.api.routes.payments.payment_service") as mock_svc, \
+         patch(
+             "app.services.email.email_service.send_booking_confirmation_email",
+             new_callable=AsyncMock,
+         ) as mock_email:
+        mock_svc.webhook_secret = "test-secret"
         response = client.post(
             "/api/v1/payments/webhook",
             json=payload,
-            headers={"X-Moyasar-Signature": "valid"},
+            headers={"X-Event-Secret": "test-secret"},
         )
 
     assert response.status_code == 200

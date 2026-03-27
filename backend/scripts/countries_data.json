@@ -4,7 +4,7 @@
     "name_en": "Andorra",
     "name_ar": "إمارة أندورا",
     "slug": "andorra",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Andorra",
     "cur": "EUR"
   },
   {
@@ -12,7 +12,7 @@
     "name_en": "United Arab Emirates",
     "name_ar": "الإمارات العربية المتحدة",
     "slug": "united-arab-emirates",
-    "tz": "UTC+04:00",
+    "tz": "Asia/Dubai",
     "cur": "AED"
   },
   {
@@ -20,7 +20,7 @@
     "name_en": "Afghanistan",
     "name_ar": "جمهورية أففانستان الإسلامية",
     "slug": "afghanistan",
-    "tz": "UTC+04:30",
+    "tz": "Asia/Kabul",
     "cur": "AFN"
   },
   {
@@ -28,7 +28,7 @@
     "name_en": "Antigua and Barbuda",
     "name_ar": "أنتيغوا وباربودا",
     "slug": "antigua-and-barbuda",
-    "tz": "UTC-04:00",
+    "tz": "America/Antigua",
     "cur": "XCD"
   },
   {
@@ -36,7 +36,7 @@
     "name_en": "Anguilla",
     "name_ar": "أنغويلا",
     "slug": "anguilla",
-    "tz": "UTC-04:00",
+    "tz": "America/Anguilla",
     "cur": "XCD"
   },
   {
@@ -44,7 +44,7 @@
     "name_en": "Albania",
     "name_ar": "جمهورية ألبانيا",
     "slug": "albania",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Tirane",
     "cur": "ALL"
   },
   {
@@ -52,7 +52,7 @@
     "name_en": "Armenia",
     "name_ar": "جمهورية أرمينيا",
     "slug": "armenia",
-    "tz": "UTC+04:00",
+    "tz": "Asia/Yerevan",
     "cur": "AMD"
   },
   {
@@ -60,7 +60,7 @@
     "name_en": "Angola",
     "name_ar": "أنغولا",
     "slug": "angola",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Luanda",
     "cur": "AOA"
   },
   {
@@ -68,7 +68,7 @@
     "name_en": "Antarctica",
     "name_ar": "أنتارتيكا",
     "slug": "antarctica",
-    "tz": "UTC-03:00",
+    "tz": "Antarctica/Rothera",
     "cur": null
   },
   {
@@ -76,7 +76,7 @@
     "name_en": "Argentina",
     "name_ar": "جمهورية الأرجنتين",
     "slug": "argentina",
-    "tz": "UTC-03:00",
+    "tz": "America/Argentina/Buenos_Aires",
     "cur": "ARS"
   },
   {
@@ -84,7 +84,7 @@
     "name_en": "American Samoa",
     "name_ar": "ساموا الأمريكية",
     "slug": "american-samoa",
-    "tz": "UTC-11:00",
+    "tz": "Pacific/Pago_Pago",
     "cur": "USD"
   },
   {
@@ -92,7 +92,7 @@
     "name_en": "Austria",
     "name_ar": "جمهورية النمسا",
     "slug": "austria",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Vienna",
     "cur": "EUR"
   },
   {
@@ -100,7 +100,7 @@
     "name_en": "Australia",
     "name_ar": "كومونولث أستراليا",
     "slug": "australia",
-    "tz": "UTC+05:00",
+    "tz": "Australia/Sydney",
     "cur": "AUD"
   },
   {
@@ -108,7 +108,7 @@
     "name_en": "Aruba",
     "name_ar": "أروبا",
     "slug": "aruba",
-    "tz": "UTC-04:00",
+    "tz": "America/Aruba",
     "cur": "AWG"
   },
   {
@@ -116,7 +116,7 @@
     "name_en": "Åland Islands",
     "name_ar": "جزر أولاند",
     "slug": "åland-islands",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Helsinki",
     "cur": "EUR"
   },
   {
@@ -124,7 +124,7 @@
     "name_en": "Azerbaijan",
     "name_ar": "جمهورية أذربيجان",
     "slug": "azerbaijan",
-    "tz": "UTC+04:00",
+    "tz": "Asia/Baku",
     "cur": "AZN"
   },
   {
@@ -132,7 +132,7 @@
     "name_en": "Bosnia and Herzegovina",
     "name_ar": "جمهورية البوسنة والهرسك",
     "slug": "bosnia-and-herzegovina",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Sarajevo",
     "cur": "BAM"
   },
   {
@@ -140,7 +140,7 @@
     "name_en": "Barbados",
     "name_ar": "باربادوس",
     "slug": "barbados",
-    "tz": "UTC-04:00",
+    "tz": "America/Barbados",
     "cur": "BBD"
   },
   {
@@ -148,7 +148,7 @@
     "name_en": "Bangladesh",
     "name_ar": "جمهورية بنغلاديش الشعبية",
     "slug": "bangladesh",
-    "tz": "UTC+06:00",
+    "tz": "Asia/Dhaka",
     "cur": "BDT"
   },
   {
@@ -156,7 +156,7 @@
     "name_en": "Belgium",
     "name_ar": "مملكة بلجيكا",
     "slug": "belgium",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Brussels",
     "cur": "EUR"
   },
   {
@@ -164,7 +164,7 @@
     "name_en": "Burkina Faso",
     "name_ar": "بوركينا فاسو",
     "slug": "burkina-faso",
-    "tz": "UTC",
+    "tz": "Africa/Ouagadougou",
     "cur": "XOF"
   },
   {
@@ -172,7 +172,7 @@
     "name_en": "Bulgaria",
     "name_ar": "جمهورية بلغاريا",
     "slug": "bulgaria",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Sofia",
     "cur": "BGN"
   },
   {
@@ -180,7 +180,7 @@
     "name_en": "Bahrain",
     "name_ar": "مملكة البحرين",
     "slug": "bahrain",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Bahrain",
     "cur": "BHD"
   },
   {
@@ -188,7 +188,7 @@
     "name_en": "Burundi",
     "name_ar": "جمهورية بوروندي",
     "slug": "burundi",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Bujumbura",
     "cur": "BIF"
   },
   {
@@ -196,7 +196,7 @@
     "name_en": "Benin",
     "name_ar": "جمهورية بنين",
     "slug": "benin",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Porto-Novo",
     "cur": "XOF"
   },
   {
@@ -204,7 +204,7 @@
     "name_en": "Saint Barthélemy",
     "name_ar": "التجمع الإقليمي لسانت بارتيليمي",
     "slug": "saint-barthélemy",
-    "tz": "UTC-04:00",
+    "tz": "America/St_Barthelemy",
     "cur": "EUR"
   },
   {
@@ -212,7 +212,7 @@
     "name_en": "Bermuda",
     "name_ar": "برمودا",
     "slug": "bermuda",
-    "tz": "UTC-04:00",
+    "tz": "Atlantic/Bermuda",
     "cur": "BMD"
   },
   {
@@ -220,7 +220,7 @@
     "name_en": "Brunei",
     "name_ar": "بروناي دار السلام",
     "slug": "brunei",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Brunei",
     "cur": "BND"
   },
   {
@@ -228,7 +228,7 @@
     "name_en": "Bolivia",
     "name_ar": "دولة بوليفيا المتعددة القوميات",
     "slug": "bolivia",
-    "tz": "UTC-04:00",
+    "tz": "America/La_Paz",
     "cur": "BOB"
   },
   {
@@ -236,7 +236,7 @@
     "name_en": "Caribbean Netherlands",
     "name_ar": "بونير وسينت أوستاتيوس وسابا",
     "slug": "caribbean-netherlands",
-    "tz": "UTC-04:00",
+    "tz": "America/Kralendijk",
     "cur": "USD"
   },
   {
@@ -244,7 +244,7 @@
     "name_en": "Brazil",
     "name_ar": "جمهورية البرازيل الاتحادية",
     "slug": "brazil",
-    "tz": "UTC-05:00",
+    "tz": "America/Sao_Paulo",
     "cur": "BRL"
   },
   {
@@ -252,7 +252,7 @@
     "name_en": "Bahamas",
     "name_ar": "كومنولث جزر البهاما",
     "slug": "bahamas",
-    "tz": "UTC-05:00",
+    "tz": "America/Nassau",
     "cur": "BSD"
   },
   {
@@ -260,7 +260,7 @@
     "name_en": "Bhutan",
     "name_ar": "مملكة بوتان",
     "slug": "bhutan",
-    "tz": "UTC+06:00",
+    "tz": "Asia/Thimphu",
     "cur": "BTN"
   },
   {
@@ -268,7 +268,7 @@
     "name_en": "Bouvet Island",
     "name_ar": "جزر بوفيه",
     "slug": "bouvet-island",
-    "tz": "UTC+01:00",
+    "tz": "Atlantic/South_Georgia",
     "cur": null
   },
   {
@@ -276,7 +276,7 @@
     "name_en": "Botswana",
     "name_ar": "جمهورية بوتسوانا",
     "slug": "botswana",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Gaborone",
     "cur": "BWP"
   },
   {
@@ -284,7 +284,7 @@
     "name_en": "Belarus",
     "name_ar": "جمهورية بيلاروسيا",
     "slug": "belarus",
-    "tz": "UTC+03:00",
+    "tz": "Europe/Minsk",
     "cur": "BYN"
   },
   {
@@ -292,7 +292,7 @@
     "name_en": "Belize",
     "name_ar": "بليز",
     "slug": "belize",
-    "tz": "UTC-06:00",
+    "tz": "America/Belize",
     "cur": "BZD"
   },
   {
@@ -300,7 +300,7 @@
     "name_en": "Canada",
     "name_ar": "كندا",
     "slug": "canada",
-    "tz": "UTC-08:00",
+    "tz": "America/Toronto",
     "cur": "CAD"
   },
   {
@@ -308,7 +308,7 @@
     "name_en": "Cocos (Keeling) Islands",
     "name_ar": "إقليم جزر كوكوس",
     "slug": "cocos-keeling-islands",
-    "tz": "UTC+06:30",
+    "tz": "Indian/Cocos",
     "cur": "AUD"
   },
   {
@@ -316,7 +316,7 @@
     "name_en": "DR Congo",
     "name_ar": "جمهورية الكونغو الديمقراطية",
     "slug": "dr-congo",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Kinshasa",
     "cur": "CDF"
   },
   {
@@ -324,7 +324,7 @@
     "name_en": "Central African Republic",
     "name_ar": "جمهورية أفريقيا الوسطى",
     "slug": "central-african-republic",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Bangui",
     "cur": "XAF"
   },
   {
@@ -332,7 +332,7 @@
     "name_en": "Republic of the Congo",
     "name_ar": "جمهورية الكونغو",
     "slug": "republic-of-the-congo",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Brazzaville",
     "cur": "XAF"
   },
   {
@@ -340,7 +340,7 @@
     "name_en": "Switzerland",
     "name_ar": "الاتحاد السويسري",
     "slug": "switzerland",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Zurich",
     "cur": "CHF"
   },
   {
@@ -348,7 +348,7 @@
     "name_en": "Ivory Coast",
     "name_ar": "جمهورية ساحل العاج",
     "slug": "ivory-coast",
-    "tz": "UTC",
+    "tz": "Africa/Abidjan",
     "cur": "XOF"
   },
   {
@@ -356,7 +356,7 @@
     "name_en": "Cook Islands",
     "name_ar": "جزر كوك",
     "slug": "cook-islands",
-    "tz": "UTC-10:00",
+    "tz": "Pacific/Rarotonga",
     "cur": "CKD"
   },
   {
@@ -364,7 +364,7 @@
     "name_en": "Chile",
     "name_ar": "جمهورية تشيلي",
     "slug": "chile",
-    "tz": "UTC-06:00",
+    "tz": "America/Santiago",
     "cur": "CLP"
   },
   {
@@ -372,7 +372,7 @@
     "name_en": "Cameroon",
     "name_ar": "جمهورية الكاميرون",
     "slug": "cameroon",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Douala",
     "cur": "XAF"
   },
   {
@@ -380,7 +380,7 @@
     "name_en": "China",
     "name_ar": "جمهورية الصين الشعبية",
     "slug": "china",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Shanghai",
     "cur": "CNY"
   },
   {
@@ -388,7 +388,7 @@
     "name_en": "Colombia",
     "name_ar": "جمهورية كولومبيا",
     "slug": "colombia",
-    "tz": "UTC-05:00",
+    "tz": "America/Bogota",
     "cur": "COP"
   },
   {
@@ -396,7 +396,7 @@
     "name_en": "Costa Rica",
     "name_ar": "جمهورية كوستاريكا",
     "slug": "costa-rica",
-    "tz": "UTC-06:00",
+    "tz": "America/Costa_Rica",
     "cur": "CRC"
   },
   {
@@ -404,7 +404,7 @@
     "name_en": "Cuba",
     "name_ar": "جمهورية كوبا",
     "slug": "cuba",
-    "tz": "UTC-05:00",
+    "tz": "America/Havana",
     "cur": "CUC"
   },
   {
@@ -412,7 +412,7 @@
     "name_en": "Cape Verde",
     "name_ar": "جمهورية كابو فيردي",
     "slug": "cape-verde",
-    "tz": "UTC-01:00",
+    "tz": "Atlantic/Cape_Verde",
     "cur": "CVE"
   },
   {
@@ -420,7 +420,7 @@
     "name_en": "Curaçao",
     "name_ar": "دولة كوراساو",
     "slug": "curaçao",
-    "tz": "UTC-04:00",
+    "tz": "America/Curacao",
     "cur": "ANG"
   },
   {
@@ -428,7 +428,7 @@
     "name_en": "Christmas Island",
     "name_ar": "جزيرة كريسماس",
     "slug": "christmas-island",
-    "tz": "UTC+07:00",
+    "tz": "Indian/Christmas",
     "cur": "AUD"
   },
   {
@@ -436,7 +436,7 @@
     "name_en": "Cyprus",
     "name_ar": "جمهورية قبرص",
     "slug": "cyprus",
-    "tz": "UTC+02:00",
+    "tz": "Asia/Nicosia",
     "cur": "EUR"
   },
   {
@@ -444,7 +444,7 @@
     "name_en": "Czechia",
     "name_ar": "جمهورية التشيك",
     "slug": "czechia",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Prague",
     "cur": "CZK"
   },
   {
@@ -452,7 +452,7 @@
     "name_en": "Germany",
     "name_ar": "جمهورية ألمانيا الاتحادية",
     "slug": "germany",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Berlin",
     "cur": "EUR"
   },
   {
@@ -460,7 +460,7 @@
     "name_en": "Djibouti",
     "name_ar": "جمهورية جيبوتي",
     "slug": "djibouti",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Djibouti",
     "cur": "DJF"
   },
   {
@@ -468,7 +468,7 @@
     "name_en": "Denmark",
     "name_ar": "مملكة الدنمارك",
     "slug": "denmark",
-    "tz": "UTC-04:00",
+    "tz": "Europe/Copenhagen",
     "cur": "DKK"
   },
   {
@@ -476,7 +476,7 @@
     "name_en": "Dominica",
     "name_ar": "كومونولث دومينيكا",
     "slug": "dominica",
-    "tz": "UTC-04:00",
+    "tz": "America/Dominica",
     "cur": "XCD"
   },
   {
@@ -484,7 +484,7 @@
     "name_en": "Dominican Republic",
     "name_ar": "جمهورية الدومينيكان",
     "slug": "dominican-republic",
-    "tz": "UTC-04:00",
+    "tz": "America/Santo_Domingo",
     "cur": "DOP"
   },
   {
@@ -492,7 +492,7 @@
     "name_en": "Algeria",
     "name_ar": "الجمهورية الديمقراطية الشعبية الجزائرية",
     "slug": "algeria",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Algiers",
     "cur": "DZD"
   },
   {
@@ -500,7 +500,7 @@
     "name_en": "Ecuador",
     "name_ar": "جمهورية الإكوادور",
     "slug": "ecuador",
-    "tz": "UTC-06:00",
+    "tz": "America/Guayaquil",
     "cur": "USD"
   },
   {
@@ -508,7 +508,7 @@
     "name_en": "Estonia",
     "name_ar": "جمهورية إستونيا",
     "slug": "estonia",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Tallinn",
     "cur": "EUR"
   },
   {
@@ -516,7 +516,7 @@
     "name_en": "Egypt",
     "name_ar": "جمهورية مصر العربية",
     "slug": "egypt",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Cairo",
     "cur": "EGP"
   },
   {
@@ -524,7 +524,7 @@
     "name_en": "Western Sahara",
     "name_ar": "الجمهورية العربية الصحراوية الديمقراطية",
     "slug": "western-sahara",
-    "tz": "UTC+00:00",
+    "tz": "Africa/El_Aaiun",
     "cur": "DZD"
   },
   {
@@ -532,7 +532,7 @@
     "name_en": "Eritrea",
     "name_ar": "دولة إريتريا",
     "slug": "eritrea",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Asmara",
     "cur": "ERN"
   },
   {
@@ -540,7 +540,7 @@
     "name_en": "Spain",
     "name_ar": "مملكة إسبانيا",
     "slug": "spain",
-    "tz": "UTC",
+    "tz": "Europe/Madrid",
     "cur": "EUR"
   },
   {
@@ -548,7 +548,7 @@
     "name_en": "Ethiopia",
     "name_ar": "جمهورية إثيوبيا الفدرالية الديموقراطية",
     "slug": "ethiopia",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Addis_Ababa",
     "cur": "ETB"
   },
   {
@@ -556,7 +556,7 @@
     "name_en": "Finland",
     "name_ar": "جمهورية فنلندا",
     "slug": "finland",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Helsinki",
     "cur": "EUR"
   },
   {
@@ -564,7 +564,7 @@
     "name_en": "Fiji",
     "name_ar": "جمهورية جزر فيجي",
     "slug": "fiji",
-    "tz": "UTC+12:00",
+    "tz": "Pacific/Fiji",
     "cur": "FJD"
   },
   {
@@ -572,7 +572,7 @@
     "name_en": "Falkland Islands",
     "name_ar": "جزر فوكلاند",
     "slug": "falkland-islands",
-    "tz": "UTC-04:00",
+    "tz": "Atlantic/Stanley",
     "cur": "FKP"
   },
   {
@@ -580,7 +580,7 @@
     "name_en": "Micronesia",
     "name_ar": "ولايات ميكرونيسيا المتحدة",
     "slug": "micronesia",
-    "tz": "UTC+10:00",
+    "tz": "Pacific/Pohnpei",
     "cur": "USD"
   },
   {
@@ -588,7 +588,7 @@
     "name_en": "Faroe Islands",
     "name_ar": "جزر فارو",
     "slug": "faroe-islands",
-    "tz": "UTC+00:00",
+    "tz": "Atlantic/Faroe",
     "cur": "DKK"
   },
   {
@@ -596,7 +596,7 @@
     "name_en": "France",
     "name_ar": "الجمهورية الفرنسية",
     "slug": "france",
-    "tz": "UTC-10:00",
+    "tz": "Europe/Paris",
     "cur": "EUR"
   },
   {
@@ -604,7 +604,7 @@
     "name_en": "Gabon",
     "name_ar": "جمهورية الغابون",
     "slug": "gabon",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Libreville",
     "cur": "XAF"
   },
   {
@@ -612,7 +612,7 @@
     "name_en": "United Kingdom",
     "name_ar": "المملكة المتحدة لبريطانيا العظمى وايرلندا الشمالية",
     "slug": "united-kingdom",
-    "tz": "UTC-08:00",
+    "tz": "Europe/London",
     "cur": "GBP"
   },
   {
@@ -620,7 +620,7 @@
     "name_en": "Grenada",
     "name_ar": "غرينادا",
     "slug": "grenada",
-    "tz": "UTC-04:00",
+    "tz": "America/Grenada",
     "cur": "XCD"
   },
   {
@@ -628,7 +628,7 @@
     "name_en": "Georgia",
     "name_ar": "جورجيا",
     "slug": "georgia",
-    "tz": "UTC+04:00",
+    "tz": "Asia/Tbilisi",
     "cur": "GEL"
   },
   {
@@ -636,7 +636,7 @@
     "name_en": "French Guiana",
     "name_ar": "غويانا الفرنسية",
     "slug": "french-guiana",
-    "tz": "UTC-03:00",
+    "tz": "America/Cayenne",
     "cur": "EUR"
   },
   {
@@ -644,7 +644,7 @@
     "name_en": "Guernsey",
     "name_ar": "غيرنزي",
     "slug": "guernsey",
-    "tz": "UTC+00:00",
+    "tz": "Europe/Guernsey",
     "cur": "GBP"
   },
   {
@@ -652,7 +652,7 @@
     "name_en": "Ghana",
     "name_ar": "جمهورية غانا",
     "slug": "ghana",
-    "tz": "UTC",
+    "tz": "Africa/Accra",
     "cur": "GHS"
   },
   {
@@ -660,7 +660,7 @@
     "name_en": "Gibraltar",
     "name_ar": "جبل طارق",
     "slug": "gibraltar",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Gibraltar",
     "cur": "GIP"
   },
   {
@@ -668,7 +668,7 @@
     "name_en": "Greenland",
     "name_ar": "جرينلاند",
     "slug": "greenland",
-    "tz": "UTC-04:00",
+    "tz": "America/Godthab",
     "cur": "DKK"
   },
   {
@@ -676,7 +676,7 @@
     "name_en": "Gambia",
     "name_ar": "جمهورية غامبيا",
     "slug": "gambia",
-    "tz": "UTC+00:00",
+    "tz": "Africa/Banjul",
     "cur": "GMD"
   },
   {
@@ -684,7 +684,7 @@
     "name_en": "Guinea",
     "name_ar": "جمهورية غينيا",
     "slug": "guinea",
-    "tz": "UTC",
+    "tz": "Africa/Conakry",
     "cur": "GNF"
   },
   {
@@ -692,7 +692,7 @@
     "name_en": "Guadeloupe",
     "name_ar": "غوادلوب",
     "slug": "guadeloupe",
-    "tz": "UTC-04:00",
+    "tz": "America/Guadeloupe",
     "cur": "EUR"
   },
   {
@@ -700,7 +700,7 @@
     "name_en": "Equatorial Guinea",
     "name_ar": "جمهورية غينيا الاستوائية",
     "slug": "equatorial-guinea",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Malabo",
     "cur": "XAF"
   },
   {
@@ -708,7 +708,7 @@
     "name_en": "Greece",
     "name_ar": "الجمهورية الهيلينية",
     "slug": "greece",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Athens",
     "cur": "EUR"
   },
   {
@@ -716,7 +716,7 @@
     "name_en": "South Georgia",
     "name_ar": "جورجيا الجنوبية وجزر ساندوتش الجنوبية",
     "slug": "south-georgia",
-    "tz": "UTC-02:00",
+    "tz": "Atlantic/South_Georgia",
     "cur": "GBP"
   },
   {
@@ -724,7 +724,7 @@
     "name_en": "Guatemala",
     "name_ar": "جمهورية غواتيمالا",
     "slug": "guatemala",
-    "tz": "UTC-06:00",
+    "tz": "America/Guatemala",
     "cur": "GTQ"
   },
   {
@@ -732,7 +732,7 @@
     "name_en": "Guam",
     "name_ar": "غوام",
     "slug": "guam",
-    "tz": "UTC+10:00",
+    "tz": "Pacific/Guam",
     "cur": "USD"
   },
   {
@@ -740,7 +740,7 @@
     "name_en": "Guinea-Bissau",
     "name_ar": "جمهورية غينيا بيساو",
     "slug": "guinea-bissau",
-    "tz": "UTC",
+    "tz": "Africa/Bissau",
     "cur": "XOF"
   },
   {
@@ -748,7 +748,7 @@
     "name_en": "Guyana",
     "name_ar": "جمهورية غيانا التعاونية",
     "slug": "guyana",
-    "tz": "UTC-04:00",
+    "tz": "America/Guyana",
     "cur": "GYD"
   },
   {
@@ -756,7 +756,7 @@
     "name_en": "Hong Kong",
     "name_ar": "منطقة هونغ كونغ الادارية التابعة لجمهورية الصين الشعبية",
     "slug": "hong-kong",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Hong_Kong",
     "cur": "HKD"
   },
   {
@@ -764,7 +764,7 @@
     "name_en": "Heard Island and McDonald Islands",
     "name_ar": "جزيرة هيرد وجزر ماكدونالد",
     "slug": "heard-island-and-mcdonald-islands",
-    "tz": "UTC+05:00",
+    "tz": "Indian/Kerguelen",
     "cur": null
   },
   {
@@ -772,7 +772,7 @@
     "name_en": "Honduras",
     "name_ar": "جمهورية هندوراس",
     "slug": "honduras",
-    "tz": "UTC-06:00",
+    "tz": "America/Tegucigalpa",
     "cur": "HNL"
   },
   {
@@ -780,7 +780,7 @@
     "name_en": "Croatia",
     "name_ar": "جمهورية كرواتيا",
     "slug": "croatia",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Zagreb",
     "cur": "EUR"
   },
   {
@@ -788,7 +788,7 @@
     "name_en": "Haiti",
     "name_ar": "جمهورية هايتي",
     "slug": "haiti",
-    "tz": "UTC-05:00",
+    "tz": "America/Port-au-Prince",
     "cur": "HTG"
   },
   {
@@ -796,7 +796,7 @@
     "name_en": "Hungary",
     "name_ar": "الجمهورية المجرية",
     "slug": "hungary",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Budapest",
     "cur": "HUF"
   },
   {
@@ -804,7 +804,7 @@
     "name_en": "Indonesia",
     "name_ar": "جمهورية إندونيسيا",
     "slug": "indonesia",
-    "tz": "UTC+07:00",
+    "tz": "Asia/Jakarta",
     "cur": "IDR"
   },
   {
@@ -812,7 +812,7 @@
     "name_en": "Ireland",
     "name_ar": "جمهورية أيرلندا",
     "slug": "ireland",
-    "tz": "UTC",
+    "tz": "Europe/Dublin",
     "cur": "EUR"
   },
   {
@@ -820,7 +820,7 @@
     "name_en": "Israel",
     "name_ar": "دولة إسرائيل",
     "slug": "israel",
-    "tz": "UTC+02:00",
+    "tz": "Asia/Jerusalem",
     "cur": "ILS"
   },
   {
@@ -828,7 +828,7 @@
     "name_en": "Isle of Man",
     "name_ar": "جزيرة مان",
     "slug": "isle-of-man",
-    "tz": "UTC+00:00",
+    "tz": "Europe/Isle_of_Man",
     "cur": "GBP"
   },
   {
@@ -836,7 +836,7 @@
     "name_en": "India",
     "name_ar": "جمهورية الهند",
     "slug": "india",
-    "tz": "UTC+05:30",
+    "tz": "Asia/Kolkata",
     "cur": "INR"
   },
   {
@@ -844,7 +844,7 @@
     "name_en": "British Indian Ocean Territory",
     "name_ar": "إقليم المحيط الهندي البريطاني",
     "slug": "british-indian-ocean-territory",
-    "tz": "UTC+06:00",
+    "tz": "Indian/Chagos",
     "cur": "USD"
   },
   {
@@ -852,7 +852,7 @@
     "name_en": "Iraq",
     "name_ar": "جمهورية العراق",
     "slug": "iraq",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Baghdad",
     "cur": "IQD"
   },
   {
@@ -860,7 +860,7 @@
     "name_en": "Iran",
     "name_ar": "جمهورية إيران الإسلامية",
     "slug": "iran",
-    "tz": "UTC+03:30",
+    "tz": "Asia/Tehran",
     "cur": "IRR"
   },
   {
@@ -868,7 +868,7 @@
     "name_en": "Iceland",
     "name_ar": "آيسلندا",
     "slug": "iceland",
-    "tz": "UTC",
+    "tz": "Atlantic/Reykjavik",
     "cur": "ISK"
   },
   {
@@ -876,7 +876,7 @@
     "name_en": "Italy",
     "name_ar": "الجمهورية الإيطالية",
     "slug": "italy",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Rome",
     "cur": "EUR"
   },
   {
@@ -884,7 +884,7 @@
     "name_en": "Jersey",
     "name_ar": "جيرزي",
     "slug": "jersey",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Jersey",
     "cur": "GBP"
   },
   {
@@ -892,7 +892,7 @@
     "name_en": "Jamaica",
     "name_ar": "جامايكا",
     "slug": "jamaica",
-    "tz": "UTC-05:00",
+    "tz": "America/Jamaica",
     "cur": "JMD"
   },
   {
@@ -900,7 +900,7 @@
     "name_en": "Jordan",
     "name_ar": "المملكة الأردنية الهاشمية",
     "slug": "jordan",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Amman",
     "cur": "JOD"
   },
   {
@@ -908,7 +908,7 @@
     "name_en": "Japan",
     "name_ar": "اليابان",
     "slug": "japan",
-    "tz": "UTC+09:00",
+    "tz": "Asia/Tokyo",
     "cur": "JPY"
   },
   {
@@ -916,7 +916,7 @@
     "name_en": "Kenya",
     "name_ar": "جمهورية كينيا",
     "slug": "kenya",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Nairobi",
     "cur": "KES"
   },
   {
@@ -924,7 +924,7 @@
     "name_en": "Kyrgyzstan",
     "name_ar": "الجمهورية القيرغيزية",
     "slug": "kyrgyzstan",
-    "tz": "UTC+06:00",
+    "tz": "Asia/Bishkek",
     "cur": "KGS"
   },
   {
@@ -932,7 +932,7 @@
     "name_en": "Cambodia",
     "name_ar": "مملكة كمبوديا",
     "slug": "cambodia",
-    "tz": "UTC+07:00",
+    "tz": "Asia/Phnom_Penh",
     "cur": "KHR"
   },
   {
@@ -940,7 +940,7 @@
     "name_en": "Kiribati",
     "name_ar": "جمهورية كيريباتي",
     "slug": "kiribati",
-    "tz": "UTC+12:00",
+    "tz": "Pacific/Tarawa",
     "cur": "AUD"
   },
   {
@@ -948,7 +948,7 @@
     "name_en": "Comoros",
     "name_ar": "الإتحاد القمري",
     "slug": "comoros",
-    "tz": "UTC+03:00",
+    "tz": "Indian/Comoro",
     "cur": "KMF"
   },
   {
@@ -956,7 +956,7 @@
     "name_en": "Saint Kitts and Nevis",
     "name_ar": "اتحاد القديس كريستوفر ونيفيس",
     "slug": "saint-kitts-and-nevis",
-    "tz": "UTC-04:00",
+    "tz": "America/St_Kitts",
     "cur": "XCD"
   },
   {
@@ -964,7 +964,7 @@
     "name_en": "North Korea",
     "name_ar": "جمهورية كوريا الديمقراطية الشعبية",
     "slug": "north-korea",
-    "tz": "UTC+09:00",
+    "tz": "Asia/Pyongyang",
     "cur": "KPW"
   },
   {
@@ -972,7 +972,7 @@
     "name_en": "South Korea",
     "name_ar": "جمهورية كوريا",
     "slug": "south-korea",
-    "tz": "UTC+09:00",
+    "tz": "Asia/Seoul",
     "cur": "KRW"
   },
   {
@@ -980,7 +980,7 @@
     "name_en": "Kuwait",
     "name_ar": "دولة الكويت",
     "slug": "kuwait",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Kuwait",
     "cur": "KWD"
   },
   {
@@ -988,7 +988,7 @@
     "name_en": "Cayman Islands",
     "name_ar": "جزر كايمان",
     "slug": "cayman-islands",
-    "tz": "UTC-05:00",
+    "tz": "America/Cayman",
     "cur": "KYD"
   },
   {
@@ -996,7 +996,7 @@
     "name_en": "Kazakhstan",
     "name_ar": "جمهورية كازاخستان",
     "slug": "kazakhstan",
-    "tz": "UTC+05:00",
+    "tz": "Asia/Almaty",
     "cur": "KZT"
   },
   {
@@ -1004,7 +1004,7 @@
     "name_en": "Laos",
     "name_ar": "جمهورية لاوس الديمقراطية الشعبية",
     "slug": "laos",
-    "tz": "UTC+07:00",
+    "tz": "Asia/Vientiane",
     "cur": "LAK"
   },
   {
@@ -1012,7 +1012,7 @@
     "name_en": "Lebanon",
     "name_ar": "الجمهورية اللبنانية",
     "slug": "lebanon",
-    "tz": "UTC+02:00",
+    "tz": "Asia/Beirut",
     "cur": "LBP"
   },
   {
@@ -1020,7 +1020,7 @@
     "name_en": "Saint Lucia",
     "name_ar": "سانت لوسيا",
     "slug": "saint-lucia",
-    "tz": "UTC-04:00",
+    "tz": "America/St_Lucia",
     "cur": "XCD"
   },
   {
@@ -1028,7 +1028,7 @@
     "name_en": "Liechtenstein",
     "name_ar": "إمارة ليختنشتاين",
     "slug": "liechtenstein",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Vaduz",
     "cur": "CHF"
   },
   {
@@ -1036,7 +1036,7 @@
     "name_en": "Sri Lanka",
     "name_ar": "جمهورية سريلانكا الديمقراطية الشعبية",
     "slug": "sri-lanka",
-    "tz": "UTC+05:30",
+    "tz": "Asia/Colombo",
     "cur": "LKR"
   },
   {
@@ -1044,7 +1044,7 @@
     "name_en": "Liberia",
     "name_ar": "جمهورية ليبيريا",
     "slug": "liberia",
-    "tz": "UTC",
+    "tz": "Africa/Monrovia",
     "cur": "LRD"
   },
   {
@@ -1052,7 +1052,7 @@
     "name_en": "Lesotho",
     "name_ar": "مملكة ليسوتو",
     "slug": "lesotho",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Maseru",
     "cur": "LSL"
   },
   {
@@ -1060,7 +1060,7 @@
     "name_en": "Lithuania",
     "name_ar": "جمهورية ليتوانيا",
     "slug": "lithuania",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Vilnius",
     "cur": "EUR"
   },
   {
@@ -1068,7 +1068,7 @@
     "name_en": "Luxembourg",
     "name_ar": "دوقية لوكسمبورغ",
     "slug": "luxembourg",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Luxembourg",
     "cur": "EUR"
   },
   {
@@ -1076,7 +1076,7 @@
     "name_en": "Latvia",
     "name_ar": "جمهورية لاتفيا",
     "slug": "latvia",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Riga",
     "cur": "EUR"
   },
   {
@@ -1084,7 +1084,7 @@
     "name_en": "Libya",
     "name_ar": "دولة ليبيا",
     "slug": "libya",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Tripoli",
     "cur": "LYD"
   },
   {
@@ -1092,7 +1092,7 @@
     "name_en": "Morocco",
     "name_ar": "المملكة المغربية",
     "slug": "morocco",
-    "tz": "UTC",
+    "tz": "Africa/Casablanca",
     "cur": "MAD"
   },
   {
@@ -1100,7 +1100,7 @@
     "name_en": "Monaco",
     "name_ar": "إمارة موناكو",
     "slug": "monaco",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Monaco",
     "cur": "EUR"
   },
   {
@@ -1108,7 +1108,7 @@
     "name_en": "Moldova",
     "name_ar": "جمهورية مولدوڤا",
     "slug": "moldova",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Chisinau",
     "cur": "MDL"
   },
   {
@@ -1116,7 +1116,7 @@
     "name_en": "Montenegro",
     "name_ar": "الجبل الاسود",
     "slug": "montenegro",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Podgorica",
     "cur": "EUR"
   },
   {
@@ -1124,7 +1124,7 @@
     "name_en": "Saint Martin",
     "name_ar": "سانت مارتن",
     "slug": "saint-martin",
-    "tz": "UTC-04:00",
+    "tz": "America/Marigot",
     "cur": "EUR"
   },
   {
@@ -1132,7 +1132,7 @@
     "name_en": "Madagascar",
     "name_ar": "جمهورية مدغشقر",
     "slug": "madagascar",
-    "tz": "UTC+03:00",
+    "tz": "Indian/Antananarivo",
     "cur": "MGA"
   },
   {
@@ -1140,7 +1140,7 @@
     "name_en": "Marshall Islands",
     "name_ar": "جمهورية جزر مارشال",
     "slug": "marshall-islands",
-    "tz": "UTC+12:00",
+    "tz": "Pacific/Majuro",
     "cur": "USD"
   },
   {
@@ -1148,7 +1148,7 @@
     "name_en": "North Macedonia",
     "name_ar": "جمهورية شمال مقدونيا",
     "slug": "north-macedonia",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Skopje",
     "cur": "MKD"
   },
   {
@@ -1156,7 +1156,7 @@
     "name_en": "Mali",
     "name_ar": "جمهورية مالي",
     "slug": "mali",
-    "tz": "UTC",
+    "tz": "Africa/Bamako",
     "cur": "XOF"
   },
   {
@@ -1164,7 +1164,7 @@
     "name_en": "Myanmar",
     "name_ar": "جمهورية اتحاد ميانمار",
     "slug": "myanmar",
-    "tz": "UTC+06:30",
+    "tz": "Asia/Yangon",
     "cur": "MMK"
   },
   {
@@ -1172,7 +1172,7 @@
     "name_en": "Mongolia",
     "name_ar": "جمهورية منغوليا",
     "slug": "mongolia",
-    "tz": "UTC+07:00",
+    "tz": "Asia/Ulaanbaatar",
     "cur": "MNT"
   },
   {
@@ -1180,7 +1180,7 @@
     "name_en": "Macau",
     "name_ar": "منطقة ماكاو الإدارية التابعة لجمهورية الصين الشعبية",
     "slug": "macau",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Macau",
     "cur": "MOP"
   },
   {
@@ -1188,7 +1188,7 @@
     "name_en": "Northern Mariana Islands",
     "name_ar": "كومونولث جزر ماريانا الشمالية",
     "slug": "northern-mariana-islands",
-    "tz": "UTC+10:00",
+    "tz": "Pacific/Saipan",
     "cur": "USD"
   },
   {
@@ -1196,7 +1196,7 @@
     "name_en": "Martinique",
     "name_ar": "مارتينيك",
     "slug": "martinique",
-    "tz": "UTC-04:00",
+    "tz": "America/Martinique",
     "cur": "EUR"
   },
   {
@@ -1204,7 +1204,7 @@
     "name_en": "Mauritania",
     "name_ar": "الجمهورية الإسلامية الموريتانية",
     "slug": "mauritania",
-    "tz": "UTC",
+    "tz": "Africa/Nouakchott",
     "cur": "MRU"
   },
   {
@@ -1212,7 +1212,7 @@
     "name_en": "Montserrat",
     "name_ar": "مونتسرات",
     "slug": "montserrat",
-    "tz": "UTC-04:00",
+    "tz": "America/Montserrat",
     "cur": "XCD"
   },
   {
@@ -1220,7 +1220,7 @@
     "name_en": "Malta",
     "name_ar": "جمهورية مالطا",
     "slug": "malta",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Malta",
     "cur": "EUR"
   },
   {
@@ -1228,7 +1228,7 @@
     "name_en": "Mauritius",
     "name_ar": "جمهورية موريشيوس",
     "slug": "mauritius",
-    "tz": "UTC+04:00",
+    "tz": "Indian/Mauritius",
     "cur": "MUR"
   },
   {
@@ -1236,7 +1236,7 @@
     "name_en": "Maldives",
     "name_ar": "جمهورية المالديف",
     "slug": "maldives",
-    "tz": "UTC+05:00",
+    "tz": "Indian/Maldives",
     "cur": "MVR"
   },
   {
@@ -1244,7 +1244,7 @@
     "name_en": "Malawi",
     "name_ar": "جمهورية مالاوي",
     "slug": "malawi",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Blantyre",
     "cur": "MWK"
   },
   {
@@ -1252,7 +1252,7 @@
     "name_en": "Mexico",
     "name_ar": "الولايات المتحدة المكسيكية",
     "slug": "mexico",
-    "tz": "UTC-08:00",
+    "tz": "America/Mexico_City",
     "cur": "MXN"
   },
   {
@@ -1260,7 +1260,7 @@
     "name_en": "Malaysia",
     "name_ar": "ماليزيا",
     "slug": "malaysia",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Kuala_Lumpur",
     "cur": "MYR"
   },
   {
@@ -1268,7 +1268,7 @@
     "name_en": "Mozambique",
     "name_ar": "جمهورية موزمبيق",
     "slug": "mozambique",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Maputo",
     "cur": "MZN"
   },
   {
@@ -1276,7 +1276,7 @@
     "name_en": "Namibia",
     "name_ar": "جمهورية ناميبيا",
     "slug": "namibia",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Windhoek",
     "cur": "NAD"
   },
   {
@@ -1284,7 +1284,7 @@
     "name_en": "New Caledonia",
     "name_ar": "كاليدونيا الجديدة",
     "slug": "new-caledonia",
-    "tz": "UTC+11:00",
+    "tz": "Pacific/Noumea",
     "cur": "XPF"
   },
   {
@@ -1292,7 +1292,7 @@
     "name_en": "Niger",
     "name_ar": "جمهورية النيجر",
     "slug": "niger",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Niamey",
     "cur": "XOF"
   },
   {
@@ -1300,7 +1300,7 @@
     "name_en": "Norfolk Island",
     "name_ar": "إقليم جزيرة نورفولك",
     "slug": "norfolk-island",
-    "tz": "UTC+11:30",
+    "tz": "Pacific/Norfolk",
     "cur": "AUD"
   },
   {
@@ -1308,7 +1308,7 @@
     "name_en": "Nigeria",
     "name_ar": "جمهورية نيجيريا الاتحادية",
     "slug": "nigeria",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Lagos",
     "cur": "NGN"
   },
   {
@@ -1316,7 +1316,7 @@
     "name_en": "Nicaragua",
     "name_ar": "جمهورية نيكاراغوا",
     "slug": "nicaragua",
-    "tz": "UTC-06:00",
+    "tz": "America/Managua",
     "cur": "NIO"
   },
   {
@@ -1324,7 +1324,7 @@
     "name_en": "Netherlands",
     "name_ar": "مملكة هولندا",
     "slug": "netherlands",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Amsterdam",
     "cur": "EUR"
   },
   {
@@ -1332,7 +1332,7 @@
     "name_en": "Norway",
     "name_ar": "مملكة النرويج",
     "slug": "norway",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Oslo",
     "cur": "NOK"
   },
   {
@@ -1340,7 +1340,7 @@
     "name_en": "Nepal",
     "name_ar": "جمهورية نيبال الديمقراطية الاتحادية",
     "slug": "nepal",
-    "tz": "UTC+05:45",
+    "tz": "Asia/Kathmandu",
     "cur": "NPR"
   },
   {
@@ -1348,7 +1348,7 @@
     "name_en": "Nauru",
     "name_ar": "جمهورية ناورو",
     "slug": "nauru",
-    "tz": "UTC+12:00",
+    "tz": "Pacific/Nauru",
     "cur": "AUD"
   },
   {
@@ -1356,7 +1356,7 @@
     "name_en": "Niue",
     "name_ar": "نييوي",
     "slug": "niue",
-    "tz": "UTC-11:00",
+    "tz": "Pacific/Niue",
     "cur": "NZD"
   },
   {
@@ -1364,7 +1364,7 @@
     "name_en": "New Zealand",
     "name_ar": "نيوزيلندا",
     "slug": "new-zealand",
-    "tz": "UTC-11:00",
+    "tz": "Pacific/Auckland",
     "cur": "NZD"
   },
   {
@@ -1372,7 +1372,7 @@
     "name_en": "Oman",
     "name_ar": "سلطنة عمان",
     "slug": "oman",
-    "tz": "UTC+04:00",
+    "tz": "Asia/Muscat",
     "cur": "OMR"
   },
   {
@@ -1380,7 +1380,7 @@
     "name_en": "Panama",
     "name_ar": "جمهورية بنما",
     "slug": "panama",
-    "tz": "UTC-05:00",
+    "tz": "America/Panama",
     "cur": "PAB"
   },
   {
@@ -1388,7 +1388,7 @@
     "name_en": "Peru",
     "name_ar": "جمهورية بيرو",
     "slug": "peru",
-    "tz": "UTC-05:00",
+    "tz": "America/Lima",
     "cur": "PEN"
   },
   {
@@ -1396,7 +1396,7 @@
     "name_en": "French Polynesia",
     "name_ar": "بولينزيا الفرنسية",
     "slug": "french-polynesia",
-    "tz": "UTC-10:00",
+    "tz": "Pacific/Tahiti",
     "cur": "XPF"
   },
   {
@@ -1404,7 +1404,7 @@
     "name_en": "Papua New Guinea",
     "name_ar": "دولة بابوا غينيا الجديدة",
     "slug": "papua-new-guinea",
-    "tz": "UTC+10:00",
+    "tz": "Pacific/Port_Moresby",
     "cur": "PGK"
   },
   {
@@ -1412,7 +1412,7 @@
     "name_en": "Philippines",
     "name_ar": "جمهورية الفلبين",
     "slug": "philippines",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Manila",
     "cur": "PHP"
   },
   {
@@ -1420,7 +1420,7 @@
     "name_en": "Pakistan",
     "name_ar": "جمهورية باكستان الإسلامية",
     "slug": "pakistan",
-    "tz": "UTC+05:00",
+    "tz": "Asia/Karachi",
     "cur": "PKR"
   },
   {
@@ -1428,7 +1428,7 @@
     "name_en": "Poland",
     "name_ar": "الجمهورية البولندية",
     "slug": "poland",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Warsaw",
     "cur": "PLN"
   },
   {
@@ -1436,7 +1436,7 @@
     "name_en": "Saint Pierre and Miquelon",
     "name_ar": "سان بيير وميكلون",
     "slug": "saint-pierre-and-miquelon",
-    "tz": "UTC-03:00",
+    "tz": "America/Miquelon",
     "cur": "EUR"
   },
   {
@@ -1444,7 +1444,7 @@
     "name_en": "Pitcairn Islands",
     "name_ar": "جزر بيتكيرن",
     "slug": "pitcairn-islands",
-    "tz": "UTC-08:00",
+    "tz": "Pacific/Pitcairn",
     "cur": "NZD"
   },
   {
@@ -1452,7 +1452,7 @@
     "name_en": "Puerto Rico",
     "name_ar": "كومنولث بويرتوريكو",
     "slug": "puerto-rico",
-    "tz": "UTC-04:00",
+    "tz": "America/Puerto_Rico",
     "cur": "USD"
   },
   {
@@ -1460,7 +1460,7 @@
     "name_en": "Palestine",
     "name_ar": "دولة فلسطين",
     "slug": "palestine",
-    "tz": "UTC+02:00",
+    "tz": "Asia/Gaza",
     "cur": "EGP"
   },
   {
@@ -1468,7 +1468,7 @@
     "name_en": "Portugal",
     "name_ar": "الجمهورية البرتغالية",
     "slug": "portugal",
-    "tz": "UTC-01:00",
+    "tz": "Europe/Lisbon",
     "cur": "EUR"
   },
   {
@@ -1476,7 +1476,7 @@
     "name_en": "Palau",
     "name_ar": "جمهورية بالاو",
     "slug": "palau",
-    "tz": "UTC+09:00",
+    "tz": "Pacific/Palau",
     "cur": "USD"
   },
   {
@@ -1484,7 +1484,7 @@
     "name_en": "Paraguay",
     "name_ar": "جمهورية باراغواي",
     "slug": "paraguay",
-    "tz": "UTC-04:00",
+    "tz": "America/Asuncion",
     "cur": "PYG"
   },
   {
@@ -1492,7 +1492,7 @@
     "name_en": "Qatar",
     "name_ar": "دولة قطر",
     "slug": "qatar",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Qatar",
     "cur": "QAR"
   },
   {
@@ -1500,7 +1500,7 @@
     "name_en": "Réunion",
     "name_ar": "جزيرة لا ريونيون",
     "slug": "réunion",
-    "tz": "UTC+04:00",
+    "tz": "Indian/Reunion",
     "cur": "EUR"
   },
   {
@@ -1508,7 +1508,7 @@
     "name_en": "Romania",
     "name_ar": "رومانيا",
     "slug": "romania",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Bucharest",
     "cur": "RON"
   },
   {
@@ -1516,7 +1516,7 @@
     "name_en": "Serbia",
     "name_ar": "جمهورية صيربيا",
     "slug": "serbia",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Belgrade",
     "cur": "RSD"
   },
   {
@@ -1524,7 +1524,7 @@
     "name_en": "Russia",
     "name_ar": "روسيا الاتحادية",
     "slug": "russia",
-    "tz": "UTC+03:00",
+    "tz": "Europe/Moscow",
     "cur": "RUB"
   },
   {
@@ -1532,7 +1532,7 @@
     "name_en": "Rwanda",
     "name_ar": "جمهورية رواندا",
     "slug": "rwanda",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Kigali",
     "cur": "RWF"
   },
   {
@@ -1540,7 +1540,7 @@
     "name_en": "Saudi Arabia",
     "name_ar": "المملكة العربية السعودية",
     "slug": "saudi-arabia",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Riyadh",
     "cur": "SAR"
   },
   {
@@ -1548,7 +1548,7 @@
     "name_en": "Solomon Islands",
     "name_ar": "جزر سليمان",
     "slug": "solomon-islands",
-    "tz": "UTC+11:00",
+    "tz": "Pacific/Guadalcanal",
     "cur": "SBD"
   },
   {
@@ -1556,7 +1556,7 @@
     "name_en": "Seychelles",
     "name_ar": "جمهورية سيشل",
     "slug": "seychelles",
-    "tz": "UTC+04:00",
+    "tz": "Indian/Mahe",
     "cur": "SCR"
   },
   {
@@ -1564,7 +1564,7 @@
     "name_en": "Sudan",
     "name_ar": "جمهورية السودان",
     "slug": "sudan",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Khartoum",
     "cur": "SDG"
   },
   {
@@ -1572,7 +1572,7 @@
     "name_en": "Sweden",
     "name_ar": "مملكة السويد",
     "slug": "sweden",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Stockholm",
     "cur": "SEK"
   },
   {
@@ -1580,7 +1580,7 @@
     "name_en": "Singapore",
     "name_ar": "جمهورية سنغافورة",
     "slug": "singapore",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Singapore",
     "cur": "SGD"
   },
   {
@@ -1588,7 +1588,7 @@
     "name_en": "Saint Helena, Ascension and Tristan da Cunha",
     "name_ar": "سانت هيلينا وأسينشين وتريستان دا كونا",
     "slug": "saint-helena-ascension-and-tristan-da-cunha",
-    "tz": "UTC+00:00",
+    "tz": "Atlantic/St_Helena",
     "cur": "GBP"
   },
   {
@@ -1596,7 +1596,7 @@
     "name_en": "Slovenia",
     "name_ar": "جمهورية سلوفينيا",
     "slug": "slovenia",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Ljubljana",
     "cur": "EUR"
   },
   {
@@ -1604,7 +1604,7 @@
     "name_en": "Svalbard and Jan Mayen",
     "name_ar": "سفالبارد ويان ماين",
     "slug": "svalbard-and-jan-mayen",
-    "tz": "UTC+01:00",
+    "tz": "Arctic/Longyearbyen",
     "cur": "NOK"
   },
   {
@@ -1612,7 +1612,7 @@
     "name_en": "Slovakia",
     "name_ar": "جمهورية سلوفاكيا",
     "slug": "slovakia",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Bratislava",
     "cur": "EUR"
   },
   {
@@ -1620,7 +1620,7 @@
     "name_en": "Sierra Leone",
     "name_ar": "جمهورية سيراليون",
     "slug": "sierra-leone",
-    "tz": "UTC",
+    "tz": "Africa/Freetown",
     "cur": "SLE"
   },
   {
@@ -1628,7 +1628,7 @@
     "name_en": "San Marino",
     "name_ar": "جمهورية سان مارينو",
     "slug": "san-marino",
-    "tz": "UTC+01:00",
+    "tz": "Europe/San_Marino",
     "cur": "EUR"
   },
   {
@@ -1636,7 +1636,7 @@
     "name_en": "Senegal",
     "name_ar": "جمهورية السنغال",
     "slug": "senegal",
-    "tz": "UTC",
+    "tz": "Africa/Dakar",
     "cur": "XOF"
   },
   {
@@ -1644,7 +1644,7 @@
     "name_en": "Somalia",
     "name_ar": "جمهورية الصومال الفيدرالية",
     "slug": "somalia",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Mogadishu",
     "cur": "SOS"
   },
   {
@@ -1652,7 +1652,7 @@
     "name_en": "Suriname",
     "name_ar": "جمهورية سورينام",
     "slug": "suriname",
-    "tz": "UTC-03:00",
+    "tz": "America/Paramaribo",
     "cur": "SRD"
   },
   {
@@ -1660,7 +1660,7 @@
     "name_en": "South Sudan",
     "name_ar": "جمهورية جنوب السودان",
     "slug": "south-sudan",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Juba",
     "cur": "SSP"
   },
   {
@@ -1668,7 +1668,7 @@
     "name_en": "São Tomé and Príncipe",
     "name_ar": "جمهورية ساو تومي وبرينسيب الديمقراطية",
     "slug": "são-tomé-and-príncipe",
-    "tz": "UTC",
+    "tz": "Africa/Sao_Tome",
     "cur": "STN"
   },
   {
@@ -1676,7 +1676,7 @@
     "name_en": "El Salvador",
     "name_ar": "جمهورية السلفادور",
     "slug": "el-salvador",
-    "tz": "UTC-06:00",
+    "tz": "America/El_Salvador",
     "cur": "USD"
   },
   {
@@ -1684,7 +1684,7 @@
     "name_en": "Sint Maarten",
     "name_ar": "سينت مارتن",
     "slug": "sint-maarten",
-    "tz": "UTC-04:00",
+    "tz": "America/Lower_Princes",
     "cur": "ANG"
   },
   {
@@ -1692,7 +1692,7 @@
     "name_en": "Syria",
     "name_ar": "الجمهورية العربية السورية",
     "slug": "syria",
-    "tz": "UTC+02:00",
+    "tz": "Asia/Damascus",
     "cur": "SYP"
   },
   {
@@ -1700,7 +1700,7 @@
     "name_en": "Eswatini",
     "name_ar": "مملكة إسواتيني",
     "slug": "eswatini",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Mbabane",
     "cur": "SZL"
   },
   {
@@ -1708,7 +1708,7 @@
     "name_en": "Turks and Caicos Islands",
     "name_ar": "جزر توركس وكايكوس",
     "slug": "turks-and-caicos-islands",
-    "tz": "UTC-04:00",
+    "tz": "America/Grand_Turk",
     "cur": "USD"
   },
   {
@@ -1716,7 +1716,7 @@
     "name_en": "Chad",
     "name_ar": "جمهورية تشاد",
     "slug": "chad",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Ndjamena",
     "cur": "XAF"
   },
   {
@@ -1724,7 +1724,7 @@
     "name_en": "French Southern and Antarctic Lands",
     "name_ar": "مقاطعات وأقاليم ما وراء البحار الفرنسية",
     "slug": "french-southern-and-antarctic-lands",
-    "tz": "UTC+05:00",
+    "tz": "Indian/Kerguelen",
     "cur": "EUR"
   },
   {
@@ -1732,7 +1732,7 @@
     "name_en": "Togo",
     "name_ar": "جمهورية توغو",
     "slug": "togo",
-    "tz": "UTC",
+    "tz": "Africa/Lome",
     "cur": "XOF"
   },
   {
@@ -1740,7 +1740,7 @@
     "name_en": "Thailand",
     "name_ar": "مملكة تايلند",
     "slug": "thailand",
-    "tz": "UTC+07:00",
+    "tz": "Asia/Bangkok",
     "cur": "THB"
   },
   {
@@ -1748,7 +1748,7 @@
     "name_en": "Tajikistan",
     "name_ar": "جمهورية طاجيكستان",
     "slug": "tajikistan",
-    "tz": "UTC+05:00",
+    "tz": "Asia/Dushanbe",
     "cur": "TJS"
   },
   {
@@ -1756,7 +1756,7 @@
     "name_en": "Tokelau",
     "name_ar": "توكيلاو",
     "slug": "tokelau",
-    "tz": "UTC+13:00",
+    "tz": "Pacific/Fakaofo",
     "cur": "NZD"
   },
   {
@@ -1764,7 +1764,7 @@
     "name_en": "Timor-Leste",
     "name_ar": "جمهورية تيمور الشرقية الديمقراطية",
     "slug": "timor-leste",
-    "tz": "UTC+09:00",
+    "tz": "Asia/Dili",
     "cur": "USD"
   },
   {
@@ -1772,7 +1772,7 @@
     "name_en": "Turkmenistan",
     "name_ar": "تركمانستان",
     "slug": "turkmenistan",
-    "tz": "UTC+05:00",
+    "tz": "Asia/Ashgabat",
     "cur": "TMT"
   },
   {
@@ -1780,7 +1780,7 @@
     "name_en": "Tunisia",
     "name_ar": "الجمهورية التونسية",
     "slug": "tunisia",
-    "tz": "UTC+01:00",
+    "tz": "Africa/Tunis",
     "cur": "TND"
   },
   {
@@ -1788,7 +1788,7 @@
     "name_en": "Tonga",
     "name_ar": "مملكة تونغا",
     "slug": "tonga",
-    "tz": "UTC+13:00",
+    "tz": "Pacific/Tongatapu",
     "cur": "TOP"
   },
   {
@@ -1796,7 +1796,7 @@
     "name_en": "Turkey",
     "name_ar": "الجمهورية التركية",
     "slug": "turkey",
-    "tz": "UTC+03:00",
+    "tz": "Europe/Istanbul",
     "cur": "TRY"
   },
   {
@@ -1804,7 +1804,7 @@
     "name_en": "Trinidad and Tobago",
     "name_ar": "جمهورية ترينيداد وتوباغو",
     "slug": "trinidad-and-tobago",
-    "tz": "UTC-04:00",
+    "tz": "America/Port_of_Spain",
     "cur": "TTD"
   },
   {
@@ -1812,7 +1812,7 @@
     "name_en": "Tuvalu",
     "name_ar": "توفالو",
     "slug": "tuvalu",
-    "tz": "UTC+12:00",
+    "tz": "Pacific/Funafuti",
     "cur": "AUD"
   },
   {
@@ -1820,7 +1820,7 @@
     "name_en": "Taiwan",
     "name_ar": "جمهورية الصين (تايوان)",
     "slug": "taiwan",
-    "tz": "UTC+08:00",
+    "tz": "Asia/Taipei",
     "cur": "TWD"
   },
   {
@@ -1828,7 +1828,7 @@
     "name_en": "Tanzania",
     "name_ar": "جمهورية تنزانيا الاتحادية",
     "slug": "tanzania",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Dar_es_Salaam",
     "cur": "TZS"
   },
   {
@@ -1836,7 +1836,7 @@
     "name_en": "Ukraine",
     "name_ar": "أوكرانيا",
     "slug": "ukraine",
-    "tz": "UTC+02:00",
+    "tz": "Europe/Kiev",
     "cur": "UAH"
   },
   {
@@ -1844,7 +1844,7 @@
     "name_en": "Uganda",
     "name_ar": "جمهورية أوغندا",
     "slug": "uganda",
-    "tz": "UTC+03:00",
+    "tz": "Africa/Kampala",
     "cur": "UGX"
   },
   {
@@ -1852,7 +1852,7 @@
     "name_en": "United States Minor Outlying Islands",
     "name_ar": "جزر الولايات المتحدة الصغيرة النائية",
     "slug": "united-states-minor-outlying-islands",
-    "tz": "UTC-11:00",
+    "tz": "Pacific/Wake",
     "cur": "USD"
   },
   {
@@ -1860,7 +1860,7 @@
     "name_en": "United States",
     "name_ar": "الولايات المتحدة الامريكية",
     "slug": "united-states",
-    "tz": "UTC-12:00",
+    "tz": "America/New_York",
     "cur": "USD"
   },
   {
@@ -1868,7 +1868,7 @@
     "name_en": "Uruguay",
     "name_ar": "جمهورية الأوروغواي الشرقية",
     "slug": "uruguay",
-    "tz": "UTC-03:00",
+    "tz": "America/Montevideo",
     "cur": "UYU"
   },
   {
@@ -1876,7 +1876,7 @@
     "name_en": "Uzbekistan",
     "name_ar": "جمهورية أوزباكستان",
     "slug": "uzbekistan",
-    "tz": "UTC+05:00",
+    "tz": "Asia/Tashkent",
     "cur": "UZS"
   },
   {
@@ -1884,7 +1884,7 @@
     "name_en": "Vatican City",
     "name_ar": "دولة مدينة الفاتيكان",
     "slug": "vatican-city",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Vatican",
     "cur": "EUR"
   },
   {
@@ -1892,7 +1892,7 @@
     "name_en": "Saint Vincent and the Grenadines",
     "name_ar": "سانت فينسنت والغرينادين",
     "slug": "saint-vincent-and-the-grenadines",
-    "tz": "UTC-04:00",
+    "tz": "America/St_Vincent",
     "cur": "XCD"
   },
   {
@@ -1900,7 +1900,7 @@
     "name_en": "Venezuela",
     "name_ar": "جمهورية فنزويلا البوليفارية",
     "slug": "venezuela",
-    "tz": "UTC-04:00",
+    "tz": "America/Caracas",
     "cur": "VES"
   },
   {
@@ -1908,7 +1908,7 @@
     "name_en": "British Virgin Islands",
     "name_ar": "جزر العذراء البريطانية",
     "slug": "british-virgin-islands",
-    "tz": "UTC-04:00",
+    "tz": "America/Tortola",
     "cur": "USD"
   },
   {
@@ -1916,7 +1916,7 @@
     "name_en": "United States Virgin Islands",
     "name_ar": "جزر العذراء الامريكية",
     "slug": "united-states-virgin-islands",
-    "tz": "UTC-04:00",
+    "tz": "America/St_Thomas",
     "cur": "USD"
   },
   {
@@ -1924,7 +1924,7 @@
     "name_en": "Vietnam",
     "name_ar": "جمهورية فيتنام الاشتراكية",
     "slug": "vietnam",
-    "tz": "UTC+07:00",
+    "tz": "Asia/Ho_Chi_Minh",
     "cur": "VND"
   },
   {
@@ -1932,7 +1932,7 @@
     "name_en": "Vanuatu",
     "name_ar": "جمهورية فانواتو",
     "slug": "vanuatu",
-    "tz": "UTC+11:00",
+    "tz": "Pacific/Efate",
     "cur": "VUV"
   },
   {
@@ -1940,7 +1940,7 @@
     "name_en": "Wallis and Futuna",
     "name_ar": "إقليم جزر واليس وفوتونا",
     "slug": "wallis-and-futuna",
-    "tz": "UTC+12:00",
+    "tz": "Pacific/Wallis",
     "cur": "XPF"
   },
   {
@@ -1948,7 +1948,7 @@
     "name_en": "Samoa",
     "name_ar": "دولة ساموا المستقلة",
     "slug": "samoa",
-    "tz": "UTC+13:00",
+    "tz": "Pacific/Apia",
     "cur": "WST"
   },
   {
@@ -1956,7 +1956,7 @@
     "name_en": "Kosovo",
     "name_ar": "جمهورية كوسوفو",
     "slug": "kosovo",
-    "tz": "UTC+01:00",
+    "tz": "Europe/Paris",
     "cur": "EUR"
   },
   {
@@ -1964,7 +1964,7 @@
     "name_en": "Yemen",
     "name_ar": "الجمهورية اليمنية",
     "slug": "yemen",
-    "tz": "UTC+03:00",
+    "tz": "Asia/Aden",
     "cur": "YER"
   },
   {
@@ -1972,7 +1972,7 @@
     "name_en": "Mayotte",
     "name_ar": "مايوت",
     "slug": "mayotte",
-    "tz": "UTC+03:00",
+    "tz": "Indian/Mayotte",
     "cur": "EUR"
   },
   {
@@ -1980,7 +1980,7 @@
     "name_en": "South Africa",
     "name_ar": "جمهورية جنوب أفريقيا",
     "slug": "south-africa",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Johannesburg",
     "cur": "ZAR"
   },
   {
@@ -1988,7 +1988,7 @@
     "name_en": "Zambia",
     "name_ar": "جمهورية زامبيا",
     "slug": "zambia",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Lusaka",
     "cur": "ZMW"
   },
   {
@@ -1996,7 +1996,7 @@
     "name_en": "Zimbabwe",
     "name_ar": "جمهورية زيمبابوي",
     "slug": "zimbabwe",
-    "tz": "UTC+02:00",
+    "tz": "Africa/Harare",
     "cur": "ZWL"
   }
 ]

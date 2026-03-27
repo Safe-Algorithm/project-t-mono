@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional, List
 
 from pydantic import BaseModel, field_validator, model_validator
-from .trip_package import TripPackageWithRequiredFields
+from .trip_package import TripPackageWithRequiredFields, TripPricingTierRead
 from .trip_extra_fee import TripExtraFeeResponse
 from app.models.trip_amenity import TripAmenity
 from app.models.trip import TripType
@@ -117,6 +117,8 @@ class TripCreate(TripBase):
     price: Optional[float] = None
     is_refundable: Optional[bool] = None
     amenities: Optional[List[TripAmenity]] = None
+    use_flexible_pricing: bool = False
+    pricing_tiers: Optional[List[dict]] = None
 
     @model_validator(mode='after')
     def validate_trip_fields(self):
@@ -160,6 +162,8 @@ class TripUpdate(BaseModel):
     price: Optional[float] = None
     is_refundable: Optional[bool] = None
     amenities: Optional[List[TripAmenity]] = None
+    use_flexible_pricing: Optional[bool] = None
+    pricing_tiers: Optional[List[dict]] = None
 
     @field_validator("timezone", mode="before")
     @classmethod
@@ -261,6 +265,9 @@ class TripRead(TripBase):
     # Required fields for non-packaged trips (from hidden package), empty for packaged trips
     simple_trip_required_fields: List[str] = []
     simple_trip_required_fields_details: List = []
+    # Flexible pricing for non-packaged trips (from hidden package)
+    simple_trip_use_flexible_pricing: bool = False
+    simple_trip_pricing_tiers: List[TripPricingTierRead] = []
 
     class Config:
         from_attributes = True

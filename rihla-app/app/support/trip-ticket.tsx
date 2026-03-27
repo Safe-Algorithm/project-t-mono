@@ -128,11 +128,11 @@ export default function TripTicketScreen() {
             ))}
           </ScrollView>
 
-          {ticket.status === 'closed' ? (
+          {(ticket.status === 'closed' || ticket.status === 'resolved') ? (
             <View style={[s.closedBar, { paddingBottom: insets.bottom + 8 }]}>
               <Text style={s.closedBarText}>{t('support.ticketClosed')}</Text>
             </View>
-          ) : (
+          ) : ticket.status === 'waiting_on_user' ? (
             <View style={[s.replyBar, { paddingBottom: insets.bottom + 8 }]}>
               <TextInput
                 style={s.replyInput}
@@ -151,6 +151,11 @@ export default function TripTicketScreen() {
                   ? <ActivityIndicator size="small" color="#fff" />
                   : <Ionicons name="send" size={18} color="#fff" />}
               </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={[s.closedBar, { paddingBottom: insets.bottom + 8 }]}>
+              <Ionicons name="time-outline" size={14} color={colors.textTertiary} style={{ marginBottom: 2 }} />
+              <Text style={s.closedBarText}>{t('support.waitingForResponse')}</Text>
             </View>
           )}
         </KeyboardAvoidingView>

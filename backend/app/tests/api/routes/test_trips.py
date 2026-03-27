@@ -303,7 +303,7 @@ def test_register_for_trip_single_participant(mock_email, client: TestClient, se
         price=100.0,
         is_active=True
     )
-    package = TripPackageModel(trip_id=trip.id, **package_in.model_dump())
+    package = TripPackageModel(trip_id=trip.id, **package_in.model_dump(exclude={"required_fields", "pricing_tiers"}))
     session.add(package)
     session.commit()
     session.refresh(package)
@@ -358,7 +358,7 @@ def test_register_for_trip_multiple_participants(mock_email, client: TestClient,
         price=100.0,
         is_active=True
     )
-    package = TripPackageModel(trip_id=trip.id, **package_in.model_dump())
+    package = TripPackageModel(trip_id=trip.id, **package_in.model_dump(exclude={"required_fields", "pricing_tiers"}))
     session.add(package)
     session.commit()
     session.refresh(package)
@@ -4070,3 +4070,359 @@ def test_register_omitted_content_hash_allowed(client: TestClient, session: Sess
         },
     )
     assert resp.status_code != 409 or "trip details have been updated" not in resp.json().get("detail", "")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Flexible Pricing Tests
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _create_simple_trip_flex(client, headers, price=None, use_flexible_pricing=False, pricing_tiers=None):
+    """Create a simple (non-packaged) trip via API; return (trip_id, response_json)."""
+    body = {
+        "name_en": "Flexible Simple Trip",
+        "description_en": "A simple trip for flexible pricing tests",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+        "max_participants": 20,
+        "is_packaged_trip": False,
+    }
+    if price is not None:
+        body["price"] = price
+    if use_flexible_pricing:
+        body["use_flexible_pricing"] = True
+    if pricing_tiers:
+        body["pricing_tiers"] = pricing_tiers
+    resp = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json=body)
+    assert resp.status_code == 200, resp.text
+    return resp.json()["id"], resp.json()
+
+
+def _create_packaged_trip_flex_pkg(client, headers, tiers):
+    """Create a packaged trip with one flexible-pricing package; return (trip_id, package_json)."""
+    resp = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json={
+        "name_en": "Flex Packaged Trip",
+        "description_en": "desc",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+        "max_participants": 20,
+        "is_packaged_trip": True,
+    })
+    assert resp.status_code == 200
+    trip_id = resp.json()["id"]
+    pkg_resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/packages", headers=headers, json={
+        "name_en": "Economy",
+        "name_ar": "اقتصادي",
+        "description_en": "Economy package",
+        "price": 0,
+        "use_flexible_pricing": True,
+        "pricing_tiers": tiers,
+    })
+    assert pkg_resp.status_code == 200, pkg_resp.text
+    return trip_id, pkg_resp.json()
+
+
+# ── Package-level flexible pricing ───────────────────────────────────────────
+
+def test_create_package_with_flexible_pricing_returns_tiers(client: TestClient, session: Session) -> None:
+    """Package created with use_flexible_pricing=True must return tiers in response."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    tiers = [
+        {"from_participant": 1, "price_per_person": 300},
+        {"from_participant": 5, "price_per_person": 250},
+    ]
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, headers, tiers)
+
+    assert pkg["use_flexible_pricing"] is True
+    assert len(pkg["pricing_tiers"]) == 2
+    rates = {t["from_participant"]: float(t["price_per_person"]) for t in pkg["pricing_tiers"]}
+    assert rates[1] == 300.0
+    assert rates[5] == 250.0
+
+
+def test_read_trip_shows_flexible_pricing_on_package(client: TestClient, session: Session) -> None:
+    """Reading the trip must expose pricing_tiers on flexible packages."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    tiers = [
+        {"from_participant": 1, "price_per_person": 500},
+        {"from_participant": 4, "price_per_person": 300},
+    ]
+    trip_id, _ = _create_packaged_trip_flex_pkg(client, headers, tiers)
+    resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert resp.status_code == 200
+    pkg = resp.json()["packages"][0]
+    assert pkg["use_flexible_pricing"] is True
+    assert len(pkg["pricing_tiers"]) == 2
+
+
+def test_update_package_replaces_flexible_pricing_tiers(client: TestClient, session: Session) -> None:
+    """Updating a package's pricing_tiers must fully replace the old ones."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, headers, [
+        {"from_participant": 1, "price_per_person": 400},
+    ])
+    pkg_id = pkg["id"]
+
+    upd = client.put(f"{settings.API_V1_STR}/trips/{trip_id}/packages/{pkg_id}", headers=headers, json={
+        "use_flexible_pricing": True,
+        "pricing_tiers": [
+            {"from_participant": 1, "price_per_person": 600},
+            {"from_participant": 3, "price_per_person": 400},
+        ],
+    })
+    assert upd.status_code == 200
+    rates = {t["from_participant"]: float(t["price_per_person"]) for t in upd.json()["pricing_tiers"]}
+    assert rates[1] == 600.0
+    assert rates[3] == 400.0
+    assert len(rates) == 2
+
+
+def test_flexible_pricing_rejects_first_tier_not_at_1(client: TestClient, session: Session) -> None:
+    """Tier list not starting at from_participant=1 must return 400."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json={
+        "name_en": "T", "description_en": "d",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+        "max_participants": 10, "is_packaged_trip": True,
+    })
+    trip_id = resp.json()["id"]
+    bad = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/packages", headers=headers, json={
+        "name_en": "Bad", "description_en": "bad package", "price": 100,
+        "use_flexible_pricing": True,
+        "pricing_tiers": [{"from_participant": 2, "price_per_person": 100}],
+    })
+    assert bad.status_code == 400
+    detail = bad.json()["detail"].lower()
+    assert "first" in detail or "participant 1" in detail or "start" in detail
+
+
+def test_flexible_pricing_rejects_zero_price_tier(client: TestClient, session: Session) -> None:
+    """A tier with price_per_person == 0 must return 400."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    resp = client.post(f"{settings.API_V1_STR}/trips", headers=headers, json={
+        "name_en": "T", "description_en": "d",
+        "start_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=30)),
+        "end_date": str(datetime.datetime.utcnow() + datetime.timedelta(days=31)),
+        "max_participants": 10, "is_packaged_trip": True,
+    })
+    trip_id = resp.json()["id"]
+    bad = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/packages", headers=headers, json={
+        "name_en": "Bad", "description_en": "bad package", "price": 100,
+        "use_flexible_pricing": True,
+        "pricing_tiers": [{"from_participant": 1, "price_per_person": 0}],
+    })
+    assert bad.status_code == 400
+    assert "greater than 0" in bad.json()["detail"].lower() or "price" in bad.json()["detail"].lower()
+
+
+# ── Simple (non-packaged) trip flexible pricing ───────────────────────────────
+
+def test_create_simple_trip_with_flexible_pricing(client: TestClient, session: Session) -> None:
+    """Simple trip created with flexible pricing must expose tiers via simple_trip_pricing_tiers."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    tiers = [
+        {"from_participant": 1, "price_per_person": 300},
+        {"from_participant": 5, "price_per_person": 200},
+    ]
+    trip_id, data = _create_simple_trip_flex(client, headers, use_flexible_pricing=True, pricing_tiers=tiers)
+
+    assert data["simple_trip_use_flexible_pricing"] is True
+    assert len(data["simple_trip_pricing_tiers"]) == 2
+    rates = {t["from_participant"]: float(t["price_per_person"]) for t in data["simple_trip_pricing_tiers"]}
+    assert rates[1] == 300.0
+    assert rates[5] == 200.0
+
+
+def test_read_simple_trip_returns_flexible_pricing_fields(client: TestClient, session: Session) -> None:
+    """GET /trips/{id} must surface simple_trip_use_flexible_pricing and tiers, hide packages."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    tiers = [{"from_participant": 1, "price_per_person": 150}]
+    trip_id, _ = _create_simple_trip_flex(client, headers, use_flexible_pricing=True, pricing_tiers=tiers)
+
+    resp = client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["simple_trip_use_flexible_pricing"] is True
+    assert len(data["simple_trip_pricing_tiers"]) == 1
+    assert float(data["simple_trip_pricing_tiers"][0]["price_per_person"]) == 150.0
+    assert data["packages"] == []
+
+
+def test_update_simple_trip_adds_flexible_pricing(client: TestClient, session: Session) -> None:
+    """Updating a flat simple trip to enable flexible pricing must persist the new tiers."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _ = _create_simple_trip_flex(client, headers, price=100.0)
+
+    assert client.get(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers).json()["simple_trip_use_flexible_pricing"] is False
+
+    upd = client.put(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers, json={
+        "use_flexible_pricing": True,
+        "pricing_tiers": [
+            {"from_participant": 1, "price_per_person": 400},
+            {"from_participant": 3, "price_per_person": 350},
+        ],
+    })
+    assert upd.status_code == 200
+    assert upd.json()["simple_trip_use_flexible_pricing"] is True
+    assert len(upd.json()["simple_trip_pricing_tiers"]) == 2
+
+
+def test_update_simple_trip_replaces_tiers(client: TestClient, session: Session) -> None:
+    """Updating an already-flexible simple trip must fully replace old tiers."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _ = _create_simple_trip_flex(client, headers, use_flexible_pricing=True,
+                                           pricing_tiers=[{"from_participant": 1, "price_per_person": 500}])
+
+    upd = client.put(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers, json={
+        "use_flexible_pricing": True,
+        "pricing_tiers": [
+            {"from_participant": 1, "price_per_person": 200},
+            {"from_participant": 6, "price_per_person": 180},
+        ],
+    })
+    assert upd.status_code == 200
+    tiers = upd.json()["simple_trip_pricing_tiers"]
+    assert len(tiers) == 2
+    rates = {t["from_participant"]: float(t["price_per_person"]) for t in tiers}
+    assert rates[1] == 200.0
+    assert rates[6] == 180.0
+
+
+def test_simple_trip_disabling_flexible_pricing_clears_tiers(client: TestClient, session: Session) -> None:
+    """Switching a flexible simple trip back to flat must clear tiers and restore flat price."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _ = _create_simple_trip_flex(client, headers, use_flexible_pricing=True,
+                                           pricing_tiers=[{"from_participant": 1, "price_per_person": 300}])
+
+    upd = client.put(f"{settings.API_V1_STR}/trips/{trip_id}", headers=headers, json={
+        "use_flexible_pricing": False,
+        "pricing_tiers": [],
+        "price": 250.0,
+    })
+    assert upd.status_code == 200
+    assert upd.json()["simple_trip_use_flexible_pricing"] is False
+    assert upd.json()["simple_trip_pricing_tiers"] == []
+    assert float(upd.json()["price"]) == 250.0
+
+
+# ── Registration price validation with flexible pricing ───────────────────────
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_register_flexible_package_correct_amount_accepted(mock_email, client: TestClient, session: Session) -> None:
+    """Registration with the correct marginal-tier total must succeed."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    # tier 1: 1–4 @ 300, tier 2: 5+ @ 200
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, provider_headers, [
+        {"from_participant": 1, "price_per_person": 300},
+        {"from_participant": 5, "price_per_person": 200},
+    ])
+    pkg_id = pkg["id"]
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # 7 people: 4 × 300 + 3 × 200 = 1200 + 600 = 1800
+    participants = [
+        {"package_id": pkg_id, "name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(7)
+    ]
+    resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 7,
+        "total_amount": "1800.00",
+        "participants": participants,
+    })
+    assert resp.status_code == 200
+    assert float(resp.json()["total_amount"]) == 1800.0
+
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_register_flexible_package_wrong_amount_rejected(mock_email, client: TestClient, session: Session) -> None:
+    """Registration with wrong flat total instead of tier total must return 400."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, provider_headers, [
+        {"from_participant": 1, "price_per_person": 300},
+        {"from_participant": 5, "price_per_person": 200},
+    ])
+    pkg_id = pkg["id"]
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # correct = 1800, sending flat 7 × 300 = 2100 (wrong)
+    participants = [
+        {"package_id": pkg_id, "name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(7)
+    ]
+    resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 7,
+        "total_amount": "2100.00",
+        "participants": participants,
+    })
+    assert resp.status_code == 400
+    assert "mismatch" in resp.json()["detail"].lower() or "price" in resp.json()["detail"].lower()
+
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_register_simple_flexible_trip_correct_amount_accepted(mock_email, client: TestClient, session: Session) -> None:
+    """Registration for a flexible simple trip with correct marginal total must succeed."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    # tier 1: 1–2 @ 400, tier 2: 3+ @ 300
+    trip_id, _ = _create_simple_trip_flex(client, provider_headers, use_flexible_pricing=True, pricing_tiers=[
+        {"from_participant": 1, "price_per_person": 400},
+        {"from_participant": 3, "price_per_person": 300},
+    ])
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # 5 people: 2 × 400 + 3 × 300 = 800 + 900 = 1700
+    participants = [
+        {"name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(5)
+    ]
+    resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 5,
+        "total_amount": "1700.00",
+        "participants": participants,
+    })
+    assert resp.status_code == 200
+    assert float(resp.json()["total_amount"]) == 1700.0
+
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_register_simple_flexible_trip_wrong_amount_rejected(mock_email, client: TestClient, session: Session) -> None:
+    """Registration for a flexible simple trip with wrong total must return 400."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _ = _create_simple_trip_flex(client, provider_headers, use_flexible_pricing=True, pricing_tiers=[
+        {"from_participant": 1, "price_per_person": 400},
+        {"from_participant": 3, "price_per_person": 300},
+    ])
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # correct = 1700, sending flat 5 × 400 = 2000 (wrong)
+    participants = [
+        {"name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(5)
+    ]
+    resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 5,
+        "total_amount": "2000.00",
+        "participants": participants,
+    })
+    assert resp.status_code == 400
+    assert "mismatch" in resp.json()["detail"].lower() or "price" in resp.json()["detail"].lower()
+
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_flat_simple_trip_registration_unaffected_by_flexible_feature(mock_email, client: TestClient, session: Session) -> None:
+    """Flat-priced simple trips must continue working correctly alongside flexible pricing."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _ = _create_simple_trip_flex(client, provider_headers, price=150.0)
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # 3 × 150 = 450
+    participants = [
+        {"name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(3)
+    ]
+    resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 3,
+        "total_amount": "450.00",
+        "participants": participants,
+    })
+    assert resp.status_code == 200
+    assert float(resp.json()["total_amount"]) == 450.0

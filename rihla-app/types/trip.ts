@@ -1,3 +1,10 @@
+export interface PricingTier {
+  id?: string;
+  package_id?: string;
+  from_participant: number;
+  price_per_person: number | string;
+}
+
 export interface TripPackageRequiredField {
   id: string;
   package_id: string;
@@ -22,6 +29,8 @@ export interface TripPackage {
   amenities?: string[] | null;
   required_fields: string[];
   required_fields_details?: TripPackageRequiredField[];
+  use_flexible_pricing?: boolean;
+  pricing_tiers?: PricingTier[];
 }
 
 export interface TripExtraFee {
@@ -96,6 +105,8 @@ export interface Trip {
   packages: TripPackage[];
   simple_trip_required_fields: string[];
   simple_trip_required_fields_details?: TripPackageRequiredField[];
+  simple_trip_use_flexible_pricing?: boolean;
+  simple_trip_pricing_tiers?: PricingTier[];
   extra_fees: TripExtraFee[];
   average_rating?: number;
   total_reviews?: number;

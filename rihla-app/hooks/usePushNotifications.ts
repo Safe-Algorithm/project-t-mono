@@ -31,8 +31,19 @@ async function sendTokenToServer(token: string) {
 
 function navigateFromData(data: Record<string, string> | undefined) {
   if (!data) return;
+  // Support ticket reply/status notification
+  if (data.ticketId && data.ticketType === 'trip') {
+    router.push({
+      pathname: '/support/trip-ticket' as any,
+      params: { ticketId: data.ticketId },
+    });
+  } else if (data.ticketId && data.ticketType === 'admin') {
+    router.push({
+      pathname: '/support/admin-ticket' as any,
+      params: { ticketId: data.ticketId },
+    });
   // Trip update notification: open the booking screen focused on updates tab
-  if (data.registrationId && data.tripUpdateId) {
+  } else if (data.registrationId && data.tripUpdateId) {
     router.push({
       pathname: '/booking/[registrationId]',
       params: { registrationId: data.registrationId, focusUpdateId: data.tripUpdateId },

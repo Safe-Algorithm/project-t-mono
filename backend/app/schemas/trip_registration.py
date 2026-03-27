@@ -79,6 +79,8 @@ class TripRegistration(TripRegistrationBase):
     registration_date: datetime
     spot_reserved_until: Optional[datetime] = None
     booking_reference: str
+    cancelled_by: Optional[str] = None
+    cancellation_reason: Optional[str] = None
     participants: List[TripRegistrationParticipant] = []
     trip: RegistrationTripInfo
 

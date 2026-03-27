@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Dict, Any, List, Optional, TYPE_CHECKING
 from sqlmodel import Field, SQLModel, Relationship, Column
 from sqlalchemy import JSON
@@ -24,6 +25,9 @@ class Provider(SQLModel, table=True):
     # Bilingual bio fields
     bio_en: Optional[str] = Field(default=None, max_length=1000)
     bio_ar: Optional[str] = Field(default=None, max_length=1000)
+
+    # Platform commission rate for this provider (percentage, e.g. 10.00 = 10%)
+    commission_rate: Decimal = Field(default=Decimal("10.00"), max_digits=5, decimal_places=2)
     
     company_metadata: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
 

@@ -7,6 +7,21 @@ from app.models.trip_field import TripFieldType
 from app.models.trip_package import Currency
 
 
+class TripPricingTierCreate(BaseModel):
+    from_participant: int
+    price_per_person: Decimal
+
+
+class TripPricingTierRead(BaseModel):
+    id: uuid.UUID
+    package_id: uuid.UUID
+    from_participant: int
+    price_per_person: Decimal
+
+    class Config:
+        from_attributes = True
+
+
 def _empty_to_none(v: Optional[str]) -> Optional[str]:
     """Coerce empty/whitespace-only strings to None for bilingual fields."""
     if v is not None and v.strip() == '':
@@ -34,6 +49,8 @@ class TripPackageBase(BaseModel):
 
 class TripPackageCreate(TripPackageBase):
     required_fields: Optional[List[TripFieldType]] = []
+    use_flexible_pricing: bool = False
+    pricing_tiers: Optional[List[TripPricingTierCreate]] = None
 
     @model_validator(mode='after')
     def validate_bilingual_fields(self):
@@ -56,6 +73,8 @@ class TripPackageUpdate(BaseModel):
     max_participants: Optional[int] = None
     is_refundable: Optional[bool] = None
     amenities: Optional[List[str]] = None
+    use_flexible_pricing: Optional[bool] = None
+    pricing_tiers: Optional[List[TripPricingTierCreate]] = None
 
     @field_validator('name_en', 'name_ar', 'description_en', 'description_ar', mode='before')
     @classmethod
@@ -103,3 +122,5 @@ class TripPackageWithRequiredFields(BaseModel):
     amenities: Optional[List[str]] = None
     required_fields: List[TripFieldType] = []
     required_fields_details: Optional[List[TripPackageRequiredFieldDetail]] = []
+    use_flexible_pricing: bool = False
+    pricing_tiers: List[TripPricingTierRead] = []

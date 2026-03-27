@@ -78,7 +78,9 @@ class TestAdminSupportTickets:
 
     def test_user_list_tickets(self, client: TestClient, session: Session):
         user, headers = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
-        client.post(f"{API}/support/tickets", json={"subject": "T1", "description": "D1"}, headers=headers)
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        r1 = client.post(f"{API}/support/tickets", json={"subject": "T1", "description": "D1"}, headers=headers)
+        client.patch(f"{API}/admin/support/tickets/{r1.json()['id']}", json={"status": "closed"}, headers=ah)
         client.post(f"{API}/support/tickets", json={"subject": "T2", "description": "D2"}, headers=headers)
         r = client.get(f"{API}/support/tickets", headers=headers)
         assert r.status_code == 200
@@ -96,6 +98,8 @@ class TestAdminSupportTickets:
         user, headers = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         r = client.post(f"{API}/support/tickets", json={"subject": "S", "description": "D"}, headers=headers)
         tid = r.json()["id"]
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ah)
         r2 = client.post(f"{API}/support/tickets/{tid}/messages", json={"message": "Hello"}, headers=headers)
         assert r2.status_code == 200
         assert r2.json()["message"] == "Hello"
@@ -139,8 +143,9 @@ class TestAdminSupportTickets:
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         r = client.post(f"{API}/support/tickets", json={"subject": "S", "description": "D"}, headers=uh)
         tid = r.json()["id"]
-        client.post(f"{API}/support/tickets/{tid}/messages", json={"message": "User msg"}, headers=uh)
         admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ah)
+        client.post(f"{API}/support/tickets/{tid}/messages", json={"message": "User msg"}, headers=uh)
         client.post(f"{API}/admin/support/tickets/{tid}/messages", json={"message": "Admin msg"}, headers=ah)
         r2 = client.get(f"{API}/admin/support/tickets/{tid}", headers=ah)
         assert r2.status_code == 200
@@ -209,6 +214,8 @@ class TestTripSupportTickets:
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
         tid = r.json()["id"]
+        # Provider sets waiting_on_user so user can reply
+        client.patch(f"{API}/provider/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ph)
         r2 = client.post(f"{API}/support/trip-tickets/{tid}/messages", json={"message": "User msg"}, headers=uh)
         assert r2.status_code == 200
 
@@ -279,9 +286,11 @@ class TestTripSupportTickets:
 
     def test_user_list_all_trip_tickets(self, client: TestClient, session: Session):
         """GET /support/trip-tickets — list all trip tickets for current user across all trips."""
-        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        trip1 = _create_trip_for_provider(session, provider)
-        trip2 = _create_trip_for_provider(session, provider)
+        # Two different providers so the open-ticket-per-provider rule allows both tickets
+        provider1, ph1 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        provider2, ph2 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip1 = _create_trip_for_provider(session, provider1)
+        trip2 = _create_trip_for_provider(session, provider2)
         user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
         _create_registration(session, trip1.id, user.id)
         _create_registration(session, trip2.id, user.id)
@@ -314,6 +323,8 @@ class TestTripSupportTickets:
         _create_registration(session, trip.id, user.id)
         r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "Detail test", "description": "D"}, headers=uh)
         tid = r.json()["id"]
+        # Provider sets waiting_on_user so user can reply
+        client.patch(f"{API}/provider/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ph)
         client.post(f"{API}/support/trip-tickets/{tid}/messages", json={"message": "My reply"}, headers=uh)
         r2 = client.get(f"{API}/support/trip-tickets/{tid}", headers=uh)
         assert r2.status_code == 200
@@ -356,7 +367,10 @@ class TestProviderAdminTickets:
         """GET /provider/support/admin-tickets — provider only sees their own tickets."""
         provider1, ph1 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
         provider2, ph2 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
-        client.post(f"{API}/provider/support/admin-tickets", json={"subject": "P1", "description": "D"}, headers=ph1)
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        r1 = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "P1", "description": "D"}, headers=ph1)
+        # Close first before opening second (1-open-ticket rule)
+        client.patch(f"{API}/admin/support/tickets/{r1.json()['id']}", json={"status": "closed"}, headers=ah)
         client.post(f"{API}/provider/support/admin-tickets", json={"subject": "P2", "description": "D"}, headers=ph1)
         client.post(f"{API}/provider/support/admin-tickets", json={"subject": "Other", "description": "D"}, headers=ph2)
         r = client.get(f"{API}/provider/support/admin-tickets", headers=ph1)
@@ -385,10 +399,12 @@ class TestProviderAdminTickets:
         assert r2.status_code == 403
 
     def test_provider_reply_admin_ticket(self, client: TestClient, session: Session):
-        """POST /provider/support/admin-tickets/{id}/messages — provider can reply to their own ticket."""
+        """POST /provider/support/admin-tickets/{id}/messages — provider can reply when waiting_on_user."""
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
         r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph)
         tid = r.json()["id"]
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ah)
         r2 = client.post(f"{API}/provider/support/admin-tickets/{tid}/messages", json={"message": "More info"}, headers=ph)
         assert r2.status_code == 200
         assert r2.json()["message"] == "More info"
@@ -399,8 +415,9 @@ class TestProviderAdminTickets:
         provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
         r = client.post(f"{API}/provider/support/admin-tickets", json={"subject": "S", "description": "D"}, headers=ph)
         tid = r.json()["id"]
-        client.post(f"{API}/provider/support/admin-tickets/{tid}/messages", json={"message": "Provider detail"}, headers=ph)
         admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ah)
+        client.post(f"{API}/provider/support/admin-tickets/{tid}/messages", json={"message": "Provider detail"}, headers=ph)
         r2 = client.get(f"{API}/admin/support/tickets/{tid}", headers=ah)
         assert r2.status_code == 200
         assert len(r2.json()["messages"]) == 1
@@ -436,3 +453,126 @@ class TestProviderAdminTickets:
         assert r2.status_code == 200
         ids = [t["id"] for t in r2.json()]
         assert tid in ids
+
+
+# ===== New Business Rules =====
+
+
+class TestTicketBusinessRules:
+    # ── Rule 1: user/provider can only reply when status is waiting_on_user ──
+
+    def test_user_cannot_reply_when_status_is_open(self, client: TestClient, session: Session):
+        """User reply blocked unless ticket is waiting_on_user."""
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        r = client.post(f"{API}/support/tickets", json={"subject": "S", "description": "D"}, headers=uh)
+        tid = r.json()["id"]
+        r2 = client.post(f"{API}/support/tickets/{tid}/messages", json={"message": "Hi"}, headers=uh)
+        assert r2.status_code == 400
+
+    def test_user_cannot_reply_when_status_is_in_progress(self, client: TestClient, session: Session):
+        """User reply blocked when status is in_progress."""
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        r = client.post(f"{API}/support/tickets", json={"subject": "S", "description": "D"}, headers=uh)
+        tid = r.json()["id"]
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "in_progress"}, headers=ah)
+        r2 = client.post(f"{API}/support/tickets/{tid}/messages", json={"message": "Hi"}, headers=uh)
+        assert r2.status_code == 400
+
+    def test_user_can_reply_when_waiting_on_user(self, client: TestClient, session: Session):
+        """User reply allowed when status is waiting_on_user."""
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        r = client.post(f"{API}/support/tickets", json={"subject": "S", "description": "D"}, headers=uh)
+        tid = r.json()["id"]
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{tid}", json={"status": "waiting_on_user"}, headers=ah)
+        r2 = client.post(f"{API}/support/tickets/{tid}/messages", json={"message": "Here is the info"}, headers=uh)
+        assert r2.status_code == 200
+
+    def test_user_cannot_reply_trip_ticket_when_open(self, client: TestClient, session: Session):
+        """User reply on trip ticket blocked unless status is waiting_on_user."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip.id, user.id)
+        r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "S", "description": "D"}, headers=uh)
+        tid = r.json()["id"]
+        r2 = client.post(f"{API}/support/trip-tickets/{tid}/messages", json={"message": "Hi"}, headers=uh)
+        assert r2.status_code == 400
+
+    # ── Rule 2: 1 open admin ticket per user ──
+
+    def test_user_cannot_open_second_admin_ticket_while_first_is_open(self, client: TestClient, session: Session):
+        """Creating a second admin ticket is blocked when the first is not closed/resolved."""
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        client.post(f"{API}/support/tickets", json={"subject": "First", "description": "D"}, headers=uh)
+        r2 = client.post(f"{API}/support/tickets", json={"subject": "Second", "description": "D"}, headers=uh)
+        assert r2.status_code == 400
+
+    def test_user_can_open_new_admin_ticket_after_previous_is_resolved(self, client: TestClient, session: Session):
+        """Creating a new admin ticket is allowed once the previous one is resolved."""
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        r1 = client.post(f"{API}/support/tickets", json={"subject": "First", "description": "D"}, headers=uh)
+        admin, ah = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.ADMIN_PANEL)
+        client.patch(f"{API}/admin/support/tickets/{r1.json()['id']}", json={"status": "resolved"}, headers=ah)
+        r2 = client.post(f"{API}/support/tickets", json={"subject": "Second", "description": "D"}, headers=uh)
+        assert r2.status_code == 200
+
+    # ── Rule 2: 1 open trip ticket per provider ──
+
+    def test_user_cannot_open_second_trip_ticket_for_same_provider(self, client: TestClient, session: Session):
+        """User blocked from opening a second ticket with the same provider while first is open."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip1 = _create_trip_for_provider(session, provider)
+        trip2 = _create_trip_for_provider(session, provider)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip1.id, user.id)
+        _create_registration(session, trip2.id, user.id)
+        client.post(f"{API}/trips/{trip1.id}/support", json={"subject": "First", "description": "D"}, headers=uh)
+        r2 = client.post(f"{API}/trips/{trip2.id}/support", json={"subject": "Second", "description": "D"}, headers=uh)
+        assert r2.status_code == 400
+
+    def test_user_can_open_trip_ticket_for_different_providers(self, client: TestClient, session: Session):
+        """User can have 1 open ticket per provider simultaneously."""
+        provider1, ph1 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        provider2, ph2 = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip1 = _create_trip_for_provider(session, provider1)
+        trip2 = _create_trip_for_provider(session, provider2)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        _create_registration(session, trip1.id, user.id)
+        _create_registration(session, trip2.id, user.id)
+        r1 = client.post(f"{API}/trips/{trip1.id}/support", json={"subject": "P1 ticket", "description": "D"}, headers=uh)
+        r2 = client.post(f"{API}/trips/{trip2.id}/support", json={"subject": "P2 ticket", "description": "D"}, headers=uh)
+        assert r1.status_code == 200
+        assert r2.status_code == 200
+
+    # ── Rule 3: cancelled booking — list tickets OK, create blocked ──
+
+    def test_cancelled_booking_can_list_existing_tickets(self, client: TestClient, session: Session):
+        """User with a cancelled booking can still see their existing tickets."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        reg = _create_registration(session, trip.id, user.id)
+        # Create ticket while booking is active
+        client.post(f"{API}/trips/{trip.id}/support", json={"subject": "Before cancel", "description": "D"}, headers=uh)
+        # Cancel the booking
+        reg.status = "cancelled"
+        session.add(reg)
+        session.commit()
+        # Listing should still work
+        r = client.get(f"{API}/trips/{trip.id}/support", headers=uh)
+        assert r.status_code == 200
+        assert len(r.json()) == 1
+
+    def test_cancelled_booking_cannot_open_new_ticket(self, client: TestClient, session: Session):
+        """User with only a cancelled booking cannot open a new support ticket."""
+        provider, ph = user_authentication_headers(client, session, UserRole.SUPER_USER, RequestSource.PROVIDERS_PANEL)
+        trip = _create_trip_for_provider(session, provider)
+        user, uh = user_authentication_headers(client, session, UserRole.NORMAL, RequestSource.MOBILE_APP)
+        reg = _create_registration(session, trip.id, user.id)
+        reg.status = "cancelled"
+        session.add(reg)
+        session.commit()
+        r = client.post(f"{API}/trips/{trip.id}/support", json={"subject": "After cancel", "description": "D"}, headers=uh)
+        assert r.status_code == 403

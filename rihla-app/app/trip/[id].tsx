@@ -16,6 +16,7 @@ import StarRating from '../../components/ui/StarRating';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { TripPackage } from '../../types/trip';
+import { minPricePerPerson, maxPricePerPerson, buildTierSummary, formatPrice } from '../../lib/pricingUtils';
 import Toast from '../../components/ui/Toast';
 
 const { width: W } = Dimensions.get('window');
@@ -473,9 +474,25 @@ export default function TripDetailScreen() {
                       <View key={pkg.id} style={s.packageCard}>
                         <View style={s.packageHeader}>
                           <Text style={s.packageName}>{pkgName}</Text>
-                          <Text style={s.packagePrice}>
-                            {t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}
-                          </Text>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            {pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0 ? (
+                              <>
+                                <Text style={s.packagePriceFrom}>{t('trip.from', 'From')}</Text>
+                                <Text style={s.packagePrice}>
+                                  {formatPrice(minPricePerPerson(pkg))}
+                                </Text>
+                                {minPricePerPerson(pkg) !== maxPricePerPerson(pkg) && (
+                                  <Text style={s.packagePriceTo}>
+                                    {t('trip.to', 'to')} {formatPrice(maxPricePerPerson(pkg))}
+                                  </Text>
+                                )}
+                              </>
+                            ) : (
+                              <Text style={s.packagePrice}>
+                                {t('booking.priceFormat', { price: Number(pkg.price).toLocaleString() })}
+                              </Text>
+                            )}
+                          </View>
                         </View>
                         {pkgDesc && <Text style={s.packageDesc} numberOfLines={2}>{pkgDesc}</Text>}
                         {/* Amenities */}
@@ -487,6 +504,17 @@ export default function TripDetailScreen() {
                                 <Text style={s.pkgAmenityText}>
                                   {t(`amenities.${a}` as any, { defaultValue: a.replace(/_/g, ' ') })}
                                 </Text>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                        {/* Flexible pricing tier bands */}
+                        {pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0 && (
+                          <View style={s.tierBandsContainer}>
+                            {buildTierSummary(pkg.pricing_tiers).map((line, i) => (
+                              <View key={i} style={s.tierBandRow}>
+                                <Ionicons name="people-outline" size={11} color={colors.primary} />
+                                <Text style={s.tierBandText}>{line}</Text>
                               </View>
                             ))}
                           </View>
@@ -574,19 +602,26 @@ export default function TripDetailScreen() {
         ) : !trip.is_packaged_trip ? (
           // Simple trip: show price + direct Book/Buy button
           <View style={s.bottomContent}>
-            {trip.price != null && (
+            {trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 ? (
+              <View>
+                <Text style={s.bottomLabel}>{t('trip.from')}</Text>
+                <Text style={s.bottomPrice}>
+                  {formatPrice(Math.min(...trip.simple_trip_pricing_tiers.map(t => Number(t.price_per_person))))}
+                </Text>
+              </View>
+            ) : trip.price != null ? (
               <View>
                 <Text style={s.bottomLabel}>{t('trip.pricePerPerson')}</Text>
                 <Text style={s.bottomPrice}>
                   {t('booking.priceFormat', { price: Number(trip.price).toLocaleString() })}
                 </Text>
               </View>
-            )}
+            ) : null}
             <Button
               title={trip.trip_type === 'self_arranged' ? t('trip.buyNow') : t('trip.bookNow')}
               onPress={() => router.push(`/book/${id}`)}
-              style={trip.price != null ? s.bookBtn : undefined}
-              fullWidth={trip.price == null}
+              style={(trip.price != null || (trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0)) ? s.bookBtn : undefined}
+              fullWidth={trip.price == null && !(trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0)}
               size="lg"
             />
           </View>
@@ -752,6 +787,11 @@ function makeStyles(c: ThemeColors) {
   packageNameSelected: { color: c.primaryDark },
   packagePrice: { fontSize: FontSize.lg, fontWeight: '800', color: c.accent },
   packagePriceSelected: { color: c.primary },
+  packagePriceFrom: { fontSize: FontSize.xs, color: c.textTertiary, fontWeight: '500' },
+  packagePriceTo: { fontSize: FontSize.xs, color: c.textTertiary, fontWeight: '500' },
+  tierBandsContainer: { gap: 4, marginTop: 6, marginBottom: 4, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.border },
+  tierBandRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tierBandText: { fontSize: FontSize.xs, color: c.textSecondary, fontWeight: '500' },
   packageDesc: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 8 },
   fieldsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   fieldsText: { fontSize: FontSize.xs, color: c.textTertiary },
