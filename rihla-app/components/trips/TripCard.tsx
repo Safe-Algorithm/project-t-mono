@@ -106,9 +106,27 @@ function formatDate(dateStr: string, _lang: string, tz?: string): string {
 }
 
 function getMinPrice(trip: Trip): number | null {
+  // Simple trip with flexible pricing — lowest tier rate
+  if (!trip.is_packaged_trip && trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers?.length) {
+    const sorted = [...trip.simple_trip_pricing_tiers].sort((a, b) => a.from_participant - b.from_participant);
+    return Number(sorted[0].price_per_person);
+  }
   if (trip.price != null) return Number(trip.price);
   if (!trip.packages?.length) return null;
-  return Math.min(...trip.packages.map((p) => Number(p.price)));
+  // For packaged trips: use the minimum starting price across packages
+  return Math.min(...trip.packages.map((p) => {
+    if (p.use_flexible_pricing && p.pricing_tiers?.length) {
+      const sorted = [...p.pricing_tiers].sort((a, b) => a.from_participant - b.from_participant);
+      return Number(sorted[0].price_per_person);
+    }
+    return Number(p.price);
+  }));
+}
+
+function isFlexibleTrip(trip: Trip): boolean {
+  if (!trip.is_packaged_trip && trip.simple_trip_use_flexible_pricing && (trip.simple_trip_pricing_tiers?.length ?? 0) > 1) return true;
+  if (trip.is_packaged_trip && trip.packages?.some(p => p.use_flexible_pricing && (p.pricing_tiers?.length ?? 0) > 1)) return true;
+  return false;
 }
 
 function getDisplayAmenities(trip: Trip): string[] | null {
@@ -133,7 +151,8 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
   const displayAmenities = getDisplayAmenities(trip);
   const name = getLocalizedName(trip, i18n.language);
   const packageCount = trip.packages?.length ?? 0;
-  const priceKey = trip.is_packaged_trip ? 'trip.fromPrice' : 'trip.priceOnly';
+  const flexible = isFlexibleTrip(trip);
+  const priceKey = (trip.is_packaged_trip || flexible) ? 'trip.fromPrice' : 'trip.priceOnly';
   const routeLabel = getDestLabel(trip, i18n.language);
 
   if (compact) {
@@ -157,6 +176,11 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           <Text style={s.compactProvider} numberOfLines={1}>{trip.provider?.company_name}</Text>
           {minPrice !== null && (
             <Text style={s.price}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
+          )}
+          {flexible && (
+            <View style={s.flexBadgeCompact}>
+              <Text style={s.flexBadgeCompactText}>{t('trip.flexiblePricingBadge', 'Flexible')}</Text>
+            </View>
           )}
         </View>
       </AnimatedTouchable>
@@ -192,9 +216,14 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
         )}
         {minPrice !== null && (
           <View style={[s.priceBadgeRow, i18n.language === 'ar' && s.priceBadgeRowRtl]}>
-            <View style={s.priceBadge}>
+            <View style={[s.priceBadge, flexible && s.priceBadgeFlexible]}>
               <Text style={s.priceBadgeText}>{t(priceKey as any, { price: minPrice.toLocaleString() })}</Text>
             </View>
+            {flexible && (
+              <View style={s.flexBadge}>
+                <Text style={s.flexBadgeText}>{t('trip.flexiblePricingBadge', 'Flexible')}</Text>
+              </View>
+            )}
           </View>
         )}
       </View>
@@ -315,5 +344,10 @@ function makeStyles(c: ThemeColors) {
     tripTypeBadgeText: { fontSize: FontSize.xs, fontWeight: '700' as const },
     tripTypeBadgeTextGuided: { color: '#92400e' },
     tripTypeBadgeTextPackage: { color: '#6b21a8' },
+    flexBadge: { backgroundColor: 'rgba(14,165,233,0.85)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
+    flexBadgeCompact: { alignSelf: 'flex-start' as const, backgroundColor: c.primarySurface, paddingHorizontal: 7, paddingVertical: 2, borderRadius: Radius.full, marginTop: 2 },
+    flexBadgeText: { color: c.white, fontSize: FontSize.xs, fontWeight: '700' as const },
+    flexBadgeCompactText: { color: c.primaryDark, fontSize: FontSize.xs, fontWeight: '700' as const },
+    priceBadgeFlexible: {},
   });
 }

@@ -48,10 +48,13 @@ export interface TripPackage {
   currency: string;
   is_active: boolean;
   max_participants?: number | null;
+  available_spots?: number | null;
   is_refundable?: boolean | null;
   amenities?: string[] | null;
   required_fields: string[];
   required_fields_details?: TripPackageRequiredField[];
+  use_flexible_pricing?: boolean;
+  pricing_tiers?: PricingTier[];
 }
 
 export interface Trip {
@@ -84,6 +87,8 @@ export interface Trip {
   price?: number | null;
   simple_trip_required_fields?: string[];
   simple_trip_required_fields_details?: TripPackageRequiredField[];
+  simple_trip_use_flexible_pricing?: boolean;
+  simple_trip_pricing_tiers?: PricingTier[];
   timezone?: string;
 }
 

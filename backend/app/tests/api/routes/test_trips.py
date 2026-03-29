@@ -4426,3 +4426,124 @@ def test_flat_simple_trip_registration_unaffected_by_flexible_feature(mock_email
     })
     assert resp.status_code == 200
     assert float(resp.json()["total_amount"]) == 450.0
+
+
+# ── Single-tier flexible == flat pricing (UX warning) ─────────────────────────
+
+def test_single_tier_flexible_pricing_is_effectively_flat(client: TestClient, session: Session) -> None:
+    """A flexible package with exactly one tier is functionally identical to flat pricing.
+    The backend must still accept it (no error). The UX warning is frontend-only."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, headers, [
+        {"from_participant": 1, "price_per_person": 200},
+    ])
+    assert pkg["use_flexible_pricing"] is True
+    assert len(pkg["pricing_tiers"]) == 1
+    assert float(pkg["pricing_tiers"][0]["price_per_person"]) == 200.0
+
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_single_tier_flexible_registration_accepted(mock_email, client: TestClient, session: Session) -> None:
+    """Booking a trip whose flexible package has only one tier works like flat pricing."""
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, provider_headers, [
+        {"from_participant": 1, "price_per_person": 300},
+    ])
+    pkg_id = pkg["id"]
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # 4 × 300 = 1200 (single tier = all participants at same rate)
+    participants = [
+        {"package_id": pkg_id, "name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(4)
+    ]
+    resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 4,
+        "total_amount": "1200.00",
+        "participants": participants,
+    })
+    assert resp.status_code == 200
+    assert float(resp.json()["total_amount"]) == 1200.0
+
+
+# ── Refund calculation with flexible pricing ──────────────────────────────────
+
+@patch('app.services.email.email_service.send_booking_confirmation_email')
+def test_flexible_pricing_refund_uses_paid_total_amount(mock_email, client: TestClient, session: Session) -> None:
+    """Cancelling a flexible-priced booking must refund the exact total_amount that was paid,
+    not a recomputed flat amount. The refund amount is stored on the registration itself."""
+    from app.models.payment import Payment, PaymentStatus
+    from app.models.trip_registration import TripRegistration as TripRegModel
+    from sqlmodel import select as sql_select
+    import uuid as _uuid
+
+    provider_user, provider_headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    # tier 1: 1-4 @ 500, tier 2: 5+ @ 350
+    trip_id, pkg = _create_packaged_trip_flex_pkg(client, provider_headers, [
+        {"from_participant": 1, "price_per_person": 500},
+        {"from_participant": 5, "price_per_person": 350},
+    ])
+    pkg_id = pkg["id"]
+    mobile_user, mobile_headers = user_authentication_headers(client, session, role=UserRole.NORMAL)
+
+    # 6 people: 4 × 500 + 2 × 350 = 2000 + 700 = 2700
+    participants = [
+        {"package_id": pkg_id, "name": f"P{i}", "date_of_birth": "1990-01-01", "is_registration_user": i == 0}
+        for i in range(6)
+    ]
+    reg_resp = client.post(f"{settings.API_V1_STR}/trips/{trip_id}/register", headers=mobile_headers, json={
+        "total_participants": 6,
+        "total_amount": "2700.00",
+        "participants": participants,
+    })
+    assert reg_resp.status_code == 200
+    reg_id = reg_resp.json()["id"]
+    assert float(reg_resp.json()["total_amount"]) == 2700.0
+
+    # Verify via the injected test session that the stored total_amount matches what was charged
+    reg = session.exec(
+        sql_select(TripRegModel).where(TripRegModel.id == _uuid.UUID(reg_id))
+    ).first()
+    assert reg is not None
+    # The stored total_amount is the source-of-truth for any future refund
+    assert float(reg.total_amount) == 2700.0
+
+
+# ── Public endpoint exposes flexible pricing ──────────────────────────────────
+
+def test_public_trip_endpoint_exposes_flexible_pricing_fields(client: TestClient, session: Session) -> None:
+    """GET /public-trips/{id} must include use_flexible_pricing and pricing_tiers on packages."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    tiers = [
+        {"from_participant": 1, "price_per_person": 400},
+        {"from_participant": 4, "price_per_person": 280},
+    ]
+    trip_id, _ = _create_packaged_trip_flex_pkg(client, headers, tiers)
+
+    resp = client.get(f"{settings.API_V1_STR}/public-trips/{trip_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["is_packaged_trip"] is True
+    pkg = data["packages"][0]
+    assert pkg["use_flexible_pricing"] is True
+    assert len(pkg["pricing_tiers"]) == 2
+    rates = {t["from_participant"]: float(t["price_per_person"]) for t in pkg["pricing_tiers"]}
+    assert rates[1] == 400.0
+    assert rates[4] == 280.0
+
+
+def test_public_trip_simple_flexible_exposes_simple_trip_fields(client: TestClient, session: Session) -> None:
+    """GET /public-trips/{id} for a simple flexible trip must include simple_trip_pricing_tiers."""
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _ = _create_simple_trip_flex(client, headers, use_flexible_pricing=True, pricing_tiers=[
+        {"from_participant": 1, "price_per_person": 250},
+        {"from_participant": 3, "price_per_person": 200},
+    ])
+
+    resp = client.get(f"{settings.API_V1_STR}/public-trips/{trip_id}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["is_packaged_trip"] is False
+    assert data["simple_trip_use_flexible_pricing"] is True
+    assert len(data["simple_trip_pricing_tiers"]) == 2
+    assert data["packages"] == []

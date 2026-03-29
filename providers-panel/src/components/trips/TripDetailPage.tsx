@@ -354,11 +354,26 @@ const TripDetailPage: React.FC = () => {
               <p className="font-medium text-slate-900 dark:text-white mt-0.5">{value}</p>
             </div>
           ))}
-          {!trip.is_packaged_trip && trip.price != null && (
-            <div>
-              <span className="text-xs text-slate-400 dark:text-slate-500">{t('tripDetail.price')}</span>
-              <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{trip.price} SAR</p>
-            </div>
+          {!trip.is_packaged_trip && (
+            trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 ? (
+              <div>
+                <span className="text-xs text-slate-400 dark:text-slate-500">{t('tripDetail.price')}</span>
+                <div className="mt-0.5">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 mb-1">Flexible Pricing</span>
+                  {trip.simple_trip_pricing_tiers.map((tier, i, arr) => (
+                    <p key={i} className="text-sm text-slate-700 dark:text-slate-300">
+                      <span className="font-semibold text-slate-900 dark:text-white">{Number(tier.price_per_person).toLocaleString()} SAR</span>
+                      {' '}/ person &bull; pax {tier.from_participant}{i + 1 < arr.length ? `–${arr[i + 1].from_participant - 1}` : '+'}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            ) : trip.price != null ? (
+              <div>
+                <span className="text-xs text-slate-400 dark:text-slate-500">{t('tripDetail.price')}</span>
+                <p className="font-semibold text-slate-900 dark:text-white mt-0.5">{trip.price} SAR</p>
+              </div>
+            ) : null
           )}
           {!trip.is_packaged_trip && (
             <div>
@@ -527,7 +542,19 @@ const TripDetailPage: React.FC = () => {
                         <h4 className="font-semibold text-slate-900 dark:text-white">{pkg.name_en || pkg.name_ar}</h4>
                         {pkg.name_ar && pkg.name_en && <p className="text-xs text-slate-400 dark:text-slate-500" dir="rtl">{pkg.name_ar}</p>}
                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{pkg.description_en || pkg.description_ar}</p>
-                        <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{pkg.price} {pkg.currency || 'SAR'}</p>
+                        {pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0 ? (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 mb-1">Flexible</span>
+                            {pkg.pricing_tiers.map((tier, i, arr) => (
+                              <p key={i} className="text-xs text-slate-700 dark:text-slate-300">
+                                <span className="font-semibold">{Number(tier.price_per_person).toLocaleString()} SAR</span>
+                                {' '}pax {tier.from_participant}{i + 1 < arr.length ? `–${arr[i + 1].from_participant - 1}` : '+'}
+                              </p>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{pkg.price} {pkg.currency || 'SAR'}</p>
+                        )}
                         {pkg.max_participants != null && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{t('tripDetail.maxParticipantsValue', { count: pkg.max_participants })}</p>}
                         {pkg.is_refundable != null && <p className="text-xs mt-0.5"><span className={pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}>{pkg.is_refundable ? t('tripDetail.refundableShort') : t('tripDetail.nonRefundableShort')}</span></p>}
                         {pkg.amenities && pkg.amenities.length > 0 && (

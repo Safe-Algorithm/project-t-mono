@@ -13,6 +13,13 @@ interface TripPackageRequiredFieldDetail {
   validation_config: any;
 }
 
+interface PricingTier {
+  id?: string;
+  package_id?: string;
+  from_participant: number;
+  price_per_person: number | string;
+}
+
 interface TripPackage {
   id: string;
   name_en: string;
@@ -27,6 +34,8 @@ interface TripPackage {
   amenities?: string[] | null;
   required_fields: string[];
   required_fields_details?: TripPackageRequiredFieldDetail[];
+  use_flexible_pricing?: boolean;
+  pricing_tiers?: PricingTier[];
 }
 
 interface TripUpdateInfo {
@@ -97,6 +106,8 @@ interface Trip {
   meeting_time?: string;
   simple_trip_required_fields?: string[];
   simple_trip_required_fields_details?: TripPackageRequiredFieldDetail[];
+  simple_trip_use_flexible_pricing?: boolean;
+  simple_trip_pricing_tiers?: PricingTier[];
   meeting_place_name?: string;
   meeting_place_name_ar?: string;
   price?: number | null;
@@ -402,12 +413,27 @@ const TripDetailPage = () => {
         )}
 
         {/* Price — non-packaged trips */}
-        {!trip.is_packaged_trip && trip.price != null && (
+        {!trip.is_packaged_trip && (trip.simple_trip_use_flexible_pricing ? (
+          <div className="mt-5">
+            <p className={lCls}>Pricing</p>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">Flexible Pricing</span>
+            </div>
+            <div className="space-y-1">
+              {(trip.simple_trip_pricing_tiers ?? []).map((tier, i, arr) => (
+                <p key={tier.id ?? i} className="text-sm text-slate-700 dark:text-slate-300">
+                  <span className="font-semibold text-slate-900 dark:text-white">{Number(tier.price_per_person).toLocaleString()} SAR</span>
+                  {' '}/ person&nbsp;&bull;&nbsp;participants {tier.from_participant}{i + 1 < arr.length ? `–${arr[i + 1].from_participant - 1}` : '+'}
+                </p>
+              ))}
+            </div>
+          </div>
+        ) : trip.price != null ? (
           <div className="mt-5">
             <p className={lCls}>Price</p>
             <p className="text-sm font-semibold text-slate-900 dark:text-white">{trip.price} SAR</p>
           </div>
-        )}
+        ) : null)}
 
         {/* Meeting Place */}
         {trip.has_meeting_place && (
@@ -806,7 +832,22 @@ const TripDetailPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                   <div><p className={lCls}>{t('tripDetail.descEn')}</p><p className="text-sm text-slate-700 dark:text-slate-300">{pkg.description_en || '—'}</p></div>
                   <div><p className={lCls}>{t('tripDetail.descAr')}</p><p className="text-sm text-slate-700 dark:text-slate-300" dir="rtl">{pkg.description_ar || '—'}</p></div>
-                  <div><p className={lCls}>{t('tripDetail.price')}</p><p className="text-sm font-semibold text-slate-900 dark:text-white">{pkg.price} {pkg.currency || 'SAR'}</p></div>
+                  <div>
+                    <p className={lCls}>{t('tripDetail.price')}</p>
+                    {pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0 ? (
+                      <div className="space-y-0.5">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 mb-1">Flexible</span>
+                        {pkg.pricing_tiers.map((tier, i, arr) => (
+                          <p key={tier.id ?? i} className="text-xs text-slate-700 dark:text-slate-300">
+                            <span className="font-semibold">{Number(tier.price_per_person).toLocaleString()} SAR</span>
+                            {' '}pax {tier.from_participant}{i + 1 < arr.length ? `–${arr[i + 1].from_participant - 1}` : '+'}
+                          </p>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm font-semibold text-slate-900 dark:text-white">{pkg.price} {pkg.currency || 'SAR'}</p>
+                    )}
+                  </div>
                   {pkg.max_participants != null && <div><p className={lCls}>Max Participants</p><p className="text-sm text-slate-900 dark:text-white">{pkg.max_participants}</p></div>}
                   {pkg.is_refundable != null && <div><p className={lCls}>Refundable</p><p className={`text-sm font-semibold ${pkg.is_refundable ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>{pkg.is_refundable ? 'Yes' : 'No'}</p></div>}
                 </div>
