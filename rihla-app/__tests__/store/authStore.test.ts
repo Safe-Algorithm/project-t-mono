@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { act } from '@testing-library/react-native';
-import { useAuthStore } from '../../store/authStore';
+import { useAuthStore, forceLogout } from '../../store/authStore';
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
@@ -137,11 +137,12 @@ describe('authStore — updateUser', () => {
 });
 
 describe('authStore — loadFromStorage', () => {
-  it('restores session when token exists in AsyncStorage', async () => {
+  it('restores session when token is valid (server confirms)', async () => {
     await AsyncStorage.multiSet([
       ['access_token', 'stored_tok'],
       ['user', JSON.stringify(FULL_USER)],
     ]);
+    (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: FULL_USER });
 
     await act(async () => {
       await useAuthStore.getState().loadFromStorage();
@@ -151,6 +152,58 @@ describe('authStore — loadFromStorage', () => {
     expect(state.isAuthenticated).toBe(true);
     expect(state.user).toEqual(FULL_USER);
     expect(state.accessToken).toBe('stored_tok');
+    expect(state.isLoading).toBe(false);
+  });
+
+  it('refreshes user data from server on startup', async () => {
+    const freshUser = { ...FULL_USER, name: 'Ali Fresh' };
+    await AsyncStorage.multiSet([
+      ['access_token', 'stored_tok'],
+      ['user', JSON.stringify(FULL_USER)],
+    ]);
+    (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: freshUser });
+
+    await act(async () => {
+      await useAuthStore.getState().loadFromStorage();
+    });
+
+    expect(useAuthStore.getState().user?.name).toBe('Ali Fresh');
+  });
+
+  it('forces logout when server rejects the stored token (user deleted / DB purged)', async () => {
+    await AsyncStorage.multiSet([
+      ['access_token', 'stale_tok'],
+      ['refresh_token', 'stale_ref'],
+      ['user', JSON.stringify(FULL_USER)],
+    ]);
+    // Server returns 401 — user no longer exists
+    (apiClient.get as jest.Mock).mockRejectedValueOnce({ response: { status: 401 } });
+
+    await act(async () => {
+      await useAuthStore.getState().loadFromStorage();
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.user).toBeNull();
+    expect(state.accessToken).toBeNull();
+    expect(state.isLoading).toBe(false);
+  });
+
+  it('clears AsyncStorage when server rejects stored token', async () => {
+    await AsyncStorage.multiSet([
+      ['access_token', 'stale_tok'],
+      ['refresh_token', 'stale_ref'],
+      ['user', JSON.stringify(FULL_USER)],
+    ]);
+    (apiClient.get as jest.Mock).mockRejectedValueOnce({ response: { status: 401 } });
+
+    await act(async () => {
+      await useAuthStore.getState().loadFromStorage();
+    });
+
+    expect(await AsyncStorage.getItem('access_token')).toBeNull();
+    expect(await AsyncStorage.getItem('user')).toBeNull();
   });
 
   it('stays unauthenticated when no token in AsyncStorage', async () => {
@@ -160,5 +213,40 @@ describe('authStore — loadFromStorage', () => {
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().user).toBeNull();
+    expect(useAuthStore.getState().isLoading).toBe(false);
+    // Should NOT have called the server at all
+    expect(apiClient.get as jest.Mock).not.toHaveBeenCalled();
+  });
+});
+
+describe('authStore — forceLogout', () => {
+  it('clears Zustand state', async () => {
+    useAuthStore.setState({ user: FULL_USER, isAuthenticated: true, accessToken: 'tok' });
+
+    await act(async () => {
+      await forceLogout();
+    });
+
+    const state = useAuthStore.getState();
+    expect(state.isAuthenticated).toBe(false);
+    expect(state.user).toBeNull();
+    expect(state.accessToken).toBeNull();
+    expect(state.isLoading).toBe(false);
+  });
+
+  it('clears AsyncStorage', async () => {
+    await AsyncStorage.multiSet([
+      ['access_token', 'tok'],
+      ['refresh_token', 'ref'],
+      ['user', JSON.stringify(FULL_USER)],
+    ]);
+
+    await act(async () => {
+      await forceLogout();
+    });
+
+    expect(await AsyncStorage.getItem('access_token')).toBeNull();
+    expect(await AsyncStorage.getItem('refresh_token')).toBeNull();
+    expect(await AsyncStorage.getItem('user')).toBeNull();
   });
 });

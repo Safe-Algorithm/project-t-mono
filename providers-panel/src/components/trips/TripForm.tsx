@@ -103,6 +103,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
 
   // Apply imported CSV data to form fields (new-trip mode only)
   const applyImport = useCallback((data: TripCsvImport) => {
+    const isPackaged = data.tier_structure === 'multiple';
+
     setFormData(prev => ({
       ...prev,
       name_en: data.name_en,
@@ -114,15 +116,73 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
       registration_deadline: data.registration_deadline,
       max_participants: String(data.max_participants),
       is_refundable: data.is_refundable,
+      has_meeting_place: data.has_meeting_place,
+      meeting_place_name: data.meeting_place_name,
+      meeting_place_name_ar: data.meeting_place_name_ar,
+      meeting_location: data.meeting_location,
     }));
+
     setTripTypeSelection(data.trip_nature === 'self_arranged' ? TripType.SELF_ARRANGED : TripType.GUIDED);
-    setIsPackagedTrip(data.tier_structure === 'multiple');
-    if (data.tier_structure === 'single' && data.price_sar != null) {
-      setTripPrice(String(data.price_sar));
+    setIsPackagedTrip(isPackaged);
+
+    // Restore starting city: set the city ID directly; the country will be resolved
+    // by the existing effect that watches startingCityId + countries.
+    if (data.starting_city_id) {
+      setStartingCityId(data.starting_city_id);
     }
-    if (data.amenities.length > 0) {
-      setSelectedAmenities(data.amenities);
+
+    // Restore destination selections from imported UUIDs
+    if (data.destination_ids && data.destination_ids.length > 0) {
+      setDestinationSelections(data.destination_ids.map(id => ({ destination_id: id })));
     }
+
+    if (!isPackaged) {
+      // Simple trip
+      setTripPrice(data.price_sar != null ? String(data.price_sar) : '');
+      setTripFlexiblePricing(data.use_flexible_pricing);
+      if (data.use_flexible_pricing && data.flexible_tiers.length > 0) {
+        setTripPricingTiers(data.flexible_tiers);
+      }
+      if (data.amenities.length > 0) {
+        setSelectedAmenities(data.amenities);
+      }
+    } else {
+      // Packaged trip — clear simple-trip price, hydrate packages
+      setTripPrice('');
+      setTripFlexiblePricing(false);
+      setSelectedAmenities([]);
+
+      if (data.packages.length > 0) {
+        const importedPackages: CreateTripPackage[] = data.packages.map(p => ({
+          name_en: p.name_en,
+          name_ar: p.name_ar,
+          description_en: p.description_en,
+          description_ar: p.description_ar,
+          price: p.use_flexible_pricing ? 0 : p.price_sar,
+          currency: 'SAR',
+          is_refundable: p.is_refundable,
+          amenities: p.amenities as any,
+          max_participants: p.max_participants ?? undefined,
+        }));
+        setPackages(importedPackages);
+
+        const flexMap: { [index: number]: boolean } = {};
+        const tiersMap: { [index: number]: PricingTier[] } = {};
+        data.packages.forEach((p, idx) => {
+          flexMap[idx] = p.use_flexible_pricing;
+          tiersMap[idx] = p.use_flexible_pricing && p.flexible_tiers.length > 0
+            ? p.flexible_tiers
+            : [{ from_participant: 1, price_per_person: p.price_sar > 0 ? p.price_sar : 0 }];
+        });
+        setPackageFlexiblePricing(flexMap);
+        setPackagePricingTiers(tiersMap);
+
+        const fieldsMap: { [index: number]: string[] } = {};
+        data.packages.forEach((_, idx) => { fieldsMap[idx] = ['name', 'date_of_birth']; });
+        setPackageRequiredFields(fieldsMap);
+      }
+    }
+
     if (onImport) onImport(data);
   }, [onImport]);
 
@@ -1034,7 +1094,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
                 </label>
               ))}
             </div>
-            {selectedAmenities.includes('omra_assistance') && !destinationSelections.some(d => d._destinationName.toLowerCase().includes('makkah') || d._destinationName.includes('مكة') || d._destinationName.includes('مكه')) && (
+            {selectedAmenities.includes('omra_assistance') && !destinationSelections.some(d => (d._destinationName ?? '').toLowerCase().includes('makkah') || (d._destinationName ?? '').includes('مكة') || (d._destinationName ?? '').includes('مكه')) && (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">⚠ Omra Assistance is typically for trips to Makkah. Make sure the destination is set accordingly.</p>
             )}
           </div>

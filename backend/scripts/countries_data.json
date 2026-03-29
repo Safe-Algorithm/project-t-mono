@@ -2,7 +2,7 @@
   {
     "code": "AD",
     "name_en": "Andorra",
-    "name_ar": "إمارة أندورا",
+    "name_ar": "أندورا",
     "slug": "andorra",
     "tz": "Europe/Andorra",
     "cur": "EUR"
@@ -18,7 +18,7 @@
   {
     "code": "AF",
     "name_en": "Afghanistan",
-    "name_ar": "جمهورية أففانستان الإسلامية",
+    "name_ar": "أفغانستان",
     "slug": "afghanistan",
     "tz": "Asia/Kabul",
     "cur": "AFN"
@@ -42,7 +42,7 @@
   {
     "code": "AL",
     "name_en": "Albania",
-    "name_ar": "جمهورية ألبانيا",
+    "name_ar": "ألبانيا",
     "slug": "albania",
     "tz": "Europe/Tirane",
     "cur": "ALL"
@@ -50,7 +50,7 @@
   {
     "code": "AM",
     "name_en": "Armenia",
-    "name_ar": "جمهورية أرمينيا",
+    "name_ar": "أرمينيا",
     "slug": "armenia",
     "tz": "Asia/Yerevan",
     "cur": "AMD"
@@ -74,7 +74,7 @@
   {
     "code": "AR",
     "name_en": "Argentina",
-    "name_ar": "جمهورية الأرجنتين",
+    "name_ar": "الأرجنتين",
     "slug": "argentina",
     "tz": "America/Argentina/Buenos_Aires",
     "cur": "ARS"
@@ -90,7 +90,7 @@
   {
     "code": "AT",
     "name_en": "Austria",
-    "name_ar": "جمهورية النمسا",
+    "name_ar": "النمسا",
     "slug": "austria",
     "tz": "Europe/Vienna",
     "cur": "EUR"
@@ -98,7 +98,7 @@
   {
     "code": "AU",
     "name_en": "Australia",
-    "name_ar": "كومونولث أستراليا",
+    "name_ar": "أستراليا",
     "slug": "australia",
     "tz": "Australia/Sydney",
     "cur": "AUD"
@@ -122,7 +122,7 @@
   {
     "code": "AZ",
     "name_en": "Azerbaijan",
-    "name_ar": "جمهورية أذربيجان",
+    "name_ar": "أذربيجان",
     "slug": "azerbaijan",
     "tz": "Asia/Baku",
     "cur": "AZN"
@@ -130,7 +130,7 @@
   {
     "code": "BA",
     "name_en": "Bosnia and Herzegovina",
-    "name_ar": "جمهورية البوسنة والهرسك",
+    "name_ar": "البوسنة والهرسك",
     "slug": "bosnia-and-herzegovina",
     "tz": "Europe/Sarajevo",
     "cur": "BAM"
@@ -146,7 +146,7 @@
   {
     "code": "BD",
     "name_en": "Bangladesh",
-    "name_ar": "جمهورية بنغلاديش الشعبية",
+    "name_ar": "بنغلاديش",
     "slug": "bangladesh",
     "tz": "Asia/Dhaka",
     "cur": "BDT"
@@ -154,7 +154,7 @@
   {
     "code": "BE",
     "name_en": "Belgium",
-    "name_ar": "مملكة بلجيكا",
+    "name_ar": "بلجيكا",
     "slug": "belgium",
     "tz": "Europe/Brussels",
     "cur": "EUR"
@@ -170,7 +170,7 @@
   {
     "code": "BG",
     "name_en": "Bulgaria",
-    "name_ar": "جمهورية بلغاريا",
+    "name_ar": "بلغاريا",
     "slug": "bulgaria",
     "tz": "Europe/Sofia",
     "cur": "BGN"
@@ -178,7 +178,7 @@
   {
     "code": "BH",
     "name_en": "Bahrain",
-    "name_ar": "مملكة البحرين",
+    "name_ar": "البحرين",
     "slug": "bahrain",
     "tz": "Asia/Bahrain",
     "cur": "BHD"
@@ -186,7 +186,7 @@
   {
     "code": "BI",
     "name_en": "Burundi",
-    "name_ar": "جمهورية بوروندي",
+    "name_ar": "بوروندي",
     "slug": "burundi",
     "tz": "Africa/Bujumbura",
     "cur": "BIF"
@@ -194,7 +194,7 @@
   {
     "code": "BJ",
     "name_en": "Benin",
-    "name_ar": "جمهورية بنين",
+    "name_ar": "بنين",
     "slug": "benin",
     "tz": "Africa/Porto-Novo",
     "cur": "XOF"
@@ -202,7 +202,7 @@
   {
     "code": "BL",
     "name_en": "Saint Barthélemy",
-    "name_ar": "التجمع الإقليمي لسانت بارتيليمي",
+    "name_ar": "سانت بارتيلمي",
     "slug": "saint-barthélemy",
     "tz": "America/St_Barthelemy",
     "cur": "EUR"
@@ -218,7 +218,7 @@
   {
     "code": "BN",
     "name_en": "Brunei",
-    "name_ar": "بروناي دار السلام",
+    "name_ar": "بروناي",
     "slug": "brunei",
     "tz": "Asia/Brunei",
     "cur": "BND"
@@ -226,7 +226,7 @@
   {
     "code": "BO",
     "name_en": "Bolivia",
-    "name_ar": "دولة بوليفيا المتعددة القوميات",
+    "name_ar": "بوليفيا",
     "slug": "bolivia",
     "tz": "America/La_Paz",
     "cur": "BOB"
@@ -242,7 +242,7 @@
   {
     "code": "BR",
     "name_en": "Brazil",
-    "name_ar": "جمهورية البرازيل الاتحادية",
+    "name_ar": "البرازيل",
     "slug": "brazil",
     "tz": "America/Sao_Paulo",
     "cur": "BRL"
@@ -250,7 +250,7 @@
   {
     "code": "BS",
     "name_en": "Bahamas",
-    "name_ar": "كومنولث جزر البهاما",
+    "name_ar": "جزر البهاما",
     "slug": "bahamas",
     "tz": "America/Nassau",
     "cur": "BSD"
@@ -258,7 +258,7 @@
   {
     "code": "BT",
     "name_en": "Bhutan",
-    "name_ar": "مملكة بوتان",
+    "name_ar": "بوتان",
     "slug": "bhutan",
     "tz": "Asia/Thimphu",
     "cur": "BTN"
@@ -274,7 +274,7 @@
   {
     "code": "BW",
     "name_en": "Botswana",
-    "name_ar": "جمهورية بوتسوانا",
+    "name_ar": "بوتسوانا",
     "slug": "botswana",
     "tz": "Africa/Gaborone",
     "cur": "BWP"
@@ -282,7 +282,7 @@
   {
     "code": "BY",
     "name_en": "Belarus",
-    "name_ar": "جمهورية بيلاروسيا",
+    "name_ar": "بيلاروسيا",
     "slug": "belarus",
     "tz": "Europe/Minsk",
     "cur": "BYN"
@@ -306,7 +306,7 @@
   {
     "code": "CC",
     "name_en": "Cocos (Keeling) Islands",
-    "name_ar": "إقليم جزر كوكوس",
+    "name_ar": "جزر كوكوس",
     "slug": "cocos-keeling-islands",
     "tz": "Indian/Cocos",
     "cur": "AUD"
@@ -314,7 +314,7 @@
   {
     "code": "CD",
     "name_en": "DR Congo",
-    "name_ar": "جمهورية الكونغو الديمقراطية",
+    "name_ar": "الكونغو الديمقراطية",
     "slug": "dr-congo",
     "tz": "Africa/Kinshasa",
     "cur": "CDF"
@@ -322,7 +322,7 @@
   {
     "code": "CF",
     "name_en": "Central African Republic",
-    "name_ar": "جمهورية أفريقيا الوسطى",
+    "name_ar": "أفريقيا الوسطى",
     "slug": "central-african-republic",
     "tz": "Africa/Bangui",
     "cur": "XAF"
@@ -330,7 +330,7 @@
   {
     "code": "CG",
     "name_en": "Republic of the Congo",
-    "name_ar": "جمهورية الكونغو",
+    "name_ar": "الكونغو",
     "slug": "republic-of-the-congo",
     "tz": "Africa/Brazzaville",
     "cur": "XAF"
@@ -338,7 +338,7 @@
   {
     "code": "CH",
     "name_en": "Switzerland",
-    "name_ar": "الاتحاد السويسري",
+    "name_ar": "سويسرا",
     "slug": "switzerland",
     "tz": "Europe/Zurich",
     "cur": "CHF"
@@ -346,7 +346,7 @@
   {
     "code": "CI",
     "name_en": "Ivory Coast",
-    "name_ar": "جمهورية ساحل العاج",
+    "name_ar": "ساحل العاج",
     "slug": "ivory-coast",
     "tz": "Africa/Abidjan",
     "cur": "XOF"
@@ -362,7 +362,7 @@
   {
     "code": "CL",
     "name_en": "Chile",
-    "name_ar": "جمهورية تشيلي",
+    "name_ar": "تشيلي",
     "slug": "chile",
     "tz": "America/Santiago",
     "cur": "CLP"
@@ -370,7 +370,7 @@
   {
     "code": "CM",
     "name_en": "Cameroon",
-    "name_ar": "جمهورية الكاميرون",
+    "name_ar": "الكاميرون",
     "slug": "cameroon",
     "tz": "Africa/Douala",
     "cur": "XAF"
@@ -378,7 +378,7 @@
   {
     "code": "CN",
     "name_en": "China",
-    "name_ar": "جمهورية الصين الشعبية",
+    "name_ar": "الصين",
     "slug": "china",
     "tz": "Asia/Shanghai",
     "cur": "CNY"
@@ -386,7 +386,7 @@
   {
     "code": "CO",
     "name_en": "Colombia",
-    "name_ar": "جمهورية كولومبيا",
+    "name_ar": "كولومبيا",
     "slug": "colombia",
     "tz": "America/Bogota",
     "cur": "COP"
@@ -394,7 +394,7 @@
   {
     "code": "CR",
     "name_en": "Costa Rica",
-    "name_ar": "جمهورية كوستاريكا",
+    "name_ar": "كوستاريكا",
     "slug": "costa-rica",
     "tz": "America/Costa_Rica",
     "cur": "CRC"
@@ -402,7 +402,7 @@
   {
     "code": "CU",
     "name_en": "Cuba",
-    "name_ar": "جمهورية كوبا",
+    "name_ar": "كوبا",
     "slug": "cuba",
     "tz": "America/Havana",
     "cur": "CUC"
@@ -410,7 +410,7 @@
   {
     "code": "CV",
     "name_en": "Cape Verde",
-    "name_ar": "جمهورية كابو فيردي",
+    "name_ar": "الرأس الأخضر",
     "slug": "cape-verde",
     "tz": "Atlantic/Cape_Verde",
     "cur": "CVE"
@@ -418,7 +418,7 @@
   {
     "code": "CW",
     "name_en": "Curaçao",
-    "name_ar": "دولة كوراساو",
+    "name_ar": "كوراساو",
     "slug": "curaçao",
     "tz": "America/Curacao",
     "cur": "ANG"
@@ -434,7 +434,7 @@
   {
     "code": "CY",
     "name_en": "Cyprus",
-    "name_ar": "جمهورية قبرص",
+    "name_ar": "قبرص",
     "slug": "cyprus",
     "tz": "Asia/Nicosia",
     "cur": "EUR"
@@ -442,7 +442,7 @@
   {
     "code": "CZ",
     "name_en": "Czechia",
-    "name_ar": "جمهورية التشيك",
+    "name_ar": "التشيك",
     "slug": "czechia",
     "tz": "Europe/Prague",
     "cur": "CZK"
@@ -450,7 +450,7 @@
   {
     "code": "DE",
     "name_en": "Germany",
-    "name_ar": "جمهورية ألمانيا الاتحادية",
+    "name_ar": "ألمانيا",
     "slug": "germany",
     "tz": "Europe/Berlin",
     "cur": "EUR"
@@ -458,7 +458,7 @@
   {
     "code": "DJ",
     "name_en": "Djibouti",
-    "name_ar": "جمهورية جيبوتي",
+    "name_ar": "جيبوتي",
     "slug": "djibouti",
     "tz": "Africa/Djibouti",
     "cur": "DJF"
@@ -466,7 +466,7 @@
   {
     "code": "DK",
     "name_en": "Denmark",
-    "name_ar": "مملكة الدنمارك",
+    "name_ar": "الدنمارك",
     "slug": "denmark",
     "tz": "Europe/Copenhagen",
     "cur": "DKK"
@@ -474,7 +474,7 @@
   {
     "code": "DM",
     "name_en": "Dominica",
-    "name_ar": "كومونولث دومينيكا",
+    "name_ar": "دومينيكا",
     "slug": "dominica",
     "tz": "America/Dominica",
     "cur": "XCD"
@@ -490,7 +490,7 @@
   {
     "code": "DZ",
     "name_en": "Algeria",
-    "name_ar": "الجمهورية الديمقراطية الشعبية الجزائرية",
+    "name_ar": "الجزائر",
     "slug": "algeria",
     "tz": "Africa/Algiers",
     "cur": "DZD"
@@ -498,7 +498,7 @@
   {
     "code": "EC",
     "name_en": "Ecuador",
-    "name_ar": "جمهورية الإكوادور",
+    "name_ar": "الإكوادور",
     "slug": "ecuador",
     "tz": "America/Guayaquil",
     "cur": "USD"
@@ -506,7 +506,7 @@
   {
     "code": "EE",
     "name_en": "Estonia",
-    "name_ar": "جمهورية إستونيا",
+    "name_ar": "إستونيا",
     "slug": "estonia",
     "tz": "Europe/Tallinn",
     "cur": "EUR"
@@ -514,7 +514,7 @@
   {
     "code": "EG",
     "name_en": "Egypt",
-    "name_ar": "جمهورية مصر العربية",
+    "name_ar": "مصر",
     "slug": "egypt",
     "tz": "Africa/Cairo",
     "cur": "EGP"
@@ -522,7 +522,7 @@
   {
     "code": "EH",
     "name_en": "Western Sahara",
-    "name_ar": "الجمهورية العربية الصحراوية الديمقراطية",
+    "name_ar": "الصحراء الغربية",
     "slug": "western-sahara",
     "tz": "Africa/El_Aaiun",
     "cur": "DZD"
@@ -530,7 +530,7 @@
   {
     "code": "ER",
     "name_en": "Eritrea",
-    "name_ar": "دولة إريتريا",
+    "name_ar": "إريتريا",
     "slug": "eritrea",
     "tz": "Africa/Asmara",
     "cur": "ERN"
@@ -538,7 +538,7 @@
   {
     "code": "ES",
     "name_en": "Spain",
-    "name_ar": "مملكة إسبانيا",
+    "name_ar": "إسبانيا",
     "slug": "spain",
     "tz": "Europe/Madrid",
     "cur": "EUR"
@@ -546,7 +546,7 @@
   {
     "code": "ET",
     "name_en": "Ethiopia",
-    "name_ar": "جمهورية إثيوبيا الفدرالية الديموقراطية",
+    "name_ar": "إثيوبيا",
     "slug": "ethiopia",
     "tz": "Africa/Addis_Ababa",
     "cur": "ETB"
@@ -554,7 +554,7 @@
   {
     "code": "FI",
     "name_en": "Finland",
-    "name_ar": "جمهورية فنلندا",
+    "name_ar": "فنلندا",
     "slug": "finland",
     "tz": "Europe/Helsinki",
     "cur": "EUR"
@@ -562,7 +562,7 @@
   {
     "code": "FJ",
     "name_en": "Fiji",
-    "name_ar": "جمهورية جزر فيجي",
+    "name_ar": "فيجي",
     "slug": "fiji",
     "tz": "Pacific/Fiji",
     "cur": "FJD"
@@ -578,7 +578,7 @@
   {
     "code": "FM",
     "name_en": "Micronesia",
-    "name_ar": "ولايات ميكرونيسيا المتحدة",
+    "name_ar": "ميكرونيسيا",
     "slug": "micronesia",
     "tz": "Pacific/Pohnpei",
     "cur": "USD"
@@ -594,7 +594,7 @@
   {
     "code": "FR",
     "name_en": "France",
-    "name_ar": "الجمهورية الفرنسية",
+    "name_ar": "فرنسا",
     "slug": "france",
     "tz": "Europe/Paris",
     "cur": "EUR"
@@ -602,7 +602,7 @@
   {
     "code": "GA",
     "name_en": "Gabon",
-    "name_ar": "جمهورية الغابون",
+    "name_ar": "الغابون",
     "slug": "gabon",
     "tz": "Africa/Libreville",
     "cur": "XAF"
@@ -610,7 +610,7 @@
   {
     "code": "GB",
     "name_en": "United Kingdom",
-    "name_ar": "المملكة المتحدة لبريطانيا العظمى وايرلندا الشمالية",
+    "name_ar": "المملكة المتحدة",
     "slug": "united-kingdom",
     "tz": "Europe/London",
     "cur": "GBP"
@@ -650,7 +650,7 @@
   {
     "code": "GH",
     "name_en": "Ghana",
-    "name_ar": "جمهورية غانا",
+    "name_ar": "غانا",
     "slug": "ghana",
     "tz": "Africa/Accra",
     "cur": "GHS"
@@ -674,7 +674,7 @@
   {
     "code": "GM",
     "name_en": "Gambia",
-    "name_ar": "جمهورية غامبيا",
+    "name_ar": "غامبيا",
     "slug": "gambia",
     "tz": "Africa/Banjul",
     "cur": "GMD"
@@ -682,7 +682,7 @@
   {
     "code": "GN",
     "name_en": "Guinea",
-    "name_ar": "جمهورية غينيا",
+    "name_ar": "غينيا",
     "slug": "guinea",
     "tz": "Africa/Conakry",
     "cur": "GNF"
@@ -698,7 +698,7 @@
   {
     "code": "GQ",
     "name_en": "Equatorial Guinea",
-    "name_ar": "جمهورية غينيا الاستوائية",
+    "name_ar": "غينيا الاستوائية",
     "slug": "equatorial-guinea",
     "tz": "Africa/Malabo",
     "cur": "XAF"
@@ -706,7 +706,7 @@
   {
     "code": "GR",
     "name_en": "Greece",
-    "name_ar": "الجمهورية الهيلينية",
+    "name_ar": "اليونان",
     "slug": "greece",
     "tz": "Europe/Athens",
     "cur": "EUR"
@@ -714,7 +714,7 @@
   {
     "code": "GS",
     "name_en": "South Georgia",
-    "name_ar": "جورجيا الجنوبية وجزر ساندوتش الجنوبية",
+    "name_ar": "جورجيا الجنوبية",
     "slug": "south-georgia",
     "tz": "Atlantic/South_Georgia",
     "cur": "GBP"
@@ -722,7 +722,7 @@
   {
     "code": "GT",
     "name_en": "Guatemala",
-    "name_ar": "جمهورية غواتيمالا",
+    "name_ar": "غواتيمالا",
     "slug": "guatemala",
     "tz": "America/Guatemala",
     "cur": "GTQ"
@@ -738,7 +738,7 @@
   {
     "code": "GW",
     "name_en": "Guinea-Bissau",
-    "name_ar": "جمهورية غينيا بيساو",
+    "name_ar": "غينيا بيساو",
     "slug": "guinea-bissau",
     "tz": "Africa/Bissau",
     "cur": "XOF"
@@ -746,7 +746,7 @@
   {
     "code": "GY",
     "name_en": "Guyana",
-    "name_ar": "جمهورية غيانا التعاونية",
+    "name_ar": "غيانا",
     "slug": "guyana",
     "tz": "America/Guyana",
     "cur": "GYD"
@@ -754,7 +754,7 @@
   {
     "code": "HK",
     "name_en": "Hong Kong",
-    "name_ar": "منطقة هونغ كونغ الادارية التابعة لجمهورية الصين الشعبية",
+    "name_ar": "هونغ كونغ",
     "slug": "hong-kong",
     "tz": "Asia/Hong_Kong",
     "cur": "HKD"
@@ -770,7 +770,7 @@
   {
     "code": "HN",
     "name_en": "Honduras",
-    "name_ar": "جمهورية هندوراس",
+    "name_ar": "هندوراس",
     "slug": "honduras",
     "tz": "America/Tegucigalpa",
     "cur": "HNL"
@@ -778,7 +778,7 @@
   {
     "code": "HR",
     "name_en": "Croatia",
-    "name_ar": "جمهورية كرواتيا",
+    "name_ar": "كرواتيا",
     "slug": "croatia",
     "tz": "Europe/Zagreb",
     "cur": "EUR"
@@ -786,7 +786,7 @@
   {
     "code": "HT",
     "name_en": "Haiti",
-    "name_ar": "جمهورية هايتي",
+    "name_ar": "هايتي",
     "slug": "haiti",
     "tz": "America/Port-au-Prince",
     "cur": "HTG"
@@ -794,7 +794,7 @@
   {
     "code": "HU",
     "name_en": "Hungary",
-    "name_ar": "الجمهورية المجرية",
+    "name_ar": "المجر",
     "slug": "hungary",
     "tz": "Europe/Budapest",
     "cur": "HUF"
@@ -802,7 +802,7 @@
   {
     "code": "ID",
     "name_en": "Indonesia",
-    "name_ar": "جمهورية إندونيسيا",
+    "name_ar": "إندونيسيا",
     "slug": "indonesia",
     "tz": "Asia/Jakarta",
     "cur": "IDR"
@@ -810,7 +810,7 @@
   {
     "code": "IE",
     "name_en": "Ireland",
-    "name_ar": "جمهورية أيرلندا",
+    "name_ar": "أيرلندا",
     "slug": "ireland",
     "tz": "Europe/Dublin",
     "cur": "EUR"
@@ -818,7 +818,7 @@
   {
     "code": "IL",
     "name_en": "Israel",
-    "name_ar": "دولة إسرائيل",
+    "name_ar": "إسرائيل",
     "slug": "israel",
     "tz": "Asia/Jerusalem",
     "cur": "ILS"
@@ -834,7 +834,7 @@
   {
     "code": "IN",
     "name_en": "India",
-    "name_ar": "جمهورية الهند",
+    "name_ar": "الهند",
     "slug": "india",
     "tz": "Asia/Kolkata",
     "cur": "INR"
@@ -842,7 +842,7 @@
   {
     "code": "IO",
     "name_en": "British Indian Ocean Territory",
-    "name_ar": "إقليم المحيط الهندي البريطاني",
+    "name_ar": "الإقليم البريطاني في المحيط الهندي",
     "slug": "british-indian-ocean-territory",
     "tz": "Indian/Chagos",
     "cur": "USD"
@@ -850,7 +850,7 @@
   {
     "code": "IQ",
     "name_en": "Iraq",
-    "name_ar": "جمهورية العراق",
+    "name_ar": "العراق",
     "slug": "iraq",
     "tz": "Asia/Baghdad",
     "cur": "IQD"
@@ -858,7 +858,7 @@
   {
     "code": "IR",
     "name_en": "Iran",
-    "name_ar": "جمهورية إيران الإسلامية",
+    "name_ar": "إيران",
     "slug": "iran",
     "tz": "Asia/Tehran",
     "cur": "IRR"
@@ -874,7 +874,7 @@
   {
     "code": "IT",
     "name_en": "Italy",
-    "name_ar": "الجمهورية الإيطالية",
+    "name_ar": "إيطاليا",
     "slug": "italy",
     "tz": "Europe/Rome",
     "cur": "EUR"
@@ -898,7 +898,7 @@
   {
     "code": "JO",
     "name_en": "Jordan",
-    "name_ar": "المملكة الأردنية الهاشمية",
+    "name_ar": "الأردن",
     "slug": "jordan",
     "tz": "Asia/Amman",
     "cur": "JOD"
@@ -914,7 +914,7 @@
   {
     "code": "KE",
     "name_en": "Kenya",
-    "name_ar": "جمهورية كينيا",
+    "name_ar": "كينيا",
     "slug": "kenya",
     "tz": "Africa/Nairobi",
     "cur": "KES"
@@ -922,7 +922,7 @@
   {
     "code": "KG",
     "name_en": "Kyrgyzstan",
-    "name_ar": "الجمهورية القيرغيزية",
+    "name_ar": "قيرغيزستان",
     "slug": "kyrgyzstan",
     "tz": "Asia/Bishkek",
     "cur": "KGS"
@@ -930,7 +930,7 @@
   {
     "code": "KH",
     "name_en": "Cambodia",
-    "name_ar": "مملكة كمبوديا",
+    "name_ar": "كمبوديا",
     "slug": "cambodia",
     "tz": "Asia/Phnom_Penh",
     "cur": "KHR"
@@ -938,7 +938,7 @@
   {
     "code": "KI",
     "name_en": "Kiribati",
-    "name_ar": "جمهورية كيريباتي",
+    "name_ar": "كيريباتي",
     "slug": "kiribati",
     "tz": "Pacific/Tarawa",
     "cur": "AUD"
@@ -946,7 +946,7 @@
   {
     "code": "KM",
     "name_en": "Comoros",
-    "name_ar": "الإتحاد القمري",
+    "name_ar": "جزر القمر",
     "slug": "comoros",
     "tz": "Indian/Comoro",
     "cur": "KMF"
@@ -954,7 +954,7 @@
   {
     "code": "KN",
     "name_en": "Saint Kitts and Nevis",
-    "name_ar": "اتحاد القديس كريستوفر ونيفيس",
+    "name_ar": "سانت كيتس ونيفيس",
     "slug": "saint-kitts-and-nevis",
     "tz": "America/St_Kitts",
     "cur": "XCD"
@@ -962,7 +962,7 @@
   {
     "code": "KP",
     "name_en": "North Korea",
-    "name_ar": "جمهورية كوريا الديمقراطية الشعبية",
+    "name_ar": "كوريا الشمالية",
     "slug": "north-korea",
     "tz": "Asia/Pyongyang",
     "cur": "KPW"
@@ -970,7 +970,7 @@
   {
     "code": "KR",
     "name_en": "South Korea",
-    "name_ar": "جمهورية كوريا",
+    "name_ar": "كوريا الجنوبية",
     "slug": "south-korea",
     "tz": "Asia/Seoul",
     "cur": "KRW"
@@ -978,7 +978,7 @@
   {
     "code": "KW",
     "name_en": "Kuwait",
-    "name_ar": "دولة الكويت",
+    "name_ar": "الكويت",
     "slug": "kuwait",
     "tz": "Asia/Kuwait",
     "cur": "KWD"
@@ -994,7 +994,7 @@
   {
     "code": "KZ",
     "name_en": "Kazakhstan",
-    "name_ar": "جمهورية كازاخستان",
+    "name_ar": "كازاخستان",
     "slug": "kazakhstan",
     "tz": "Asia/Almaty",
     "cur": "KZT"
@@ -1002,7 +1002,7 @@
   {
     "code": "LA",
     "name_en": "Laos",
-    "name_ar": "جمهورية لاوس الديمقراطية الشعبية",
+    "name_ar": "لاوس",
     "slug": "laos",
     "tz": "Asia/Vientiane",
     "cur": "LAK"
@@ -1010,7 +1010,7 @@
   {
     "code": "LB",
     "name_en": "Lebanon",
-    "name_ar": "الجمهورية اللبنانية",
+    "name_ar": "لبنان",
     "slug": "lebanon",
     "tz": "Asia/Beirut",
     "cur": "LBP"
@@ -1026,7 +1026,7 @@
   {
     "code": "LI",
     "name_en": "Liechtenstein",
-    "name_ar": "إمارة ليختنشتاين",
+    "name_ar": "ليختنشتاين",
     "slug": "liechtenstein",
     "tz": "Europe/Vaduz",
     "cur": "CHF"
@@ -1034,7 +1034,7 @@
   {
     "code": "LK",
     "name_en": "Sri Lanka",
-    "name_ar": "جمهورية سريلانكا الديمقراطية الشعبية",
+    "name_ar": "سريلانكا",
     "slug": "sri-lanka",
     "tz": "Asia/Colombo",
     "cur": "LKR"
@@ -1042,7 +1042,7 @@
   {
     "code": "LR",
     "name_en": "Liberia",
-    "name_ar": "جمهورية ليبيريا",
+    "name_ar": "ليبيريا",
     "slug": "liberia",
     "tz": "Africa/Monrovia",
     "cur": "LRD"
@@ -1050,7 +1050,7 @@
   {
     "code": "LS",
     "name_en": "Lesotho",
-    "name_ar": "مملكة ليسوتو",
+    "name_ar": "ليسوتو",
     "slug": "lesotho",
     "tz": "Africa/Maseru",
     "cur": "LSL"
@@ -1058,7 +1058,7 @@
   {
     "code": "LT",
     "name_en": "Lithuania",
-    "name_ar": "جمهورية ليتوانيا",
+    "name_ar": "ليتوانيا",
     "slug": "lithuania",
     "tz": "Europe/Vilnius",
     "cur": "EUR"
@@ -1066,7 +1066,7 @@
   {
     "code": "LU",
     "name_en": "Luxembourg",
-    "name_ar": "دوقية لوكسمبورغ",
+    "name_ar": "لوكسمبورغ",
     "slug": "luxembourg",
     "tz": "Europe/Luxembourg",
     "cur": "EUR"
@@ -1074,7 +1074,7 @@
   {
     "code": "LV",
     "name_en": "Latvia",
-    "name_ar": "جمهورية لاتفيا",
+    "name_ar": "لاتفيا",
     "slug": "latvia",
     "tz": "Europe/Riga",
     "cur": "EUR"
@@ -1082,7 +1082,7 @@
   {
     "code": "LY",
     "name_en": "Libya",
-    "name_ar": "دولة ليبيا",
+    "name_ar": "ليبيا",
     "slug": "libya",
     "tz": "Africa/Tripoli",
     "cur": "LYD"
@@ -1090,7 +1090,7 @@
   {
     "code": "MA",
     "name_en": "Morocco",
-    "name_ar": "المملكة المغربية",
+    "name_ar": "المغرب",
     "slug": "morocco",
     "tz": "Africa/Casablanca",
     "cur": "MAD"
@@ -1098,7 +1098,7 @@
   {
     "code": "MC",
     "name_en": "Monaco",
-    "name_ar": "إمارة موناكو",
+    "name_ar": "موناكو",
     "slug": "monaco",
     "tz": "Europe/Monaco",
     "cur": "EUR"
@@ -1106,7 +1106,7 @@
   {
     "code": "MD",
     "name_en": "Moldova",
-    "name_ar": "جمهورية مولدوڤا",
+    "name_ar": "مولدوفا",
     "slug": "moldova",
     "tz": "Europe/Chisinau",
     "cur": "MDL"
@@ -1114,7 +1114,7 @@
   {
     "code": "ME",
     "name_en": "Montenegro",
-    "name_ar": "الجبل الاسود",
+    "name_ar": "الجبل الأسود",
     "slug": "montenegro",
     "tz": "Europe/Podgorica",
     "cur": "EUR"
@@ -1130,7 +1130,7 @@
   {
     "code": "MG",
     "name_en": "Madagascar",
-    "name_ar": "جمهورية مدغشقر",
+    "name_ar": "مدغشقر",
     "slug": "madagascar",
     "tz": "Indian/Antananarivo",
     "cur": "MGA"
@@ -1138,7 +1138,7 @@
   {
     "code": "MH",
     "name_en": "Marshall Islands",
-    "name_ar": "جمهورية جزر مارشال",
+    "name_ar": "جزر مارشال",
     "slug": "marshall-islands",
     "tz": "Pacific/Majuro",
     "cur": "USD"
@@ -1146,7 +1146,7 @@
   {
     "code": "MK",
     "name_en": "North Macedonia",
-    "name_ar": "جمهورية شمال مقدونيا",
+    "name_ar": "شمال مقدونيا",
     "slug": "north-macedonia",
     "tz": "Europe/Skopje",
     "cur": "MKD"
@@ -1154,7 +1154,7 @@
   {
     "code": "ML",
     "name_en": "Mali",
-    "name_ar": "جمهورية مالي",
+    "name_ar": "مالي",
     "slug": "mali",
     "tz": "Africa/Bamako",
     "cur": "XOF"
@@ -1162,7 +1162,7 @@
   {
     "code": "MM",
     "name_en": "Myanmar",
-    "name_ar": "جمهورية اتحاد ميانمار",
+    "name_ar": "ميانمار",
     "slug": "myanmar",
     "tz": "Asia/Yangon",
     "cur": "MMK"
@@ -1170,7 +1170,7 @@
   {
     "code": "MN",
     "name_en": "Mongolia",
-    "name_ar": "جمهورية منغوليا",
+    "name_ar": "منغوليا",
     "slug": "mongolia",
     "tz": "Asia/Ulaanbaatar",
     "cur": "MNT"
@@ -1178,7 +1178,7 @@
   {
     "code": "MO",
     "name_en": "Macau",
-    "name_ar": "منطقة ماكاو الإدارية التابعة لجمهورية الصين الشعبية",
+    "name_ar": "ماكاو",
     "slug": "macau",
     "tz": "Asia/Macau",
     "cur": "MOP"
@@ -1186,7 +1186,7 @@
   {
     "code": "MP",
     "name_en": "Northern Mariana Islands",
-    "name_ar": "كومونولث جزر ماريانا الشمالية",
+    "name_ar": "جزر ماريانا الشمالية",
     "slug": "northern-mariana-islands",
     "tz": "Pacific/Saipan",
     "cur": "USD"
@@ -1202,7 +1202,7 @@
   {
     "code": "MR",
     "name_en": "Mauritania",
-    "name_ar": "الجمهورية الإسلامية الموريتانية",
+    "name_ar": "موريتانيا",
     "slug": "mauritania",
     "tz": "Africa/Nouakchott",
     "cur": "MRU"
@@ -1218,7 +1218,7 @@
   {
     "code": "MT",
     "name_en": "Malta",
-    "name_ar": "جمهورية مالطا",
+    "name_ar": "مالطا",
     "slug": "malta",
     "tz": "Europe/Malta",
     "cur": "EUR"
@@ -1226,7 +1226,7 @@
   {
     "code": "MU",
     "name_en": "Mauritius",
-    "name_ar": "جمهورية موريشيوس",
+    "name_ar": "موريشيوس",
     "slug": "mauritius",
     "tz": "Indian/Mauritius",
     "cur": "MUR"
@@ -1234,7 +1234,7 @@
   {
     "code": "MV",
     "name_en": "Maldives",
-    "name_ar": "جمهورية المالديف",
+    "name_ar": "المالديف",
     "slug": "maldives",
     "tz": "Indian/Maldives",
     "cur": "MVR"
@@ -1242,7 +1242,7 @@
   {
     "code": "MW",
     "name_en": "Malawi",
-    "name_ar": "جمهورية مالاوي",
+    "name_ar": "مالاوي",
     "slug": "malawi",
     "tz": "Africa/Blantyre",
     "cur": "MWK"
@@ -1250,7 +1250,7 @@
   {
     "code": "MX",
     "name_en": "Mexico",
-    "name_ar": "الولايات المتحدة المكسيكية",
+    "name_ar": "المكسيك",
     "slug": "mexico",
     "tz": "America/Mexico_City",
     "cur": "MXN"
@@ -1266,7 +1266,7 @@
   {
     "code": "MZ",
     "name_en": "Mozambique",
-    "name_ar": "جمهورية موزمبيق",
+    "name_ar": "موزمبيق",
     "slug": "mozambique",
     "tz": "Africa/Maputo",
     "cur": "MZN"
@@ -1274,7 +1274,7 @@
   {
     "code": "NA",
     "name_en": "Namibia",
-    "name_ar": "جمهورية ناميبيا",
+    "name_ar": "ناميبيا",
     "slug": "namibia",
     "tz": "Africa/Windhoek",
     "cur": "NAD"
@@ -1290,7 +1290,7 @@
   {
     "code": "NE",
     "name_en": "Niger",
-    "name_ar": "جمهورية النيجر",
+    "name_ar": "النيجر",
     "slug": "niger",
     "tz": "Africa/Niamey",
     "cur": "XOF"
@@ -1298,7 +1298,7 @@
   {
     "code": "NF",
     "name_en": "Norfolk Island",
-    "name_ar": "إقليم جزيرة نورفولك",
+    "name_ar": "جزيرة نورفولك",
     "slug": "norfolk-island",
     "tz": "Pacific/Norfolk",
     "cur": "AUD"
@@ -1306,7 +1306,7 @@
   {
     "code": "NG",
     "name_en": "Nigeria",
-    "name_ar": "جمهورية نيجيريا الاتحادية",
+    "name_ar": "نيجيريا",
     "slug": "nigeria",
     "tz": "Africa/Lagos",
     "cur": "NGN"
@@ -1314,7 +1314,7 @@
   {
     "code": "NI",
     "name_en": "Nicaragua",
-    "name_ar": "جمهورية نيكاراغوا",
+    "name_ar": "نيكاراغوا",
     "slug": "nicaragua",
     "tz": "America/Managua",
     "cur": "NIO"
@@ -1322,7 +1322,7 @@
   {
     "code": "NL",
     "name_en": "Netherlands",
-    "name_ar": "مملكة هولندا",
+    "name_ar": "هولندا",
     "slug": "netherlands",
     "tz": "Europe/Amsterdam",
     "cur": "EUR"
@@ -1330,7 +1330,7 @@
   {
     "code": "NO",
     "name_en": "Norway",
-    "name_ar": "مملكة النرويج",
+    "name_ar": "النرويج",
     "slug": "norway",
     "tz": "Europe/Oslo",
     "cur": "NOK"
@@ -1338,7 +1338,7 @@
   {
     "code": "NP",
     "name_en": "Nepal",
-    "name_ar": "جمهورية نيبال الديمقراطية الاتحادية",
+    "name_ar": "نيبال",
     "slug": "nepal",
     "tz": "Asia/Kathmandu",
     "cur": "NPR"
@@ -1346,7 +1346,7 @@
   {
     "code": "NR",
     "name_en": "Nauru",
-    "name_ar": "جمهورية ناورو",
+    "name_ar": "ناورو",
     "slug": "nauru",
     "tz": "Pacific/Nauru",
     "cur": "AUD"
@@ -1370,7 +1370,7 @@
   {
     "code": "OM",
     "name_en": "Oman",
-    "name_ar": "سلطنة عمان",
+    "name_ar": "عُمان",
     "slug": "oman",
     "tz": "Asia/Muscat",
     "cur": "OMR"
@@ -1378,7 +1378,7 @@
   {
     "code": "PA",
     "name_en": "Panama",
-    "name_ar": "جمهورية بنما",
+    "name_ar": "بنما",
     "slug": "panama",
     "tz": "America/Panama",
     "cur": "PAB"
@@ -1386,7 +1386,7 @@
   {
     "code": "PE",
     "name_en": "Peru",
-    "name_ar": "جمهورية بيرو",
+    "name_ar": "بيرو",
     "slug": "peru",
     "tz": "America/Lima",
     "cur": "PEN"
@@ -1402,7 +1402,7 @@
   {
     "code": "PG",
     "name_en": "Papua New Guinea",
-    "name_ar": "دولة بابوا غينيا الجديدة",
+    "name_ar": "بابوا غينيا الجديدة",
     "slug": "papua-new-guinea",
     "tz": "Pacific/Port_Moresby",
     "cur": "PGK"
@@ -1410,7 +1410,7 @@
   {
     "code": "PH",
     "name_en": "Philippines",
-    "name_ar": "جمهورية الفلبين",
+    "name_ar": "الفلبين",
     "slug": "philippines",
     "tz": "Asia/Manila",
     "cur": "PHP"
@@ -1418,7 +1418,7 @@
   {
     "code": "PK",
     "name_en": "Pakistan",
-    "name_ar": "جمهورية باكستان الإسلامية",
+    "name_ar": "باكستان",
     "slug": "pakistan",
     "tz": "Asia/Karachi",
     "cur": "PKR"
@@ -1426,7 +1426,7 @@
   {
     "code": "PL",
     "name_en": "Poland",
-    "name_ar": "الجمهورية البولندية",
+    "name_ar": "بولندا",
     "slug": "poland",
     "tz": "Europe/Warsaw",
     "cur": "PLN"
@@ -1450,7 +1450,7 @@
   {
     "code": "PR",
     "name_en": "Puerto Rico",
-    "name_ar": "كومنولث بويرتوريكو",
+    "name_ar": "بورتوريكو",
     "slug": "puerto-rico",
     "tz": "America/Puerto_Rico",
     "cur": "USD"
@@ -1458,7 +1458,7 @@
   {
     "code": "PS",
     "name_en": "Palestine",
-    "name_ar": "دولة فلسطين",
+    "name_ar": "فلسطين",
     "slug": "palestine",
     "tz": "Asia/Gaza",
     "cur": "EGP"
@@ -1466,7 +1466,7 @@
   {
     "code": "PT",
     "name_en": "Portugal",
-    "name_ar": "الجمهورية البرتغالية",
+    "name_ar": "البرتغال",
     "slug": "portugal",
     "tz": "Europe/Lisbon",
     "cur": "EUR"
@@ -1474,7 +1474,7 @@
   {
     "code": "PW",
     "name_en": "Palau",
-    "name_ar": "جمهورية بالاو",
+    "name_ar": "بالاو",
     "slug": "palau",
     "tz": "Pacific/Palau",
     "cur": "USD"
@@ -1482,7 +1482,7 @@
   {
     "code": "PY",
     "name_en": "Paraguay",
-    "name_ar": "جمهورية باراغواي",
+    "name_ar": "باراغواي",
     "slug": "paraguay",
     "tz": "America/Asuncion",
     "cur": "PYG"
@@ -1490,7 +1490,7 @@
   {
     "code": "QA",
     "name_en": "Qatar",
-    "name_ar": "دولة قطر",
+    "name_ar": "قطر",
     "slug": "qatar",
     "tz": "Asia/Qatar",
     "cur": "QAR"
@@ -1514,7 +1514,7 @@
   {
     "code": "RS",
     "name_en": "Serbia",
-    "name_ar": "جمهورية صيربيا",
+    "name_ar": "صربيا",
     "slug": "serbia",
     "tz": "Europe/Belgrade",
     "cur": "RSD"
@@ -1522,7 +1522,7 @@
   {
     "code": "RU",
     "name_en": "Russia",
-    "name_ar": "روسيا الاتحادية",
+    "name_ar": "روسيا",
     "slug": "russia",
     "tz": "Europe/Moscow",
     "cur": "RUB"
@@ -1530,7 +1530,7 @@
   {
     "code": "RW",
     "name_en": "Rwanda",
-    "name_ar": "جمهورية رواندا",
+    "name_ar": "رواندا",
     "slug": "rwanda",
     "tz": "Africa/Kigali",
     "cur": "RWF"
@@ -1538,7 +1538,7 @@
   {
     "code": "SA",
     "name_en": "Saudi Arabia",
-    "name_ar": "المملكة العربية السعودية",
+    "name_ar": "السعودية",
     "slug": "saudi-arabia",
     "tz": "Asia/Riyadh",
     "cur": "SAR"
@@ -1554,7 +1554,7 @@
   {
     "code": "SC",
     "name_en": "Seychelles",
-    "name_ar": "جمهورية سيشل",
+    "name_ar": "سيشل",
     "slug": "seychelles",
     "tz": "Indian/Mahe",
     "cur": "SCR"
@@ -1562,7 +1562,7 @@
   {
     "code": "SD",
     "name_en": "Sudan",
-    "name_ar": "جمهورية السودان",
+    "name_ar": "السودان",
     "slug": "sudan",
     "tz": "Africa/Khartoum",
     "cur": "SDG"
@@ -1570,7 +1570,7 @@
   {
     "code": "SE",
     "name_en": "Sweden",
-    "name_ar": "مملكة السويد",
+    "name_ar": "السويد",
     "slug": "sweden",
     "tz": "Europe/Stockholm",
     "cur": "SEK"
@@ -1578,7 +1578,7 @@
   {
     "code": "SG",
     "name_en": "Singapore",
-    "name_ar": "جمهورية سنغافورة",
+    "name_ar": "سنغافورة",
     "slug": "singapore",
     "tz": "Asia/Singapore",
     "cur": "SGD"
@@ -1594,7 +1594,7 @@
   {
     "code": "SI",
     "name_en": "Slovenia",
-    "name_ar": "جمهورية سلوفينيا",
+    "name_ar": "سلوفينيا",
     "slug": "slovenia",
     "tz": "Europe/Ljubljana",
     "cur": "EUR"
@@ -1610,7 +1610,7 @@
   {
     "code": "SK",
     "name_en": "Slovakia",
-    "name_ar": "جمهورية سلوفاكيا",
+    "name_ar": "سلوفاكيا",
     "slug": "slovakia",
     "tz": "Europe/Bratislava",
     "cur": "EUR"
@@ -1618,7 +1618,7 @@
   {
     "code": "SL",
     "name_en": "Sierra Leone",
-    "name_ar": "جمهورية سيراليون",
+    "name_ar": "سيراليون",
     "slug": "sierra-leone",
     "tz": "Africa/Freetown",
     "cur": "SLE"
@@ -1626,7 +1626,7 @@
   {
     "code": "SM",
     "name_en": "San Marino",
-    "name_ar": "جمهورية سان مارينو",
+    "name_ar": "سان مارينو",
     "slug": "san-marino",
     "tz": "Europe/San_Marino",
     "cur": "EUR"
@@ -1634,7 +1634,7 @@
   {
     "code": "SN",
     "name_en": "Senegal",
-    "name_ar": "جمهورية السنغال",
+    "name_ar": "السنغال",
     "slug": "senegal",
     "tz": "Africa/Dakar",
     "cur": "XOF"
@@ -1642,7 +1642,7 @@
   {
     "code": "SO",
     "name_en": "Somalia",
-    "name_ar": "جمهورية الصومال الفيدرالية",
+    "name_ar": "الصومال",
     "slug": "somalia",
     "tz": "Africa/Mogadishu",
     "cur": "SOS"
@@ -1650,7 +1650,7 @@
   {
     "code": "SR",
     "name_en": "Suriname",
-    "name_ar": "جمهورية سورينام",
+    "name_ar": "سورينام",
     "slug": "suriname",
     "tz": "America/Paramaribo",
     "cur": "SRD"
@@ -1658,7 +1658,7 @@
   {
     "code": "SS",
     "name_en": "South Sudan",
-    "name_ar": "جمهورية جنوب السودان",
+    "name_ar": "جنوب السودان",
     "slug": "south-sudan",
     "tz": "Africa/Juba",
     "cur": "SSP"
@@ -1666,7 +1666,7 @@
   {
     "code": "ST",
     "name_en": "São Tomé and Príncipe",
-    "name_ar": "جمهورية ساو تومي وبرينسيب الديمقراطية",
+    "name_ar": "ساو تومي وبرينسيب",
     "slug": "são-tomé-and-príncipe",
     "tz": "Africa/Sao_Tome",
     "cur": "STN"
@@ -1674,7 +1674,7 @@
   {
     "code": "SV",
     "name_en": "El Salvador",
-    "name_ar": "جمهورية السلفادور",
+    "name_ar": "السلفادور",
     "slug": "el-salvador",
     "tz": "America/El_Salvador",
     "cur": "USD"
@@ -1690,7 +1690,7 @@
   {
     "code": "SY",
     "name_en": "Syria",
-    "name_ar": "الجمهورية العربية السورية",
+    "name_ar": "سوريا",
     "slug": "syria",
     "tz": "Asia/Damascus",
     "cur": "SYP"
@@ -1698,7 +1698,7 @@
   {
     "code": "SZ",
     "name_en": "Eswatini",
-    "name_ar": "مملكة إسواتيني",
+    "name_ar": "إسواتيني",
     "slug": "eswatini",
     "tz": "Africa/Mbabane",
     "cur": "SZL"
@@ -1714,7 +1714,7 @@
   {
     "code": "TD",
     "name_en": "Chad",
-    "name_ar": "جمهورية تشاد",
+    "name_ar": "تشاد",
     "slug": "chad",
     "tz": "Africa/Ndjamena",
     "cur": "XAF"
@@ -1722,7 +1722,7 @@
   {
     "code": "TF",
     "name_en": "French Southern and Antarctic Lands",
-    "name_ar": "مقاطعات وأقاليم ما وراء البحار الفرنسية",
+    "name_ar": "أراضي فرنسا الجنوبية",
     "slug": "french-southern-and-antarctic-lands",
     "tz": "Indian/Kerguelen",
     "cur": "EUR"
@@ -1730,7 +1730,7 @@
   {
     "code": "TG",
     "name_en": "Togo",
-    "name_ar": "جمهورية توغو",
+    "name_ar": "توغو",
     "slug": "togo",
     "tz": "Africa/Lome",
     "cur": "XOF"
@@ -1738,7 +1738,7 @@
   {
     "code": "TH",
     "name_en": "Thailand",
-    "name_ar": "مملكة تايلند",
+    "name_ar": "تايلند",
     "slug": "thailand",
     "tz": "Asia/Bangkok",
     "cur": "THB"
@@ -1746,7 +1746,7 @@
   {
     "code": "TJ",
     "name_en": "Tajikistan",
-    "name_ar": "جمهورية طاجيكستان",
+    "name_ar": "طاجيكستان",
     "slug": "tajikistan",
     "tz": "Asia/Dushanbe",
     "cur": "TJS"
@@ -1762,7 +1762,7 @@
   {
     "code": "TL",
     "name_en": "Timor-Leste",
-    "name_ar": "جمهورية تيمور الشرقية الديمقراطية",
+    "name_ar": "تيمور الشرقية",
     "slug": "timor-leste",
     "tz": "Asia/Dili",
     "cur": "USD"
@@ -1778,7 +1778,7 @@
   {
     "code": "TN",
     "name_en": "Tunisia",
-    "name_ar": "الجمهورية التونسية",
+    "name_ar": "تونس",
     "slug": "tunisia",
     "tz": "Africa/Tunis",
     "cur": "TND"
@@ -1786,7 +1786,7 @@
   {
     "code": "TO",
     "name_en": "Tonga",
-    "name_ar": "مملكة تونغا",
+    "name_ar": "تونغا",
     "slug": "tonga",
     "tz": "Pacific/Tongatapu",
     "cur": "TOP"
@@ -1794,7 +1794,7 @@
   {
     "code": "TR",
     "name_en": "Turkey",
-    "name_ar": "الجمهورية التركية",
+    "name_ar": "تركيا",
     "slug": "turkey",
     "tz": "Europe/Istanbul",
     "cur": "TRY"
@@ -1802,7 +1802,7 @@
   {
     "code": "TT",
     "name_en": "Trinidad and Tobago",
-    "name_ar": "جمهورية ترينيداد وتوباغو",
+    "name_ar": "ترينيداد وتوباغو",
     "slug": "trinidad-and-tobago",
     "tz": "America/Port_of_Spain",
     "cur": "TTD"
@@ -1818,7 +1818,7 @@
   {
     "code": "TW",
     "name_en": "Taiwan",
-    "name_ar": "جمهورية الصين (تايوان)",
+    "name_ar": "تايوان",
     "slug": "taiwan",
     "tz": "Asia/Taipei",
     "cur": "TWD"
@@ -1826,7 +1826,7 @@
   {
     "code": "TZ",
     "name_en": "Tanzania",
-    "name_ar": "جمهورية تنزانيا الاتحادية",
+    "name_ar": "تنزانيا",
     "slug": "tanzania",
     "tz": "Africa/Dar_es_Salaam",
     "cur": "TZS"
@@ -1842,7 +1842,7 @@
   {
     "code": "UG",
     "name_en": "Uganda",
-    "name_ar": "جمهورية أوغندا",
+    "name_ar": "أوغندا",
     "slug": "uganda",
     "tz": "Africa/Kampala",
     "cur": "UGX"
@@ -1850,7 +1850,7 @@
   {
     "code": "UM",
     "name_en": "United States Minor Outlying Islands",
-    "name_ar": "جزر الولايات المتحدة الصغيرة النائية",
+    "name_ar": "جزر الولايات المتحدة النائية",
     "slug": "united-states-minor-outlying-islands",
     "tz": "Pacific/Wake",
     "cur": "USD"
@@ -1858,7 +1858,7 @@
   {
     "code": "US",
     "name_en": "United States",
-    "name_ar": "الولايات المتحدة الامريكية",
+    "name_ar": "الولايات المتحدة",
     "slug": "united-states",
     "tz": "America/New_York",
     "cur": "USD"
@@ -1866,7 +1866,7 @@
   {
     "code": "UY",
     "name_en": "Uruguay",
-    "name_ar": "جمهورية الأوروغواي الشرقية",
+    "name_ar": "أوروغواي",
     "slug": "uruguay",
     "tz": "America/Montevideo",
     "cur": "UYU"
@@ -1874,7 +1874,7 @@
   {
     "code": "UZ",
     "name_en": "Uzbekistan",
-    "name_ar": "جمهورية أوزباكستان",
+    "name_ar": "أوزبكستان",
     "slug": "uzbekistan",
     "tz": "Asia/Tashkent",
     "cur": "UZS"
@@ -1882,7 +1882,7 @@
   {
     "code": "VA",
     "name_en": "Vatican City",
-    "name_ar": "دولة مدينة الفاتيكان",
+    "name_ar": "الفاتيكان",
     "slug": "vatican-city",
     "tz": "Europe/Vatican",
     "cur": "EUR"
@@ -1898,7 +1898,7 @@
   {
     "code": "VE",
     "name_en": "Venezuela",
-    "name_ar": "جمهورية فنزويلا البوليفارية",
+    "name_ar": "فنزويلا",
     "slug": "venezuela",
     "tz": "America/Caracas",
     "cur": "VES"
@@ -1922,7 +1922,7 @@
   {
     "code": "VN",
     "name_en": "Vietnam",
-    "name_ar": "جمهورية فيتنام الاشتراكية",
+    "name_ar": "فيتنام",
     "slug": "vietnam",
     "tz": "Asia/Ho_Chi_Minh",
     "cur": "VND"
@@ -1930,7 +1930,7 @@
   {
     "code": "VU",
     "name_en": "Vanuatu",
-    "name_ar": "جمهورية فانواتو",
+    "name_ar": "فانواتو",
     "slug": "vanuatu",
     "tz": "Pacific/Efate",
     "cur": "VUV"
@@ -1938,7 +1938,7 @@
   {
     "code": "WF",
     "name_en": "Wallis and Futuna",
-    "name_ar": "إقليم جزر واليس وفوتونا",
+    "name_ar": "واليس وفوتونا",
     "slug": "wallis-and-futuna",
     "tz": "Pacific/Wallis",
     "cur": "XPF"
@@ -1946,7 +1946,7 @@
   {
     "code": "WS",
     "name_en": "Samoa",
-    "name_ar": "دولة ساموا المستقلة",
+    "name_ar": "ساموا",
     "slug": "samoa",
     "tz": "Pacific/Apia",
     "cur": "WST"
@@ -1954,7 +1954,7 @@
   {
     "code": "XK",
     "name_en": "Kosovo",
-    "name_ar": "جمهورية كوسوفو",
+    "name_ar": "كوسوفو",
     "slug": "kosovo",
     "tz": "Europe/Paris",
     "cur": "EUR"
@@ -1962,7 +1962,7 @@
   {
     "code": "YE",
     "name_en": "Yemen",
-    "name_ar": "الجمهورية اليمنية",
+    "name_ar": "اليمن",
     "slug": "yemen",
     "tz": "Asia/Aden",
     "cur": "YER"
@@ -1978,7 +1978,7 @@
   {
     "code": "ZA",
     "name_en": "South Africa",
-    "name_ar": "جمهورية جنوب أفريقيا",
+    "name_ar": "جنوب أفريقيا",
     "slug": "south-africa",
     "tz": "Africa/Johannesburg",
     "cur": "ZAR"
@@ -1986,7 +1986,7 @@
   {
     "code": "ZM",
     "name_en": "Zambia",
-    "name_ar": "جمهورية زامبيا",
+    "name_ar": "زامبيا",
     "slug": "zambia",
     "tz": "Africa/Lusaka",
     "cur": "ZMW"
@@ -1994,7 +1994,7 @@
   {
     "code": "ZW",
     "name_en": "Zimbabwe",
-    "name_ar": "جمهورية زيمبابوي",
+    "name_ar": "زيمبابوي",
     "slug": "zimbabwe",
     "tz": "Africa/Harare",
     "cur": "ZWL"

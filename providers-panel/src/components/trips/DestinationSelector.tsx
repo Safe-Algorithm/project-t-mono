@@ -6,8 +6,8 @@ import { destinationService, Destination, Place, TripDestination } from '../../s
 export interface DestinationSelection {
   destination_id: string;
   place_id?: string;
-  // Display info stored for UI rendering
-  _destinationName: string;
+  // Display info stored for UI rendering (optional — may be empty for imported selections)
+  _destinationName?: string;
   _placeName?: string;
 }
 
@@ -191,7 +191,7 @@ const DestinationSelector: React.FC<DestinationSelectorProps> = ({
     selections.forEach((s, i) => {
       displayItems.push({
         key: String(i),
-        name: s._destinationName,
+        name: s._destinationName ?? '',
         placeName: s._placeName,
       });
     });

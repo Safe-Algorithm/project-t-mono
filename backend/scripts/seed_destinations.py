@@ -44,12 +44,19 @@ def seed_countries(session: Session) -> None:
     existing = session.exec(
         select(Destination).where(Destination.type == DestinationType.COUNTRY)
     ).all()
-    existing_codes = {d.country_code for d in existing}
+    existing_by_code = {d.country_code: d for d in existing}
 
     created = 0
+    updated = 0
     for c in data:
         code = c["code"]
-        if code in existing_codes:
+        if code in existing_by_code:
+            dest = existing_by_code[code]
+            if dest.name_ar != c["name_ar"] or dest.name_en != c["name_en"]:
+                dest.name_ar = c["name_ar"]
+                dest.name_en = c["name_en"]
+                session.add(dest)
+                updated += 1
             continue
         slug = c["slug"] or slugify(c["name_en"])
         if not slug:
@@ -68,11 +75,11 @@ def seed_countries(session: Session) -> None:
             display_order=0,
         )
         session.add(destination)
-        existing_codes.add(code)
+        existing_by_code[code] = destination
         created += 1
 
     session.commit()
-    print(f"Countries: seeded {created} new, {len(existing_codes) - created} already existed.")
+    print(f"Countries: seeded {created} new, {updated} updated, {len(existing_by_code) - created} already up-to-date.")
 
 
 # Major cities per country code: list of (name_en, name_ar, timezone_override, currency_override)
@@ -458,5 +465,6 @@ def seed_destinations(session: Session) -> None:
 
 
 if __name__ == "__main__":
+    from app.core.db import engine
     with Session(engine) as session:
         seed_destinations(session)

@@ -45,8 +45,27 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const [token, userStr] = await AsyncStorage.multiGet(['access_token', 'user']);
       const accessToken = token[1];
-      const user = userStr[1] ? JSON.parse(userStr[1]) : null;
-      set({ user, accessToken, isAuthenticated: !!accessToken, isLoading: false });
+      const cachedUser = userStr[1] ? JSON.parse(userStr[1]) : null;
+
+      if (!accessToken) {
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+
+      // Verify the token is still valid against the server.
+      // If the user was deleted / DB purged, the server will return 401 and the
+      // response interceptor in api.ts will call forceLogout() for us, which also
+      // sets isLoading: false.  We only need to handle the happy-path here.
+      try {
+        const { data: freshUser } = await apiClient.get<User>('/users/me');
+        await AsyncStorage.setItem('user', JSON.stringify(freshUser));
+        set({ user: freshUser, accessToken, isAuthenticated: true, isLoading: false });
+      } catch {
+        // The token was rejected by the server (user deleted, DB purged, token expired).
+        // Clear storage and state unconditionally — don't rely solely on the interceptor.
+        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
+        set({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+      }
     } catch {
       set({ isLoading: false });
     }
@@ -101,3 +120,13 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ user });
   },
 }));
+
+/**
+ * Called by the api.ts 401 interceptor after it exhausts token refresh attempts.
+ * Clears AsyncStorage + resets Zustand state so the UI immediately reacts and
+ * redirects the user to the login screen.
+ */
+export async function forceLogout(): Promise<void> {
+  await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
+  useAuthStore.setState({ user: null, accessToken: null, isAuthenticated: false, isLoading: false });
+}

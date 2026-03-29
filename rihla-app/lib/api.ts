@@ -43,7 +43,10 @@ apiClient.interceptors.response.use(
         original.headers.Authorization = `Bearer ${data.access_token}`;
         return apiClient(original);
       } catch {
-        await AsyncStorage.multiRemove(['access_token', 'refresh_token', 'user']);
+        // Lazy require breaks the api ↔ authStore circular import at module-init time.
+        // By the time this runs, both modules are fully initialised.
+        const { forceLogout } = require('../store/authStore') as typeof import('../store/authStore');
+        await forceLogout();
       }
     }
     return Promise.reject(error);
