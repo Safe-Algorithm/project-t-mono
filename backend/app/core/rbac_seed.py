@@ -201,6 +201,7 @@ PROVIDER_PERMISSIONS: List[Tuple] = [
         [
             ("GET", "/dashboard/*"),
             ("GET", "/dashboard"),
+            ("GET", "/provider/dashboard/stats"),
         ],
     ),
     # ── Financials ────────────────────────────────────────────────────────────

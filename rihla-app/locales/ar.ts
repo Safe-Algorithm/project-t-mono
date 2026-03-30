@@ -167,10 +167,14 @@ export default {
     from: 'يبدأ من',
     to: 'حتى',
     flexiblePricing: 'سعر المجموعة',
+    tieringExplainer: 'يتغير سعر الشخص بحسب عدد المشاركين. كل مشارك إضافي يتجاوز حد الفئة يُحتسب بالسعر الجديد — المشاركون السابقون يحتفظون بسعرهم.',
     flexiblePricingBadge: 'تسعير متدرج — السعر للشخص يتغير حسب عدد المشاركين',
+    tieredPricingBadge: 'تسعير متدرج',
+    pricingTitle: 'التسعير',
     pricingBandFrom: 'من {{count}} مشارك',
     tier: 'فئة',
     pricePerPersonShort: '{{price}} ريال / شخص',
+    refundPolicy: 'سياسة الاسترداد',
     nonRefundableWarningTitle: 'هذه الرحلة غير قابلة للاسترداد',
     nonRefundableWarningBody: 'مبلغ هذه الرحلة غير قابل للاسترداد عند الإلغاء، باستثناء فترة التراجع المحددة بساعة واحدة بعد الدفع مباشرةً (شريطة أن يكون موعد إغلاق التسجيل بعد أكثر من 24 ساعة).',
     refundableTitle: 'الحجز قابل للاسترداد',
@@ -529,6 +533,14 @@ export default {
     statusWaitingOnUser: 'في انتظارك',
     statusResolved: 'محلولة',
     statusClosed: 'مغلقة',
+  },
+
+  pricing: {
+    currencySymbol: '﷼',
+    participants_short: 'شخص',
+    perPerson: '/شخص',
+    participantsLabel: 'المشاركون',
+    pricePerPersonLabel: 'السعر / شخص',
   },
 
   amenities: {

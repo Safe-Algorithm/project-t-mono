@@ -167,10 +167,14 @@ export default {
     from: 'From',
     to: 'to',
     flexiblePricing: 'Group pricing applies',
+    tieringExplainer: 'Price per person varies by group size. Each additional participant beyond a band threshold is charged at the new rate — earlier participants keep their rate.',
     flexiblePricingBadge: 'Tiered pricing — price per person varies by group size',
+    tieredPricingBadge: 'Tiered Pricing',
+    pricingTitle: 'Pricing',
     pricingBandFrom: 'From {{count}} participant(s)',
     tier: 'Tier',
     pricePerPersonShort: '{{price}} SAR / person',
+    refundPolicy: 'Refund Policy',
     nonRefundableWarningTitle: 'Non-Refundable Booking',
     nonRefundableWarningBody: 'This trip is non-refundable. Once booked, you cannot get a refund if you cancel — except within the 1-hour cooling-off period after payment.',
     refundableTitle: 'Refundable Booking',
@@ -529,6 +533,14 @@ export default {
     statusWaitingOnUser: 'Waiting on You',
     statusResolved: 'Resolved',
     statusClosed: 'Closed',
+  },
+
+  pricing: {
+    currencySymbol: 'SAR',
+    participants_short: 'pax',
+    perPerson: '/person',
+    participantsLabel: 'Participants',
+    pricePerPersonLabel: 'Price / person',
   },
 
   amenities: {

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Trip } from '../../types/trip';
 import Pagination from '../../components/ui/Pagination';
 import PermissionDenied from '../../components/common/PermissionDenied';
+import { providerStatsService, ProviderDashboardStats } from '../../services/providerStatsService';
 
 const PAGE_SIZE = 20;
 
@@ -36,6 +37,7 @@ const TripsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [stats, setStats] = useState<ProviderDashboardStats | null>(null);
 
   const handleDuplicate = useCallback(async (trip: Trip, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -59,11 +61,32 @@ const TripsPage = () => {
     new Date(dateStr).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const getMinPrice = (trip: Trip): string => {
-    if (trip.price != null) return `${Number(trip.price).toLocaleString()} SAR`;
+    // Simple trip with flexible pricing — trip.price is 0 (placeholder), use tiers instead
+    if (!trip.is_packaged_trip && trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers?.length) {
+      const prices = trip.simple_trip_pricing_tiers.map(t => Number(t.price_per_person));
+      const min = Math.min(...prices);
+      return `${t('trips.priceFrom')} ${min.toLocaleString('en-US')} SAR`;
+    }
+    if (!trip.is_packaged_trip && trip.price != null && Number(trip.price) > 0) {
+      return `${Number(trip.price).toLocaleString('en-US')} SAR`;
+    }
     if (!trip.packages?.length) return '—';
-    const min = Math.min(...trip.packages.map(p => Number(p.price)));
-    return `${min.toLocaleString()} SAR`;
+    // Packaged trip — find minimum across packages, accounting for flexible-priced packages
+    const packageMins = trip.packages.map(p => {
+      if (p.use_flexible_pricing && p.pricing_tiers?.length) {
+        return Math.min(...p.pricing_tiers.map(t => Number(t.price_per_person)));
+      }
+      return Number(p.price);
+    });
+    const min = Math.min(...packageMins);
+    return `${t('trips.priceFrom')} ${min.toLocaleString('en-US')} SAR`;
   };
+
+  useEffect(() => {
+    providerStatsService.getDashboardStats()
+      .then(setStats)
+      .catch(() => setStats(null));
+  }, []);
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -102,6 +125,8 @@ const TripsPage = () => {
 
   const filtered = trips;
 
+  const totalActionNeeded = stats?.total_action_needed ?? 0;
+
   return (
     <div className="space-y-6" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
@@ -122,6 +147,24 @@ const TripsPage = () => {
           {t('trips.createNew')}
         </Link>
       </div>
+
+      {/* Action-needed alert */}
+      {totalActionNeeded > 0 && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <svg className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <p className="text-sm text-orange-800 dark:text-orange-300">
+            <span className="font-bold">{t('trips.actionNeededTitle', { count: totalActionNeeded })}</span>
+            {stats && stats.total_awaiting_provider > 0 && (
+              <span className="font-normal"> · {t('trips.awaitingProviderCount', { count: stats.total_awaiting_provider })}</span>
+            )}
+            {stats && stats.total_processing > 0 && (
+              <span className="font-normal"> · {t('trips.processingCount', { count: stats.total_processing })}</span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Filters bar */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -228,10 +271,21 @@ const TripsPage = () => {
                         )}
                         <div className="min-w-0">
                           <p className="font-semibold text-slate-900 dark:text-white truncate max-w-[200px]">{getTripName(trip)}</p>
-                          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                            {trip.is_packaged_trip ? t('trips.typePackaged') : t('trips.typeSimple')}
-                            {trip.packages?.length ? ` · ${trip.packages.length} ${t('trips.pkg')}` : ''}
-                          </p>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                              {trip.is_packaged_trip ? t('trips.typePackaged') : t('trips.typeSimple')}
+                              {trip.packages?.length ? ` · ${trip.packages.length} ${t('trips.pkg')}` : ''}
+                            </p>
+                            {(() => {
+                              const actionItem = stats?.trips_needing_action.find(tr => tr.trip_id === trip.id);
+                              return actionItem && actionItem.total_action_needed > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-semibold rounded-full">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                  {t('trips.needsAction', { count: actionItem.total_action_needed })}
+                                </span>
+                              ) : null;
+                            })()}
+                          </div>
                         </div>
                       </div>
                     </td>

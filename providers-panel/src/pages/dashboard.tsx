@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useTrips } from '@/hooks/useTrips';
 import { Trip } from '@/types/trip';
 import { formatDateInTripTz, tzLabel } from '@/utils/tripDate';
+import { providerStatsService, ProviderDashboardStats } from '@/services/providerStatsService';
 
 function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
   return (
@@ -37,7 +38,16 @@ const DashboardPage = () => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
-  const { trips, isLoading } = useTrips();
+  const { trips, isLoading: tripsLoading } = useTrips();
+  const [stats, setStats] = useState<ProviderDashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    providerStatsService.getDashboardStats()
+      .then(setStats)
+      .catch(() => setStats(null))
+      .finally(() => setStatsLoading(false));
+  }, []);
 
   if (!user) {
     return (
@@ -48,9 +58,6 @@ const DashboardPage = () => {
   }
 
   const now = new Date();
-  const activeTrips = trips.filter(t => t.is_active && new Date(t.start_date) > now);
-  const totalTrips = trips.length;
-  const totalParticipants = trips.reduce((sum, t) => sum + (t.max_participants ?? 0), 0);
   const upcomingTrips = trips
     .filter(t => new Date(t.start_date) > now)
     .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
@@ -61,6 +68,9 @@ const DashboardPage = () => {
 
   const getTripName = (trip: Trip) =>
     (isRTL ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar) || '—';
+
+  const tableLoading = tripsLoading || statsLoading;
+  const totalActionNeeded = stats?.total_action_needed ?? 0;
 
   return (
     <div className="space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -74,37 +84,127 @@ const DashboardPage = () => {
         </p>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <StatCard
-          label={t('dashboard.totalTrips')}
-          value={isLoading ? '—' : totalTrips}
-          color="bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400"
-          icon={
+      {/* Action-required alert */}
+      {!statsLoading && totalActionNeeded > 0 && (
+        <div className="flex items-start gap-3 px-5 py-4 rounded-2xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <svg className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-orange-800 dark:text-orange-300">
+              {t('dashboard.actionRequiredTitle', { count: totalActionNeeded })}
+            </p>
+            <p className="text-xs text-orange-700 dark:text-orange-400 mt-0.5">
+              {stats!.total_awaiting_provider > 0 && t('dashboard.awaitingProviderCount', { count: stats!.total_awaiting_provider })}
+              {stats!.total_awaiting_provider > 0 && stats!.total_processing > 0 && ' · '}
+              {stats!.total_processing > 0 && t('dashboard.processingCount', { count: stats!.total_processing })}
+            </p>
+            {stats!.trips_needing_action.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {stats!.trips_needing_action.slice(0, 4).map(tr => (
+                  <Link key={tr.trip_id} href={`/trips/${tr.trip_id}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 text-xs font-medium rounded-lg hover:bg-orange-200 dark:hover:bg-orange-800/50 transition-colors">
+                    <span className="max-w-[140px] truncate">{tr.trip_name}</span>
+                    <span className="font-bold">·{tr.total_action_needed}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+          <Link href="/trips" className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline flex-shrink-0">
+            {t('dashboard.viewTrips')} →
+          </Link>
+        </div>
+      )}
+
+      {/* Primary action stat cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Bookings needing action */}
+        <Link href="/trips" className={`group rounded-2xl p-5 border flex items-center gap-4 transition-colors ${
+          totalActionNeeded > 0
+            ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 hover:border-orange-400'
+            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            totalActionNeeded > 0 ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+          }`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
-          }
-        />
-        <StatCard
-          label={t('dashboard.activeTrips')}
-          value={isLoading ? '—' : activeTrips.length}
-          color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-          icon={
+          </div>
+          <div>
+            <p className={`text-2xl font-bold ${totalActionNeeded > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-slate-900 dark:text-white'}`}>
+              {statsLoading ? '—' : totalActionNeeded}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboard.bookingsNeedAction')}</p>
+          </div>
+        </Link>
+
+        {/* Open support tickets */}
+        <Link href="/support" className={`group rounded-2xl p-5 border flex items-center gap-4 transition-colors ${
+          (stats?.open_tickets ?? 0) > 0
+            ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 hover:border-red-400'
+            : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+        }`}>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            (stats?.open_tickets ?? 0) > 0 ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+          }`}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 3H3a2 2 0 00-2 2v14a2 2 0 002 2h18a2 2 0 002-2V5a2 2 0 00-2-2z" />
             </svg>
-          }
-        />
-        <StatCard
-          label={t('dashboard.totalSeats')}
-          value={isLoading ? '—' : totalParticipants.toLocaleString()}
-          color="bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"
-          icon={
+          </div>
+          <div>
+            <p className={`text-2xl font-bold ${(stats?.open_tickets ?? 0) > 0 ? 'text-red-700 dark:text-red-300' : 'text-slate-900 dark:text-white'}`}>
+              {statsLoading ? '—' : (stats?.open_tickets ?? 0)}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboard.openTickets')}</p>
+          </div>
+        </Link>
+
+        {/* Upcoming trips */}
+        <Link href="/trips" className="group bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex items-center gap-4 hover:border-slate-300 transition-colors">
+          <div className="w-12 h-12 rounded-xl bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {statsLoading ? '—' : (stats?.upcoming_trips ?? 0)}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboard.upcomingTripsCount')}</p>
+          </div>
+        </Link>
+
+        {/* Confirmed bookings */}
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-          }
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-slate-900 dark:text-white">
+              {statsLoading ? '—' : (stats?.total_confirmed ?? 0)}
+            </p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{t('dashboard.confirmedBookings')}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary info row */}
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard label={t('dashboard.totalTrips')} value={statsLoading ? '—' : (stats?.total_trips ?? 0)}
+          color="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>}
+        />
+        <StatCard label={t('dashboard.activeTrips')} value={statsLoading ? '—' : (stats?.active_trips ?? 0)}
+          color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+        />
+        <StatCard label={t('dashboard.totalBookings')} value={statsLoading ? '—' : (stats?.total_bookings ?? 0)}
+          color="bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400"
+          icon={<svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
         />
       </div>
 
@@ -119,7 +219,7 @@ const DashboardPage = () => {
           </Link>
         </div>
 
-        {isLoading ? (
+        {tableLoading ? (
           <div className="p-8 flex justify-center">
             <div className="animate-spin w-6 h-6 rounded-full border-4 border-sky-500 border-t-transparent" />
           </div>
@@ -141,40 +241,49 @@ const DashboardPage = () => {
                   <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                     {t('dashboard.trip')}
                   </th>
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden md:table-cell">
                     {t('dashboard.tripStartDate')}
                   </th>
-                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                  <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide hidden sm:table-cell">
                     {t('dashboard.seats')}
                   </th>
                   <th className="text-start px-6 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    {isRTL ? 'الحالة' : 'Status'}
+                    {t('dashboard.statusCol')}
                   </th>
                   <th className="px-6 py-3" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                {upcomingTrips.map((trip) => (
-                  <tr key={trip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <td className="px-6 py-3.5 font-medium text-slate-900 dark:text-white max-w-xs truncate">
-                      {getTripName(trip)}
-                    </td>
-                    <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400">
-                      {formatDate(trip.start_date, trip.timezone)} <span className="text-xs text-slate-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span>
-                    </td>
-                    <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400">
-                      {trip.max_participants}
-                    </td>
-                    <td className="px-6 py-3.5">
-                      <TripStatusBadge isActive={trip.is_active} />
-                    </td>
-                    <td className="px-6 py-3.5 text-end">
-                      <Link href={`/trips/${trip.id}/edit`} className="text-sky-500 hover:text-sky-600 font-medium text-xs">
-                        {t('common.edit')}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
+                {upcomingTrips.map((trip) => {
+                  const actionItem = stats?.trips_needing_action.find(tr => tr.trip_id === trip.id);
+                  return (
+                    <tr key={trip.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="px-6 py-3.5 font-medium text-slate-900 dark:text-white max-w-xs">
+                        <p className="truncate">{getTripName(trip)}</p>
+                        {actionItem && actionItem.total_action_needed > 0 && (
+                          <span className="inline-flex items-center gap-1 mt-0.5 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-semibold rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            {t('dashboard.needsAction', { count: actionItem.total_action_needed })}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400 hidden md:table-cell">
+                        {formatDate(trip.start_date, trip.timezone)} <span className="text-xs text-slate-400">({tzLabel(trip.timezone ?? 'Asia/Riyadh')})</span>
+                      </td>
+                      <td className="px-6 py-3.5 text-slate-500 dark:text-slate-400 hidden sm:table-cell">
+                        {trip.max_participants}
+                      </td>
+                      <td className="px-6 py-3.5">
+                        <TripStatusBadge isActive={trip.is_active} />
+                      </td>
+                      <td className="px-6 py-3.5 text-end">
+                        <Link href={`/trips/${trip.id}`} className="text-sky-500 hover:text-sky-600 font-medium text-xs">
+                          {t('common.view')}
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -191,9 +300,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <p className="font-semibold text-slate-900 dark:text-white text-sm">{t('trips.createNew')}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {t('dashboard.addTripCta')}
-            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('dashboard.addTripCta')}</p>
           </div>
         </Link>
         <Link href="/trip-updates" className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-5 flex items-center gap-4 hover:border-sky-300 dark:hover:border-sky-700 transition-colors">
@@ -204,9 +311,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <p className="font-semibold text-slate-900 dark:text-white text-sm">{t('nav.tripUpdates')}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {t('dashboard.sendUpdatesCta')}
-            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{t('dashboard.sendUpdatesCta')}</p>
           </div>
         </Link>
       </div>

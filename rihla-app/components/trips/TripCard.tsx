@@ -179,7 +179,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
           )}
           {flexible && (
             <View style={s.flexBadgeCompact}>
-              <Text style={s.flexBadgeCompactText}>{t('trip.flexiblePricingBadge', 'Flexible')}</Text>
+              <Text style={s.flexBadgeCompactText} numberOfLines={1}>{t('trip.tieredPricingBadge')}</Text>
             </View>
           )}
         </View>
@@ -221,7 +221,7 @@ export default function TripCard({ trip, onPress, isFavorite = false, onFavorite
             </View>
             {flexible && (
               <View style={s.flexBadge}>
-                <Text style={s.flexBadgeText}>{t('trip.flexiblePricingBadge', 'Flexible')}</Text>
+                <Text style={s.flexBadgeText} numberOfLines={1}>{t('trip.tieredPricingBadge')}</Text>
               </View>
             )}
           </View>
@@ -314,7 +314,7 @@ function makeStyles(c: ThemeColors) {
     imagePlaceholder: { backgroundColor: c.gray100, alignItems: 'center', justifyContent: 'center' },
     imageOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 80, backgroundColor: 'transparent' },
     favoriteBtn: { position: 'absolute', top: 12, right: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
-    priceBadgeRow: { position: 'absolute', bottom: 12, left: 12, right: 12, flexDirection: 'row', justifyContent: 'flex-start' },
+    priceBadgeRow: { position: 'absolute', bottom: 12, left: 12, right: 12, flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center', gap: 6, flexWrap: 'nowrap' },
     priceBadgeRowRtl: {},
     priceBadge: { backgroundColor: c.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full },
     priceBadgeText: { color: c.white, fontSize: FontSize.sm, fontWeight: '700' },
@@ -344,7 +344,7 @@ function makeStyles(c: ThemeColors) {
     tripTypeBadgeText: { fontSize: FontSize.xs, fontWeight: '700' as const },
     tripTypeBadgeTextGuided: { color: '#92400e' },
     tripTypeBadgeTextPackage: { color: '#6b21a8' },
-    flexBadge: { backgroundColor: 'rgba(14,165,233,0.85)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full },
+    flexBadge: { backgroundColor: 'rgba(14,165,233,0.85)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: Radius.full, flexShrink: 1, maxWidth: 140 },
     flexBadgeCompact: { alignSelf: 'flex-start' as const, backgroundColor: c.primarySurface, paddingHorizontal: 7, paddingVertical: 2, borderRadius: Radius.full, marginTop: 2 },
     flexBadgeText: { color: c.white, fontSize: FontSize.xs, fontWeight: '700' as const },
     flexBadgeCompactText: { color: c.primaryDark, fontSize: FontSize.xs, fontWeight: '700' as const },

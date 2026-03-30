@@ -253,6 +253,8 @@ const ProviderSupportPage = () => {
   const [pageError, setPageError] = useState<Error | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const openTripTicketCount = tripTickets.filter(t => t.status !== 'closed' && t.status !== 'resolved').length;
+
   useEffect(() => { setTripPage(1); }, [statusFilter, activeTab]);
   useEffect(() => { if (activeTab === 'trip') loadTripTickets(); }, [statusFilter, tripPage, activeTab]);
   useEffect(() => { if (activeTab === 'admin') loadAdminTickets(); }, [adminPage, activeTab]);
@@ -318,7 +320,15 @@ const ProviderSupportPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Support</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Support</h1>
+            {openTripTicketCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold rounded-full">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                {openTripTicketCount} open
+              </span>
+            )}
+          </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage customer tickets and contact admin support</p>
         </div>
         {activeTab === 'admin' && (
@@ -340,10 +350,15 @@ const ProviderSupportPage = () => {
       {/* Tab switcher */}
       <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
         <button onClick={() => setActiveTab('trip')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
             activeTab === 'trip' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
           }`}>
           Customer Tickets
+          {openTripTicketCount > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">
+              {openTripTicketCount}
+            </span>
+          )}
         </button>
         <button onClick={() => setActiveTab('admin')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${

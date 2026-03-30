@@ -1,5 +1,7 @@
 import { PricingTier, TripPackage, Trip } from '../types/trip';
 
+export type TierLabelFn = (key: string, opts?: Record<string, any>) => string;
+
 /**
  * Compute the total price for a given package and participant count.
  * - If use_flexible_pricing is true and pricing_tiers are provided, applies
@@ -81,17 +83,56 @@ export function formatPrice(amount: number, currency = 'SAR'): string {
 }
 
 /**
- * Build a human-readable summary of pricing tiers for display.
- * e.g. ["1–4 pax: SAR 300/person", "5+ pax: SAR 250/person"]
+ * Returns structured tier rows for display (used by the UI to render a proper table).
+ * Each row describes how many participants are in that band and the rate.
  */
-export function buildTierSummary(tiers: PricingTier[], currency = 'SAR'): string[] {
+export interface TierSummaryRow {
+  rangeLabel: string;        // e.g. "1–3" or "4+"
+  priceFormatted: string;    // e.g. "300" (no currency — rendered separately)
+  isFirst: boolean;
+}
+
+export function buildTierSummaryRows(
+  tiers: PricingTier[],
+): TierSummaryRow[] {
   const sorted = [...tiers].sort((a, b) => a.from_participant - b.from_participant);
   return sorted.map((tier, idx) => {
     const next = sorted[idx + 1];
+    const priceFormatted = Number(tier.price_per_person).toLocaleString(
+      'en-US',
+      { minimumFractionDigits: 0, maximumFractionDigits: 2 },
+    );
     const rangeLabel = next
-      ? `${tier.from_participant}–${next.from_participant - 1} pax`
-      : `${tier.from_participant}+ pax`;
-    return `${rangeLabel}: ${currency} ${Number(tier.price_per_person).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/person`;
+      ? `${tier.from_participant}–${next.from_participant - 1}`
+      : `${tier.from_participant}+`;
+    return { rangeLabel, priceFormatted, isFirst: idx === 0 };
+  });
+}
+
+export function buildTierSummary(
+  tiers: PricingTier[],
+  currency = 'SAR',
+  t?: TierLabelFn,
+  isRTL = false,
+): string[] {
+  const sorted = [...tiers].sort((a, b) => a.from_participant - b.from_participant);
+  const currencySymbol = t ? t('pricing.currencySymbol', { defaultValue: currency }) : currency;
+  const personWord = t ? t('pricing.perPerson') : '/person';
+  const paxWord = t ? t('pricing.participants_short') : 'pax';
+
+  return sorted.map((tier, idx) => {
+    const next = sorted[idx + 1];
+    const priceFormatted = Number(tier.price_per_person).toLocaleString(
+      'en-US',
+      { minimumFractionDigits: 0, maximumFractionDigits: 2 },
+    );
+    const rangeLabel = next
+      ? `${tier.from_participant}–${next.from_participant - 1} ${paxWord}`
+      : `${tier.from_participant}+ ${paxWord}`;
+    if (isRTL) {
+      return `${rangeLabel}: ${priceFormatted} ${currencySymbol}${personWord}`;
+    }
+    return `${rangeLabel}: ${currencySymbol} ${priceFormatted}${personWord}`;
   });
 }
 
@@ -102,11 +143,19 @@ export function buildTierSummary(tiers: PricingTier[], currency = 'SAR'): string
  *   ["pax 1–3: 3 × SAR 5,000 = SAR 15,000", "pax 4: 1 × SAR 1,000 = SAR 1,000"]
  * Only returns lines for bands that actually have participants.
  */
-export function buildTierBillingBreakdown(tiers: PricingTier[], count: number, currency = 'SAR'): string[] {
+export function buildTierBillingBreakdown(
+  tiers: PricingTier[],
+  count: number,
+  currency = 'SAR',
+  t?: TierLabelFn,
+  isRTL = false,
+): string[] {
   if (count <= 0 || !tiers || tiers.length === 0) return [];
   const sorted = [...tiers].sort((a, b) => a.from_participant - b.from_participant);
   const lines: string[] = [];
   let remaining = count;
+  const currencySymbol = t ? t('pricing.currencySymbol', { defaultValue: currency }) : currency;
+  const paxWord = t ? t('pricing.participants_short') : 'pax';
 
   for (let i = 0; i < sorted.length; i++) {
     if (remaining <= 0) break;
@@ -120,10 +169,16 @@ export function buildTierBillingBreakdown(tiers: PricingTier[], count: number, c
     const bandTotal = inBand * rate;
     const bandFrom = tierStart;
     const bandTo = tierStart + inBand - 1;
-    const rangeLabel = inBand === 1 ? `pax ${bandFrom}` : `pax ${bandFrom}–${bandTo}`;
-    lines.push(
-      `${rangeLabel}: ${inBand} × ${currency} ${rate.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} = ${currency} ${bandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
-    );
+    const rangeLabel = inBand === 1
+      ? `${paxWord} ${bandFrom}`
+      : `${paxWord} ${bandFrom}–${bandTo}`;
+    const rateStr = rate.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const totalStr = bandTotal.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    if (isRTL) {
+      lines.push(`${rangeLabel}: ${inBand} × ${rateStr} ${currencySymbol} = ${totalStr} ${currencySymbol}`);
+    } else {
+      lines.push(`${rangeLabel}: ${inBand} × ${currencySymbol} ${rateStr} = ${currencySymbol} ${totalStr}`);
+    }
     remaining -= inBand;
   }
 

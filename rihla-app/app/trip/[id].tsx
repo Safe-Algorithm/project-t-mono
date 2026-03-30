@@ -16,7 +16,7 @@ import StarRating from '../../components/ui/StarRating';
 import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
 import { TripPackage } from '../../types/trip';
-import { minPricePerPerson, maxPricePerPerson, buildTierSummary, formatPrice } from '../../lib/pricingUtils';
+import { minPricePerPerson, maxPricePerPerson, buildTierSummaryRows, formatPrice } from '../../lib/pricingUtils';
 import Toast from '../../components/ui/Toast';
 
 const { width: W } = Dimensions.get('window');
@@ -51,6 +51,7 @@ function formatMeetingTime(d: string, locale: string, tz: string) {
 
 export default function TripDetailScreen() {
   const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const insets = useSafeAreaInsets();
@@ -60,7 +61,6 @@ export default function TripDetailScreen() {
   const [showTripTypeInfo, setShowTripTypeInfo] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const isRTL = i18n.language === 'ar';
 
   const { data: trip, isLoading } = useTrip(id);
   const { data: rating } = useTripRating(id);
@@ -281,6 +281,15 @@ export default function TripDetailScreen() {
                 colors={colors} s={s}
               />
             )}
+            {trip.is_refundable != null && (
+              <InfoChip
+                icon={trip.is_refundable ? 'checkmark-circle-outline' : 'close-circle-outline'}
+                label={t('trip.refundPolicy')}
+                value={trip.is_refundable ? t('trip.refundable') : t('trip.nonRefundable')}
+                colors={colors} s={s}
+                valueColor={trip.is_refundable ? '#166534' : '#991b1b'}
+              />
+            )}
           </View>
           {trip.timezone && (
             <View style={s.tzChip}>
@@ -289,26 +298,6 @@ export default function TripDetailScreen() {
             </View>
           )}
 
-          {/* Refundability banner */}
-          {trip.is_refundable != null && (
-            trip.is_refundable === false ? (
-              <View style={s.nonRefundableBanner}>
-                <View style={s.nonRefundableTitleRow}>
-                  <Ionicons name="close-circle" size={18} color="#fff" />
-                  <Text style={s.nonRefundableBannerTitle}>{t('trip.nonRefundableWarningTitle')}</Text>
-                </View>
-                <Text style={s.nonRefundableBannerBody}>{t('trip.nonRefundableWarningBody')}</Text>
-              </View>
-            ) : (
-              <View style={s.refundableBanner}>
-                <View style={s.refundableTitleRow}>
-                  <Ionicons name="checkmark-circle" size={18} color="#166534" />
-                  <Text style={s.refundableBannerTitle}>{t('trip.refundableTitle')}</Text>
-                </View>
-                <Text style={s.refundableBannerBody}>{t('trip.refundableBody')}</Text>
-              </View>
-            )
-          )}
 
           {/* Route: Timeline */}
           {(trip.starting_city || (trip.destinations && trip.destinations.length > 0)) && (() => {
@@ -459,6 +448,31 @@ export default function TripDetailScreen() {
             </View>
           )}
 
+          {/* Pricing tiers for simple (non-packaged) flexible pricing trips */}
+          {!trip.is_packaged_trip && trip.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 && (
+            <View style={s.section}>
+              <Text style={s.sectionTitle}>{t('trip.pricingTitle')}</Text>
+              <Text style={s.tierExplainer}>{t('trip.tieringExplainer')}</Text>
+              <View style={s.tierTable}>
+                <View style={s.tierTableHeader}>
+                  <Text style={s.tierTableHeaderCell}>{t('pricing.participantsLabel')}</Text>
+                  <Text style={[s.tierTableHeaderCell, s.tierTableHeaderRight]}>{t('pricing.pricePerPersonLabel')}</Text>
+                </View>
+                {buildTierSummaryRows(trip.simple_trip_pricing_tiers).map((row, i) => (
+                  <View key={i} style={[s.tierTableRow, i % 2 === 1 && s.tierTableRowAlt]}>
+                    <View style={s.tierTableRangeCell}>
+                      <Ionicons name="people-outline" size={12} color={colors.primary} />
+                      <Text style={s.tierTableRangeText}>{row.rangeLabel}</Text>
+                    </View>
+                    <Text style={s.tierTablePriceCell}>
+                      {t('pricing.currencySymbol')} {row.priceFormatted}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
           {/* Tiers — only shown for packaged trips */}
           {trip.is_packaged_trip && (
             <View style={s.section}>
@@ -508,13 +522,22 @@ export default function TripDetailScreen() {
                             ))}
                           </View>
                         )}
-                        {/* Flexible pricing tier bands */}
+                        {/* Flexible pricing tier table */}
                         {pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0 && (
-                          <View style={s.tierBandsContainer}>
-                            {buildTierSummary(pkg.pricing_tiers).map((line, i) => (
-                              <View key={i} style={s.tierBandRow}>
-                                <Ionicons name="people-outline" size={11} color={colors.primary} />
-                                <Text style={s.tierBandText}>{line}</Text>
+                          <View style={s.tierTable}>
+                            <View style={s.tierTableHeader}>
+                              <Text style={s.tierTableHeaderCell}>{t('pricing.participantsLabel')}</Text>
+                              <Text style={[s.tierTableHeaderCell, s.tierTableHeaderRight]}>{t('pricing.pricePerPersonLabel')}</Text>
+                            </View>
+                            {buildTierSummaryRows(pkg.pricing_tiers).map((row, i) => (
+                              <View key={i} style={[s.tierTableRow, i % 2 === 1 && s.tierTableRowAlt]}>
+                                <View style={s.tierTableRangeCell}>
+                                  <Ionicons name="people-outline" size={12} color={colors.primary} />
+                                  <Text style={s.tierTableRangeText}>{row.rangeLabel}</Text>
+                                </View>
+                                <Text style={s.tierTablePriceCell}>
+                                  {t('pricing.currencySymbol')} {row.priceFormatted}
+                                </Text>
                               </View>
                             ))}
                           </View>
@@ -644,13 +667,13 @@ export default function TripDetailScreen() {
   );
 }
 
-function InfoChip({ icon, label, value, colors, s }: { icon: any; label: string; value: string; colors: any; s: any }) {
+function InfoChip({ icon, label, value, colors, s, valueColor }: { icon: any; label: string; value: string; colors: any; s: any; valueColor?: string }) {
   return (
     <View style={s.infoChip}>
-      <Ionicons name={icon} size={16} color={colors.primary} />
+      <Ionicons name={icon} size={16} color={valueColor ?? colors.primary} />
       <View>
         <Text style={s.infoChipLabel}>{label}</Text>
-        <Text style={s.infoChipValue}>{value}</Text>
+        <Text style={[s.infoChipValue, valueColor ? { color: valueColor } : undefined]}>{value}</Text>
       </View>
     </View>
   );
@@ -792,6 +815,8 @@ function makeStyles(c: ThemeColors) {
   tierBandsContainer: { gap: 4, marginTop: 6, marginBottom: 4, paddingTop: 6, borderTopWidth: 1, borderTopColor: c.border },
   tierBandRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   tierBandText: { fontSize: FontSize.xs, color: c.textSecondary, fontWeight: '500' },
+  tierBandTextRtl: { textAlign: 'right' as const },
+  tierExplainer: { fontSize: FontSize.sm, color: c.textSecondary, marginBottom: 8, lineHeight: 20 },
   packageDesc: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 8 },
   fieldsRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   fieldsText: { fontSize: FontSize.xs, color: c.textTertiary },
@@ -862,22 +887,24 @@ function makeStyles(c: ThemeColors) {
   },
   bookedBannerText: { flex: 1, fontSize: FontSize.sm, fontWeight: '700', color: '#166534' },
 
-  nonRefundableBanner: {
-    backgroundColor: '#DC2626', borderRadius: Radius.xl,
-    padding: 14, marginBottom: 12,
-  },
-  nonRefundableTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  nonRefundableBannerTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#fff', flex: 1 },
-  nonRefundableBannerBody: { fontSize: FontSize.sm, color: 'rgba(255,255,255,0.9)', lineHeight: 20 },
+  refundBadgeRow: { flexDirection: 'row', marginTop: 8, marginBottom: 4 },
+  refundBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full, borderWidth: 1 },
+  refundBadgeYes: { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
+  refundBadgeNo: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  refundBadgeText: { fontSize: FontSize.xs, fontWeight: '600' as const },
+  refundBadgeTextYes: { color: '#166534' },
+  refundBadgeTextNo: { color: '#991b1b' },
 
-  refundableBanner: {
-    backgroundColor: '#F0FDF4', borderRadius: Radius.xl,
-    borderWidth: 1, borderColor: '#BBF7D0',
-    padding: 14, marginBottom: 12,
-  },
-  refundableTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  refundableBannerTitle: { fontSize: FontSize.md, fontWeight: '700', color: '#166534', flex: 1 },
-  refundableBannerBody: { fontSize: FontSize.sm, color: '#166534', lineHeight: 20, opacity: 0.85 },
+  tierTable: { borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: c.border, marginTop: 4 },
+  tierTableHeader: { flexDirection: 'row', backgroundColor: c.primarySurface, paddingHorizontal: 12, paddingVertical: 7 },
+  tierTableHeaderCell: { flex: 1, fontSize: FontSize.xs, fontWeight: '700' as const, color: c.primaryDark },
+  tierTableHeaderRight: { textAlign: 'right' as const },
+  tierTableRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: c.surface },
+  tierTableRowAlt: { backgroundColor: c.background },
+  tierTableRangeCell: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  tierTableRangeText: { fontSize: FontSize.sm, fontWeight: '600' as const, color: c.textPrimary },
+  tierTablePriceCell: { fontSize: FontSize.sm, fontWeight: '700' as const, color: c.accent, textAlign: 'right' as const },
+
   tzChip: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: 4 },
   tzChipText: { fontSize: FontSize.xs, color: c.textTertiary, fontStyle: 'italic' },
   });

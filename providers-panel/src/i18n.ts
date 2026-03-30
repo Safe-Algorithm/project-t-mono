@@ -230,7 +230,18 @@ const resources = {
       "dashboard.totalTrips": "Total Trips",
       "dashboard.activeTrips": "Active Trips",
       "dashboard.totalRegistrations": "Total Registrations",
+      "dashboard.totalBookings": "Total Bookings",
       "dashboard.revenue": "Revenue",
+      "dashboard.bookingsNeedAction": "Bookings Need Action",
+      "dashboard.openTickets": "Open Support Tickets",
+      "dashboard.upcomingTripsCount": "Upcoming Trips",
+      "dashboard.confirmedBookings": "Confirmed Bookings",
+      "dashboard.actionRequiredTitle": "{{count}} booking(s) require your attention",
+      "dashboard.awaitingProviderCount": "{{count}} awaiting you",
+      "dashboard.processingCount": "{{count}} in processing",
+      "dashboard.needsAction": "{{count}} need action",
+      "dashboard.viewTrips": "View Trips",
+      "dashboard.statusCol": "Status",
 
       // Profile
       "profile.companyProfile": "Company Profile",
@@ -250,6 +261,10 @@ const resources = {
       "trips.title": "My Trips",
       "trips.createNew": "Create New Trip",
       "trips.noTrips": "No trips found.",
+      "trips.actionNeededTitle": "{{count}} booking(s) require your action across your trips",
+      "trips.awaitingProviderCount": "{{count}} awaiting you",
+      "trips.processingCount": "{{count}} in processing",
+      "trips.needsAction": "{{count}} need action",
 
       // Common extras
       "common.confirm": "Confirm",
@@ -450,6 +465,7 @@ const resources = {
       "trips.typePackaged": "Packaged",
       "trips.typeSimple": "Simple",
       "trips.pkg": "pkg",
+      "trips.priceFrom": "From",
       "trips.getStarted": "Get started by creating your first trip",
 
       // CSV export / import
@@ -709,6 +725,12 @@ const resources = {
       "tripDetail.bookerInformation": "Booker Information",
       "tripDetail.phone": "Phone",
       "tripDetail.bookedOn": "Booked On",
+      "tripDetail.actionNeededTitle": "{{count}} booking(s) need your attention",
+      "tripDetail.awaitingProviderCount": "{{count}} awaiting you",
+      "tripDetail.processingCount": "{{count}} in processing",
+      "tripDetail.viewBookings": "View Bookings",
+      "tripDetail.actionNeeded": "Action Needed",
+      "tripDetail.processing": "In Processing",
       "tripDetail.actionRequired": "⏳ Action Required",
       "tripDetail.orderInProgress": "🔄 Order In Progress",
       "tripDetail.awaitingProviderHelp": "This participant paid {{days}} day(s) ago. Click below once you have started booking their arrangements.",
@@ -1154,7 +1176,18 @@ const resources = {
       "dashboard.totalTrips": "إجمالي الرحلات",
       "dashboard.activeTrips": "الرحلات النشطة",
       "dashboard.totalRegistrations": "إجمالي التسجيلات",
+      "dashboard.totalBookings": "إجمالي الحجوزات",
       "dashboard.revenue": "الإيرادات",
+      "dashboard.bookingsNeedAction": "حجوزات تحتاج إجراء",
+      "dashboard.openTickets": "تذاكر دعم مفتوحة",
+      "dashboard.upcomingTripsCount": "رحلات قادمة",
+      "dashboard.confirmedBookings": "حجوزات مؤكدة",
+      "dashboard.actionRequiredTitle": "{{count}} حجز/حجوزات تحتاج انتباهك",
+      "dashboard.awaitingProviderCount": "{{count}} بانتظارك",
+      "dashboard.processingCount": "{{count}} قيد المعالجة",
+      "dashboard.needsAction": "{{count}} يتطلب إجراء",
+      "dashboard.viewTrips": "عرض الرحلات",
+      "dashboard.statusCol": "الحالة",
 
       // Profile
       "profile.companyProfile": "ملف الشركة",
@@ -1174,6 +1207,10 @@ const resources = {
       "trips.title": "رحلاتي",
       "trips.createNew": "إنشاء رحلة جديدة",
       "trips.noTrips": "لا توجد رحلات.",
+      "trips.actionNeededTitle": "{{count}} حجز/حجوزات تحتاج إجراءك عبر رحلاتك",
+      "trips.awaitingProviderCount": "{{count}} بانتظارك",
+      "trips.processingCount": "{{count}} قيد المعالجة",
+      "trips.needsAction": "{{count}} يتطلب إجراء",
 
       // Common extras
       "common.confirm": "تأكيد",
@@ -1374,6 +1411,7 @@ const resources = {
       "trips.typePackaged": "بباقات",
       "trips.typeSimple": "عادية",
       "trips.pkg": "باقة",
+      "trips.priceFrom": "من",
       "trips.getStarted": "ابدأ بإنشاء رحلتك الأولى",
 
       // New/Edit trip pages
@@ -1613,6 +1651,12 @@ const resources = {
       "tripDetail.bookerInformation": "معلومات الحاجز",
       "tripDetail.phone": "الهاتف",
       "tripDetail.bookedOn": "تاريخ الحجز",
+      "tripDetail.actionNeededTitle": "{{count}} حجز/حجوزات تحتاج انتباهك",
+      "tripDetail.awaitingProviderCount": "{{count}} بانتظارك",
+      "tripDetail.processingCount": "{{count}} قيد المعالجة",
+      "tripDetail.viewBookings": "عرض الحجوزات",
+      "tripDetail.actionNeeded": "يتطلب إجراء",
+      "tripDetail.processing": "قيد المعالجة",
       "tripDetail.actionRequired": "⏳ مطلوب إجراء",
       "tripDetail.orderInProgress": "🔄 الطلب قيد التنفيذ",
       "tripDetail.awaitingProviderHelp": "قام هذا المشارك بالدفع منذ {{days}} يوم. اضغط أدناه بمجرد أن تبدأ في حجز ترتيباته.",

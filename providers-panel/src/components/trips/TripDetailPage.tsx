@@ -37,7 +37,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending: 'tripDetail.awaitingPayment',
   pending_payment: 'tripDetail.awaitingPayment',
   awaiting_provider: 'tripDetail.awaitingProvider',
-  processing: 'tripDetail.providerConfirmed',
+  processing: 'tripDetail.processing',
   confirmed: 'tripDetail.confirmed',
   cancelled: 'tripDetail.cancelled',
   completed: 'tripDetail.completed',
@@ -184,6 +184,9 @@ const TripDetailPage: React.FC = () => {
 
   const confirmedCount = registrations.filter(r => r.status === 'confirmed').length;
   const pendingCount = registrations.filter(r => r.status === 'pending_payment' || r.status === 'pending').length;
+  const awaitingProviderCount = registrations.filter(r => r.status === 'awaiting_provider').length;
+  const processingCount = registrations.filter(r => r.status === 'processing').length;
+  const actionNeededCount = awaitingProviderCount + processingCount;
   const availableSpots = trip ? trip.max_participants - registrations.filter(r => ['confirmed', 'pending_payment'].includes(r.status)).reduce((sum, r) => sum + r.total_participants, 0) : 0;
 
   const cardCls = 'bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden';
@@ -324,16 +327,40 @@ const TripDetailPage: React.FC = () => {
         )}
       </div>
 
+      {/* Action-needed alert banner */}
+      {actionNeededCount > 0 && (
+        <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
+          <svg className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
+              {t('tripDetail.actionNeededTitle', { count: actionNeededCount })}
+            </p>
+            <p className="text-xs text-orange-700 dark:text-orange-400 mt-0.5">
+              {awaitingProviderCount > 0 && t('tripDetail.awaitingProviderCount', { count: awaitingProviderCount })}
+              {awaitingProviderCount > 0 && processingCount > 0 && ' · '}
+              {processingCount > 0 && t('tripDetail.processingCount', { count: processingCount })}
+            </p>
+          </div>
+          <a href="#bookings-section" className="text-xs font-medium text-orange-600 dark:text-orange-400 underline flex-shrink-0">
+            {t('tripDetail.viewBookings')}
+          </a>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {[
-          { label: t('tripDetail.totalBookings'), value: registrations.length, color: 'text-slate-900 dark:text-white' },
-          { label: t('tripDetail.confirmed'), value: confirmedCount, color: 'text-emerald-600 dark:text-emerald-400' },
-          { label: t('tripDetail.pendingPayment'), value: pendingCount, color: 'text-amber-600 dark:text-amber-400' },
-          { label: t('tripDetail.availableSpots'), value: Math.max(0, availableSpots), color: availableSpots <= 5 ? 'text-red-600 dark:text-red-400' : 'text-sky-600 dark:text-sky-400' },
+          { label: t('tripDetail.actionNeeded'), value: actionNeededCount, color: actionNeededCount > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500', bg: actionNeededCount > 0 ? 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/10' : '' },
+          { label: t('tripDetail.awaitingProvider'), value: awaitingProviderCount, color: awaitingProviderCount > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500', bg: '' },
+          { label: t('tripDetail.processing'), value: processingCount, color: processingCount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500', bg: '' },
+          { label: t('tripDetail.confirmed'), value: confirmedCount, color: 'text-emerald-600 dark:text-emerald-400', bg: '' },
+          { label: t('tripDetail.pendingPayment'), value: pendingCount, color: 'text-slate-500 dark:text-slate-400', bg: '' },
+          { label: t('tripDetail.availableSpots'), value: Math.max(0, availableSpots), color: availableSpots <= 5 ? 'text-red-600 dark:text-red-400' : 'text-sky-600 dark:text-sky-400', bg: '' },
         ].map(s => (
-          <div key={s.label} className={`${cardCls} p-4`}>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{s.label}</p>
+          <div key={s.label} className={`${cardCls} ${s.bg} p-4`}>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 leading-tight">{s.label}</p>
             <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
           </div>
         ))}
@@ -656,7 +683,7 @@ const TripDetailPage: React.FC = () => {
       </div>
 
       {/* Bookings Table */}
-      <div className={cardCls}>
+      <div id="bookings-section" className={cardCls}>
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('tripDetail.bookings', { count: registrations.length })}</h2>
           {trip.trip_type === 'self_arranged' && (() => {

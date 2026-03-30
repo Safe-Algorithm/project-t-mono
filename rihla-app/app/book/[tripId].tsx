@@ -31,6 +31,7 @@ interface PackageSelection {
 
 export default function BookingScreen() {
   const { t, i18n } = useTranslation();
+  const isRTL = i18n.language === 'ar';
   const { colors } = useTheme();
   const s = makeStyles(colors);
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
@@ -192,7 +193,7 @@ export default function BookingScreen() {
 
     if (!isPackaged) {
       const participants = simpleParticipants.slice(0, simpleCount);
-      errors = validateAllParticipants(participants, simpleRequiredFields, nationalityCodes);
+      errors = validateAllParticipants(participants, simpleRequiredFields, nationalityCodes, nationalities);
     } else {
       pkgFlatList.forEach(({ participant, pkg, globalIndex }) => {
         const fieldDefs = (pkg.required_fields ?? []).map(ft => {
@@ -203,7 +204,7 @@ export default function BookingScreen() {
             validation_config: detail?.validation_config ?? null,
           };
         });
-        const pErrors = validateAllParticipants([participant], fieldDefs, nationalityCodes);
+        const pErrors = validateAllParticipants([participant], fieldDefs, nationalityCodes, nationalities);
         if (pErrors[0] && Object.keys(pErrors[0]).length > 0) {
           errors[globalIndex] = pErrors[0];
         }
@@ -454,7 +455,7 @@ export default function BookingScreen() {
                   <View style={s.simplePriceBox}>
                     <Text style={s.simplePriceTotal}>{formatPrice(totalAmount)}</Text>
                     <View style={s.tierBreakdownContainer}>
-                      {buildTierSummary(trip.simple_trip_pricing_tiers).map((line, i) => (
+                      {buildTierSummary(trip.simple_trip_pricing_tiers, 'SAR', t as any, isRTL).map((line, i) => (
                         <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
                       ))}
                     </View>
@@ -475,7 +476,7 @@ export default function BookingScreen() {
                   const pkgName = (i18n.language === 'ar' ? (pkg.name_ar || pkg.name_en) : (pkg.name_en || pkg.name_ar)) || 'Tier';
                   const isFlexPkg = pkg.use_flexible_pricing && pkg.pricing_tiers && pkg.pricing_tiers.length > 0;
                   const pkgSubtotal = count > 0 ? computePackagePrice(pkg, count) : 0;
-                  const billingLines = isFlexPkg && count > 0 ? buildTierBillingBreakdown(pkg.pricing_tiers!, count) : [];
+                  const billingLines = isFlexPkg && count > 0 ? buildTierBillingBreakdown(pkg.pricing_tiers!, count, 'SAR', t as any, isRTL) : [];
                   return (
                     <View key={pkg.id} style={s.pkgCard}>
                       <View style={s.pkgInfo}>
@@ -618,7 +619,7 @@ export default function BookingScreen() {
                 <ConfirmRow label={t('booking.participants')} value={String(totalParticipants)} s={s} />
                 {!isPackaged && trip?.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 && (
                   <View style={s.tierBreakdownContainer}>
-                    {buildTierBillingBreakdown(trip.simple_trip_pricing_tiers, simpleCount).map((line, i) => (
+                    {buildTierBillingBreakdown(trip.simple_trip_pricing_tiers, simpleCount, 'SAR', t as any, isRTL).map((line, i) => (
                       <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
                     ))}
                   </View>
@@ -634,14 +635,14 @@ export default function BookingScreen() {
                   const pkgTotal = computePackagePrice(sel.package, sel.count);
                   const isFlexSel = sel.package.use_flexible_pricing && sel.package.pricing_tiers && sel.package.pricing_tiers.length > 0;
                   const valueLabel = isFlexSel
-                    ? `${sel.count} pax → ${formatPrice(pkgTotal)}`
+                    ? `${sel.count} ${t('pricing.participants_short')} → ${formatPrice(pkgTotal)}`
                     : `${sel.count} × ${formatPrice(Number(sel.package.price))} = ${formatPrice(pkgTotal)}`;
                   return (
                     <View key={sel.package.id}>
                       <ConfirmRow label={pName} value={valueLabel} s={s} />
                       {isFlexSel && (
                         <View style={s.tierBreakdownContainer}>
-                          {buildTierBillingBreakdown(sel.package.pricing_tiers!, sel.count).map((line, i) => (
+                          {buildTierBillingBreakdown(sel.package.pricing_tiers!, sel.count, 'SAR', t as any, isRTL).map((line, i) => (
                             <Text key={i} style={s.tierBreakdownText}>• {line}</Text>
                           ))}
                         </View>

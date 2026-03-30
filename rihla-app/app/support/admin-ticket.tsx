@@ -99,7 +99,7 @@ function TicketThread({ ticketId, colors }: { ticketId: string; colors: ThemeCol
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
     >
       <ScrollView
@@ -200,7 +200,7 @@ function NewTicketForm({ colors, onCreated }: { colors: ThemeColors; onCreated: 
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={s.scroll}>
         <Text style={s.formTitle}>{t('support.formTitle')}</Text>

@@ -40,10 +40,12 @@ export interface ValidationConfig {
   validationConfig?: Record<string, any> | null;
   /** For nationality/gender selects: known valid values */
   knownValues?: string[];
+  /** Full nationality options list for resolving code → name in error messages */
+  nationalityOptions?: Array<{ code: string; name: string; name_ar?: string | null; name_en?: string | null }>;
 }
 
 export function useFieldValidation() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   /**
    * Returns the first error string for a field, or null if valid.
@@ -54,7 +56,15 @@ export function useFieldValidation() {
     value: string | undefined,
     config: ValidationConfig = {},
   ): string | null => {
-    const { isRequired, validationConfig, knownValues } = config;
+    const { isRequired, validationConfig, knownValues, nationalityOptions } = config;
+
+    const resolveNationalityName = (code: string): string => {
+      if (!nationalityOptions) return code;
+      const match = nationalityOptions.find(n => n.code.toUpperCase() === code.toUpperCase());
+      if (!match) return code;
+      const isAr = i18n.language === 'ar';
+      return (isAr ? (match.name_ar || match.name_en || match.name) : (match.name_en || match.name)) || code;
+    };
     const v = (value ?? '').trim();
 
     // Required check
@@ -157,7 +167,8 @@ export function useFieldValidation() {
         if (validationConfig?.nationality_restriction?.allowed_nationalities) {
           const allowed: string[] = validationConfig.nationality_restriction.allowed_nationalities;
           if (!allowed.map(n => n.toUpperCase()).includes(v.toUpperCase())) {
-            return t('fieldValidation.nationalityRestricted', { nationalities: allowed.join(', ') });
+            const names = allowed.map(resolveNationalityName).join('، ');
+            return t('fieldValidation.nationalityRestricted', { nationalities: names });
           }
         }
         break;
@@ -203,6 +214,7 @@ export function useFieldValidation() {
     participants: Array<Record<string, string | undefined>>,
     fieldDefs: Array<{ field_type: FieldType; is_required: boolean; validation_config: Record<string, any> | null }>,
     nationalityCodes?: string[],
+    nationalityOptionsList?: ValidationConfig['nationalityOptions'],
   ): Record<number, Record<string, string>> => {
     const errors: Record<number, Record<string, string>> = {};
     participants.forEach((participant, idx) => {
@@ -211,6 +223,7 @@ export function useFieldValidation() {
           isRequired: is_required,
           validationConfig: validation_config,
           knownValues: field_type === 'nationality' ? nationalityCodes : undefined,
+          nationalityOptions: field_type === 'nationality' ? nationalityOptionsList : undefined,
         });
         if (error) {
           if (!errors[idx]) errors[idx] = {};

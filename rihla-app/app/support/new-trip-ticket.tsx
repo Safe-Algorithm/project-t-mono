@@ -55,7 +55,7 @@ export default function NewTripTicketScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView contentContainerStyle={s.scroll}>
           <Text style={s.formTitle}>{t('support.contactFormTitle', { providerName: providerName || t('booking.contactProvider') })}</Text>
