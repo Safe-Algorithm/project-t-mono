@@ -27,6 +27,7 @@ from app.schemas.financials import (
 )
 from app.services.financials import (
     get_or_create_earning_lines_for_provider,
+    get_commission_rate_at_time,
     _is_owed,
 )
 from app.utils.localization import get_name
@@ -361,13 +362,17 @@ def get_trip_financial_detail(
         status = _booking_status_label(registration, payment, trip, earning_line)
 
         gross = registration.total_amount
-        cut_pct = trip.provider.commission_rate if trip.provider else Decimal("10.00")
-        cut = (gross * cut_pct / Decimal("100")).quantize(Decimal("0.01"))
-        provider_amt = gross - cut
 
         if earning_line:
+            # Use the locked rate from when the earning line was created
             cut = earning_line.platform_cut_amount
             provider_amt = earning_line.provider_amount
+        else:
+            # Booking not yet locked — estimate using the rate at payment time
+            paid_at = payment.paid_at or payment.created_at
+            cut_pct = get_commission_rate_at_time(session, trip.provider_id, paid_at)
+            cut = (gross * cut_pct / Decimal("100")).quantize(Decimal("0.01"))
+            provider_amt = gross - cut
 
         total_gross += gross
         total_cut += cut

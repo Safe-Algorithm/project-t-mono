@@ -38,16 +38,26 @@ const DashboardPage = () => {
   const { user } = useAuth();
   const { t, i18n } = useTranslation();
   const isRTL = i18n.language === 'ar';
-  const { trips, isLoading: tripsLoading } = useTrips();
+  const { trips, isLoading: tripsLoading, refetch: refetchTrips } = useTrips();
   const [stats, setStats] = useState<ProviderDashboardStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    providerStatsService.getDashboardStats()
+  const loadStats = () => {
+    setStatsLoading(true);
+    return providerStatsService.getDashboardStats()
       .then(setStats)
       .catch(() => setStats(null))
       .finally(() => setStatsLoading(false));
-  }, []);
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadStats(), refetchTrips()]);
+    setRefreshing(false);
+  };
+
+  useEffect(() => { loadStats(); }, []);
 
   if (!user) {
     return (
@@ -75,13 +85,29 @@ const DashboardPage = () => {
   return (
     <div className="space-y-8" dir={isRTL ? 'rtl' : 'ltr'}>
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-          {t('dashboard.welcomeBack', { name: user.company_name || user.name })}
-        </h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          {t('dashboard.summary')}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+            {t('dashboard.welcomeBack', { name: user.company_name || user.name })}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            {t('dashboard.summary')}
+          </p>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          title={t('dashboard.refresh')}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 hover:border-sky-300 dark:hover:border-sky-600 hover:text-sky-600 dark:hover:text-sky-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm flex-shrink-0"
+        >
+          <svg
+            className={`w-4 h-4 transition-transform ${refreshing ? 'animate-spin' : 'group-hover:rotate-180'}`}
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>{refreshing ? t('dashboard.refreshing') : t('dashboard.refresh')}</span>
+        </button>
       </div>
 
       {/* Action-required alert */}

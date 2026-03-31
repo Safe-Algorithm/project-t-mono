@@ -17,7 +17,33 @@ from app.models.earning_line import EarningLine
 from app.models.trip import Trip
 from app.models.trip_package import TripPackage
 from app.models.provider import Provider
+from app.models.commission_rate_history import CommissionRateHistory
 from app.services.refund import compute_refund
+
+
+def get_commission_rate_at_time(session: Session, provider_id, at: datetime) -> Decimal:
+    """
+    Return the commission rate that was in effect for a provider at a given
+    datetime.  Looks up the most recent CommissionRateHistory row whose
+    effective_from <= at.  Falls back to the provider's current rate if no
+    history row is found (safety net for providers created before this feature).
+    """
+    import uuid as _uuid
+    pid = provider_id if isinstance(provider_id, _uuid.UUID) else _uuid.UUID(str(provider_id))
+    row = session.exec(
+        select(CommissionRateHistory)
+        .where(
+            CommissionRateHistory.provider_id == pid,
+            CommissionRateHistory.effective_from <= at,
+        )
+        .order_by(CommissionRateHistory.effective_from.desc())
+    ).first()
+    if row:
+        return row.rate
+    # Fall back to current rate if history somehow missing
+    from app.models.provider import Provider as ProviderModel
+    provider = session.get(ProviderModel, pid)
+    return provider.commission_rate if provider else Decimal("10.00")
 
 
 def _get_is_refundable(session: Session, registration: TripRegistration) -> bool:
@@ -90,7 +116,9 @@ def materialize_earning_line(
         return existing
 
     gross = registration.total_amount
-    cut_pct = provider.commission_rate
+    # Use the rate that was in effect when the payment was made, not today's rate
+    paid_at = payment.paid_at or payment.created_at
+    cut_pct = get_commission_rate_at_time(session, provider.id, paid_at)
     cut_amount = (gross * cut_pct / Decimal("100")).quantize(Decimal("0.01"))
     provider_amount = (gross - cut_amount).quantize(Decimal("0.01"))
 

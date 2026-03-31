@@ -521,6 +521,8 @@ const resources = {
       // Dashboard extras
       "dashboard.welcomeBack": "Welcome back, {{name}} 👋",
       "dashboard.summary": "Here's a summary of your activity",
+      "dashboard.refresh": "Refresh",
+      "dashboard.refreshing": "Refreshing…",
       "dashboard.totalSeats": "Total Seats",
       "dashboard.upcomingTrips": "Upcoming Trips",
       "dashboard.viewAll": "View all",
@@ -1447,6 +1449,8 @@ const resources = {
       // Dashboard extras
       "dashboard.welcomeBack": "مرحباً بعودتك، {{name}} 👋",
       "dashboard.summary": "إليك ملخص نشاطك",
+      "dashboard.refresh": "تحديث",
+      "dashboard.refreshing": "جارٍ التحديث…",
       "dashboard.totalSeats": "إجمالي المقاعد",
       "dashboard.upcomingTrips": "الرحلات القادمة",
       "dashboard.viewAll": "عرض الكل",

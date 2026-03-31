@@ -29,3 +29,4 @@ from .refund_record import RefundRecord
 from .user_push_token import UserPushToken
 from .earning_line import EarningLine
 from .provider_payout import ProviderPayout, PayoutStatus
+from .commission_rate_history import CommissionRateHistory

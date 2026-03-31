@@ -496,3 +496,116 @@ def test_provider_summary_reflects_commission_rate(
     resp = client.get("/api/v1/provider/financials/summary", headers=provider_headers)
     assert resp.status_code == 200
     assert Decimal(resp.json()["commission_rate"]) == Decimal("20.00")
+
+
+# ─── Commission rate history ──────────────────────────────────────────────────
+
+def test_commission_update_writes_history_row(
+    client: TestClient, session: Session,
+    admin_headers: dict, provider: Provider,
+):
+    """Updating commission via API creates a CommissionRateHistory row."""
+    from app.models.commission_rate_history import CommissionRateHistory
+    from sqlmodel import select as sql_select
+
+    resp = client.patch(
+        f"/api/v1/admin/providers/{provider.id}/commission",
+        json={"commission_rate": "18.00"},
+        headers=admin_headers,
+    )
+    assert resp.status_code == 200
+
+    rows = session.exec(
+        sql_select(CommissionRateHistory)
+        .where(CommissionRateHistory.provider_id == provider.id)
+        .order_by(CommissionRateHistory.effective_from.desc())
+    ).all()
+    assert len(rows) >= 1
+    assert rows[0].rate == Decimal("18.00")
+
+
+def test_earning_line_uses_historical_rate(
+    session: Session, provider: Provider,
+    trip_non_refundable: Trip, mobile_user: User,
+):
+    """
+    Booking paid at time T uses the commission rate that was in effect at T,
+    not the rate that was set later.
+    """
+    from app.models.commission_rate_history import CommissionRateHistory
+    from app.services.financials import materialize_earning_line, get_commission_rate_at_time
+
+    # Seed a history row: provider started at 10%
+    t0 = datetime.utcnow() - timedelta(hours=10)
+    session.add(CommissionRateHistory(
+        provider_id=provider.id,
+        rate=Decimal("10.00"),
+        effective_from=t0,
+    ))
+    # Rate changed to 20% 5 hours ago
+    t1 = datetime.utcnow() - timedelta(hours=5)
+    session.add(CommissionRateHistory(
+        provider_id=provider.id,
+        rate=Decimal("20.00"),
+        effective_from=t1,
+    ))
+    session.commit()
+
+    # Payment was made 7 hours ago — should use 10% rate
+    paid_at_old = datetime.utcnow() - timedelta(hours=7)
+    assert get_commission_rate_at_time(session, provider.id, paid_at_old) == Decimal("10.00")
+
+    # Payment made 3 hours ago — should use 20% rate
+    paid_at_new = datetime.utcnow() - timedelta(hours=3)
+    assert get_commission_rate_at_time(session, provider.id, paid_at_new) == Decimal("20.00")
+
+
+def test_earning_line_locked_to_payment_time_rate(
+    session: Session, provider: Provider,
+    trip_non_refundable: Trip, mobile_user: User,
+):
+    """
+    EarningLine.platform_cut_pct is locked to the rate at payment time.
+    A subsequent commission rate change must NOT affect an already-materialised line.
+    """
+    from app.models.commission_rate_history import CommissionRateHistory
+    from app.services.financials import materialize_earning_line
+
+    # Seed history: 10% from the start
+    t0 = datetime.utcnow() - timedelta(days=30)
+    session.add(CommissionRateHistory(
+        provider_id=provider.id,
+        rate=Decimal("10.00"),
+        effective_from=t0,
+    ))
+    session.commit()
+
+    # Create a paid registration (7 hours ago, when rate was 10%)
+    reg, payment = _make_paid_registration(
+        session, trip_non_refundable, mobile_user,
+        amount=Decimal("1000.00"),
+        paid_at_offset_hours=-7,
+    )
+
+    # Materialise earning line — should use 10%
+    session.refresh(provider)
+    line = materialize_earning_line(session, reg, payment, trip_non_refundable, provider)
+    session.commit()
+
+    assert line.platform_cut_pct == Decimal("10.00")
+    assert line.platform_cut_amount == Decimal("100.00")
+    assert line.provider_amount == Decimal("900.00")
+
+    # Now change rate to 25% — existing line must be unchanged
+    session.add(CommissionRateHistory(
+        provider_id=provider.id,
+        rate=Decimal("25.00"),
+        effective_from=datetime.utcnow(),
+    ))
+    provider.commission_rate = Decimal("25.00")
+    session.add(provider)
+    session.commit()
+    session.refresh(line)
+
+    assert line.platform_cut_pct == Decimal("10.00"), "Existing earning line must not change after rate update"
+    assert line.provider_amount == Decimal("900.00")

@@ -206,15 +206,24 @@ def admin_update_commission(
 ):
     """Update a provider's platform commission rate."""
     from app.models.provider import Provider as ProviderModel
+    from app.models.commission_rate_history import CommissionRateHistory
     from datetime import datetime
     provider = session.get(ProviderModel, provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
     if commission_in.commission_rate < 0 or commission_in.commission_rate > 100:
         raise HTTPException(status_code=400, detail="Commission rate must be between 0 and 100")
+    now = datetime.utcnow()
     provider.commission_rate = commission_in.commission_rate
-    provider.updated_at = datetime.utcnow()
+    provider.updated_at = now
     session.add(provider)
+    history_row = CommissionRateHistory(
+        provider_id=provider_id,
+        rate=commission_in.commission_rate,
+        effective_from=now,
+        changed_by_admin_id=current_admin.id,
+    )
+    session.add(history_row)
     session.commit()
     return {"ok": True, "commission_rate": float(commission_in.commission_rate)}
 

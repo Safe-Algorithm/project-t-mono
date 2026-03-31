@@ -7,21 +7,21 @@ export const useTrips = (filters?: TripFilterParams) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        setIsLoading(true);
-        const fetchedTrips = await tripService.getAll(filters);
-        setTrips(fetchedTrips);
-      } catch (err: any) {
-        setError(err.message || 'Failed to fetch trips');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchTrips = async () => {
+    try {
+      setIsLoading(true);
+      const fetchedTrips = await tripService.getAll(filters);
+      setTrips(fetchedTrips);
+    } catch (err: any) {
+      setError(err.message || 'Failed to fetch trips');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTrips();
   }, [filters?.search, filters?.start_date_from, filters?.start_date_to, filters?.min_price, filters?.max_price, filters?.min_participants, filters?.max_participants, filters?.min_rating, filters?.is_active]);
 
-  return { trips, isLoading, error };
+  return { trips, isLoading, error, refetch: fetchTrips };
 };
