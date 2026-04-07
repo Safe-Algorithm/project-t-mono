@@ -67,7 +67,14 @@ def _filter_trip_update_changes(session: Session, db_trip, trip_in: TripUpdate) 
     hidden_package = None
     package_only_fields = {"price", "is_refundable", "amenities"}
 
-    if any(field in payload for field in package_only_fields):
+    # For packaged trips these fields live on the individual packages, not on the
+    # trip or a hidden package.  Sending them in the trip-level update payload is a
+    # no-op — don't treat them as changes so they never trigger the refundability
+    # guard or the paid-booking material-change guard.
+    if db_trip.is_packaged_trip:
+        for f in package_only_fields:
+            payload.pop(f, None)
+    elif any(field in payload for field in package_only_fields):
         hidden_package = _get_hidden_package(session, db_trip.id)
 
     changed: Dict[str, Any] = {}
@@ -2010,10 +2017,11 @@ def flag_registration_processing(
 
     # Push: notify user that provider started arranging the trip
     from sqlmodel import select as sql_select
+    from app.utils.localization import get_localized_field
     reg_user = session.get(User, reg.user_id)
     if reg_user:
         lang = getattr(reg_user, "preferred_language", "en") or "en"
-        trip_name = trip.name_en or trip.name_ar or ""
+        trip_name = get_localized_field(trip, "name", lang) or ""
         tokens = [pt.token for pt in session.exec(sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)).all()]
         for token in tokens:
             background_tasks.add_task(
@@ -2271,8 +2279,9 @@ async def user_cancel_booking(
 
     # Push: notify user their cancellation is confirmed
     from sqlmodel import select as sql_select_cancel
+    from app.utils.localization import get_localized_field
     lang = getattr(current_user, "preferred_language", "en") or "en"
-    trip_name_cancel = trip.name_en or trip.name_ar or ""
+    trip_name_cancel = get_localized_field(trip, "name", lang) or ""
     tokens_cancel = [pt.token for pt in session.exec(sql_select_cancel(UserPushToken).where(UserPushToken.user_id == current_user.id)).all()]
     for token in tokens_cancel:
         background_tasks.add_task(
@@ -2353,10 +2362,11 @@ async def provider_cancel_single_booking(
     session.commit()
 
     # Push: notify the user their booking was cancelled by the provider
+    from app.utils.localization import get_localized_field
     reg_user = session.get(User, reg.user_id)
     if reg_user:
         lang = getattr(reg_user, "preferred_language", "en") or "en"
-        trip_name_val = trip.name_en or trip.name_ar or ""
+        trip_name_val = get_localized_field(trip, "name", lang) or ""
         tokens = [pt.token for pt in session.exec(
             sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
         ).all()]
@@ -2430,12 +2440,13 @@ async def provider_cancel_trip(
     session.commit()
 
     # Push: notify each affected user the trip was cancelled by provider
-    trip_name_cancel = trip.name_en or trip.name_ar or ""
+    from app.utils.localization import get_localized_field
     for reg in active_regs:
         reg_user = session.get(User, reg.user_id)
         if not reg_user:
             continue
         lang = getattr(reg_user, "preferred_language", "en") or "en"
+        trip_name_cancel = get_localized_field(trip, "name", lang) or ""
         tokens = [pt.token for pt in session.exec(
             sql_select(UserPushToken).where(UserPushToken.user_id == reg_user.id)
         ).all()]
@@ -2741,36 +2752,36 @@ async def upload_trip_images(
     allowed_types = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
     max_size = 10 * 1024 * 1024  # 10 MB raw input (will be compressed before storage)
 
-    uploaded_urls = []
+    uploaded_urls: list[str] = []
+    failed_files: list[dict] = []  # {"filename": ..., "reason": ...}
 
     for file in files:
+        fname = file.filename or "image"
+
         if file.content_type not in allowed_types:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid file type: {file.content_type}. Allowed types: JPEG, PNG, WEBP"
-            )
+            failed_files.append({"filename": fname, "reason": f"Invalid file type ({file.content_type}). Allowed: JPEG, PNG, WEBP"})
+            continue
 
         content = await file.read()
 
         if len(content) > max_size:
-            raise HTTPException(
-                status_code=400,
-                detail=f"File '{file.filename}' is too large. Maximum accepted size is 10 MB"
-            )
+            failed_files.append({"filename": fname, "reason": f"File is too large ({len(content) // (1024*1024)} MB). Maximum is 10 MB"})
+            continue
 
         # Validate resolution and compress — run in thread pool to avoid blocking the event loop
         try:
             loop = asyncio.get_event_loop()
             processed = await loop.run_in_executor(
-                None, process_trip_image, content, file.filename or "image.jpg"
+                None, process_trip_image, content, fname
             )
         except ValueError as exc:
-            raise HTTPException(status_code=400, detail=str(exc))
+            failed_files.append({"filename": fname, "reason": str(exc)})
+            continue
 
         try:
             file_info = await storage_service.upload_file(
                 file_data=processed.data,
-                file_name=file.filename,
+                file_name=fname,
                 content_type=processed.content_type,
                 folder="trip_images"
             )
@@ -2783,27 +2794,36 @@ async def upload_trip_images(
                 provider_id=current_user.provider_id,
                 url=url,
                 b2_file_id=file_info.get("fileId", ""),
-                b2_file_name=file_info.get("fileName", file.filename or ""),
-                original_filename=file.filename,
+                b2_file_name=file_info.get("fileName", fname),
+                original_filename=fname,
                 width=processed.width,
                 height=processed.height,
                 size_bytes=len(processed.data),
             )
         except Exception as e:
-            logger.error(f"Error uploading file {file.filename}: {e}")
-            raise HTTPException(status_code=500, detail=f"Failed to upload '{file.filename}'")
+            logger.error(f"Error uploading file {fname}: {e}")
+            failed_files.append({"filename": fname, "reason": "Storage upload failed. Please try again."})
 
-    # Update trip with new image URLs
-    current_images = trip.images or []
-    trip.images = current_images + uploaded_urls
-    session.add(trip)
-    session.commit()
-    session.refresh(trip)
+    # Update trip with successfully uploaded image URLs
+    if uploaded_urls:
+        current_images = trip.images or []
+        trip.images = current_images + uploaded_urls
+        session.add(trip)
+        session.commit()
+        session.refresh(trip)
+
+    # If every single file failed, return 400 so the frontend knows nothing succeeded
+    if not uploaded_urls and failed_files:
+        raise HTTPException(
+            status_code=400,
+            detail="\n".join(f"'{f['filename']}': {f['reason']}" for f in failed_files),
+        )
 
     return {
-        "message": f"Successfully uploaded {len(uploaded_urls)} images",
+        "message": f"Uploaded {len(uploaded_urls)} of {len(files)} image(s)",
         "uploaded_urls": uploaded_urls,
-        "total_images": len(trip.images)
+        "total_images": len(trip.images or []),
+        "failed": failed_files,
     }
 
 

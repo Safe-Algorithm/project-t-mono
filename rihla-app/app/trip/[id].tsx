@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Image, Dimensions, FlatList, Linking, Share,
@@ -69,6 +69,12 @@ export default function TripDetailScreen() {
   const toggleFav = useToggleFavorite();
   const { data: myRegistrations } = useMyRegistrations();
 
+  useEffect(() => {
+    if (trip?.images && trip.images.length > 1) {
+      trip.images.forEach((uri) => Image.prefetch(uri));
+    }
+  }, [trip?.id]);
+
   const isFav = favorites?.some((t) => t.id === id) ?? false;
   const activeBooking = myRegistrations?.find(
     (r) => r.trip_id === id && !['cancelled', 'completed'].includes(r.status)
@@ -133,14 +139,15 @@ export default function TripDetailScreen() {
           {images.length > 0 ? (
             <View>
               <FlatList
-                data={isRTL ? [...images].reverse() : images}
+                data={images}
                 keyExtractor={(_, i) => String(i)}
                 horizontal
                 pagingEnabled
+                inverted={isRTL}
                 showsHorizontalScrollIndicator={false}
                 onMomentumScrollEnd={(e) => {
                   const rawIndex = Math.round(e.nativeEvent.contentOffset.x / W);
-                  setImageIndex(isRTL ? images.length - 1 - rawIndex : rawIndex);
+                  setImageIndex(rawIndex);
                 }}
                 renderItem={({ item }) => (
                   <Image source={{ uri: item }} style={s.heroImage} />
@@ -149,9 +156,9 @@ export default function TripDetailScreen() {
               {/* Image dots */}
               {images.length > 1 && (
                 <View style={s.imageDots}>
-                  {images.map((_, i) => {
-                    const dotActive = isRTL ? i === (images.length - 1 - imageIndex) : i === imageIndex;
-                    return <View key={i} style={[s.imageDot, dotActive && s.imageDotActive]} />;
+                  {(isRTL ? [...images].reverse() : images).map((_, i) => {
+                    const originalIndex = isRTL ? images.length - 1 - i : i;
+                    return <View key={i} style={[s.imageDot, originalIndex === imageIndex && s.imageDotActive]} />;
                   })}
                 </View>
               )}
@@ -432,9 +439,9 @@ export default function TripDetailScreen() {
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={s.feeName}>{i18n.language === 'ar' ? (fee.name_ar || fee.name_en) : (fee.name_en || fee.name_ar)}</Text>
-                      <View style={[s.feeBadge, fee.is_required ? s.feeBadgeRequired : s.feeBadgeOptional]}>
-                        <Text style={[s.feeBadgeText, fee.is_required ? s.feeBadgeTextRequired : s.feeBadgeTextOptional]}>
-                          {fee.is_required ? t('trip.feeRequired') : t('trip.feeOptional')}
+                      <View style={[s.feeBadge, fee.is_mandatory ? s.feeBadgeRequired : s.feeBadgeOptional]}>
+                        <Text style={[s.feeBadgeText, fee.is_mandatory ? s.feeBadgeTextRequired : s.feeBadgeTextOptional]}>
+                          {fee.is_mandatory ? t('trip.feeRequired') : t('trip.feeOptional')}
                         </Text>
                       </View>
                     </View>

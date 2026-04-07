@@ -21,7 +21,7 @@ from app.models.trip_registration import TripRegistration
 from app.services.notification import NotificationService
 from app.services.fcm import fcm_service
 from app.models.user_push_token import UserPushToken
-from app.utils.localization import get_name, get_description
+from app.utils.localization import get_name, get_description, get_localized_field
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +63,8 @@ async def send_trip_reminders():
                 
                 for registration in registrations:
                     try:
-                        # Send notification via NotificationService
-                        trip_name = get_name(trip)
                         lang = getattr(registration.user, "preferred_language", "en") or "en"
+                        trip_name = get_localized_field(trip, "name", lang) or get_name(trip)
                         await notification_service.send_trip_reminder(
                             user=registration.user,
                             trip_name=trip_name,
@@ -143,8 +142,8 @@ async def send_review_reminders():
                         
                         if not existing_review:
                             # Send review reminder via SMS/Email/Push
-                            trip_name = get_name(trip)
                             lang = getattr(registration.user, "preferred_language", "en") or "en"
+                            trip_name = get_localized_field(trip, "name", lang) or get_name(trip)
                             
                             # Send SMS if phone verified
                             if registration.user.is_phone_verified and registration.user.phone:

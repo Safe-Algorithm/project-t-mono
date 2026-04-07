@@ -42,7 +42,7 @@ export interface TripExtraFee {
   description_ar: string | null;
   amount: string | number;
   currency: string;
-  is_required: boolean;
+  is_mandatory: boolean;
 }
 
 export interface TripProvider {

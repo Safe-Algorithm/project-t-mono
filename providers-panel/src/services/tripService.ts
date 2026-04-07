@@ -159,7 +159,7 @@ export const tripService = {
     return api.get<{ nationalities: NationalityOption[] }>('/trips/validation/nationalities');
   },
 
-  uploadImages: async (tripId: string, images: File[]): Promise<{ message: string; uploaded_urls: string[]; total_images: number }> => {
+  uploadImages: async (tripId: string, images: File[]): Promise<{ message: string; uploaded_urls: string[]; total_images: number; failed: { filename: string; reason: string }[] }> => {
     const formData = new FormData();
     images.forEach((image) => {
       formData.append('files', image);

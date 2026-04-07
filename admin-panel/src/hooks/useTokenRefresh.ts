@@ -1,54 +1,60 @@
 import { useAuth } from '@/context/AuthContext';
 import { useEffect, useRef } from 'react';
 
+/** Returns seconds until token expiry (negative if already expired). */
+function tokenSecondsRemaining(token: string): number {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(base64));
+    if (!payload?.exp) return -1;
+    return payload.exp - Math.floor(Date.now() / 1000);
+  } catch {
+    return -1;
+  }
+}
+
+// Refresh this many seconds before the token actually expires.
+const REFRESH_BEFORE_EXPIRY_SECONDS = 90;
+// Minimum delay between refresh attempts (prevents thrashing).
+const MIN_REFRESH_DELAY_MS = 10_000;
+
 export const useTokenRefresh = () => {
   const { token, refreshToken, logout } = useAuth();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
     }
-    if (token) {
-      intervalRef.current = setInterval(async () => {
+
+    if (!token) return;
+
+    const scheduleNext = (currentToken: string) => {
+      const secondsLeft = tokenSecondsRemaining(currentToken);
+      // Fire REFRESH_BEFORE_EXPIRY_SECONDS before expiry; never sooner than MIN_REFRESH_DELAY_MS.
+      const delayMs = Math.max(
+        (secondsLeft - REFRESH_BEFORE_EXPIRY_SECONDS) * 1000,
+        MIN_REFRESH_DELAY_MS,
+      );
+
+      timerRef.current = setTimeout(async () => {
         const success = await refreshToken();
         if (!success) {
           logout();
         }
-      }, 10 * 60 * 1000);
-    }
+        // After a successful refresh the token state changes, which re-runs this
+        // effect with the new token and reschedules automatically.
+      }, delayMs);
+    };
+
+    scheduleNext(token);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     };
   }, [token, refreshToken, logout]);
-
-  // Also refresh on API call failures (401 errors)
-  const handleApiCall = async (apiCall: () => Promise<Response>): Promise<Response> => {
-    try {
-      const response = await apiCall();
-      
-      if (response.status === 401) {
-        // Try to refresh token
-        const refreshSuccess = await refreshToken();
-        if (refreshSuccess) {
-          // Retry the API call with new token
-          return await apiCall();
-        } else {
-          logout();
-          throw new Error('Authentication failed');
-        }
-      }
-      
-      return response;
-    } catch (error) {
-      throw error;
-    }
-  };
-
-  return { handleApiCall };
 };

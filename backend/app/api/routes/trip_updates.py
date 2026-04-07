@@ -106,12 +106,13 @@ async def provider_send_update_to_all(
             TripRegistration.status != "cancelled",
         )
     ).all())
-    trip_name = trip.name_en or trip.name_ar or ""
     for reg in registrations:
         user = session.get(User, reg.user_id)
         if not user:
             continue
         lang = getattr(user, "preferred_language", "en") or "en"
+        from app.utils.localization import get_localized_field
+        trip_name = get_localized_field(trip, "name", lang) or ""
         tokens = [pt.token for pt in session.exec(
             select(UserPushToken).where(UserPushToken.user_id == user.id)
         ).all()]
@@ -170,7 +171,8 @@ async def provider_send_update_to_registration(
     user = session.get(User, reg.user_id)
     if user:
         lang = getattr(user, "preferred_language", "en") or "en"
-        trip_name = trip.name_en or trip.name_ar or ""
+        from app.utils.localization import get_localized_field
+        trip_name = get_localized_field(trip, "name", lang) or ""
         tokens = [pt.token for pt in session.exec(
             select(UserPushToken).where(UserPushToken.user_id == user.id)
         ).all()]

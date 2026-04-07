@@ -69,6 +69,7 @@ export const CSV_COLUMNS = [
   'starting_city_name',
   'starting_city_id',
   'destination_ids',
+  'required_fields',
 ] as const;
 
 export type CsvColumn = typeof CSV_COLUMNS[number];
@@ -86,6 +87,7 @@ export interface CsvImportPackage {
   is_refundable: boolean;
   amenities: string[];
   max_participants: number | null;
+  required_fields: string[];
 }
 
 /** The structured object produced by a successful CSV import. */
@@ -114,6 +116,8 @@ export interface TripCsvImport {
   starting_city_name: string;
   starting_city_id: string;
   destination_ids: string[];
+  // Required fields for simple (non-packaged) trips
+  required_fields: string[];
   // Packaged trip packages (populated from package rows)
   packages: CsvImportPackage[];
 }
@@ -258,6 +262,8 @@ export function exportTripToCsv(trip: Trip): string {
     cityName,
     cityId,
     destIds,
+    // Simple-trip required fields (pipe-separated field_type values)
+    !isPackaged ? (trip.simple_trip_required_fields ?? []).join('|') : '',
   ]);
 
   const rows: string[] = [header, tripRow];
@@ -285,6 +291,7 @@ export function exportTripToCsv(trip: Trip): string {
         pkgAmenities,
         '', '', '', '', '',            // meeting place + city blank
         '', '',                        // starting_city_id + destination_ids blank
+        (pkg.required_fields ?? []).join('|'),  // required_fields
       ]));
     }
   }
@@ -465,7 +472,17 @@ export function parseTripCsv(
   }
 
   // ── is_refundable ───────────────────────────────────────────────────────
-  const is_refundable = get('is_refundable').toLowerCase() !== 'false';
+  const is_refundable = get('is_refundable').toLowerCase() === 'true';
+
+  // ── required_fields (simple trip) ───────────────────────────────────────
+  const MANDATORY_FIELDS = ['name', 'date_of_birth'];
+  const ALLOWED_FIELD_TYPES = new Set(['name', 'date_of_birth', 'gender', 'nationality',
+    'phone_number', 'email', 'id_iqama_number', 'passport_number',
+    'disability_status', 'age', 'weight', 'height']);
+  const required_fields = Array.from(new Set([
+    ...MANDATORY_FIELDS,
+    ...get('required_fields').split('|').map(s => s.trim().toLowerCase()).filter(s => ALLOWED_FIELD_TYPES.has(s)),
+  ]));
 
   // ── amenities ───────────────────────────────────────────────────────────
   const amenities = parsePipeList(get('amenities'), ALLOWED_AMENITIES);
@@ -506,6 +523,10 @@ export function parseTripCsv(
       }
       const pkgMaxRaw = pg('max_participants_pkg');
       const pkgMax = pkgMaxRaw ? parseInt(pkgMaxRaw, 10) : null;
+      const pkgRequiredFields = Array.from(new Set([
+        ...MANDATORY_FIELDS,
+        ...pg('required_fields').split('|').map((s: string) => s.trim().toLowerCase()).filter((s: string) => ALLOWED_FIELD_TYPES.has(s)),
+      ]));
       packages.push({
         name_en: pg('name_en').substring(0, 200),
         name_ar: pg('name_ar').substring(0, 200),
@@ -514,9 +535,10 @@ export function parseTripCsv(
         price_sar: pkgPrice,
         use_flexible_pricing: pkgFlex,
         flexible_tiers: pkgTiers,
-        is_refundable: pg('is_refundable').toLowerCase() !== 'false',
+        is_refundable: pg('is_refundable').toLowerCase() === 'true',
         amenities: parsePipeList(pg('amenities'), ALLOWED_AMENITIES),
         max_participants: pkgMax && !isNaN(pkgMax) ? pkgMax : null,
+        required_fields: pkgRequiredFields,
       });
     }
   }
@@ -535,6 +557,7 @@ export function parseTripCsv(
       starting_city_name,
       starting_city_id,
       destination_ids,
+      required_fields,
       packages,
     },
   };

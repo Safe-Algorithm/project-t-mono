@@ -3,6 +3,23 @@ import { useUser } from '@/hooks/useUser';
 import { User } from '@/types/user';
 import { setGlobalRefreshToken } from '@/services/api';
 
+/** Decode JWT payload without verification (client-side only — expiry check). */
+function decodeJwtPayload(token: string): Record<string, any> | null {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(base64));
+  } catch {
+    return null;
+  }
+}
+
+/** Returns seconds until token expiry (negative if already expired). */
+function tokenSecondsRemaining(token: string): number {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return -1;
+  return payload.exp - Math.floor(Date.now() / 1000);
+}
+
 interface UserContextType {
   user: User | null;
   token: string | null;
@@ -29,7 +46,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           'Content-Type': 'application/json',
           'X-Source': 'providers_panel',
         },
-        credentials: 'include', // Include cookies
+        credentials: 'include',
       });
 
       if (response.ok) {
@@ -38,31 +55,43 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('provider_access_token', data.access_token);
         return true;
       } else {
-        // Clear tokens on refresh failure
         setToken(null);
         localStorage.removeItem('provider_access_token');
         return false;
       }
     } catch (error) {
       console.error('Token refresh failed:', error);
-      // Clear tokens on refresh failure
       setToken(null);
       localStorage.removeItem('provider_access_token');
       return false;
     }
   }, []);
 
+  // Register refresh function synchronously so the api layer can use it
+  // before the first useEffect fires (avoids race on initial API calls).
+  setGlobalRefreshToken(refreshTokens);
+
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('provider_access_token');
-      
+
       if (storedToken) {
-        setToken(storedToken);
+        const secondsLeft = tokenSecondsRemaining(storedToken);
+        if (secondsLeft > 120) {
+          // Token still valid with comfortable margin — use it directly.
+          setToken(storedToken);
+        } else {
+          // Token expired or about to expire — refresh immediately via cookie.
+          const success = await refreshTokens();
+          if (!success) {
+            setToken(null);
+            localStorage.removeItem('provider_access_token');
+          }
+        }
       } else {
-        // Try to refresh token on app start using cookie
+        // No stored token — try silent refresh via HttpOnly cookie.
         const success = await refreshTokens();
         if (!success) {
-          // If refresh fails, clear any remaining tokens
           setToken(null);
           localStorage.removeItem('provider_access_token');
         }
@@ -72,7 +101,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initializeAuth();
   }, [refreshTokens]);
-
 
   const login = useCallback((accessToken: string) => {
     setToken(accessToken);
@@ -97,10 +125,6 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const refreshToken = useCallback(async (): Promise<boolean> => refreshTokens(), [refreshTokens]);
-
-  useEffect(() => {
-    setGlobalRefreshToken(refreshTokens);
-  }, [refreshTokens]);
 
   return (
     <UserContext.Provider value={{ user, token, isInitialized, isLoading, error, login, logout, refreshToken }}>

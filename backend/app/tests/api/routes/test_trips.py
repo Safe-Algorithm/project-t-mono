@@ -3649,6 +3649,37 @@ def test_update_trip_package_same_is_refundable_value_allowed(client: TestClient
     assert resp.json()["id"] == package_id
 
 
+def test_update_packaged_trip_with_is_refundable_in_payload_does_not_raise(
+    client: TestClient, session: Session
+):
+    """
+    Regression: updating a packaged trip (is_packaged_trip=True) while the
+    payload happens to include is_refundable must NOT raise the
+    'Refundability cannot be changed' error, because is_refundable belongs to
+    individual packages, not the trip itself.  The field should simply be
+    ignored at the trip level.
+    """
+    user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)
+    trip_id, _, _ = _create_packaged_trip(client, headers)
+
+    # Updating the trip description while also sending is_refundable (e.g. the
+    # frontend serialises the whole form) must succeed.
+    resp = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"description_en": "Updated description", "is_refundable": True},
+    )
+    assert resp.status_code == 200, resp.json()
+
+    # Sending is_refundable alone must also succeed (no false-positive change detected)
+    resp2 = client.put(
+        f"{settings.API_V1_STR}/trips/{trip_id}",
+        headers=headers,
+        json={"is_refundable": False},
+    )
+    assert resp2.status_code == 200, resp2.json()
+
+
 def test_update_trip_material_fields_blocked_with_paid_bookings(client: TestClient, session: Session):
     """Changing material fields when paid bookings exist must return 409."""
     user, headers = user_authentication_headers(client, session, role=UserRole.SUPER_USER)

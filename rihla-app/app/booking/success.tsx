@@ -69,7 +69,7 @@ export default function BookingSuccessScreen() {
           color={isConfirmed ? colors.success : isAwaitingProvider ? colors.primary : isExpired ? colors.error : colors.warning ?? '#F59E0B'}
         />
       </Animated.View>
-      <Animated.View style={[s.content, contentStyle]}>
+      <Animated.View style={[s.content, contentStyle, { alignSelf: 'stretch' }]}>
         <Text style={s.title}>
           {isConfirmed ? t('booking.confirmed') : isAwaitingProvider ? t('booking.paymentReceived') : isExpired ? t('booking.spotExpired') : t('booking.successTitle')}
         </Text>
@@ -128,7 +128,7 @@ export default function BookingSuccessScreen() {
               size="lg"
             />
           )}
-          {isAwaitingProvider && registrationId && (
+          {(isConfirmed || isAwaitingProvider) && registrationId && (
             <Button
               title={t('booking.viewBooking')}
               onPress={() => router.replace({ pathname: '/booking/[registrationId]', params: { registrationId } })}
@@ -141,12 +141,12 @@ export default function BookingSuccessScreen() {
             onPress={() => router.replace('/(tabs)/bookings')}
             fullWidth
             size="lg"
-            variant={isConfirmed || isAwaitingProvider ? undefined : 'outline'}
+            variant="outline"
           />
           <Button
-            title={t('explore.subtitle')}
+            title={t('tabs.explore')}
             onPress={() => router.replace('/(tabs)')}
-            variant="outline"
+            variant="ghost"
             fullWidth
           />
         </View>

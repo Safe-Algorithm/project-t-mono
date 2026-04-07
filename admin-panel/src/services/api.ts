@@ -7,6 +7,7 @@ const getAuthToken = (): string | null => {
 
 // Global refresh token function that can be set by the auth context
 let globalRefreshToken: (() => Promise<boolean>) | null = null;
+let refreshInProgress: Promise<boolean> | null = null;
 
 export const setGlobalRefreshToken = (refreshFn: () => Promise<boolean>) => {
   globalRefreshToken = refreshFn;
@@ -29,6 +30,25 @@ export class PermissionDeniedError extends Error {
   }
 }
 
+/**
+ * Extracts a user-friendly error string from any thrown value.
+ * For ApiErrors with fieldErrors (422 pydantic validation), the individual
+ * field messages are joined so the user sees what actually went wrong.
+ */
+export function extractErrorMessage(err: unknown, fallback = 'An unexpected error occurred'): string {
+  if (err instanceof ApiError) {
+    if (err.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+      const lines = Object.entries(err.fieldErrors).map(
+        ([field, msg]) => `• ${field.replace(/_/g, ' ')}: ${msg}`
+      );
+      return lines.join('\n');
+    }
+    return err.message || fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
+
 const handleResponse = async (response: Response, retryCallback?: () => Promise<Response>): Promise<any> => {
   if (response.ok) {
     if (response.status === 204) {
@@ -40,16 +60,24 @@ const handleResponse = async (response: Response, retryCallback?: () => Promise<
   // Handle 401 Unauthorized - try to refresh token first
   if (response.status === 401 && globalRefreshToken && retryCallback) {
     try {
-      const refreshSuccess = await globalRefreshToken();
+      // If a refresh is already in progress, wait for it instead of starting a new one
+      if (!refreshInProgress) {
+        refreshInProgress = globalRefreshToken();
+      }
+
+      const refreshSuccess = await refreshInProgress;
+      refreshInProgress = null;
+
       if (refreshSuccess) {
         // Retry the original request with new token
         const retryResponse = await retryCallback();
-        return handleResponse(retryResponse); // Handle the retry response (without retry callback to avoid infinite loop)
+        return handleResponse(retryResponse); // No retry callback — avoid infinite loop
       }
     } catch (refreshError) {
       console.error('Token refresh failed:', refreshError);
+      refreshInProgress = null;
     }
-    
+
     // If refresh failed or no refresh function available, redirect to login
     localStorage.removeItem('admin_access_token');
     window.location.href = '/login';

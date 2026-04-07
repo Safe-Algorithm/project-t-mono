@@ -615,7 +615,7 @@ export default function BookingScreen() {
             <View style={s.section}>
               <Text style={s.sectionTitle}>{t('booking.confirmBooking')}</Text>
               <View style={s.confirmCard}>
-                <ConfirmRow label={t('explore.subtitle')} value={tripName} s={s} />
+                <ConfirmRow label={t('trip.details')} value={tripName} s={s} />
                 <ConfirmRow label={t('booking.participants')} value={String(totalParticipants)} s={s} />
                 {!isPackaged && trip?.simple_trip_use_flexible_pricing && trip.simple_trip_pricing_tiers && trip.simple_trip_pricing_tiers.length > 0 && (
                   <View style={s.tierBreakdownContainer}>

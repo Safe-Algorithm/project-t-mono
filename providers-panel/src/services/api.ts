@@ -30,6 +30,25 @@ export class PermissionDeniedError extends Error {
   }
 }
 
+/**
+ * Extracts a user-friendly error string from any thrown value.
+ * For ApiErrors with fieldErrors (422 pydantic validation), the individual
+ * field messages are joined so the user sees what actually went wrong.
+ */
+export function extractErrorMessage(err: unknown, fallback = 'An unexpected error occurred'): string {
+  if (err instanceof ApiError) {
+    if (err.fieldErrors && Object.keys(err.fieldErrors).length > 0) {
+      const lines = Object.entries(err.fieldErrors).map(
+        ([field, msg]) => `• ${field.replace(/_/g, ' ')}: ${msg}`
+      );
+      return lines.join('\n');
+    }
+    return err.message || fallback;
+  }
+  if (err instanceof Error) return err.message || fallback;
+  return fallback;
+}
+
 const handleResponse = async (response: Response, retryCallback?: () => Promise<Response>): Promise<any> => {
   if (response.ok) {
     if (response.status === 204) {

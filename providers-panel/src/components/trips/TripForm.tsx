@@ -146,6 +146,10 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
       if (data.amenities.length > 0) {
         setSelectedAmenities(data.amenities);
       }
+      // Restore required fields for non-packaged trip (mandatory always included by parser)
+      if (data.required_fields && data.required_fields.length > 0) {
+        setTripRequiredFields(data.required_fields);
+      }
     } else {
       // Packaged trip — clear simple-trip price, hydrate packages
       setTripPrice('');
@@ -178,7 +182,11 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
         setPackagePricingTiers(tiersMap);
 
         const fieldsMap: { [index: number]: string[] } = {};
-        data.packages.forEach((_, idx) => { fieldsMap[idx] = ['name', 'date_of_birth']; });
+        data.packages.forEach((p, idx) => {
+          fieldsMap[idx] = p.required_fields && p.required_fields.length > 0
+            ? p.required_fields
+            : ['name', 'date_of_birth'];
+        });
         setPackageRequiredFields(fieldsMap);
       }
     }
@@ -212,18 +220,17 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
   }, [selectedCountryId, countries]);
 
   // Resolve the parent country for the starting city once countries are loaded.
-  // This is a separate effect because countries load asynchronously and may not
-  // be available when the trip effect first runs.
+  // Handles both editing an existing trip (trip prop) and CSV import (startingCityId state).
   useEffect(() => {
-    if (!trip?.starting_city_id || !countries.length || selectedCountryId) return;
+    if (!startingCityId || !countries.length || selectedCountryId) return;
     for (const country of countries) {
-      const found = country.children?.some(c => c.id === trip.starting_city_id);
+      const found = country.children?.some(c => c.id === startingCityId);
       if (found) {
         setSelectedCountryId(country.id);
         break;
       }
     }
-  }, [trip, countries]);
+  }, [startingCityId, countries]);
 
   useEffect(() => {
     // Load available fields on component mount
@@ -520,6 +527,14 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
 
   const [imageErrors, setImageErrors] = useState<string[]>([]);
   const [imageTab, setImageTab] = useState<'upload' | 'collection'>('upload');
+  // Stable blob URL cache: one URL per File object, revoked when the file is removed.
+  const blobUrlCache = useRef<Map<File, string>>(new Map());
+  const getBlobUrl = (file: File): string => {
+    if (!blobUrlCache.current.has(file)) {
+      blobUrlCache.current.set(file, URL.createObjectURL(file));
+    }
+    return blobUrlCache.current.get(file)!;
+  };
   const [collectionImages, setCollectionImages] = useState<ProviderImage[]>([]);
   const [collectionLoading, setCollectionLoading] = useState(false);
   const [collectionLoaded, setCollectionLoaded] = useState(false);
@@ -558,6 +573,8 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
   const isCollectionImageSelected = (img: ProviderImage) =>
     selectedCollectionUrls.includes(img.url) || (tripImages.includes(img.url) && (trip?.images?.includes(img.url) ?? false));
 
+  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10 MB
+
   const checkImageResolution = (file: File): Promise<{ ok: boolean; reason?: string }> =>
     new Promise(resolve => {
       const url = URL.createObjectURL(file);
@@ -584,14 +601,18 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
     const rejected: string[] = [];
     const accepted: File[] = [];
 
-    await Promise.all(filesArray.map(async file => {
+    for (const file of filesArray) {
+      if (file.size > MAX_IMAGE_SIZE) {
+        rejected.push(`"${file.name}" is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum: 10 MB.`);
+        continue;
+      }
       const result = await checkImageResolution(file);
       if (result.ok) {
         accepted.push(file);
       } else {
         rejected.push(result.reason!);
       }
-    }));
+    }
 
     setImageErrors(rejected);
     if (accepted.length > 0) setNewImageFiles(prev => [...prev, ...accepted]);
@@ -599,7 +620,14 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
   };
 
   const removeNewImage = (index: number) => {
-    setNewImageFiles(prev => prev.filter((_, i) => i !== index));
+    setNewImageFiles(prev => {
+      const file = prev[index];
+      if (file && blobUrlCache.current.has(file)) {
+        URL.revokeObjectURL(blobUrlCache.current.get(file)!);
+        blobUrlCache.current.delete(file);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const removeExistingImage = (imageUrl: string) => {
@@ -1319,7 +1347,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {newImageFiles.map((file, index) => (
                 <div key={index} className="relative rounded-lg overflow-hidden border border-sky-300 dark:border-sky-700">
-                  <img src={URL.createObjectURL(file)} alt={`New ${index + 1}`} className="w-full h-28 object-cover" />
+                  <img src={getBlobUrl(file)} alt={`New ${index + 1}`} className="w-full h-28 object-cover" />
                   <button type="button" onClick={() => removeNewImage(index)} className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white text-xs px-2 py-0.5 rounded">{t('form.remove')}</button>
                   <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded truncate max-w-[90%]">{file.name}</div>
                 </div>
@@ -1360,6 +1388,7 @@ const TripForm: React.FC<TripFormProps> = ({ trip, onSubmit, isSubmitting, onImp
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
               {t('trip.imagesDescription')} <span className="font-semibold">JPG, PNG, WEBP</span>
               {' · '}{t('trip.imagesMinRes', 'Min. 800×600 px')}
+              {' · '}{t('trip.imagesMaxSize', 'Max. 10 MB per image')}
             </p>
             <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple onChange={handleImageFileChange} className="hidden" id="trip-image-upload" />
             <label htmlFor="trip-image-upload" className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg cursor-pointer transition">

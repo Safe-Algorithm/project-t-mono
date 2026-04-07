@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import { useTranslation } from 'react-i18next';
 import TripForm from '../../../components/trips/TripForm';
 import { tripService, TripUpdatePayload } from '../../../services/tripService';
+import { extractErrorMessage } from '../../../services/api';
 import { imageCollectionService } from '../../../services/imageCollectionService';
 import { Trip, CreateTripPackage, CreateTripExtraFee, PackageRequiredField, ValidationConfig } from '../../../types/trip';
 import { DestinationSelection } from '../../../components/trips/DestinationSelector';
@@ -16,6 +17,7 @@ const TripEditPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageWarnings, setImageWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     if (typeof id === 'string') {
@@ -50,6 +52,7 @@ const TripEditPage = () => {
     if (!id || typeof id !== 'string') return;
     setIsSubmitting(true);
     setError(null);
+    setImageWarnings([]);
 
     try {
       await tripService.update(id, payload);
@@ -68,9 +71,12 @@ const TripEditPage = () => {
       // Handle new image uploads
       if (imageData?.newImages && imageData.newImages.length > 0) {
         try {
-          await tripService.uploadImages(id, imageData.newImages);
+          const uploadResult = await tripService.uploadImages(id, imageData.newImages);
+          if (uploadResult.failed && uploadResult.failed.length > 0) {
+            setImageWarnings(uploadResult.failed.map(f => `"${f.filename}": ${f.reason}`));
+          }
         } catch (err) {
-          console.error('Failed to upload images:', err);
+          setImageWarnings([err instanceof Error ? err.message : 'Some images failed to upload.']);
         }
       }
 
@@ -167,11 +173,7 @@ const TripEditPage = () => {
 
       router.push(`/trips/${id}`);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(t('trip.loadingError'));
-      }
+      setError(extractErrorMessage(err, t('trip.loadingError')));
     } finally {
       setIsSubmitting(false);
     }
@@ -253,11 +255,23 @@ const TripEditPage = () => {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
-          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <div className="flex items-start gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-700 dark:text-red-400">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
           </svg>
-          {error}
+          <span className="whitespace-pre-wrap">{error}</span>
+        </div>
+      )}
+
+      {imageWarnings.length > 0 && (
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Some images failed to upload:</p>
+            <button type="button" onClick={() => setImageWarnings([])} className="text-xs text-amber-600 hover:text-amber-800 dark:hover:text-amber-300 underline">Dismiss</button>
+          </div>
+          <ul className="list-disc list-inside space-y-1">
+            {imageWarnings.map((w, i) => <li key={i} className="text-sm text-amber-700 dark:text-amber-300">{w}</li>)}
+          </ul>
         </div>
       )}
 
