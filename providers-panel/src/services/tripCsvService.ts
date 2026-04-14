@@ -477,8 +477,8 @@ export function parseTripCsv(
   // ── required_fields (simple trip) ───────────────────────────────────────
   const MANDATORY_FIELDS = ['name', 'date_of_birth'];
   const ALLOWED_FIELD_TYPES = new Set(['name', 'date_of_birth', 'gender', 'nationality',
-    'phone_number', 'email', 'id_iqama_number', 'passport_number',
-    'disability_status', 'age', 'weight', 'height']);
+    'phone', 'email', 'id_iqama_number', 'passport_number',
+    'disability', 'medical_conditions', 'allergies', 'address']);
   const required_fields = Array.from(new Set([
     ...MANDATORY_FIELDS,
     ...get('required_fields').split('|').map(s => s.trim().toLowerCase()).filter(s => ALLOWED_FIELD_TYPES.has(s)),

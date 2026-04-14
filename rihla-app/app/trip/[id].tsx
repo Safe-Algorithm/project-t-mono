@@ -137,13 +137,12 @@ export default function TripDetailScreen() {
         {/* Sticky image header */}
         <View>
           {images.length > 0 ? (
-            <View>
+            <View style={{ direction: 'ltr' }}>
               <FlatList
                 data={images}
                 keyExtractor={(_, i) => String(i)}
                 horizontal
                 pagingEnabled
-                inverted={isRTL}
                 showsHorizontalScrollIndicator={false}
                 onMomentumScrollEnd={(e) => {
                   const rawIndex = Math.round(e.nativeEvent.contentOffset.x / W);
@@ -156,10 +155,9 @@ export default function TripDetailScreen() {
               {/* Image dots */}
               {images.length > 1 && (
                 <View style={s.imageDots}>
-                  {(isRTL ? [...images].reverse() : images).map((_, i) => {
-                    const originalIndex = isRTL ? images.length - 1 - i : i;
-                    return <View key={i} style={[s.imageDot, originalIndex === imageIndex && s.imageDotActive]} />;
-                  })}
+                  {images.map((_, i) => (
+                    <View key={i} style={[s.imageDot, i === imageIndex && s.imageDotActive]} />
+                  ))}
                 </View>
               )}
             </View>

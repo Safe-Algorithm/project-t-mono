@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import Layout from '../../../components/Layout';
 import {
   EarningLineRead,
   ProviderFinancialSummary,
@@ -157,8 +156,8 @@ export default function ProviderFinancialsPage() {
   };
 
   return (
-    <Layout>
-      <div className="space-y-6">
+    <>
+    <div className="space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Link href="/financials" className="hover:text-sky-500 transition-colors">{t('fin.title')}</Link>
@@ -486,7 +485,6 @@ export default function ProviderFinancialsPage() {
           </>
         )}
       </div>
-
       {/* Payout Modal */}
       {showPayoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -544,6 +542,6 @@ export default function ProviderFinancialsPage() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

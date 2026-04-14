@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import Layout from '../../components/Layout';
 import {
   AdminFinancialsOverview,
   ProviderFinancialSummary,
@@ -37,8 +36,7 @@ export default function FinancialsOverviewPage() {
   ) ?? [];
 
   return (
-    <Layout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('fin.title')}</h1>
@@ -104,8 +102,7 @@ export default function FinancialsOverviewPage() {
             </div>
           </>
         )}
-      </div>
-    </Layout>
+    </div>
   );
 }
 

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import Layout from '../../../components/Layout';
 import {
   TripFinancialDetail,
   TripEarningStatus,
@@ -42,8 +41,7 @@ export default function TripFinancialDetailPage() {
   const bookings = detail?.bookings.filter(b => filter === 'all' || b.status === filter) ?? [];
 
   return (
-    <Layout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Link href="/financials" className="hover:text-sky-500 transition-colors">{t('fin.title')}</Link>
@@ -176,7 +174,6 @@ export default function TripFinancialDetailPage() {
             </div>
           </>
         )}
-      </div>
-    </Layout>
+    </div>
   );
 }

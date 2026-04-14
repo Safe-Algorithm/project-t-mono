@@ -411,7 +411,7 @@ export default function BookingScreen() {
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
             <Ionicons name={i18n.language === 'ar' ? 'arrow-forward' : 'arrow-back'} size={22} color={colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={s.headerTitle}>{t('booking.title')}</Text>
+          <Text style={s.headerTitle} numberOfLines={1}>{tripName}</Text>
           <View style={{ width: 40 }} />
         </View>
         <View style={s.progress}>
@@ -429,12 +429,6 @@ export default function BookingScreen() {
       </SafeAreaView>
 
       <ScrollView ref={scrollRef} style={s.scrollView} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} keyboardDismissMode="on-drag">
-
-        {/* Summary */}
-        <View style={s.summaryCard}>
-          <Text style={s.summaryTrip} numberOfLines={1}>{tripName}</Text>
-          <Text style={s.summaryPkg}>{isPackaged ? t('booking.selectTiers', { defaultValue: 'Select Tiers' }) : t('booking.simpleTrip', { defaultValue: 'Simple Trip' })}</Text>
-        </View>
 
         {/* ── STEP 1: Count / Package Selection ── */}
         {step === 'count' && (
@@ -479,6 +473,7 @@ export default function BookingScreen() {
                   const billingLines = isFlexPkg && count > 0 ? buildTierBillingBreakdown(pkg.pricing_tiers!, count, 'SAR', t as any, isRTL) : [];
                   return (
                     <View key={pkg.id} style={s.pkgCard}>
+                      <View style={s.pkgCardRow}>
                       <View style={s.pkgInfo}>
                         <Text style={s.pkgName}>{pkgName}</Text>
                         {isFlexPkg ? (
@@ -505,6 +500,7 @@ export default function BookingScreen() {
                         >
                           <Ionicons name="add" size={18} color={(pkg.available_spots === 0 || pkgSelections.reduce((acc, s) => acc + s.count, 0) >= (trip?.available_spots ?? Infinity)) ? colors.gray300 : colors.textPrimary} />
                         </TouchableOpacity>
+                      </View>
                       </View>
                       {billingLines.length > 0 && (
                         <View style={s.tierBreakdownContainer}>
@@ -789,7 +785,7 @@ function makeStyles(c: ThemeColors) {
     errorText: { fontSize: FontSize.xl, fontWeight: '700', color: c.textPrimary },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border },
     backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-    headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary },
+    headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: c.textPrimary, flex: 1, textAlign: 'center' },
     progress: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 32, paddingVertical: 14, backgroundColor: c.surface },
     progressStep: { width: 28, height: 28, borderRadius: 14, backgroundColor: c.gray200, alignItems: 'center', justifyContent: 'center' },
     progressStepActive: { backgroundColor: c.primary },
@@ -800,12 +796,6 @@ function makeStyles(c: ThemeColors) {
     flex1: { flex: 1 },
     scrollView: { flex: 1 },
     scroll: { padding: 16, gap: 0 },
-    summaryCard: { backgroundColor: c.primarySurface, borderRadius: Radius.xl, padding: 16, borderLeftWidth: 4, borderLeftColor: c.primary, marginBottom: 20 },
-    summaryTrip: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary },
-    summaryPkg: { fontSize: FontSize.md, color: c.primary, fontWeight: '600', marginBottom: 8 },
-    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    summaryLabel: { fontSize: FontSize.sm, color: c.textSecondary },
-    summaryPrice: { fontSize: FontSize.xl, fontWeight: '800', color: c.accent },
     section: { marginBottom: 20 },
     sectionTitle: { fontSize: FontSize.lg, fontWeight: '800', color: c.textPrimary, marginBottom: 12 },
     counterRow: { flexDirection: 'row', alignItems: 'center', gap: 20 },
@@ -818,7 +808,8 @@ function makeStyles(c: ThemeColors) {
     noFields: { fontSize: FontSize.md, color: c.textTertiary, fontStyle: 'italic' },
     continueBtn: { marginTop: 8 },
     sectionSubtitle: { fontSize: FontSize.sm, color: c.textSecondary, marginBottom: 12, marginTop: -8 },
-    pkgCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: c.surface, borderRadius: Radius.lg, padding: 14, marginBottom: 10, ...Shadow.sm },
+    pkgCard: { flexDirection: 'column', backgroundColor: c.surface, borderRadius: Radius.lg, padding: 14, marginBottom: 10, ...Shadow.sm },
+    pkgCardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     pkgInfo: { flex: 1, marginRight: 12 },
     pkgName: { fontSize: FontSize.md, fontWeight: '700', color: c.textPrimary },
     pkgPrice: { fontSize: FontSize.sm, color: c.accent, fontWeight: '600', marginTop: 2 },
@@ -853,7 +844,7 @@ function makeStyles(c: ThemeColors) {
     refundBoxBody: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: 6 },
     refundBoxRule: { fontSize: FontSize.sm, color: c.textSecondary, lineHeight: 20, marginLeft: 4 },
     refundBoxCooling: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18, marginTop: 6, fontStyle: 'italic' },
-    tierBreakdownContainer: { paddingLeft: 12, paddingBottom: 6, gap: 2 },
+    tierBreakdownContainer: { paddingLeft: 12, paddingBottom: 6, gap: 2, marginTop: 8 },
     tierBreakdownText: { fontSize: FontSize.xs, color: c.textTertiary, lineHeight: 18 },
     simplePriceBox: { marginTop: 16, backgroundColor: c.primarySurface, borderRadius: Radius.lg, padding: 12 },
     simplePriceTotal: { fontSize: FontSize.lg, fontWeight: '800', color: c.accent, marginTop: 12, textAlign: 'center' },
