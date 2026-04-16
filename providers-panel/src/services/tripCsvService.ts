@@ -207,13 +207,25 @@ export function parseCsvRaw(raw: string): string[][] {
   return rows;
 }
 
-// ─── Trim ISO datetime to YYYY-MM-DDTHH:mm ─────────────────────────────────
-// Dates are stored as UTC ISO strings representing the provider's local wall-clock
-// time (via localToUtcIso in TripForm). We must NOT re-convert through Date here.
-function fmtDate(iso: string | null | undefined): string {
+// ─── Convert UTC ISO string → local wall-clock YYYY-MM-DDTHH:mm ────────────
+// The backend stores datetimes as naive UTC. For the CSV we need the provider's
+// local wall-clock time (in the trip's timezone) so that on re-import
+// localToUtcIso converts it back to the same UTC value.
+function utcToLocalStr(iso: string | null | undefined, tz: string): string {
   if (!iso) return '';
-  const bare = iso.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '');
-  return bare.substring(0, 16);
+  const dt = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  if (isNaN(dt.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+    hour12: false,
+  }).formatToParts(dt);
+  const get = (type: string) => parts.find(p => p.type === type)?.value ?? '00';
+  const h = get('hour');
+  // Intl may return '24' for midnight in some environments — normalise to '00'
+  const hh = h === '24' ? '00' : h;
+  return `${get('year')}-${get('month')}-${get('day')}T${hh}:${get('minute')}`;
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────
@@ -237,6 +249,8 @@ export function exportTripToCsv(trip: Trip): string {
   const simpleFlexTiers = !isPackaged ? tiersToString(trip.simple_trip_pricing_tiers) : '';
   const simplePrice = !isPackaged ? (trip.price ?? '') : '';
 
+  const tripTz = trip.timezone ?? 'Asia/Riyadh';
+
   const tripRow = buildCsvRow([
     'trip',
     trip.name_en ?? '',
@@ -245,9 +259,9 @@ export function exportTripToCsv(trip: Trip): string {
     trip.description_ar ?? '',
     tripNature,
     tierStructure,
-    fmtDate(trip.start_date),
-    fmtDate(trip.end_date),
-    fmtDate(trip.registration_deadline),
+    utcToLocalStr(trip.start_date, tripTz),
+    utcToLocalStr(trip.end_date, tripTz),
+    utcToLocalStr(trip.registration_deadline, tripTz),
     trip.max_participants ?? '',
     '',                                    // max_participants_pkg — trip row blank
     simplePrice,
