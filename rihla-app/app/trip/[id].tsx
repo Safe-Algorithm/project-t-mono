@@ -127,8 +127,9 @@ export default function TripDetailScreen() {
   const activePackages = trip.packages?.filter((p) => p.is_active) ?? [];
 
   const now = new Date();
-  const isPastDeadline = trip.registration_deadline ? new Date(trip.registration_deadline) < now : false;
-  const isTripEnded = new Date(trip.end_date) < now;
+  const toUtcDate = (s: string) => new Date(s.endsWith('Z') ? s : s + 'Z');
+  const isPastDeadline = trip.registration_deadline ? toUtcDate(trip.registration_deadline) < now : false;
+  const isTripEnded = toUtcDate(trip.end_date) < now;
   const isBookable = trip.is_active && trip.available_spots > 0 && !isPastDeadline && !isTripEnded;
 
   return (
