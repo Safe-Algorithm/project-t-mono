@@ -75,15 +75,15 @@ function TripTicketDetail({
     <div className="max-w-4xl mx-auto space-y-4">
       <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-sky-500 hover:text-sky-600 font-medium transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        Back to list
+        {t('support.backToList')}
       </button>
       {error && <div className="text-red-500 text-sm">{error}</div>}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{current.subject}</h2>
-            <p className="text-xs text-slate-400 mt-1">Created: {formatDate(current.created_at)}</p>
-            <p className="text-xs text-slate-400">User ID: {current.user_id}</p>
+            <p className="text-xs text-slate-400 mt-1">{t('support.created')} {formatDate(current.created_at)}</p>
+            <p className="text-xs text-slate-400">{t('support.userId')} {current.user_id}</p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[current.status] || ''}`}>{current.status.replace(/_/g, ' ')}</span>
@@ -93,13 +93,13 @@ function TripTicketDetail({
         <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap mb-5">{current.description}</p>
         <div className="flex flex-wrap gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">Status</label>
+            <label className="text-xs font-medium text-slate-500 block mb-1">{t('support.colStatus')}</label>
             <select value={current.status} onChange={e => handleUpdateStatus(e.target.value)} disabled={updating} className={selectCls}>
               {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500 block mb-1">Priority</label>
+            <label className="text-xs font-medium text-slate-500 block mb-1">{t('support.colPriority')}</label>
             <select value={current.priority} onChange={e => handleUpdatePriority(e.target.value)} disabled={updating} className={selectCls}>
               {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -107,9 +107,9 @@ function TripTicketDetail({
         </div>
       </div>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Messages ({current.messages.length})</h3>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t('support.messagesCount', { count: current.messages.length })}</h3>
         <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
-          {current.messages.length === 0 && <p className="text-slate-400 text-sm">No messages yet.</p>}
+          {current.messages.length === 0 && <p className="text-slate-400 text-sm">{t('support.noMessages')}</p>}
           {current.messages.map(msg => (
             <div key={msg.id} className={`p-3 rounded-xl text-sm ${
               msg.sender_type === 'provider'
@@ -118,7 +118,7 @@ function TripTicketDetail({
             }`}>
               <div className="flex justify-between items-center mb-1">
                 <span className={`text-xs font-semibold ${ msg.sender_type === 'provider' ? 'text-sky-600 dark:text-sky-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                  {msg.sender_type === 'provider' ? 'You' : 'Customer'}
+                  {msg.sender_type === 'provider' ? t('support.you') : t('support.customer')}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(msg.created_at)}</span>
               </div>
@@ -128,11 +128,11 @@ function TripTicketDetail({
         </div>
         {current.status !== 'closed' && (
           <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Write a reply…"
+            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder={t('support.replyPlaceholder')}
               className={`flex-1 resize-none ${inputCls}`} rows={2} />
             <button onClick={handleReply} disabled={updating || !replyText.trim()}
               className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-sm font-medium self-end transition-colors">
-              Reply
+              {t('support.reply')}
             </button>
           </div>
         )}
@@ -146,6 +146,7 @@ function TripTicketDetail({
 function AdminTicketDetail({
   ticket, onClose,
 }: { ticket: SupportTicketWithMessages; onClose: () => void }) {
+  const { t } = useTranslation();
   const [replyText, setReplyText] = useState('');
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -169,14 +170,14 @@ function AdminTicketDetail({
     <div className="max-w-4xl mx-auto space-y-4">
       <button onClick={onClose} className="flex items-center gap-1.5 text-sm text-sky-500 hover:text-sky-600 font-medium transition-colors">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        Back to list
+        {t('support.backToList')}
       </button>
       {error && <div className="text-red-500 text-sm">{error}</div>}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{current.subject}</h2>
-            <p className="text-xs text-slate-400 mt-1">Created: {formatDate(current.created_at)}</p>
+            <p className="text-xs text-slate-400 mt-1">{t('support.created')} {formatDate(current.created_at)}</p>
           </div>
           <div className="flex gap-2">
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[current.status] || ''}`}>{current.status.replace(/_/g, ' ')}</span>
@@ -187,9 +188,9 @@ function AdminTicketDetail({
         <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">{current.description}</p>
       </div>
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6">
-        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Messages ({current.messages.length})</h3>
+        <h3 className="text-base font-semibold text-slate-900 dark:text-white mb-4">{t('support.messagesCount', { count: current.messages.length })}</h3>
         <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
-          {current.messages.length === 0 && <p className="text-slate-400 text-sm">No messages yet.</p>}
+          {current.messages.length === 0 && <p className="text-slate-400 text-sm">{t('support.noMessages')}</p>}
           {current.messages.map(msg => (
             <div key={msg.id} className={`p-3 rounded-xl text-sm ${
               msg.sender_type === 'provider'
@@ -204,7 +205,7 @@ function AdminTicketDetail({
                   : msg.sender_type === 'admin' ? 'text-emerald-600 dark:text-emerald-400'
                   : 'text-slate-500 dark:text-slate-400'
                 }`}>
-                  {msg.sender_type === 'provider' ? 'You' : msg.sender_type === 'admin' ? 'Admin' : 'Support'}
+                  {msg.sender_type === 'provider' ? t('support.you') : msg.sender_type === 'admin' ? t('support.admin') : t('support.supportTeam')}
                 </span>
                 <span className="text-xs text-slate-400">{formatDate(msg.created_at)}</span>
               </div>
@@ -214,11 +215,11 @@ function AdminTicketDetail({
         </div>
         {current.status !== 'closed' && (
           <div className="flex gap-2 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="Write a reply to admin…"
+            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} placeholder={t('support.replyToAdminPlaceholder')}
               className={`flex-1 resize-none ${inputCls}`} rows={2} />
             <button onClick={handleReply} disabled={updating || !replyText.trim()}
               className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-sm font-medium self-end transition-colors">
-              Reply
+              {t('support.reply')}
             </button>
           </div>
         )}
@@ -270,7 +271,7 @@ const ProviderSupportPage = () => {
       else setTripTotal(prev => Math.max(prev, tripPage * PAGE_SIZE + 1));
     } catch (err: any) {
       if (err instanceof PermissionDeniedError) setPageError(err);
-      else setError(err.message || 'Failed to load tickets');
+      else setError(err.message || t('support.loadError'));
     } finally { setLoading(false); }
   };
 
@@ -285,7 +286,7 @@ const ProviderSupportPage = () => {
       else setAdminTotal(prev => Math.max(prev, adminPage * PAGE_SIZE + 1));
     } catch (err: any) {
       if (err instanceof PermissionDeniedError) setPageError(err);
-      else setError(err.message || 'Failed to load tickets');
+      else setError(err.message || t('support.loadError'));
     } finally { setLoading(false); }
   };
 
@@ -321,21 +322,21 @@ const ProviderSupportPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Support</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('support.pageTitle')}</h1>
             {openTripTicketCount > 0 && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-bold rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                {openTripTicketCount} open
+                {t('support.openCount', { count: openTripTicketCount })}
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage customer tickets and contact admin support</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('support.pageSubtitle')}</p>
         </div>
         {activeTab === 'admin' && (
           <button onClick={() => setShowCreateForm(v => !v)}
             className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-xl text-sm font-medium transition-colors">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-            New Ticket to Admin
+            {t('support.newTicketToAdmin')}
           </button>
         )}
       </div>
@@ -343,7 +344,7 @@ const ProviderSupportPage = () => {
       {error && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
           <span className="flex-1">{error}</span>
-          <button onClick={() => setError(null)} className="underline text-xs">Dismiss</button>
+          <button onClick={() => setError(null)} className="underline text-xs">{t('support.dismiss')}</button>
         </div>
       )}
 
@@ -353,7 +354,7 @@ const ProviderSupportPage = () => {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
             activeTab === 'trip' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
           }`}>
-          Customer Tickets
+          {t('support.tabCustomerTickets')}
           {openTripTicketCount > 0 && (
             <span className="inline-flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">
               {openTripTicketCount}
@@ -364,33 +365,33 @@ const ProviderSupportPage = () => {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
             activeTab === 'admin' ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
           }`}>
-          My Admin Tickets
+          {t('support.tabAdminTickets')}
         </button>
       </div>
 
       {/* Create admin ticket form */}
       {activeTab === 'admin' && showCreateForm && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 space-y-4">
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">New Support Ticket to Admin</h2>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white">{t('support.newTicketFormTitle')}</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Subject *</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t('support.subjectLabel')}</label>
               <input value={createForm.subject} onChange={e => setCreateForm(f => ({ ...f, subject: e.target.value }))}
-                placeholder="Brief summary of the issue" className={inputCls} />
+                placeholder={t('support.subjectPlaceholder')} className={inputCls} />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-slate-500 mb-1">Description *</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t('support.descriptionLabel')}</label>
               <textarea value={createForm.description} onChange={e => setCreateForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Describe the issue in detail…" rows={4} className={`resize-none ${inputCls}`} />
+                placeholder={t('support.descriptionPlaceholder')} rows={4} className={`resize-none ${inputCls}`} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Category</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t('support.categoryLabel')}</label>
               <select value={createForm.category} onChange={e => setCreateForm(f => ({ ...f, category: e.target.value }))} className={`w-full ${selectCls}`}>
                 {CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">Priority</label>
+              <label className="block text-xs font-medium text-slate-500 mb-1">{t('support.priorityLabel')}</label>
               <select value={createForm.priority} onChange={e => setCreateForm(f => ({ ...f, priority: e.target.value }))} className={`w-full ${selectCls}`}>
                 {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
@@ -399,10 +400,10 @@ const ProviderSupportPage = () => {
           <div className="flex gap-2 pt-2">
             <button onClick={handleCreate} disabled={creating || !createForm.subject.trim() || !createForm.description.trim()}
               className="px-5 py-2 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white rounded-xl text-sm font-medium transition-colors">
-              {creating ? 'Submitting…' : 'Submit Ticket'}
+              {creating ? t('support.submitting') : t('support.submitTicket')}
             </button>
             <button onClick={() => setShowCreateForm(false)} className="px-5 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -412,7 +413,7 @@ const ProviderSupportPage = () => {
       {activeTab === 'trip' && (
         <div>
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className={selectCls}>
-            <option value="">All Statuses</option>
+            <option value="">{t('support.allStatuses')}</option>
             {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
           </select>
         </div>
@@ -425,15 +426,15 @@ const ProviderSupportPage = () => {
       ) : activeTab === 'trip' ? (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {tripTickets.length === 0 ? (
-            <p className="p-8 text-center text-slate-400 text-sm">No customer tickets found.</p>
+            <p className="p-8 text-center text-slate-400 text-sm">{t('support.noCustomerTickets')}</p>
           ) : (
             <div>
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Subject</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Priority</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Created</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('support.colSubject')}</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">{t('support.colPriority')}</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('support.colStatus')}</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">{t('support.colCreated')}</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {tripTickets.map(t => (
@@ -454,17 +455,17 @@ const ProviderSupportPage = () => {
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           {adminTickets.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-slate-400 text-sm mb-3">You haven't raised any admin tickets yet.</p>
-              <button onClick={() => setShowCreateForm(true)} className="text-sky-500 hover:text-sky-600 text-sm font-medium">Create your first ticket →</button>
+              <p className="text-slate-400 text-sm mb-3">{t('support.noAdminTickets')}</p>
+              <button onClick={() => setShowCreateForm(true)} className="text-sky-500 hover:text-sky-600 text-sm font-medium">{t('support.createFirstTicket')}</button>
             </div>
           ) : (
             <div>
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Subject</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">Category</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
-                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">Created</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('support.colSubject')}</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden sm:table-cell">{t('support.colCategory')}</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">{t('support.colStatus')}</th>
+                  <th className="text-start px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide hidden md:table-cell">{t('support.colCreated')}</th>
                 </tr></thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                   {adminTickets.map(t => (

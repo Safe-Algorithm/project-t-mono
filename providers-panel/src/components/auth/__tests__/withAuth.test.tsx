@@ -42,10 +42,10 @@ describe('withAuth HOC', () => {
 
   it('redirects if user does not have the required role', () => {
     (useAuth as jest.Mock).mockReturnValue({
-      user: { id: '1', name: 'Test User', role: UserRole.PROVIDER },
+      user: { id: '1', name: 'Test User', role: UserRole.NORMAL },
       isLoading: false,
     });
-    const AuthProtectedComponent = withAuth(TestComponent, UserRole.SUPER_PROVIDER);
+    const AuthProtectedComponent = withAuth(TestComponent, UserRole.SUPER_USER);
     render(<AuthProtectedComponent />);
     expect(mockReplace).toHaveBeenCalledWith('/');
     expect(screen.queryByText('Protected Content')).not.toBeInTheDocument();
@@ -53,10 +53,10 @@ describe('withAuth HOC', () => {
 
   it('renders the component if user is authenticated and has the required role', () => {
     (useAuth as jest.Mock).mockReturnValue({
-      user: { id: '1', name: 'Test User', role: UserRole.SUPER_PROVIDER },
+      user: { id: '1', name: 'Test User', role: UserRole.SUPER_USER },
       isLoading: false,
     });
-    const AuthProtectedComponent = withAuth(TestComponent, UserRole.SUPER_PROVIDER);
+    const AuthProtectedComponent = withAuth(TestComponent, UserRole.SUPER_USER);
     render(<AuthProtectedComponent />);
     expect(screen.getByText('Protected Content')).toBeInTheDocument();
     expect(mockReplace).not.toHaveBeenCalled();

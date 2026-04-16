@@ -140,7 +140,7 @@ const TripUpdatesPage = () => {
   };
 
   const formatDate = (d: string) => new Date(d).toLocaleString();
-  const getTripName = (trip: TripOption) => trip.name_en || trip.name_ar || 'Unnamed Trip';
+  const getTripName = (trip: TripOption) => trip.name_en || trip.name_ar || t('tripUpdates.unnamedTrip');
 
   const inputCls = "w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition text-sm";
   const selectCls = "px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition";
@@ -215,7 +215,9 @@ const TripUpdatesPage = () => {
                 <option value="">{t('tripUpdates.selectRegistration')}</option>
                 {registrations.map(r => (
                   <option key={r.id} value={r.id}>
-                    {r.id.slice(0, 8)}... — User: {r.user_id.slice(0, 8)}... ({r.total_participants} participant{r.total_participants > 1 ? 's' : ''})
+                    {r.total_participants > 1
+                      ? t('tripUpdates.registrationOptionPlural', { id: r.id.slice(0, 8), user: r.user_id.slice(0, 8), count: r.total_participants })
+                      : t('tripUpdates.registrationOption', { id: r.id.slice(0, 8), user: r.user_id.slice(0, 8), count: r.total_participants })}
                   </option>
                 ))}
               </select>
@@ -234,16 +236,16 @@ const TripUpdatesPage = () => {
           </div>
 
           <div>
-            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">Attachment <span className="text-slate-400">(optional — image or PDF)</span></label>
+            <label className="text-xs font-medium text-slate-500 dark:text-slate-400 block mb-1.5">{t('tripUpdates.attachmentLabel')} <span className="text-slate-400">{t('tripUpdates.attachmentOptional')}</span></label>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 cursor-pointer hover:border-sky-400 dark:hover:border-sky-500 transition-colors text-sm text-slate-600 dark:text-slate-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                {attachedFile ? attachedFile.name : 'Choose file'}
+                {attachedFile ? attachedFile.name : t('tripUpdates.chooseFile')}
                 <input type="file" accept="image/*,.pdf" className="hidden"
                   onChange={e => setAttachedFile(e.target.files?.[0] ?? null)} />
               </label>
               {attachedFile && (
-                <button onClick={() => setAttachedFile(null)} className="text-xs text-red-500 hover:text-red-700 font-medium">Remove</button>
+                <button onClick={() => setAttachedFile(null)} className="text-xs text-red-500 hover:text-red-700 font-medium">{t('tripUpdates.removeAttachment')}</button>
               )}
             </div>
           </div>

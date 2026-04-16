@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/UserContext';
 import { providerService } from '@/services/providerService';
 import { providerFilesService, FileDefinition, ProviderFile } from '@/services/fileDefinitions';
 import ImageCropper from '@/components/ui/ImageCropper';
 
 const ProfilePage = () => {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const [provider, setProvider] = useState<any>(null);
   const [companyName, setCompanyName] = useState('');
@@ -65,7 +67,7 @@ const ProfilePage = () => {
           setMissingDefinitions(missing);
         } catch (error) {
           console.error('Failed to fetch provider profile:', error);
-          setError('Failed to load profile data');
+          setError(t('profile.profileLoadFail'));
         }
       }
     };
@@ -99,10 +101,10 @@ const ProfilePage = () => {
       setCompanyAvatar(response.avatar_url);
       setAvatarFile(null);
       setAvatarPreview(null);
-      setSuccess('Company avatar uploaded successfully!');
+      setSuccess(t('profile.avatarUploadSuccess'));
     } catch (error: any) {
       console.error('Avatar upload failed:', error);
-      setError(error.message || 'Failed to upload avatar');
+      setError(error.message || t('profile.avatarUploadFail'));
     } finally {
       setUploadingAvatar(false);
     }
@@ -134,10 +136,10 @@ const ProfilePage = () => {
       setCompanyCover(response.cover_url);
       setCoverFile(null);
       setCoverPreview(null);
-      setSuccess('Cover image uploaded successfully!');
+      setSuccess(t('profile.coverUploadSuccess'));
     } catch (error: any) {
       console.error('Cover upload failed:', error);
-      setError(error.message || 'Failed to upload cover image');
+      setError(error.message || t('profile.coverUploadFail'));
     } finally {
       setUploadingCover(false);
     }
@@ -155,10 +157,10 @@ const ProfilePage = () => {
         company_email: companyEmail,
         company_phone: companyPhone,
       });
-      setSuccess('Profile updated successfully!');
+      setSuccess(t('profile.profileUpdateSuccess'));
     } catch (error) {
       console.error('Profile update failed:', error);
-      setError('Failed to update profile. Please try again.');
+      setError(t('profile.profileUpdateFail'));
     } finally {
       setLoading(false);
     }
@@ -184,12 +186,12 @@ const ProfilePage = () => {
       const missing = await providerFilesService.getMissingFileDefinitions();
       setMissingDefinitions(missing);
       
-      setSuccess(isReplacement ? 'File replaced successfully!' : 'File uploaded successfully!');
+      setSuccess(isReplacement ? t('profile.fileReplacedSuccess') : t('profile.fileUploadSuccess'));
     } catch (error: any) {
       console.error('File upload failed:', error);
       setFileErrors(prev => ({ 
         ...prev, 
-        [fileDefinitionId]: error.message || 'Failed to upload file' 
+        [fileDefinitionId]: error.message || t('profile.fileUploadFail') 
       }));
     } finally {
       setUploadingFiles(prev => ({ ...prev, [fileDefinitionId]: false }));
@@ -199,11 +201,11 @@ const ProfilePage = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'accepted':
-        return <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">✓ Accepted</span>;
+        return <span className="inline-block px-2 py-1 bg-green-100 text-green-800 text-xs rounded">{t('profile.fileAccepted')}</span>;
       case 'rejected':
-        return <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded">✗ Rejected</span>;
+        return <span className="inline-block px-2 py-1 bg-red-100 text-red-800 text-xs rounded">{t('profile.fileRejected')}</span>;
       case 'processing':
-        return <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">⏳ Under Review</span>;
+        return <span className="inline-block px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">{t('profile.fileUnderReview')}</span>;
       default:
         return null;
     }
@@ -226,20 +228,20 @@ const ProfilePage = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Company Profile</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your company information and documents</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('profile.pageTitle')}</h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('profile.pageSubtitle')}</p>
       </div>
       
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Company Information</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">Update your company details and contact information.</p>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('profile.companyInfoTitle')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('profile.companyInfoSubtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
           {/* Cover image */}
           <div className="pb-5 border-b border-slate-100 dark:border-slate-800">
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Cover Image</p>
+            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">{t('profile.coverImageLabel')}</p>
             <div className="relative w-full h-36 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 ring-2 ring-slate-200 dark:ring-slate-700 mb-3">
               {(coverPreview || companyCover) ? (
                 <img src={coverPreview || companyCover || ''} alt="Cover" className="w-full h-full object-cover" />
@@ -248,23 +250,23 @@ const ProfilePage = () => {
                   <svg className="w-8 h-8 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">No cover image</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">{t('profile.noCoverImage')}</p>
                 </div>
               )}
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleCoverChange} className="hidden" id="cover-upload" />
               <label htmlFor="cover-upload" className="cursor-pointer px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                Choose cover
+                {t('profile.chooseCover')}
               </label>
               {coverFile && (
                 <button type="button" onClick={handleCoverUpload} disabled={uploadingCover}
                   className="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-medium transition-colors">
-                  {uploadingCover ? 'Uploading...' : 'Upload'}
+                  {uploadingCover ? t('profile.uploading') : t('profile.upload')}
                 </button>
               )}
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">JPG, PNG or WEBP · Source image min 1200×400 px · Crop tool opens before upload</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">{t('profile.coverHint')}</p>
           </div>
 
           {/* Avatar */}
@@ -284,38 +286,38 @@ const ProfilePage = () => {
               <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={handleAvatarChange} className="hidden" id="avatar-upload" />
               <div className="flex items-center gap-2 flex-wrap">
                 <label htmlFor="avatar-upload" className="cursor-pointer px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                  Choose image
+                  {t('profile.chooseImage')}
                 </label>
                 {avatarFile && (
                   <button type="button" onClick={handleAvatarUpload} disabled={uploadingAvatar}
                     className="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-medium transition-colors">
-                    {uploadingAvatar ? 'Uploading...' : 'Upload'}
+                    {uploadingAvatar ? t('profile.uploading') : t('profile.upload')}
                   </button>
                 )}
               </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">JPG, PNG or WEBP · Crop tool opens before upload</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">{t('profile.avatarHint')}</p>
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>User Email</label>
+            <label className={labelCls}>{t('profile.userEmailLabel')}</label>
             <input type="email" value={user.email} disabled className={`${inputCls} opacity-60 cursor-not-allowed`} />
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Your login email cannot be changed here</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t('profile.userEmailHint')}</p>
           </div>
 
           <div>
-            <label htmlFor="companyName" className={labelCls}>Company Name *</label>
-            <input id="companyName" type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} required className={inputCls} placeholder="Your company name" />
+            <label htmlFor="companyName" className={labelCls}>{t('profile.companyNameRequired')}</label>
+            <input id="companyName" type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} required className={inputCls} placeholder={t('profile.companyNamePlaceholder')} />
           </div>
 
           <div>
-            <label htmlFor="companyEmail" className={labelCls}>Company Email *</label>
-            <input id="companyEmail" type="email" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} required className={inputCls} placeholder="company@example.com" />
+            <label htmlFor="companyEmail" className={labelCls}>{t('profile.companyEmailRequired')}</label>
+            <input id="companyEmail" type="email" value={companyEmail} onChange={e => setCompanyEmail(e.target.value)} required className={inputCls} placeholder={t('profile.companyEmailPlaceholder')} />
           </div>
 
           <div>
-            <label htmlFor="companyPhone" className={labelCls}>Company Phone *</label>
-            <input id="companyPhone" type="tel" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} required className={inputCls} placeholder="+966 5x xxx xxxx" />
+            <label htmlFor="companyPhone" className={labelCls}>{t('profile.companyPhoneRequired')}</label>
+            <input id="companyPhone" type="tel" value={companyPhone} onChange={e => setCompanyPhone(e.target.value)} required className={inputCls} placeholder={t('profile.companyPhonePlaceholder')} />
           </div>
 
           {error && (
@@ -334,7 +336,7 @@ const ProfilePage = () => {
           <div className="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-800">
             <button type="submit" disabled={loading}
               className="px-5 py-2.5 bg-sky-500 hover:bg-sky-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors">
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('profile.saving') : t('profile.saveChanges')}
             </button>
           </div>
         </form>
@@ -343,19 +345,19 @@ const ProfilePage = () => {
       {/* Uploaded Documents */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Uploaded Documents</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">View your documents. You can replace rejected files.</p>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('profile.uploadedDocsTitle')}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('profile.uploadedDocsSubtitle')}</p>
         </div>
         <div className="px-6 py-5">
           {uploadedFiles.length === 0 ? (
-            <p className="text-slate-500 dark:text-slate-400 text-sm">No documents uploaded yet.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">{t('profile.noDocuments')}</p>
           ) : (
             <div className="space-y-3">
               {uploadedFiles.map(file => {
                 const statusMap: Record<string, { cls: string; label: string }> = {
-                  accepted: { cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400', label: '✓ Accepted' },
-                  rejected: { cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400', label: '✗ Rejected' },
-                  processing: { cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', label: '⏳ Under Review' },
+                  accepted: { cls: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400', label: t('profile.fileAccepted') },
+                  rejected: { cls: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400', label: t('profile.fileRejected') },
+                  processing: { cls: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', label: t('profile.fileUnderReview') },
                 };
                 const badge = statusMap[file.file_verification_status];
                 return (
@@ -374,7 +376,7 @@ const ProfilePage = () => {
                         {badge && <span className={`inline-block mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.cls}`}>{badge.label}</span>}
                         {file.file_verification_status === 'rejected' && file.rejection_reason && (
                           <div className="mt-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs">
-                            <p className="font-semibold text-red-700 dark:text-red-400 mb-0.5">Rejection reason:</p>
+                            <p className="font-semibold text-red-700 dark:text-red-400 mb-0.5">{t('profile.rejectionReason')}</p>
                             <p className="text-red-600 dark:text-red-300">{file.rejection_reason}</p>
                           </div>
                         )}
@@ -391,7 +393,7 @@ const ProfilePage = () => {
                                   const fileExt = selectedFile.name.split('.').pop()?.toLowerCase();
                                   const acceptedExts = file.file_definition?.accepted_file_extensions?.map((ext: string) => ext.toLowerCase());
                                   if (acceptedExts && fileExt && !acceptedExts.includes(fileExt)) {
-                                    setFileErrors(prev => ({ ...prev, [file.file_definition_id]: `Invalid type. Accepted: ${acceptedExts.join(', ')}` }));
+                                    setFileErrors(prev => ({ ...prev, [file.file_definition_id]: t('profile.invalidFileType', { types: acceptedExts.join(', ') }) }));
                                     return;
                                   }
                                   handleFileUpload(file.file_definition_id, selectedFile, true);
@@ -399,7 +401,7 @@ const ProfilePage = () => {
                               }}
                             />
                             <span className="inline-flex items-center px-3 py-1.5 rounded-xl border border-red-300 dark:border-red-700 text-sm font-medium text-red-600 dark:text-red-400 bg-white dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                              {uploadingFiles[file.file_definition_id] ? 'Uploading...' : 'Replace'}
+                              {uploadingFiles[file.file_definition_id] ? t('profile.replacingFile') : t('profile.replaceFile')}
                             </span>
                           </label>
                           {fileErrors[file.file_definition_id] && (
@@ -420,8 +422,8 @@ const ProfilePage = () => {
       {missingDefinitions.length > 0 && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
           <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Additional Documents</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">These documents are available for upload but not yet submitted.</p>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">{t('profile.additionalDocsTitle')}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{t('profile.additionalDocsSubtitle')}</p>
           </div>
           <div className="px-6 py-5 space-y-3">
             {missingDefinitions.map(definition => (
@@ -431,7 +433,7 @@ const ProfilePage = () => {
                     <p className="text-sm font-semibold text-slate-900 dark:text-white">{definition.name_en}</p>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{definition.description_en}</p>
                     <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                      Allowed: {definition.allowed_extensions.join(', ').toUpperCase()} · Max: {definition.max_size_mb}MB
+                      {t('profile.allowedTypes', { types: definition.allowed_extensions.join(', ').toUpperCase(), max: definition.max_size_mb })}
                     </p>
                   </div>
                   <div className="flex-shrink-0">
@@ -445,7 +447,7 @@ const ProfilePage = () => {
                         }}
                       />
                       <span className="inline-flex items-center px-3 py-1.5 rounded-xl border border-sky-500 text-sm font-medium text-sky-500 bg-white dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors">
-                        {uploadingFiles[definition.id] ? 'Uploading...' : 'Upload'}
+                        {uploadingFiles[definition.id] ? t('profile.uploading') : t('profile.upload')}
                       </span>
                     </label>
                     {fileErrors[definition.id] && (
@@ -466,7 +468,7 @@ const ProfilePage = () => {
           aspectRatio={3}
           minWidth={1200}
           minHeight={400}
-          label="Crop Cover Image (3:1)"
+          label={t('profile.cropCoverLabel')}
           onCrop={handleCoverCropDone}
           onCancel={() => setCoverCropSrc(null)}
         />
@@ -479,7 +481,7 @@ const ProfilePage = () => {
           aspectRatio={1}
           minWidth={200}
           minHeight={200}
-          label="Crop Profile Avatar (1:1)"
+          label={t('profile.cropAvatarLabel')}
           onCrop={handleAvatarCropDone}
           onCancel={() => setAvatarCropSrc(null)}
         />

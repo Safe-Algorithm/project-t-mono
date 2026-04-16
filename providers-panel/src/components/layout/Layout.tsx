@@ -153,7 +153,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
           <div>
             <p className="text-base font-bold text-slate-900 dark:text-white leading-tight">رحلة</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">Provider Panel</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-tight">{t('nav.providerPanel')}</p>
           </div>
         </div>
 
@@ -166,9 +166,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavLink href="/support" icon={NAV_ICON_SUPPORT} label={t('nav.supportTickets')} />
               <NavLink href="/trip-updates" icon={NAV_ICON_UPDATES} label={t('nav.tripUpdates')} />
               <NavLink href="/team" icon={NAV_ICON_TEAM} label={t('nav.team')} />
-              <NavLink href="/image-collection" icon={NAV_ICON_IMAGES} label="Image Collection" />
-              <NavLink href="/financials" icon={NAV_ICON_FINANCIALS} label="Financials" />
-              <NavLink href="/roles" icon={NAV_ICON_ROLES} label="Roles & Permissions" />
+              <NavLink href="/image-collection" icon={NAV_ICON_IMAGES} label={t('nav.imageCollection')} />
+              <NavLink href="/financials" icon={NAV_ICON_FINANCIALS} label={t('nav.financials')} />
+              <NavLink href="/roles" icon={NAV_ICON_ROLES} label={t('nav.rolesPermissions')} />
             </>
           )}
           {!statusLoading && !isApproved && user && (

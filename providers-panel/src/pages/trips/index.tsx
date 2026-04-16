@@ -42,17 +42,17 @@ const TripsPage = () => {
   const handleDuplicate = useCallback(async (trip: Trip, e: React.MouseEvent) => {
     e.stopPropagation();
     const name = trip.name_en || trip.name_ar || trip.id;
-    if (!confirm(`Duplicate "${name}"? A draft copy will be created.`)) return;
+    if (!confirm(t('trips.duplicateConfirm', { name }))) return;
     setDuplicatingId(trip.id);
     try {
       const newTrip = await tripService.duplicate(trip.id);
       router.push(`/trips/${newTrip.id}`);
     } catch (err: any) {
-      alert(err.message || 'Failed to duplicate trip');
+      alert(err.message || t('trips.duplicateFail'));
     } finally {
       setDuplicatingId(null);
     }
-  }, [router]);
+  }, [router, t]);
 
   const getTripName = (trip: Trip) =>
     (isRTL ? trip.name_ar || trip.name_en : trip.name_en || trip.name_ar) || '—';
@@ -315,7 +315,7 @@ const TripsPage = () => {
                           disabled={duplicatingId === trip.id}
                           className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-medium text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {duplicatingId === trip.id ? '…' : t('common.duplicate', 'Duplicate')}
+                          {duplicatingId === trip.id ? '…' : t('common.duplicate')}
                         </button>
                       </div>
                     </td>

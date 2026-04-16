@@ -1,8 +1,12 @@
 import { useRouter } from 'next/router';
 import React, { ComponentType } from 'react';
 import { useAuth } from '@/context/UserContext';
+import { UserRole } from '@/types/user';
 
-const withAuth = <P extends object>(WrappedComponent: ComponentType<P>) => {
+const withAuth = <P extends object>(
+  WrappedComponent: ComponentType<P>,
+  requiredRole?: UserRole,
+) => {
   const AuthComponent: React.FC<P> = (props) => {
     const { user, isLoading } = useAuth();
     const router = useRouter();
@@ -11,9 +15,9 @@ const withAuth = <P extends object>(WrappedComponent: ComponentType<P>) => {
       return <p>Loading...</p>;
     }
 
-    if (!user) {
+    if (!user || (requiredRole !== undefined && user.role !== requiredRole)) {
       if (typeof window !== 'undefined') {
-        router.replace('/login');
+        router.replace('/');
       }
       return null;
     }

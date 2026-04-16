@@ -5,8 +5,10 @@ import TeamList from '@/components/team/TeamList';
 import { teamService } from '@/services/teamService';
 import { rolesService, Role } from '@/services/rolesService';
 import withAuth from '@/components/auth/withAuth';
+import { useTranslation } from 'react-i18next';
 
 const TeamManagementPage = () => {
+  const { t } = useTranslation();
   const { members, isLoading, error, refreshMembers } = useTeamMembers();
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ const TeamManagementPage = () => {
       await teamService.deleteTeamMember(userId);
       refreshMembers(); // Refresh the list after deletion
     } catch (err: any) {
-      setDeleteError(err.message || 'Failed to delete team member');
+      setDeleteError(err.message || t('team.deleteMemberFail'));
     } finally {
       setIsDeleting(null);
     }
@@ -47,7 +49,7 @@ const TeamManagementPage = () => {
       await teamService.updateTeamMemberRole(userId, role);
       refreshMembers();
     } catch (err: any) {
-      setUpdateError(err.message || 'Failed to update role');
+      setUpdateError(err.message || t('team.updateRoleFail'));
     } finally {
       setIsUpdating(null);
     }
@@ -64,13 +66,13 @@ const TeamManagementPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Team Management</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your team members and their roles</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t('team.pageTitle')}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('team.pageSubtitle')}</p>
         </div>
         <Link href="/team/invite"
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-xl transition-colors shadow-sm">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-          Invite New Member
+          {t('team.inviteNewMember')}
         </Link>
       </div>
 

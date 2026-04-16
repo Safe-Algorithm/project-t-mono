@@ -255,8 +255,8 @@ const NewTripPage = () => {
       {imageWarnings.length > 0 && (
         <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">Some images failed to upload:</p>
-            <button type="button" onClick={() => setImageWarnings([])} className="text-xs text-amber-600 hover:text-amber-800 dark:hover:text-amber-300 underline">Dismiss</button>
+            <p className="text-sm font-bold text-amber-700 dark:text-amber-400">{t('trips.imageUploadFailTitle')}</p>
+            <button type="button" onClick={() => setImageWarnings([])} className="text-xs text-amber-600 hover:text-amber-800 dark:hover:text-amber-300 underline">{t('trips.imageUploadDismiss')}</button>
           </div>
           <ul className="list-disc list-inside space-y-1">
             {imageWarnings.map((w, i) => <li key={i} className="text-sm text-amber-700 dark:text-amber-300">{w}</li>)}

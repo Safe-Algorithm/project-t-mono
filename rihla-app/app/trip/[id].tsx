@@ -270,6 +270,12 @@ export default function TripDetailScreen() {
           )}
 
           {/* Key info */}
+          {trip.timezone && (
+            <View style={s.tzChip}>
+              <Ionicons name="globe-outline" size={13} color={colors.textTertiary} />
+              <Text style={s.tzChipText}>{t('trip.allDatesIn', { tz: trip.timezone })}</Text>
+            </View>
+          )}
           <View style={s.infoGrid}>
             <InfoChip icon="calendar-outline" label={t('trip.start')} value={formatDate(trip.start_date, locale, trip.timezone)} colors={colors} s={s} />
             <InfoChip icon="calendar" label={t('trip.end')} value={formatDate(trip.end_date, locale, trip.timezone)} colors={colors} s={s} />
@@ -297,12 +303,6 @@ export default function TripDetailScreen() {
               />
             )}
           </View>
-          {trip.timezone && (
-            <View style={s.tzChip}>
-              <Ionicons name="globe-outline" size={13} color={colors.textTertiary} />
-              <Text style={s.tzChipText}>{t('trip.allDatesIn', { tz: trip.timezone })}</Text>
-            </View>
-          )}
 
 
           {/* Route: Timeline */}
